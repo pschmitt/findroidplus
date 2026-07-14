@@ -6,9 +6,11 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -23,8 +25,10 @@ import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.work.AutoDownloadWorker
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
 import dev.jdtech.jellyfin.work.SyncWorker
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
 import okio.Path.Companion.toOkioPath
@@ -65,6 +69,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
 
         scheduleUserDataSync(workManager)
         scheduleMpvCleanup(workManager)
+        scheduleAutoDownload(workManager)
     }
 
     @OptIn(ExperimentalCoilApi::class, ExperimentalTime::class)
@@ -106,6 +111,34 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
                 existingWorkPolicy = ExistingWorkPolicy.KEEP,
                 request = syncWorkRequest
             )
+    }
+
+    private fun scheduleAutoDownload(workManager: WorkManager) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val periodicRequest =
+            PeriodicWorkRequestBuilder<AutoDownloadWorker>(6, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            uniqueWorkName = "autoDownloadRules",
+            existingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.KEEP,
+            request = periodicRequest,
+        )
+
+        // Also evaluate once at startup, standing in for "after library refresh/sync" - there is
+        // no dedicated library-refresh worker in this codebase to hook into.
+        val startupRequest =
+            OneTimeWorkRequestBuilder<AutoDownloadWorker>().setConstraints(constraints).build()
+
+        workManager.enqueueUniqueWork(
+            uniqueWorkName = "autoDownloadRulesStartup",
+            existingWorkPolicy = ExistingWorkPolicy.REPLACE,
+            request = startupRequest,
+        )
     }
 
     private fun scheduleMpvCleanup(workManager: WorkManager) {

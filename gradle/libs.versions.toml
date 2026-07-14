@@ -13,19 +13,24 @@ androidx-media3 = "1.10.1"
 androidx-navigation = "2.9.8"
 androidx-paging = "3.5.0"
 androidx-room = "2.8.4"
+androidx-test = "1.7.0"
+androidx-test-ext-junit = "1.3.0"
 androidx-tv-material3 = "1.1.0"
 androidx-window = "1.5.1"
 androidx-work = "2.11.2"
 coil = "3.5.0"
 hilt = "2.59.2"
 jellyfin = "1.8.11"
+junit = "4.13.2"
 kotlin = "2.4.0"
+kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.11.0"
 ksp = "2.3.9"
 ktfmt = "0.26.0"
 libmpv = "1.0.0"
 material = "1.14.0"
 media3-ffmpeg-decoder = "1.9.0+1"
+nanohttpd = "2.3.1"
 okhttp = "5.4.0"
 timber = "5.0.1"
 slf4j = "2.0.17"
@@ -61,9 +66,14 @@ androidx-paging = { group = "androidx.paging", name = "paging-runtime", version.
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "androidx-paging" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "androidx-room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "androidx-room" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "androidx-room" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidx-test" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "androidx-tv-material3" }
 androidx-window = { group = "androidx.window", name = "window", version.ref = "androidx-window" }
 androidx-work = { group = "androidx.work", name = "work-runtime", version.ref = "androidx-work" }
+androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "androidx-work" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-network-cache-control = { group = "io.coil-kt.coil3", name = "coil-network-cache-control", version.ref = "coil" }
@@ -71,11 +81,14 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 jellyfin-core = { group = "org.jellyfin.sdk", name = "jellyfin-core", version.ref = "jellyfin" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlin-metadata-jvm = { group = "org.jetbrains.kotlin", name = "kotlin-metadata-jvm", version.ref = "kotlin"}
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 libmpv = { group = "dev.jdtech.mpv", name = "libmpv", version.ref = "libmpv" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 media3-ffmpeg-decoder = { group = "org.jellyfin.media3", name = "media3-ffmpeg-decoder", version.ref = "media3-ffmpeg-decoder" }
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }

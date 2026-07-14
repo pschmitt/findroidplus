@@ -16,6 +16,10 @@ sealed interface ShowAction {
 
     data object UnmarkAsFavorite : ShowAction
 
+    data object ToggleAutoDownload : ShowAction
+
+    data class DeleteShowDownloads(val alsoRemoveRules: Boolean) : ShowAction
+
     data object OnBackClick : ShowAction
 
     data object OnHomeClick : ShowAction

@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.FilledTonalIconButton
@@ -52,6 +53,8 @@ fun ItemButtonsBar(
     modifier: Modifier = Modifier,
     downloaderState: DownloaderState? = null,
     canPlay: Boolean = true,
+    downloadLocationPreference: String = "ask",
+    trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -153,6 +156,7 @@ fun ItemButtonsBar(
                         }
                     }
                 }
+                trailingContent()
                 if (downloaderState != null && !downloaderState.isDownloading) {
                     if (item.isDownloaded()) {
                         FilledTonalIconButton(onClick = { deleteDownloadDialogOpen = true }) {
@@ -165,11 +169,30 @@ fun ItemButtonsBar(
                         FilledTonalIconButton(
                             onClick = {
                                 storageLocations = context.getExternalFilesDirs(null)
-                                if (storageLocations.size > 1) {
-                                    storageSelectionDialogOpen = true
-                                } else {
-                                    selectedStorageIndex = 0
-                                    onDownloadClick(selectedStorageIndex)
+                                val preferredIndex =
+                                    when (downloadLocationPreference) {
+                                        "internal" ->
+                                            storageLocations.indexOfFirst {
+                                                it != null && !Environment.isExternalStorageRemovable(it)
+                                            }
+                                        "external" ->
+                                            storageLocations.indexOfFirst {
+                                                it != null && Environment.isExternalStorageRemovable(it)
+                                            }
+                                        else -> -1
+                                    }
+                                when {
+                                    preferredIndex >= 0 -> {
+                                        selectedStorageIndex = preferredIndex
+                                        onDownloadClick(selectedStorageIndex)
+                                    }
+                                    storageLocations.size > 1 -> {
+                                        storageSelectionDialogOpen = true
+                                    }
+                                    else -> {
+                                        selectedStorageIndex = 0
+                                        onDownloadClick(selectedStorageIndex)
+                                    }
                                 }
                             }
                         ) {

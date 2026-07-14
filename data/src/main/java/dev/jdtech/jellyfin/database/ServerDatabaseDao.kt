@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisodeDto
 import dev.jdtech.jellyfin.models.FindroidMediaStreamDto
 import dev.jdtech.jellyfin.models.FindroidMovieDto
@@ -257,4 +258,55 @@ interface ServerDatabaseDao {
 
     @Query("SELECT * FROM trickplayInfos WHERE sourceId = :sourceId")
     fun getTrickplayInfo(sourceId: String): FindroidTrickplayInfoDto?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAutoDownloadRule(rule: AutoDownloadRuleDto): Long
+
+    @Update fun updateAutoDownloadRule(rule: AutoDownloadRuleDto)
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NULL"
+    )
+    fun getShowAutoDownloadRule(serverId: String, userId: UUID, seriesId: UUID): AutoDownloadRuleDto?
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId = :seasonId"
+    )
+    fun getSeasonAutoDownloadRule(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        seasonId: UUID,
+    ): AutoDownloadRuleDto?
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId ORDER BY createdAt DESC"
+    )
+    fun getAutoDownloadRules(serverId: String, userId: UUID): List<AutoDownloadRuleDto>
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND enabled = 1"
+    )
+    fun getEnabledAutoDownloadRules(serverId: String, userId: UUID): List<AutoDownloadRuleDto>
+
+    @Query("UPDATE autoDownloadRules SET enabled = :enabled WHERE id = :id")
+    fun setAutoDownloadRuleEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE autoDownloadRules SET onlyNewEpisodes = :onlyNewEpisodes WHERE id = :id")
+    fun setAutoDownloadRuleOnlyNewEpisodes(id: Long, onlyNewEpisodes: Boolean)
+
+    @Query("DELETE FROM autoDownloadRules WHERE id = :id") fun deleteAutoDownloadRule(id: Long)
+
+    @Query(
+        "DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NOT NULL"
+    )
+    fun deleteSeasonAutoDownloadRulesForShow(serverId: String, userId: UUID, seriesId: UUID)
+
+    @Query(
+        "DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId"
+    )
+    fun deleteAutoDownloadRulesForShow(serverId: String, userId: UUID, seriesId: UUID)
+
+    @Query("DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId")
+    fun deleteAllAutoDownloadRules(serverId: String, userId: UUID)
 }

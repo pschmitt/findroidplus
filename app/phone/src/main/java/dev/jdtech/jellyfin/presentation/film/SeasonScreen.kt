@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,12 +33,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummySeason
 import dev.jdtech.jellyfin.film.presentation.season.SeasonAction
 import dev.jdtech.jellyfin.film.presentation.season.SeasonState
@@ -61,7 +69,7 @@ fun SeasonScreen(
     navigateToSeries: (seriesId: UUID) -> Unit,
     viewModel: SeasonViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
+    val androidContext = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.loadSeason(seasonId = seasonId) }
@@ -71,10 +79,10 @@ fun SeasonScreen(
         onAction = { action ->
             when (action) {
                 is SeasonAction.Play -> {
-                    val intent = Intent(context, PlayerActivity::class.java)
+                    val intent = Intent(androidContext, PlayerActivity::class.java)
                     intent.putExtra("itemId", seasonId.toString())
                     intent.putExtra("itemKind", BaseItemKind.SEASON.serialName)
-                    context.startActivity(intent)
+                    androidContext.startActivity(intent)
                 }
                 is SeasonAction.OnBackClick -> navigateBack()
                 is SeasonAction.OnHomeClick -> navigateHome()
@@ -89,6 +97,7 @@ fun SeasonScreen(
 
 @Composable
 private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> Unit) {
+    val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
@@ -165,6 +174,42 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                         modifier =
                             Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
                         canPlay = state.episodes.isNotEmpty(),
+                        trailingContent = {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    onAction(SeasonAction.ToggleAutoDownload)
+                                    val toastContext = androidContext
+                                    Toast.makeText(
+                                            toastContext,
+                                            if (state.autoDownloadEnabled) {
+                                                CoreR.string.auto_download_disabled_toast
+                                            } else {
+                                                CoreR.string.auto_download_enabled_toast
+                                            },
+                                            Toast.LENGTH_SHORT,
+                                        )
+                                        .show()
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_download),
+                                    contentDescription =
+                                        stringResource(
+                                            if (state.autoDownloadEnabled) {
+                                                CoreR.string.auto_download_disable
+                                            } else {
+                                                CoreR.string.auto_download_enable
+                                            }
+                                        ),
+                                    tint =
+                                        if (state.autoDownloadEnabled) {
+                                            Color("#F2C94C".toColorInt())
+                                        } else {
+                                            LocalContentColor.current
+                                        },
+                                )
+                            }
+                        },
                     )
                 }
                 items(items = state.episodes, key = { episode -> episode.id }) { episode ->

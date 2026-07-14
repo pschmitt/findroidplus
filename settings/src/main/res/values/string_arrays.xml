@@ -52,4 +52,14 @@
         <item>COMMERCIAL</item>
         <item>UNKNOWN</item>
     </string-array>
+    <string-array name="download_locations">
+        <item>@string/download_location_ask</item>
+        <item>@string/download_location_internal</item>
+        <item>@string/download_location_external</item>
+    </string-array>
+    <string-array name="download_locations_values">
+        <item>ask</item>
+        <item>internal</item>
+        <item>external</item>
+    </string-array>
 </resources>

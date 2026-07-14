@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Test-only: LargeFileHttpServer serves plain http://127.0.0.1 to avoid needing TLS certs
+         for a throwaway loopback server. Does not affect the shipped app's manifest. -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

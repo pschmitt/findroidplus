@@ -11,7 +11,10 @@ android {
     compileSdk = Versions.COMPILE_SDK
     buildToolsVersion = Versions.BUILD_TOOLS
 
-    defaultConfig { minSdk = Versions.MIN_SDK }
+    defaultConfig {
+        minSdk = Versions.MIN_SDK
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
     buildTypes {
         named("release") { isMinifyEnabled = false }
@@ -50,4 +53,12 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.slf4j.api)
     implementation(libs.slf4j.android)
+
+    androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.nanohttpd)
 }

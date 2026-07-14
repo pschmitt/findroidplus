@@ -103,6 +103,7 @@ fun EpisodeScreen(
     EpisodeScreenLayout(
         state = state,
         downloaderState = downloaderState,
+        downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
         onAction = { action ->
             when (action) {
                 is EpisodeAction.Play -> {
@@ -128,6 +129,7 @@ fun EpisodeScreen(
 private fun EpisodeScreenLayout(
     state: EpisodeState,
     downloaderState: DownloaderState,
+    downloadLocationPreference: String = "ask",
     onAction: (EpisodeAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
 ) {
@@ -222,6 +224,7 @@ private fun EpisodeScreenLayout(
                     ItemButtonsBar(
                         item = episode,
                         downloaderState = downloaderState,
+                        downloadLocationPreference = downloadLocationPreference,
                         onPlayClick = { startFromBeginning ->
                             onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning))
                         },

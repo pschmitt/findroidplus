@@ -12,5 +12,7 @@ data class ShowState(
     val actors: List<FindroidItemPerson> = emptyList(),
     val director: FindroidItemPerson? = null,
     val writers: List<FindroidItemPerson> = emptyList(),
+    val autoDownloadEnabled: Boolean = false,
+    val hasDownloads: Boolean = false,
     val error: Exception? = null,
 )

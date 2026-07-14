@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloading
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
 import javax.inject.Inject
 import kotlinx.coroutines.Runnable
@@ -19,7 +20,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class DownloaderViewModel @Inject constructor(private val downloader: Downloader) : ViewModel() {
+class DownloaderViewModel
+@Inject
+constructor(private val downloader: Downloader, private val appPreferences: AppPreferences) :
+    ViewModel() {
     private val _state = MutableStateFlow(DownloaderState())
     val state = _state.asStateFlow()
 
@@ -27,6 +31,9 @@ class DownloaderViewModel @Inject constructor(private val downloader: Downloader
     val events = eventsChannel.receiveAsFlow()
 
     var downloadId: Long? = null
+
+    val downloadLocationPreference: String
+        get() = appPreferences.getValue(appPreferences.downloadLocation)
 
     private val handler = Handler(Looper.getMainLooper())
 

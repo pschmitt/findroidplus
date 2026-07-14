@@ -649,6 +649,14 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                                                     backendPreference =
                                                         appPreferences.downloadWhenRoaming,
                                                 ),
+                                                PreferenceSelect(
+                                                    nameStringResource = R.string.download_location,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.downloadLocation,
+                                                    options = R.array.download_locations,
+                                                    optionValues = R.array.download_locations_values,
+                                                ),
                                             )
                                     )
                                 ),

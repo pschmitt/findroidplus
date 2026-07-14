@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -16,9 +18,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -31,20 +37,26 @@ import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
 import dev.jdtech.jellyfin.models.CollectionSection
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.UiText
+import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.CollectionGrid
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
 @Composable
 fun DownloadsScreen(
     onItemClick: (item: FindroidItem) -> Unit,
+    onAutoDownloadRulesClick: () -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.loadItems() }
 
+    var clearAllDialogOpen by remember { mutableStateOf(false) }
+
     DownloadsScreenLayout(
         state = state,
+        onAutoDownloadRulesClick = onAutoDownloadRulesClick,
+        onClearAllClick = { clearAllDialogOpen = true },
         onAction = { action ->
             when (action) {
                 is CollectionAction.OnItemClick -> onItemClick(action.item)
@@ -52,11 +64,28 @@ fun DownloadsScreen(
             }
         },
     )
+
+    if (clearAllDialogOpen) {
+        ClearDownloadsDialog(
+            title = stringResource(CoreR.string.clear_all_downloads),
+            message = stringResource(CoreR.string.clear_all_downloads_message),
+            onConfirm = { alsoRemoveRules ->
+                viewModel.clearAllDownloads(alsoRemoveRules)
+                clearAllDialogOpen = false
+            },
+            onDismiss = { clearAllDialogOpen = false },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DownloadsScreenLayout(state: CollectionState, onAction: (CollectionAction) -> Unit) {
+private fun DownloadsScreenLayout(
+    state: CollectionState,
+    onAutoDownloadRulesClick: () -> Unit = {},
+    onClearAllClick: () -> Unit = {},
+    onAction: (CollectionAction) -> Unit,
+) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
@@ -67,6 +96,22 @@ private fun DownloadsScreenLayout(state: CollectionState, onAction: (CollectionA
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(CoreR.string.title_download)) },
+                actions = {
+                    IconButton(onClick = onAutoDownloadRulesClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_settings),
+                            contentDescription = stringResource(CoreR.string.auto_download_rules),
+                        )
+                    }
+                    if (state.sections.isNotEmpty()) {
+                        IconButton(onClick = onClearAllClick) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_trash),
+                                contentDescription = stringResource(CoreR.string.clear_all_downloads),
+                            )
+                        }
+                    }
+                },
                 windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
                 scrollBehavior = scrollBehavior,
             )

@@ -17,6 +17,8 @@ android {
 
         consumerProguardFile("proguard-rules.pro")
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
             arg("room.generateKotlin", "true")
@@ -34,6 +36,8 @@ android {
     }
 
     buildFeatures { buildConfig = true }
+
+    sourceSets { getByName("androidTest").assets.srcDirs("$projectDir/schemas") }
 }
 
 dependencies {
@@ -44,4 +48,12 @@ dependencies {
     implementation(libs.jellyfin.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.timber)
+
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    kspAndroidTest(libs.androidx.room.compiler)
 }

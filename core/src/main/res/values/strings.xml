@@ -109,4 +109,24 @@
     <string name="download_paused">Paused</string>
     <string name="download_downloading">Downloading…</string>
     <string name="download_failed">Failed to download</string>
+    <string name="auto_download_new_episodes">Automatically download new episodes</string>
+    <string name="auto_download_enable">Enable automatic downloads</string>
+    <string name="auto_download_disable">Disable automatic downloads</string>
+    <string name="auto_download_enabled_toast">Automatic downloads enabled</string>
+    <string name="auto_download_disabled_toast">Automatic downloads disabled</string>
+    <string name="auto_download_rules">Auto-download rules</string>
+    <string name="no_auto_download_rules">You have no auto-download rules</string>
+    <string name="auto_download_rule_show">Whole show</string>
+    <string name="auto_download_rule_season">Season %1$d</string>
+    <string name="auto_download_only_new_episodes">Only new episodes (no backfill)</string>
+    <string name="clear_all_downloads">Clear all downloads</string>
+    <string name="clear_all_downloads_message">This will delete every downloaded movie and episode on this device.</string>
+    <string name="clear_show_downloads">Delete show downloads</string>
+    <string name="clear_show_downloads_message">This will delete every downloaded episode of this show on this device.</string>
+    <string name="also_remove_auto_download_rules">Also remove auto-download rules</string>
+    <string name="also_remove_auto_download_rules_summary">Otherwise these episodes will be queued again the next time rules are evaluated.</string>
+    <string name="download_notification_channel_name">Downloads</string>
+    <string name="downloading_item">Downloading %1$s</string>
+    <string name="download_complete_item">Download complete: %1$s</string>
+    <string name="download_failed_item">Failed to download %1$s</string>
 </resources>

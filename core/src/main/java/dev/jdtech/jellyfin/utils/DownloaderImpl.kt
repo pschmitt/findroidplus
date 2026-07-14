@@ -7,7 +7,9 @@ import android.os.Environment
 import android.os.StatFs
 import android.text.format.Formatter
 import androidx.core.net.toUri
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dev.jdtech.jellyfin.core.R as CoreR
@@ -32,11 +34,13 @@ import dev.jdtech.jellyfin.models.toFindroidUserDataDto
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.work.ImagesDownloaderWorker
+import dev.jdtech.jellyfin.work.VideoDownloadWorker
 import java.io.File
 import java.util.UUID
 import kotlin.Exception
 import kotlin.math.ceil
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 class DownloaderImpl(
@@ -90,20 +94,12 @@ class DownloaderImpl(
                     ),
                 )
             }
-            val request =
-                DownloadManager.Request(source.path.toUri())
-                    .setTitle(item.name)
-                    .setAllowedOverMetered(
-                        appPreferences.getValue(appPreferences.downloadOverMobileData)
-                    )
-                    .setAllowedOverRoaming(
-                        appPreferences.getValue(appPreferences.downloadWhenRoaming)
-                    )
-                    .setNotificationVisibility(
-                        DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
-                    )
-                    .setDestinationUri(path)
-            val downloadId = downloadManager.enqueue(request)
+            // The primary source is streamed by our own VideoDownloadWorker rather than
+            // DownloadManager - see the class doc on VideoDownloadWorker for why. downloadId is
+            // now a synthetic, locally-unique 64-bit id used purely as a Room lookup key; it no
+            // longer comes from DownloadManager.enqueue().
+            val downloadId = UUID.randomUUID().mostSignificantBits
+            val finalPath = path.path.orEmpty().replace(".download", "")
 
             when (item) {
                 is FindroidMovie -> {
@@ -138,6 +134,23 @@ class DownloaderImpl(
             database.insertSource(sourceDto.copy(downloadId = downloadId))
             database.insertUserData(item.toFindroidUserDataDto(jellyfinRepository.getUserId()))
 
+            // Enqueue only after the sources row exists - VideoDownloadWorker updates that row by
+            // id on completion, so it must not race the insert above.
+            val downloadRequest =
+                OneTimeWorkRequestBuilder<VideoDownloadWorker>()
+                    .setInputData(
+                        workDataOf(
+                            VideoDownloadWorker.KEY_SOURCE_ID to source.id,
+                            VideoDownloadWorker.KEY_SOURCE_URL to source.path,
+                            VideoDownloadWorker.KEY_DESTINATION_PATH to path.path,
+                            VideoDownloadWorker.KEY_FINAL_PATH to finalPath,
+                            VideoDownloadWorker.KEY_EXPECTED_SIZE to source.size,
+                            VideoDownloadWorker.KEY_ITEM_NAME to item.name,
+                        )
+                    )
+                    .build()
+            workManager.enqueueUniqueWork(source.id, ExistingWorkPolicy.KEEP, downloadRequest)
+
             downloadExternalMediaStreams(item, source, storageIndex)
 
             segments.forEach { database.insertSegment(it.toFindroidSegmentsDto(item.id)) }
@@ -165,9 +178,7 @@ class DownloaderImpl(
     override suspend fun cancelDownload(item: FindroidItem, downloadId: Long) {
         val source =
             database.getSourceByDownloadId(downloadId)?.toFindroidSource(database) ?: return
-        if (source.downloadId != null) {
-            downloadManager.remove(source.downloadId!!)
-        }
+        workManager.cancelUniqueWork(source.id)
         deleteItem(item, source)
     }
 
@@ -216,33 +227,33 @@ class DownloaderImpl(
         if (downloadId == null) {
             return Pair(downloadStatus, progress)
         }
-        val query = DownloadManager.Query().setFilterById(downloadId)
-        val cursor = downloadManager.query(query)
-        if (cursor.moveToFirst()) {
-            downloadStatus =
-                cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            when (downloadStatus) {
-                DownloadManager.STATUS_RUNNING -> {
-                    val totalBytes =
-                        cursor.getLong(
-                            cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                        )
-                    if (totalBytes > 0) {
-                        val downloadedBytes =
-                            cursor.getLong(
-                                cursor.getColumnIndexOrThrow(
-                                    DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR
-                                )
-                            )
-                        progress = downloadedBytes.times(100).div(totalBytes).toInt()
-                    }
-                }
-                DownloadManager.STATUS_SUCCESSFUL -> {
-                    progress = 100
+        val source = database.getSourceByDownloadId(downloadId) ?: return Pair(downloadStatus, progress)
+        val workInfo =
+            workManager.getWorkInfosForUniqueWorkFlow(source.id).first().firstOrNull()
+                ?: return Pair(DownloadManager.STATUS_FAILED, progress)
+
+        when (workInfo.state) {
+            WorkInfo.State.ENQUEUED,
+            WorkInfo.State.BLOCKED -> {
+                downloadStatus = DownloadManager.STATUS_PENDING
+            }
+            WorkInfo.State.RUNNING -> {
+                downloadStatus = DownloadManager.STATUS_RUNNING
+                val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
+                val downloadedBytes =
+                    workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
+                if (totalBytes > 0 && downloadedBytes >= 0) {
+                    progress = downloadedBytes.times(100).div(totalBytes).toInt()
                 }
             }
-        } else {
-            downloadStatus = DownloadManager.STATUS_FAILED
+            WorkInfo.State.SUCCEEDED -> {
+                downloadStatus = DownloadManager.STATUS_SUCCESSFUL
+                progress = 100
+            }
+            WorkInfo.State.FAILED,
+            WorkInfo.State.CANCELLED -> {
+                downloadStatus = DownloadManager.STATUS_FAILED
+            }
         }
         return Pair(downloadStatus, progress)
     }

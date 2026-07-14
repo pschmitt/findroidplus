@@ -99,6 +99,7 @@ fun MovieScreen(
     MovieScreenLayout(
         state = state,
         downloaderState = downloaderState,
+        downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
         onAction = { action ->
             when (action) {
                 is MovieAction.Play -> {
@@ -130,6 +131,7 @@ fun MovieScreen(
 private fun MovieScreenLayout(
     state: MovieState,
     downloaderState: DownloaderState,
+    downloadLocationPreference: String = "ask",
     onAction: (MovieAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
 ) {
@@ -219,6 +221,7 @@ private fun MovieScreenLayout(
                     ItemButtonsBar(
                         item = movie,
                         downloaderState = downloaderState,
+                        downloadLocationPreference = downloadLocationPreference,
                         onPlayClick = { startFromBeginning ->
                             onAction(MovieAction.Play(startFromBeginning = startFromBeginning))
                         },

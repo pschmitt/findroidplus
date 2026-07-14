@@ -20,12 +20,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +53,7 @@ import dev.jdtech.jellyfin.film.presentation.show.ShowState
 import dev.jdtech.jellyfin.film.presentation.show.ShowViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
+import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.InfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
@@ -72,7 +78,7 @@ fun ShowScreen(
     navigateToPerson: (personId: UUID) -> Unit,
     viewModel: ShowViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
+    val androidContext = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -84,16 +90,16 @@ fun ShowScreen(
         onAction = { action ->
             when (action) {
                 is ShowAction.Play -> {
-                    val intent = Intent(context, PlayerActivity::class.java)
+                    val intent = Intent(androidContext, PlayerActivity::class.java)
                     intent.putExtra("itemId", showId.toString())
                     intent.putExtra("itemKind", BaseItemKind.SERIES.serialName)
-                    context.startActivity(intent)
+                    androidContext.startActivity(intent)
                 }
                 is ShowAction.PlayTrailer -> {
                     try {
                         uriHandler.openUri(action.trailer)
                     } catch (e: IllegalArgumentException) {
-                        Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(androidContext, e.localizedMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
                 is ShowAction.OnBackClick -> navigateBack()
@@ -109,6 +115,7 @@ fun ShowScreen(
 
 @Composable
 private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
+    val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
@@ -116,6 +123,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
 
     val scrollState = rememberScrollState()
+    var clearShowDownloadsDialogOpen by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         state.show?.let { show ->
@@ -209,6 +217,53 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                         onDownloadDeleteClick = {},
                         modifier = Modifier.fillMaxWidth(),
                         canPlay = state.seasons.isNotEmpty(),
+                        trailingContent = {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    onAction(ShowAction.ToggleAutoDownload)
+                                    val toastContext = androidContext
+                                    Toast.makeText(
+                                            toastContext,
+                                            if (state.autoDownloadEnabled) {
+                                                CoreR.string.auto_download_disabled_toast
+                                            } else {
+                                                CoreR.string.auto_download_enabled_toast
+                                            },
+                                            Toast.LENGTH_SHORT,
+                                        )
+                                        .show()
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_download),
+                                    contentDescription =
+                                        stringResource(
+                                            if (state.autoDownloadEnabled) {
+                                                CoreR.string.auto_download_disable
+                                            } else {
+                                                CoreR.string.auto_download_enable
+                                            }
+                                        ),
+                                    tint =
+                                        if (state.autoDownloadEnabled) {
+                                            Color("#F2C94C".toColorInt())
+                                        } else {
+                                            LocalContentColor.current
+                                        },
+                                )
+                            }
+                            if (state.hasDownloads) {
+                                FilledTonalIconButton(
+                                    onClick = { clearShowDownloadsDialogOpen = true }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(CoreR.drawable.ic_trash),
+                                        contentDescription =
+                                            stringResource(CoreR.string.clear_show_downloads),
+                                    )
+                                }
+                            }
+                        },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     OverviewText(text = show.overview, maxCollapsedLines = 3)
@@ -293,6 +348,18 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
             hasHomeButton = true,
             onBackClick = { onAction(ShowAction.OnBackClick) },
             onHomeClick = { onAction(ShowAction.OnHomeClick) },
+        )
+    }
+
+    if (clearShowDownloadsDialogOpen) {
+        ClearDownloadsDialog(
+            title = stringResource(CoreR.string.clear_show_downloads),
+            message = stringResource(CoreR.string.clear_show_downloads_message),
+            onConfirm = { alsoRemoveRules ->
+                onAction(ShowAction.DeleteShowDownloads(alsoRemoveRules))
+                clearShowDownloadsDialogOpen = false
+            },
+            onDismiss = { clearShowDownloadsDialogOpen = false },
         )
     }
 }

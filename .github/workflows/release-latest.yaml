@@ -1,0 +1,77 @@
+name: Release (latest)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release-latest:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build debug APKs
+        run: ./gradlew assembleDebug --stacktrace --build-cache
+
+      - name: Collect and rename APKs
+        id: apks
+        run: |
+          mkdir -p /tmp/findroid-latest
+          for apk in \
+            app/phone/build/outputs/apk/libre/debug/phone-libre-arm64-v8a-debug.apk \
+            app/phone/build/outputs/apk/libre/debug/phone-libre-armeabi-v7a-debug.apk \
+            app/phone/build/outputs/apk/libre/debug/phone-libre-x86_64-debug.apk \
+            app/phone/build/outputs/apk/libre/debug/phone-libre-x86-debug.apk \
+            app/tv/build/outputs/apk/libre/debug/tv-libre-arm64-v8a-debug.apk \
+            app/tv/build/outputs/apk/libre/debug/tv-libre-armeabi-v7a-debug.apk \
+            app/tv/build/outputs/apk/libre/debug/tv-libre-x86_64-debug.apk \
+            app/tv/build/outputs/apk/libre/debug/tv-libre-x86-debug.apk \
+          ; do
+            name="findroid-latest-$(basename "$apk" | sed -E 's/^(phone|tv)-libre-/\1-/; s/-debug\.apk$/.apk/')"
+            cp "$apk" "/tmp/findroid-latest/$name"
+          done
+          echo "dir=/tmp/findroid-latest" >> "$GITHUB_OUTPUT"
+
+      - name: Move latest tag
+        run: |
+          git tag -f latest
+          git push origin latest --force
+
+      - name: Record build time
+        id: date
+        run: echo "date=$(date -u +'%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest build"
+          body: |
+            Automated debug build of the latest main (${{ github.sha }}), built ${{ steps.date.outputs.date }}.
+
+            Debug-signed, unsigned for distribution — not a stable release.
+          files: ${{ steps.apks.outputs.dir }}/*.apk
+          prerelease: true
+          make_latest: false
