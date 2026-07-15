@@ -10,5 +10,6 @@ data class MovieState(
     val actors: List<FindroidItemPerson> = emptyList(),
     val director: FindroidItemPerson? = null,
     val writers: List<FindroidItemPerson> = emptyList(),
+    val dateFormat: String = "system",
     val error: Exception? = null,
 )

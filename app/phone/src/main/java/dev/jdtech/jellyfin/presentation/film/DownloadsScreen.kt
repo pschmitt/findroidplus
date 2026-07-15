@@ -524,6 +524,14 @@ private fun ShowGroupHeader(
     collapsed: Boolean = false,
     onToggleCollapsed: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val downloadedSizeBytes =
+        remember(group.episodes) {
+            group.episodes.sumOf { episode ->
+                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.size ?: 0L
+            }
+        }
+
     Card {
         Row(
             modifier =
@@ -542,14 +550,22 @@ private fun ShowGroupHeader(
                 ItemPoster(item = group.episodes.first(), direction = Direction.VERTICAL)
             }
             Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-            Text(
-                text = group.seriesName,
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = group.seriesName,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (downloadedSizeBytes > 0) {
+                    Text(
+                        text = Formatter.formatFileSize(context, downloadedSizeBytes),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
             if (!selectionMode && canForce) {
                 IconButton(onClick = onForceClick) {
                     Icon(

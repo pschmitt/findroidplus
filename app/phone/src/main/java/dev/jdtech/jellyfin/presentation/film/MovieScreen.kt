@@ -62,6 +62,7 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
+import dev.jdtech.jellyfin.utils.format
 import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
 
@@ -188,7 +189,7 @@ private fun MovieScreenLayout(
                     ) {
                         movie.premiereDate?.let { premiereDate ->
                             Text(
-                                text = premiereDate.year.toString(),
+                                text = premiereDate.format(state.dateFormat),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
