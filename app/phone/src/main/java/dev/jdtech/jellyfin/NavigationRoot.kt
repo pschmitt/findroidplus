@@ -329,6 +329,11 @@ fun NavigationRoot(
                         navigateToItem(navController = navController, item = item)
                     },
                     onFavoritesClick = { navController.safeNavigate(FavoritesRoute) },
+                    onSettingsClick = {
+                        navController.safeNavigate(
+                            SettingsRoute(indexes = intArrayOf(CoreR.string.title_settings))
+                        )
+                    },
                     searchExpanded = searchExpanded,
                     onSearchExpand = { searchExpanded = it },
                 )
@@ -340,6 +345,17 @@ fun NavigationRoot(
                     },
                     onAutoDownloadRulesClick = {
                         navController.safeNavigate(AutoDownloadRulesRoute)
+                    },
+                    onSettingsClick = {
+                        navController.safeNavigate(
+                            SettingsRoute(
+                                indexes =
+                                    intArrayOf(
+                                        CoreR.string.title_settings,
+                                        CoreR.string.title_download,
+                                    )
+                            )
+                        )
                     },
                 )
             }

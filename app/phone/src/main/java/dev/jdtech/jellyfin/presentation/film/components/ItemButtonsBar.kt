@@ -62,6 +62,8 @@ fun ItemButtonsBar(
     showEpisodeDownloadOption: Boolean = false,
     defaultSeasonId: UUID? = null,
     getSeasons: (suspend () -> List<FindroidSeason>)? = null,
+    hasActiveDownloadOrRule: Boolean = false,
+    onDeleteDownloads: (() -> Unit)? = null,
     onBulkDownload:
         (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit =
         { _, _, _ ->
@@ -288,6 +290,14 @@ fun ItemButtonsBar(
                 seasons = seasons,
                 showEpisodeOption = showEpisodeDownloadOption,
                 defaultSeasonId = defaultSeasonId,
+                canDelete = hasActiveDownloadOrRule,
+                onDelete =
+                    onDeleteDownloads?.let {
+                        {
+                            downloadScopeDialogOpen = false
+                            it()
+                        }
+                    },
                 onConfirm = { selection, alsoFollowNew, onlyUnwatched ->
                     downloadScopeDialogOpen = false
                     if (selection.thisEpisodeOnly) {

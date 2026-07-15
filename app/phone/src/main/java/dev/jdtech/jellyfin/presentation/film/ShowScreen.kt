@@ -220,6 +220,8 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                         downloaderState = DownloaderState(),
                         enableDownloadDialog = true,
                         getSeasons = { state.seasons },
+                        hasActiveDownloadOrRule = state.hasDownloads || state.autoDownloadEnabled,
+                        onDeleteDownloads = { clearShowDownloadsDialogOpen = true },
                         downloadIconTint =
                             if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
                         onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->

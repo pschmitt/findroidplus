@@ -74,6 +74,7 @@ import java.util.UUID
 fun DownloadsScreen(
     onItemClick: (item: FindroidItem) -> Unit,
     onAutoDownloadRulesClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val androidContext = LocalContext.current
@@ -87,6 +88,7 @@ fun DownloadsScreen(
     DownloadsScreenLayout(
         state = state,
         onAutoDownloadRulesClick = onAutoDownloadRulesClick,
+        onSettingsClick = onSettingsClick,
         onTrashClick = {
             if (state.selectedIds.isNotEmpty()) deleteSelectedDialogOpen = true
             else clearAllDialogOpen = true
@@ -133,6 +135,7 @@ fun DownloadsScreen(
 private fun DownloadsScreenLayout(
     state: DownloadsState,
     onAutoDownloadRulesClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
     onItemClick: (FindroidItem) -> Unit = {},
     onToggleSelection: (UUID) -> Unit = {},
@@ -161,6 +164,12 @@ private fun DownloadsScreenLayout(
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_refresh_cw),
                             contentDescription = stringResource(CoreR.string.auto_download_rules),
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_settings),
+                            contentDescription = stringResource(CoreR.string.title_settings),
                         )
                     }
                     if (!state.isEmpty) {

@@ -48,6 +48,8 @@ fun DownloadScopeDialog(
     seasons: List<FindroidSeason>?,
     showEpisodeOption: Boolean,
     defaultSeasonId: UUID? = null,
+    canDelete: Boolean = false,
+    onDelete: (() -> Unit)? = null,
     onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -166,7 +168,24 @@ fun DownloadScopeDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+            Row {
+                if (canDelete && onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                        Text(
+                            text = stringResource(CoreR.string.download_scope_remove),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+            }
         },
     )
 }

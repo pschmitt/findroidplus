@@ -1,17 +1,26 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,12 +28,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyCollections
 import dev.jdtech.jellyfin.film.presentation.media.MediaAction
 import dev.jdtech.jellyfin.film.presentation.media.MediaState
@@ -47,6 +60,7 @@ import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 fun MediaScreen(
     onItemClick: (FindroidItem) -> Unit,
     onFavoritesClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     searchExpanded: Boolean,
     onSearchExpand: (Boolean) -> Unit,
     viewModel: MediaViewModel = hiltViewModel(),
@@ -62,6 +76,7 @@ fun MediaScreen(
         searchState = searchState,
         searchExpanded = searchExpanded,
         onSearchExpand = onSearchExpand,
+        onSettingsClick = onSettingsClick,
         onAction = { action ->
             when (action) {
                 is MediaAction.OnItemClick -> onItemClick(action.item)
@@ -86,13 +101,16 @@ private fun MediaScreenLayout(
     searchState: SearchState,
     searchExpanded: Boolean,
     onSearchExpand: (Boolean) -> Unit,
+    onSettingsClick: () -> Unit = {},
     onAction: (MediaAction) -> Unit,
     onSearchAction: (SearchAction) -> Unit,
 ) {
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
+    val settingsButtonSize = 56.dp
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
     val paddingEnd = safePadding.end + MaterialTheme.spacings.default
+    val searchBarPaddingEnd = paddingEnd + settingsButtonSize + MaterialTheme.spacings.small
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
 
     val contentPaddingTop by
@@ -127,7 +145,7 @@ private fun MediaScreenLayout(
             onAction = onSearchAction,
             modifier = Modifier.fillMaxWidth(),
             paddingStart = paddingStart,
-            paddingEnd = paddingEnd,
+            paddingEnd = searchBarPaddingEnd,
         )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = minColumnSize),
@@ -171,6 +189,30 @@ private fun MediaScreenLayout(
                     exception = state.error!!,
                     onDismissRequest = { showErrorDialog = false },
                 )
+            }
+        }
+        // Declared last so it sits above the LazyVerticalGrid in hit-testing order - the grid's
+        // scrollable modifier otherwise swallows taps aimed at siblings placed earlier in this Box.
+        AnimatedVisibility(
+            visible = !searchExpanded,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = safePadding.top, end = paddingEnd),
+        ) {
+            Surface(
+                onClick = onSettingsClick,
+                modifier = Modifier.height(settingsButtonSize).aspectRatio(1f),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxHeight()) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_settings),
+                        contentDescription = stringResource(CoreR.string.title_settings),
+                    )
+                }
             }
         }
     }

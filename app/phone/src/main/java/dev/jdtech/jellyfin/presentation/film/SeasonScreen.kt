@@ -189,6 +189,8 @@ private fun SeasonScreenLayout(
                         enableDownloadDialog = true,
                         getSeasons = getSeasons,
                         defaultSeasonId = season.id,
+                        hasActiveDownloadOrRule = state.hasDownloads || state.autoDownloadEnabled,
+                        onDeleteDownloads = { clearSeasonDownloadsDialogOpen = true },
                         downloadIconTint =
                             if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
                         onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
