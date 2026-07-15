@@ -368,6 +368,10 @@ class DownloaderImpl(
                 WorkInfo.State.ENQUEUED,
                 WorkInfo.State.BLOCKED -> DownloadProgress(status = DownloadManager.STATUS_PENDING)
                 WorkInfo.State.RUNNING -> {
+                    if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_QUEUED, false)) {
+                        return@map DownloadProgress(status = DownloadManager.STATUS_PENDING)
+                    }
+
                     val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
                     val downloadedBytes =
                         workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)

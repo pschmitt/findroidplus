@@ -72,8 +72,15 @@ constructor(
                 )
 
                 val maxParallel = appPreferences.getValue(appPreferences.maxParallelDownloads)
+                // Mark this worker as queued in WorkManager's own progress Data too - it's already
+                // RUNNING in WorkManager's eyes once setForeground() is called, even though we're
+                // still blocked here waiting for a parallel-download slot, so the Downloads screen
+                // (which reads workInfo.progress, unlike the notification coordinator) would
+                // otherwise show "Downloading..." for an item that hasn't started transferring yet.
+                setProgress(workDataOf(KEY_QUEUED to true))
                 DownloadSlotLimiter.acquire(maxParallel)
                 try {
+                    setProgress(workDataOf())
                     reportProgress(sourceId, downloadId, itemName, 0, 0L, 0L, 0L)
                     downloadToFile(sourceUrl, destinationPath, expectedSize, sourceId, downloadId, itemName)
                 } finally {
@@ -292,6 +299,7 @@ constructor(
         const val KEY_ITEM_NAME = "KEY_ITEM_NAME"
         const val KEY_DOWNLOADED = "KEY_DOWNLOADED"
         const val KEY_TOTAL = "KEY_TOTAL"
+        const val KEY_QUEUED = "KEY_QUEUED"
 
         private const val CHANNEL_ID = "downloads"
         private const val BUFFER_SIZE = 64 * 1024
