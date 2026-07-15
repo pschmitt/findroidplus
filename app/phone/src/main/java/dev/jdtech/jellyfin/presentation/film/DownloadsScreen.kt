@@ -3,7 +3,14 @@ package dev.jdtech.jellyfin.presentation.film
 import android.app.DownloadManager
 import android.text.format.Formatter
 import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +20,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -38,16 +46,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +71,7 @@ import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsState
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
@@ -69,11 +81,12 @@ import dev.jdtech.jellyfin.utils.DownloadProgress
 import dev.jdtech.jellyfin.utils.formatDownloadSpeed
 import dev.jdtech.jellyfin.utils.formatEta
 import java.util.UUID
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun DownloadsScreen(
     onItemClick: (item: FindroidItem) -> Unit,
-    onAutoDownloadRulesClick: () -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
@@ -84,20 +97,22 @@ fun DownloadsScreen(
 
     var clearAllDialogOpen by remember { mutableStateOf(false) }
     var deleteSelectedDialogOpen by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Pair<UUID, String>?>(null) }
 
     DownloadsScreenLayout(
         state = state,
-        onAutoDownloadRulesClick = onAutoDownloadRulesClick,
         onSettingsClick = onSettingsClick,
         onTrashClick = {
             if (state.selectedIds.isNotEmpty()) deleteSelectedDialogOpen = true
             else clearAllDialogOpen = true
         },
+        onClearSelection = { viewModel.toggleSelectAll(false) },
         onItemClick = onItemClick,
         onToggleSelection = viewModel::toggleSelection,
         onToggleSelectAll = viewModel::toggleSelectAll,
         onToggleGroupSelection = viewModel::setGroupSelected,
         onDownloadAction = viewModel::onDownloadAction,
+        onSwipeDeleteRequest = { id, title -> pendingDelete = id to title },
     )
 
     if (clearAllDialogOpen) {
@@ -128,20 +143,32 @@ fun DownloadsScreen(
             onDismiss = { deleteSelectedDialogOpen = false },
         )
     }
+
+    pendingDelete?.let { (id, title) ->
+        DeleteSingleDownloadDialog(
+            title = title,
+            onConfirm = {
+                viewModel.deleteItem(id)
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DownloadsScreenLayout(
     state: DownloadsState,
-    onAutoDownloadRulesClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
+    onClearSelection: () -> Unit = {},
     onItemClick: (FindroidItem) -> Unit = {},
     onToggleSelection: (UUID) -> Unit = {},
     onToggleSelectAll: (Boolean) -> Unit = {},
     onToggleGroupSelection: (Set<UUID>, Boolean) -> Unit = { _, _ -> },
     onDownloadAction: (UUID, DownloadAction) -> Unit = { _, _ -> },
+    onSwipeDeleteRequest: (UUID, String) -> Unit = { _, _ -> },
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val allIds =
@@ -150,6 +177,7 @@ private fun DownloadsScreenLayout(
                 .toSet()
         }
     val allSelected = allIds.isNotEmpty() && state.selectedIds.containsAll(allIds)
+    val selectionMode = state.selectedIds.isNotEmpty()
 
     Scaffold(
         modifier =
@@ -159,29 +187,35 @@ private fun DownloadsScreenLayout(
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(CoreR.string.title_download)) },
+                navigationIcon = {
+                    if (selectionMode) {
+                        IconButton(onClick = onClearSelection) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_x),
+                                contentDescription = stringResource(CoreR.string.cancel),
+                            )
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = onAutoDownloadRulesClick) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_refresh_cw),
-                            contentDescription = stringResource(CoreR.string.auto_download_rules),
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_settings),
-                            contentDescription = stringResource(CoreR.string.title_settings),
-                        )
-                    }
                     if (!state.isEmpty) {
                         IconButton(onClick = onTrashClick) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
                                 contentDescription =
-                                    if (state.selectedIds.isNotEmpty()) {
+                                    if (selectionMode) {
                                         stringResource(CoreR.string.delete_selected_downloads)
                                     } else {
                                         stringResource(CoreR.string.clear_all_downloads)
                                     },
+                            )
+                        }
+                    }
+                    if (!selectionMode) {
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_settings),
+                                contentDescription = stringResource(CoreR.string.title_settings),
                             )
                         }
                     }
@@ -201,7 +235,7 @@ private fun DownloadsScreenLayout(
                 )
             }
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                if (allIds.isNotEmpty()) {
+                if (selectionMode) {
                     item {
                         Row(
                             modifier =
@@ -226,10 +260,13 @@ private fun DownloadsScreenLayout(
                             item = movie,
                             title = movie.name,
                             checked = movie.id in state.selectedIds,
+                            selectionMode = selectionMode,
                             progress = state.downloadProgress[movie.id],
                             onClick = { onItemClick(movie) },
+                            onLongClick = { onToggleSelection(movie.id) },
                             onToggleSelection = { onToggleSelection(movie.id) },
                             onDownloadAction = { onDownloadAction(movie.id, it) },
+                            onSwipeDeleteRequest = { onSwipeDeleteRequest(movie.id, movie.name) },
                         )
                     }
                 }
@@ -240,24 +277,32 @@ private fun DownloadsScreenLayout(
                         ShowGroupHeader(
                             group = group,
                             checked = groupSelected,
+                            selectionMode = selectionMode,
                             onToggle = { onToggleGroupSelection(groupIds, !groupSelected) },
+                            onLongClick = { onToggleGroupSelection(groupIds, !groupSelected) },
                         )
                     }
                     items(items = group.episodes, key = { it.id }) { episode ->
+                        val episodeTitle =
+                            stringResource(
+                                CoreR.string.episode_name_extended,
+                                episode.parentIndexNumber,
+                                episode.indexNumber,
+                                episode.name,
+                            )
                         DownloadRow(
                             item = episode,
-                            title =
-                                stringResource(
-                                    CoreR.string.episode_name_extended,
-                                    episode.parentIndexNumber,
-                                    episode.indexNumber,
-                                    episode.name,
-                                ),
+                            title = episodeTitle,
                             checked = episode.id in state.selectedIds,
+                            selectionMode = selectionMode,
                             progress = state.downloadProgress[episode.id],
                             onClick = { onItemClick(episode) },
+                            onLongClick = { onToggleSelection(episode.id) },
                             onToggleSelection = { onToggleSelection(episode.id) },
                             onDownloadAction = { onDownloadAction(episode.id, it) },
+                            onSwipeDeleteRequest = {
+                                onSwipeDeleteRequest(episode.id, episodeTitle)
+                            },
                         )
                     }
                 }
@@ -282,15 +327,25 @@ private fun SectionHeader(text: String) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ShowGroupHeader(group: DownloadShowGroup, checked: Boolean, onToggle: () -> Unit) {
+private fun ShowGroupHeader(
+    group: DownloadShowGroup,
+    checked: Boolean,
+    selectionMode: Boolean,
+    onToggle: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     Card {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .clickable(onClick = onToggle)
+                    .combinedClickable(
+                        onClick = { if (selectionMode) onToggle() },
+                        onLongClick = onLongClick,
+                    )
                     .padding(
-                        horizontal = MaterialTheme.spacings.medium,
+                        horizontal = MaterialTheme.spacings.default,
                         vertical = MaterialTheme.spacings.small,
                     ),
             verticalAlignment = Alignment.CenterVertically,
@@ -307,112 +362,187 @@ private fun ShowGroupHeader(group: DownloadShowGroup, checked: Boolean, onToggle
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Checkbox(checked = checked, onCheckedChange = { onToggle() })
+            if (selectionMode) {
+                Checkbox(checked = checked, onCheckedChange = { onToggle() })
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun DownloadRow(
     item: FindroidItem,
     title: String,
     checked: Boolean,
+    selectionMode: Boolean,
     progress: DownloadProgress?,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onToggleSelection: () -> Unit,
     onDownloadAction: (DownloadAction) -> Unit,
+    onSwipeDeleteRequest: () -> Unit,
 ) {
     val context = LocalContext.current
     val activeProgress = progress?.takeIf { it.status != DownloadManager.STATUS_SUCCESSFUL }
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
     val isPaused = activeProgress?.status == DownloadManager.STATUS_PAUSED
     val sizeBytes = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.size ?: 0L
+    val swipeEnabled = activeProgress == null && !selectionMode
 
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(
-                    horizontal = MaterialTheme.spacings.default,
-                    vertical = MaterialTheme.spacings.small,
-                ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
-            ItemPoster(item = item, direction = Direction.HORIZONTAL)
-        }
-        Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            if (activeProgress != null) {
-                Text(
-                    text =
-                        when {
-                            isPending -> stringResource(CoreR.string.download_queued)
-                            isPaused -> stringResource(CoreR.string.download_paused)
-                            activeProgress.percent >= 0 ->
-                                stringResource(
-                                    CoreR.string.download_progress_status,
-                                    activeProgress.percent,
-                                    formatDownloadSpeed(context, activeProgress.speedBytesPerSecond),
-                                    formatEta(activeProgress.etaSeconds),
-                                )
-                            else -> stringResource(CoreR.string.download_downloading)
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (!isPending) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
-                        modifier = Modifier.fillMaxWidth().height(3.dp),
+    val content: @Composable () -> Unit = {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { if (selectionMode) onToggleSelection() else onClick() },
+                        onLongClick = onLongClick,
                     )
-                }
-            } else {
-                Text(
-                    text = Formatter.formatFileSize(context, sizeBytes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    .padding(
+                        horizontal = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.small,
+                    ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
+                ItemPoster(item = item, direction = Direction.HORIZONTAL)
             }
-        }
-        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-        if (activeProgress != null) {
-            if (!isPending) {
-                IconButton(
-                    onClick = {
-                        onDownloadAction(if (isPaused) DownloadAction.Resume else DownloadAction.Pause)
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                if (activeProgress != null) {
+                    Text(
+                        text =
+                            when {
+                                isPending -> stringResource(CoreR.string.download_queued)
+                                isPaused -> stringResource(CoreR.string.download_paused)
+                                activeProgress.percent >= 0 ->
+                                    stringResource(
+                                        CoreR.string.download_progress_status,
+                                        activeProgress.percent,
+                                        formatDownloadSpeed(
+                                            context,
+                                            activeProgress.speedBytesPerSecond,
+                                        ),
+                                        formatEta(activeProgress.etaSeconds),
+                                    )
+                                else -> stringResource(CoreR.string.download_downloading)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!isPending) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
+                            modifier = Modifier.fillMaxWidth().height(3.dp),
+                        )
                     }
-                ) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                if (isPaused) CoreR.drawable.ic_play else CoreR.drawable.ic_pause
-                            ),
-                        contentDescription =
-                            stringResource(
-                                if (isPaused) CoreR.string.download_action_resume
-                                else CoreR.string.download_action_pause
-                            ),
+                } else {
+                    Text(
+                        text = Formatter.formatFileSize(context, sizeBytes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            when {
+                activeProgress != null -> {
+                    if (!isPending) {
+                        IconButton(
+                            onClick = {
+                                onDownloadAction(
+                                    if (isPaused) DownloadAction.Resume else DownloadAction.Pause
+                                )
+                            }
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (isPaused) CoreR.drawable.ic_play
+                                        else CoreR.drawable.ic_pause
+                                    ),
+                                contentDescription =
+                                    stringResource(
+                                        if (isPaused) CoreR.string.download_action_resume
+                                        else CoreR.string.download_action_pause
+                                    ),
+                            )
+                        }
+                    }
+                    IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_x),
+                            contentDescription = stringResource(CoreR.string.download_action_cancel),
+                        )
+                    }
+                }
+                selectionMode -> {
+                    Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
+                }
+                item.isDownloaded() -> {
+                    IconButton(onClick = onClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_play),
+                            contentDescription = stringResource(CoreR.string.download_action_play),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (swipeEnabled) {
+        val density = LocalDensity.current
+        val scope = rememberCoroutineScope()
+        val offsetX = remember { Animatable(0f) }
+        val maxSwipePx = with(density) { 96.dp.toPx() }
+        val thresholdPx = maxSwipePx / 2f
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier =
+                    Modifier.matchParentSize().padding(horizontal = MaterialTheme.spacings.default),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
                 Icon(
-                    painter = painterResource(CoreR.drawable.ic_x),
-                    contentDescription = stringResource(CoreR.string.download_action_cancel),
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = stringResource(CoreR.string.delete_download),
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
-        } else {
-            Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
+            Box(
+                modifier =
+                    Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                        .background(MaterialTheme.colorScheme.background)
+                        .draggable(
+                            orientation = Orientation.Horizontal,
+                            state =
+                                rememberDraggableState { delta ->
+                                    scope.launch {
+                                        offsetX.snapTo((offsetX.value + delta).coerceIn(-maxSwipePx, 0f))
+                                    }
+                                },
+                            onDragStopped = {
+                                if (offsetX.value < -thresholdPx) {
+                                    onSwipeDeleteRequest()
+                                }
+                                scope.launch { offsetX.animateTo(0f) }
+                            },
+                        )
+            ) {
+                content()
+            }
         }
+    } else {
+        content()
     }
 }
 
@@ -421,6 +551,21 @@ private fun DeleteSelectedDownloadsDialog(count: Int, onConfirm: () -> Unit, onD
     AlertDialog(
         title = { Text(text = stringResource(CoreR.string.delete_selected_downloads)) },
         text = { Text(text = stringResource(CoreR.string.delete_selected_downloads_message, count)) },
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(text = stringResource(CoreR.string.delete_download)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun DeleteSingleDownloadDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        title = { Text(text = stringResource(CoreR.string.delete_download)) },
+        text = { Text(text = title) },
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(text = stringResource(CoreR.string.delete_download)) }

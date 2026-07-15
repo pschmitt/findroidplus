@@ -343,9 +343,6 @@ fun NavigationRoot(
                     onItemClick = { item ->
                         navigateToItem(navController = navController, item = item)
                     },
-                    onAutoDownloadRulesClick = {
-                        navController.safeNavigate(AutoDownloadRulesRoute)
-                    },
                     onSettingsClick = {
                         navController.safeNavigate(
                             SettingsRoute(

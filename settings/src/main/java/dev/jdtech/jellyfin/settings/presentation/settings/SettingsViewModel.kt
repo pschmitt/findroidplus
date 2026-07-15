@@ -828,9 +828,10 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
 
             // Show preferences based on the name of the parent
             for (index in indexes) {
-                // If index is root (Settings) don't search for category
+                // If index is root (Settings) don't search for category - just skip straight to
+                // the next index instead of stopping the whole drill-down here.
                 if (index == R.string.title_settings) {
-                    break
+                    continue
                 }
                 val preference =
                     preferences

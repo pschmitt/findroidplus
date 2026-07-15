@@ -169,6 +169,18 @@ constructor(
         }
     }
 
+    fun deleteItem(id: UUID) {
+        viewModelScope.launch {
+            val item: FindroidItem =
+                _state.value.movies.find { it.id == id }
+                    ?: _state.value.showGroups.flatMap { it.episodes }.find { it.id == id }
+                    ?: return@launch
+            clearDownloads(listOf(item), database, downloader)
+            _state.value = _state.value.copy(selectedIds = _state.value.selectedIds - id)
+            refresh()
+        }
+    }
+
     fun onDownloadAction(itemId: UUID, action: DownloadAction) {
         viewModelScope.launch {
             val downloadId = downloadIdsByItem[itemId] ?: return@launch

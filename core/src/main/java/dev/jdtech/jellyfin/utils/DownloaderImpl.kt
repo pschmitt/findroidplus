@@ -331,12 +331,16 @@ class DownloaderImpl(
                 downloadStatus = DownloadManager.STATUS_PENDING
             }
             WorkInfo.State.RUNNING -> {
-                downloadStatus = DownloadManager.STATUS_RUNNING
-                val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
-                val downloadedBytes =
-                    workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
-                if (totalBytes > 0 && downloadedBytes >= 0) {
-                    progress = downloadedBytes.times(100).div(totalBytes).toInt()
+                if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_QUEUED, false)) {
+                    downloadStatus = DownloadManager.STATUS_PENDING
+                } else {
+                    downloadStatus = DownloadManager.STATUS_RUNNING
+                    val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
+                    val downloadedBytes =
+                        workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
+                    if (totalBytes > 0 && downloadedBytes >= 0) {
+                        progress = downloadedBytes.times(100).div(totalBytes).toInt()
+                    }
                 }
             }
             WorkInfo.State.SUCCEEDED -> {
