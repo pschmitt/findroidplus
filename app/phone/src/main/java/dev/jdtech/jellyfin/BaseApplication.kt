@@ -25,6 +25,7 @@ import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.work.AutoBackupScheduler
 import dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker
 import dev.jdtech.jellyfin.work.AutoDownloadWorker
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
@@ -72,6 +73,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         scheduleMpvCleanup(workManager)
         scheduleAutoDownload(workManager)
         scheduleAutoDeleteWatched(workManager)
+        AutoBackupScheduler.schedule(applicationContext, appPreferences)
     }
 
     @OptIn(ExperimentalCoilApi::class, ExperimentalTime::class)

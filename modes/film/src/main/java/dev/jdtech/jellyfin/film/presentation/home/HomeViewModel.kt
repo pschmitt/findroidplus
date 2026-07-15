@@ -3,14 +3,19 @@ package dev.jdtech.jellyfin.film.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.jdtech.jellyfin.backup.BackupDownloadedItemKind
+import dev.jdtech.jellyfin.backup.decodePendingRestoreDownloads
+import dev.jdtech.jellyfin.backup.encodePendingRestoreDownloads
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.R as FilmR
 import dev.jdtech.jellyfin.models.CollectionType
+import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.models.HomeSection
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.utils.Downloader
 import dev.jdtech.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
@@ -27,6 +32,7 @@ constructor(
     val repository: JellyfinRepository,
     val appPreferences: AppPreferences,
     val database: ServerDatabaseDao,
+    val downloader: Downloader,
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state = _state.asStateFlow()
@@ -47,6 +53,7 @@ constructor(
             try {
                 appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
                     loadServerName(serverId)
+                    processPendingRestoreDownloads(serverId)
                 }
 
                 loadSuggestions()
@@ -65,6 +72,44 @@ constructor(
         if (server != null) {
             _state.emit(_state.value.copy(server = server))
         }
+    }
+
+    // Restoring downloads requires an active, authenticated session against the right server,
+    // which may not exist right after restore - so re-queuing is deferred to the next Home load
+    // for the server the restored items actually belong to, rather than done immediately in
+    // RestoreBackupScreen. Items belonging to other (not-yet-selected) servers are left pending.
+    private suspend fun processPendingRestoreDownloads(serverId: String) {
+        val json = appPreferences.getValue(appPreferences.pendingRestoreDownloads) ?: return
+        val items =
+            try {
+                decodePendingRestoreDownloads(json)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to parse pending restore downloads")
+                emptyList()
+            }
+
+        val (matching, remaining) = items.partition { it.serverId == serverId }
+
+        for (item in matching) {
+            try {
+                val itemId = UUID.fromString(item.itemId)
+                val findroidItem: FindroidItem? =
+                    when (item.itemKind) {
+                        BackupDownloadedItemKind.MOVIE -> repository.getMovie(itemId)
+                        BackupDownloadedItemKind.EPISODE -> repository.getEpisode(itemId)
+                        else -> null
+                    }
+                val sourceId = findroidItem?.sources?.firstOrNull()?.id ?: continue
+                downloader.downloadItem(findroidItem, sourceId)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to queue restored download for item ${item.itemId}")
+            }
+        }
+
+        appPreferences.setValue(
+            appPreferences.pendingRestoreDownloads,
+            if (remaining.isEmpty()) null else encodePendingRestoreDownloads(remaining),
+        )
     }
 
     private suspend fun loadSuggestions() {

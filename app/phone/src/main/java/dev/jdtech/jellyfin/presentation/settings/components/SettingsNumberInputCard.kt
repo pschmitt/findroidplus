@@ -40,22 +40,40 @@ fun SettingsIntInputCard(
 
     val suffix = preference.suffixRes?.let { stringResource(it) }
 
+    val text =
+        if (preference.presetsMinutes != null) {
+            formatIntervalMinutes(preference.value)
+        } else {
+            listOf(prefix, preference.value, suffix).fastFilterNotNull().joinToString(" ")
+        }
+
     SettingsNumberInputCard(
         preference = preference,
-        text = listOf(prefix, preference.value, suffix).fastFilterNotNull().joinToString(" "),
+        text = text,
         onClick = { showDialog = true },
         modifier = modifier,
     )
 
     if (showDialog) {
-        SettingsIntInputDialog(
-            preference = preference,
-            onUpdate = { value ->
-                showDialog = false
-                onUpdate(value)
-            },
-            onDismissRequest = { showDialog = false },
-        )
+        if (preference.presetsMinutes != null) {
+            SettingsIntervalInputDialog(
+                preference = preference,
+                onUpdate = { value ->
+                    showDialog = false
+                    onUpdate(value)
+                },
+                onDismissRequest = { showDialog = false },
+            )
+        } else {
+            SettingsIntInputDialog(
+                preference = preference,
+                onUpdate = { value ->
+                    showDialog = false
+                    onUpdate(value)
+                },
+                onDismissRequest = { showDialog = false },
+            )
+        }
     }
 }
 

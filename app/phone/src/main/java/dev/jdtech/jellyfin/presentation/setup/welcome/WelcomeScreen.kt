@@ -30,13 +30,14 @@ import dev.jdtech.jellyfin.setup.R as SetupR
 import dev.jdtech.jellyfin.setup.presentation.welcome.WelcomeAction
 
 @Composable
-fun WelcomeScreen(onContinueClick: () -> Unit) {
+fun WelcomeScreen(onContinueClick: () -> Unit, onRestoreClick: () -> Unit) {
     val uriHandler = LocalUriHandler.current
 
     WelcomeScreenLayout(
         onAction = { action ->
             when (action) {
                 is WelcomeAction.OnContinueClick -> onContinueClick()
+                is WelcomeAction.OnRestoreClick -> onRestoreClick()
                 is WelcomeAction.OnLearnMoreClick -> {
                     uriHandler.openUri("https://jellyfin.org/")
                 }
@@ -82,6 +83,13 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(text = stringResource(SetupR.string.welcome_btn_continue))
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { onAction(WelcomeAction.OnRestoreClick) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = stringResource(SetupR.string.welcome_btn_restore))
                 }
             }
         }

@@ -13,5 +13,7 @@ sealed interface ServersAction {
 
     data object OnAddClick : ServersAction
 
+    data object OnRestoreClick : ServersAction
+
     data object OnBackClick : ServersAction
 }

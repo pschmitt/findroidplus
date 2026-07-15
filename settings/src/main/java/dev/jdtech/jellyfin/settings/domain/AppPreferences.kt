@@ -85,8 +85,15 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val autoDeleteWatched = Preference("pref_downloads_auto_delete_watched", false)
     val autoDeleteWatchedHours = Preference("pref_downloads_auto_delete_watched_hours", 24)
     val autoDownloadCheckIntervalMinutes =
-        Preference("pref_downloads_auto_check_interval_minutes", 240)
+        Preference("pref_downloads_auto_check_interval_minutes", 2 * 60)
     val maxParallelDownloads = Preference("pref_downloads_max_parallel", 2)
+
+    // Backup
+    val autoBackupEnabled = Preference("pref_backup_auto_enabled", false)
+    val autoBackupIntervalMinutes = Preference("pref_backup_auto_interval_minutes", 24 * 60)
+    val autoBackupFolderUri = Preference<String?>("pref_backup_auto_folder_uri", null)
+    val lastBackupTimestamp = Preference("pref_backup_last_timestamp", 0L)
+    val pendingRestoreDownloads = Preference<String?>("pref_backup_pending_restore_downloads", null)
 
     // Network
     val requestTimeout =

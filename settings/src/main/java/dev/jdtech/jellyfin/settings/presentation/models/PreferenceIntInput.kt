@@ -17,4 +17,7 @@ data class PreferenceIntInput(
     @param:StringRes val prefixRes: Int? = null,
     @param:StringRes val suffixRes: Int? = null,
     val value: Int = -1,
+    // When set, renders as a presets-plus-custom interval picker instead of a bare number field.
+    val presetsMinutes: List<Int>? = null,
+    val validRange: IntRange = 1..Int.MAX_VALUE,
 ) : Preference

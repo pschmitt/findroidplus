@@ -64,6 +64,12 @@ interface ServerDatabaseDao {
     @Query("SELECT * FROM servers")
     fun getServersWithAddresses(): List<ServerWithAddresses>
 
+    @Transaction
+    @Query("SELECT * FROM servers")
+    fun getAllServersWithAddressesAndUsers(): List<ServerWithAddressesAndUsers>
+
+    @Query("SELECT * FROM autoDownloadRules") fun getAllAutoDownloadRules(): List<AutoDownloadRuleDto>
+
     @Query("DELETE FROM servers") fun clear()
 
     @Query("SELECT * FROM servers") fun getAllServersSync(): List<Server>

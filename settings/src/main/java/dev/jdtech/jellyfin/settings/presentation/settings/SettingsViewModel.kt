@@ -615,6 +615,21 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                 preferences =
                     listOf(
                         PreferenceCategory(
+                            nameStringResource = R.string.settings_category_backup,
+                            iconDrawableId = R.drawable.ic_save,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToBackupSettings)
+                                }
+                            },
+                        )
+                    )
+            ),
+            PreferenceGroup(
+                preferences =
+                    listOf(
+                        PreferenceCategory(
                             nameStringResource = R.string.title_download,
                             iconDrawableId = R.drawable.ic_download,
                             supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -700,6 +715,9 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                                                     backendPreference =
                                                         appPreferences.autoDownloadCheckIntervalMinutes,
                                                     suffixRes = R.string.minutes_suffix,
+                                                    presetsMinutes =
+                                                        listOf(15, 30, 60, 120, 240, 720, 1440),
+                                                    validRange = 15..(24 * 60),
                                                 ),
                                                 PreferenceCategory(
                                                     nameStringResource =

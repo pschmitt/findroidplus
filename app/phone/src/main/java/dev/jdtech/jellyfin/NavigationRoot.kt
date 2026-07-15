@@ -55,9 +55,11 @@ import dev.jdtech.jellyfin.presentation.film.ShowScreen
 import dev.jdtech.jellyfin.presentation.settings.AboutScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
+import dev.jdtech.jellyfin.presentation.settings.backup.BackupSettingsScreen
 import dev.jdtech.jellyfin.presentation.setup.addresses.ServerAddressesScreen
 import dev.jdtech.jellyfin.presentation.setup.addserver.AddServerScreen
 import dev.jdtech.jellyfin.presentation.setup.login.LoginScreen
+import dev.jdtech.jellyfin.presentation.setup.restore.RestoreBackupScreen
 import dev.jdtech.jellyfin.presentation.setup.servers.ServersScreen
 import dev.jdtech.jellyfin.presentation.setup.users.UsersScreen
 import dev.jdtech.jellyfin.presentation.setup.welcome.WelcomeScreen
@@ -115,6 +117,10 @@ data class LibraryRoute(
 )
 
 @Serializable data object AboutRoute
+
+@Serializable data object BackupSettingsRoute
+
+@Serializable data object RestoreBackupRoute
 
 data class TabBarItem(
     @param:StringRes val title: Int = 0,
@@ -182,9 +188,6 @@ fun NavigationRoot(
         )
 
     val mediaState by mediaViewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(isOfflineMode) {
-        if (!isOfflineMode) mediaViewModel.loadData()
-    }
 
     val navigationItems =
         when (isOfflineMode) {
@@ -280,7 +283,10 @@ fun NavigationRoot(
             exitTransition = { fadeOut(tween(300)) },
         ) {
             composable<WelcomeRoute> {
-                WelcomeScreen(onContinueClick = { navController.safeNavigate(ServersRoute) })
+                WelcomeScreen(
+                    onContinueClick = { navController.safeNavigate(ServersRoute) },
+                    onRestoreClick = { navController.safeNavigate(RestoreBackupRoute) },
+                )
             }
             composable<ServersRoute> {
                 ServersScreen(
@@ -289,6 +295,7 @@ fun NavigationRoot(
                         navController.safeNavigate(ServerAddressesRoute(serverId))
                     },
                     onAddClick = { navController.safeNavigate(AddServerRoute) },
+                    onRestoreClick = { navController.safeNavigate(RestoreBackupRoute) },
                     onBackClick = { navController.safePopBackStack() },
                     showBack = navController.previousBackStackEntry != null,
                 )
@@ -343,6 +350,14 @@ fun NavigationRoot(
                 )
             }
             composable<HomeRoute> {
+                // Reloaded on every visit (rather than once at NavigationRoot's initial
+                // composition) since MainViewModel's hasCurrentUser snapshot - and thus whether a
+                // session existed yet - is only computed once at process cold-start. Without this,
+                // logging in or restoring a backup within the same process would leave the
+                // library/Movies/Shows nav tabs permanently empty.
+                LaunchedEffect(Unit) {
+                    if (!isOfflineMode) mediaViewModel.loadData()
+                }
                 HomeScreen(
                     onLibraryClick = {
                         navController.safeNavigate(
@@ -535,8 +550,17 @@ fun NavigationRoot(
                     navigateToAutoDownloadRules = {
                         navController.safeNavigate(AutoDownloadRulesRoute)
                     },
+                    navigateToBackupSettings = {
+                        navController.safeNavigate(BackupSettingsRoute)
+                    },
                     navigateBack = { navController.safePopBackStack() },
                 )
+            }
+            composable<BackupSettingsRoute> {
+                BackupSettingsScreen(navigateBack = { navController.safePopBackStack() })
+            }
+            composable<RestoreBackupRoute> {
+                RestoreBackupScreen(onBackClick = { navController.safePopBackStack() })
             }
             composable<SettingsFileEditRoute> { backStackEntry ->
                 val route: SettingsFileEditRoute = backStackEntry.toRoute()

@@ -56,6 +56,7 @@ fun ServersScreen(
     navigateToUsers: () -> Unit,
     navigateToAddresses: (serverId: String) -> Unit,
     onAddClick: () -> Unit,
+    onRestoreClick: () -> Unit,
     onBackClick: () -> Unit,
     showBack: Boolean = true,
     viewModel: ServersViewModel = hiltViewModel(),
@@ -77,6 +78,7 @@ fun ServersScreen(
         onAction = { action ->
             when (action) {
                 is ServersAction.OnAddClick -> onAddClick()
+                is ServersAction.OnRestoreClick -> onRestoreClick()
                 is ServersAction.OnBackClick -> onBackClick()
                 is ServersAction.NavigateToAddresses -> navigateToAddresses(action.serverId)
                 else -> Unit
@@ -124,6 +126,10 @@ private fun ServersScreenLayout(
                     text = stringResource(SetupR.string.servers_no_servers),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = { onAction(ServersAction.OnRestoreClick) }) {
+                    Text(text = stringResource(SetupR.string.welcome_btn_restore))
+                }
                 Spacer(modifier = Modifier.weight(1f))
             } else {
                 LazyColumn(

@@ -5,8 +5,11 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import dev.jdtech.jellyfin.backup.UUIDSerializer
 import java.util.UUID
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(
     tableName = "autoDownloadRules",
     foreignKeys =
@@ -34,11 +37,11 @@ import java.util.UUID
 data class AutoDownloadRuleDto(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val serverId: String,
-    val userId: UUID,
-    val seriesId: UUID,
+    @Serializable(with = UUIDSerializer::class) val userId: UUID,
+    @Serializable(with = UUIDSerializer::class) val seriesId: UUID,
     // null = show-level rule, applies to all current and future seasons.
     // non-null = season-level rule, applies only to that season.
-    val seasonId: UUID?,
+    @Serializable(with = UUIDSerializer::class) val seasonId: UUID?,
     val enabled: Boolean = true,
     val createdAt: Long,
     // false (default) = backfill all currently-missing episodes immediately, then follow new

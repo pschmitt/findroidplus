@@ -53,6 +53,47 @@ fun SettingsIntInputDialog(
 }
 
 @Composable
+fun SettingsIntervalInputDialog(
+    preference: PreferenceIntInput,
+    onUpdate: (value: Int) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    var value by remember { mutableStateOf(preference.value) }
+
+    BaseDialog(
+        title = stringResource(preference.nameStringResource),
+        onDismiss = onDismissRequest,
+        negativeButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = stringResource(SettingsR.string.cancel))
+            }
+        },
+        positiveButton = {
+            TextButton(onClick = { onUpdate(value) }) {
+                Text(text = stringResource(SettingsR.string.save))
+            }
+        },
+    ) { contentPadding ->
+        Column(modifier = Modifier.padding(contentPadding)) {
+            preference.descriptionStringRes?.let {
+                Text(
+                    text = stringResource(it),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
+            }
+            IntervalPickerContent(
+                value = value,
+                presetsMinutes = preference.presetsMinutes.orEmpty(),
+                validRange = preference.validRange,
+                onValueChange = { value = it },
+            )
+        }
+    }
+}
+
+@Composable
 fun SettingsLongInputDialog(
     preference: PreferenceLongInput,
     onUpdate: (value: Long) -> Unit,

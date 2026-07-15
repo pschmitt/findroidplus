@@ -31,6 +31,19 @@ fun Activity.restart() {
     startActivity(intent)
 }
 
+/**
+ * Unlike [restart], this kills the whole process rather than just recreating the Activity - only
+ * an Activity restart isn't enough after a backup restore, since @Singleton-scoped Hilt
+ * dependencies like JellyfinApi are constructed once from the current server/user at process
+ * startup and never rebuilt for the lifetime of the process.
+ */
+fun Activity.restartProcess() {
+    val intent = packageManager.getLaunchIntentForPackage(packageName)
+    intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    startActivity(intent)
+    Runtime.getRuntime().exit(0)
+}
+
 fun String.base64ToByteArray(): ByteArray {
     return Base64.decode(toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP)
 }
