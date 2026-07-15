@@ -35,6 +35,8 @@ import dev.jdtech.jellyfin.models.toFindroidTrickplayInfoDto
 import dev.jdtech.jellyfin.models.toFindroidUserDataDto
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.work.DownloadNotificationCoordinator
+import dev.jdtech.jellyfin.work.DownloadSlotLimiter
 import dev.jdtech.jellyfin.work.ImagesDownloaderWorker
 import dev.jdtech.jellyfin.work.VideoDownloadWorker
 import java.io.File
@@ -43,7 +45,6 @@ import kotlin.Exception
 import kotlin.math.ceil
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
@@ -197,6 +198,16 @@ class DownloaderImpl(
         workManager.cancelUniqueWork(sourceDto.id)
     }
 
+    override suspend fun forceDownload(downloadId: Long) {
+        val sourceDto = database.getSourceByDownloadId(downloadId) ?: return
+        val promoted = DownloadSlotLimiter.forcePromote(sourceDto.id)
+        if (promoted) {
+            DownloadNotificationCoordinator.runningDownloadIds()
+                .firstOrNull { it != downloadId }
+                ?.let { victimDownloadId -> pauseDownload(victimDownloadId) }
+        }
+    }
+
     override suspend fun resumeDownload(downloadId: Long): UiText? {
         val sourceDto =
             database.getSourceByDownloadId(downloadId)
@@ -312,47 +323,6 @@ class DownloaderImpl(
 
         File(context.filesDir, "trickplay/${item.id}").deleteRecursively()
         File(context.filesDir, "images/${item.id}").deleteRecursively()
-    }
-
-    override suspend fun getProgress(downloadId: Long?): Pair<Int, Int> {
-        var downloadStatus = -1
-        var progress = -1
-        if (downloadId == null) {
-            return Pair(downloadStatus, progress)
-        }
-        val source = database.getSourceByDownloadId(downloadId) ?: return Pair(downloadStatus, progress)
-        val workInfo =
-            workManager.getWorkInfosForUniqueWorkFlow(source.id).first().firstOrNull()
-                ?: return Pair(DownloadManager.STATUS_FAILED, progress)
-
-        when (workInfo.state) {
-            WorkInfo.State.ENQUEUED,
-            WorkInfo.State.BLOCKED -> {
-                downloadStatus = DownloadManager.STATUS_PENDING
-            }
-            WorkInfo.State.RUNNING -> {
-                if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_QUEUED, false)) {
-                    downloadStatus = DownloadManager.STATUS_PENDING
-                } else {
-                    downloadStatus = DownloadManager.STATUS_RUNNING
-                    val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
-                    val downloadedBytes =
-                        workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
-                    if (totalBytes > 0 && downloadedBytes >= 0) {
-                        progress = downloadedBytes.times(100).div(totalBytes).toInt()
-                    }
-                }
-            }
-            WorkInfo.State.SUCCEEDED -> {
-                downloadStatus = DownloadManager.STATUS_SUCCESSFUL
-                progress = 100
-            }
-            WorkInfo.State.FAILED,
-            WorkInfo.State.CANCELLED -> {
-                downloadStatus = DownloadManager.STATUS_FAILED
-            }
-        }
-        return Pair(downloadStatus, progress)
     }
 
     override fun getProgressFlow(downloadId: Long): Flow<DownloadProgress> {

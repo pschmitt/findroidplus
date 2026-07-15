@@ -1,8 +1,6 @@
 package dev.jdtech.jellyfin.core.presentation.downloader
 
 import android.app.DownloadManager
-import android.os.Handler
-import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,10 +10,11 @@ import dev.jdtech.jellyfin.models.isDownloading
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
 import javax.inject.Inject
-import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -35,7 +34,7 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
     val downloadLocationPreference: String
         get() = appPreferences.getValue(appPreferences.downloadLocation)
 
-    private val handler = Handler(Looper.getMainLooper())
+    private var progressJob: Job? = null
 
     fun update(item: FindroidItem) {
         viewModelScope.launch {
@@ -43,8 +42,9 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
                 val source =
                     item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
                         ?: return@launch
-                this@DownloaderViewModel.downloadId = source.downloadId
-                pollDownloadProgress(source.downloadId)
+                val downloadId = source.downloadId ?: return@launch
+                this@DownloaderViewModel.downloadId = downloadId
+                observeDownloadProgress(downloadId)
             }
         }
     }
@@ -60,7 +60,7 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
                 )
             if (downloadId != -1L) {
                 this@DownloaderViewModel.downloadId = downloadId
-                pollDownloadProgress(downloadId)
+                observeDownloadProgress(downloadId)
             } else {
                 _state.emit(
                     DownloaderState(status = DownloadManager.STATUS_FAILED, errorText = uiText)
@@ -71,8 +71,8 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
 
     private fun cancelDownload() {
         viewModelScope.launch {
-            // Stop progress polling
-            handler.removeCallbacksAndMessages(null)
+            // Stop progress observation
+            progressJob?.cancel()
 
             // Cancel the download
             downloadId?.let { downloader.cancelDownload(downloadId = it) }
@@ -92,31 +92,24 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
         }
     }
 
-    private fun pollDownloadProgress(downloadId: Long?) {
-        handler.removeCallbacksAndMessages(null)
-        val downloadProgressRunnable =
-            object : Runnable {
-                override fun run() {
-                    viewModelScope.launch {
-                        val (status, progress) = downloader.getProgress(downloadId)
-                        _state.emit(
-                            DownloaderState(
-                                status = status,
-                                progress = progress.coerceAtLeast(0) / 100f,
-                            )
+    private fun observeDownloadProgress(downloadId: Long) {
+        progressJob?.cancel()
+        progressJob =
+            viewModelScope.launch {
+                downloader.getProgressFlow(downloadId).collectLatest { progress ->
+                    _state.emit(
+                        DownloaderState(
+                            status = progress.status,
+                            progress = progress.percent.coerceAtLeast(0) / 100f,
+                            speedBytesPerSecond = progress.speedBytesPerSecond,
+                            etaSeconds = progress.etaSeconds,
                         )
-                    }
-
-                    if (_state.value.status == DownloadManager.STATUS_SUCCESSFUL) {
-                        eventsChannel.trySend(DownloaderEvent.Successful)
-                    }
-
-                    if (_state.value.isDownloading) {
-                        handler.postDelayed(this, 1000L)
+                    )
+                    if (progress.status == DownloadManager.STATUS_SUCCESSFUL) {
+                        eventsChannel.send(DownloaderEvent.Successful)
                     }
                 }
             }
-        handler.post(downloadProgressRunnable)
     }
 
     fun onAction(action: DownloaderAction) {
@@ -124,11 +117,11 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
             is DownloaderAction.Download -> download(action.item, action.storageIndex)
             is DownloaderAction.DeleteDownload -> deleteDownload(action.item)
             is DownloaderAction.CancelDownload -> cancelDownload()
+            is DownloaderAction.ForceDownload -> forceDownload()
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        handler.removeCallbacksAndMessages(null)
+    private fun forceDownload() {
+        viewModelScope.launch { downloadId?.let { downloader.forceDownload(it) } }
     }
 }

@@ -24,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -49,7 +52,10 @@ import dev.jdtech.jellyfin.film.presentation.episode.EpisodeAction
 import dev.jdtech.jellyfin.film.presentation.episode.EpisodeState
 import dev.jdtech.jellyfin.film.presentation.episode.EpisodeViewModel
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
+import dev.jdtech.jellyfin.presentation.film.components.DeleteDownloadDialog
 import dev.jdtech.jellyfin.presentation.film.components.ExtraInfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
@@ -222,9 +228,40 @@ private fun EpisodeScreenLayout(
                         }
                     }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    val deleteDownload: () -> Unit = {
+                        onDownloaderAction(DownloaderAction.DeleteDownload(episode))
+                        Toast.makeText(
+                                androidContext,
+                                CoreR.string.download_deleted_toast,
+                                Toast.LENGTH_SHORT,
+                            )
+                            .show()
+                    }
+                    var deleteDownloadDialogOpen by remember { mutableStateOf(false) }
                     state.videoMetadata?.let { videoMetadata ->
-                        VideoMetadataBar(videoMetadata)
+                        val downloadedSizeBytes =
+                            if (episode.isDownloaded()) {
+                                episode.sources
+                                    .firstOrNull { it.type == FindroidSourceType.LOCAL }
+                                    ?.size
+                            } else {
+                                null
+                            }
+                        VideoMetadataBar(
+                            videoMetadata,
+                            downloadedSizeBytes = downloadedSizeBytes,
+                            onDownloadedSizeClick = { deleteDownloadDialogOpen = true },
+                        )
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    }
+                    if (deleteDownloadDialogOpen) {
+                        DeleteDownloadDialog(
+                            onDelete = {
+                                deleteDownload()
+                                deleteDownloadDialogOpen = false
+                            },
+                            onDismiss = { deleteDownloadDialogOpen = false },
+                        )
                     }
                     ItemButtonsBar(
                         item = episode,
@@ -252,15 +289,10 @@ private fun EpisodeScreenLayout(
                         onDownloadCancelClick = {
                             onDownloaderAction(DownloaderAction.CancelDownload(episode))
                         },
-                        onDownloadDeleteClick = {
-                            onDownloaderAction(DownloaderAction.DeleteDownload(episode))
-                            Toast.makeText(
-                                    androidContext,
-                                    CoreR.string.download_deleted_toast,
-                                    Toast.LENGTH_SHORT,
-                                )
-                                .show()
+                        onDownloadForceClick = {
+                            onDownloaderAction(DownloaderAction.ForceDownload)
                         },
+                        onDownloadDeleteClick = deleteDownload,
                         modifier = Modifier.fillMaxWidth(),
                         enableDownloadDialog = true,
                         showEpisodeDownloadOption = true,

@@ -7,6 +7,8 @@ data class DownloaderState(
     val status: Int = 0,
     val progress: Float = 0f,
     val errorText: UiText? = null,
+    val speedBytesPerSecond: Long = 0L,
+    val etaSeconds: Long = -1L,
 ) {
     val isDownloading: Boolean
         get() =

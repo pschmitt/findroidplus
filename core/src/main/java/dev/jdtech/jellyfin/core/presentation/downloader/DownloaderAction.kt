@@ -8,4 +8,6 @@ sealed interface DownloaderAction {
     data class DeleteDownload(val item: FindroidItem) : DownloaderAction
 
     data class CancelDownload(val item: FindroidItem) : DownloaderAction
+
+    data object ForceDownload : DownloaderAction
 }

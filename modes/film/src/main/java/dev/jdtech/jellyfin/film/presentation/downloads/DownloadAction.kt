@@ -6,4 +6,6 @@ sealed interface DownloadAction {
     data object Resume : DownloadAction
 
     data object Cancel : DownloadAction
+
+    data object Force : DownloadAction
 }

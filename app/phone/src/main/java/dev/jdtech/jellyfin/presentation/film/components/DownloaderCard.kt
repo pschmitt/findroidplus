@@ -22,6 +22,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,10 +32,18 @@ import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.utils.formatDownloadSpeed
+import dev.jdtech.jellyfin.utils.formatEta
 import kotlin.math.roundToInt
 
 @Composable
-fun DownloaderCard(state: DownloaderState, onCancelClick: () -> Unit, onRetryClick: () -> Unit) {
+fun DownloaderCard(
+    state: DownloaderState,
+    onCancelClick: () -> Unit,
+    onRetryClick: () -> Unit,
+    onForceClick: () -> Unit = {},
+) {
+    val context = LocalContext.current
     val animatedProgress by
         animateFloatAsState(
             targetValue = state.progress,
@@ -50,7 +59,7 @@ fun DownloaderCard(state: DownloaderState, onCancelClick: () -> Unit, onRetryCli
 
     val statusText =
         when (state.status) {
-            DownloadManager.STATUS_PENDING -> stringResource(CoreR.string.download_pending)
+            DownloadManager.STATUS_PENDING -> stringResource(CoreR.string.download_queued)
             DownloadManager.STATUS_PAUSED -> stringResource(CoreR.string.download_paused)
             DownloadManager.STATUS_FAILED -> stringResource(CoreR.string.download_failed)
             else -> stringResource(CoreR.string.download_downloading)
@@ -105,6 +114,24 @@ fun DownloaderCard(state: DownloaderState, onCancelClick: () -> Unit, onRetryCli
                         )
                     }
                 }
+                if (state.status == DownloadManager.STATUS_RUNNING && state.speedBytesPerSecond > 0) {
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    val speedText = formatDownloadSpeed(context, state.speedBytesPerSecond)
+                    Text(
+                        text =
+                            if (state.etaSeconds >= 0) {
+                                stringResource(
+                                    CoreR.string.download_speed_eta,
+                                    speedText,
+                                    formatEta(state.etaSeconds),
+                                )
+                            } else {
+                                speedText
+                            },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 Spacer(Modifier.height(MaterialTheme.spacings.small))
                 if (state.errorText != null) {
                     Text(
@@ -115,22 +142,38 @@ fun DownloaderCard(state: DownloaderState, onCancelClick: () -> Unit, onRetryCli
                 }
             }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                when (state.status) {
-                    DownloadManager.STATUS_PENDING,
-                    DownloadManager.STATUS_RUNNING -> {
-                        FilledTonalIconButton(onClick = onCancelClick) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_x),
-                                contentDescription = null,
-                            )
+                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                    when (state.status) {
+                        DownloadManager.STATUS_PENDING -> {
+                            FilledTonalIconButton(onClick = onForceClick) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_fast_forward),
+                                    contentDescription =
+                                        stringResource(CoreR.string.download_action_force),
+                                )
+                            }
+                            FilledTonalIconButton(onClick = onCancelClick) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_x),
+                                    contentDescription = null,
+                                )
+                            }
                         }
-                    }
-                    DownloadManager.STATUS_FAILED -> {
-                        FilledTonalIconButton(onClick = onRetryClick) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_rotate_ccw),
-                                contentDescription = null,
-                            )
+                        DownloadManager.STATUS_RUNNING -> {
+                            FilledTonalIconButton(onClick = onCancelClick) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_x),
+                                    contentDescription = null,
+                                )
+                            }
+                        }
+                        DownloadManager.STATUS_FAILED -> {
+                            FilledTonalIconButton(onClick = onRetryClick) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                                    contentDescription = null,
+                                )
+                            }
                         }
                     }
                 }

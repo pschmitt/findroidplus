@@ -78,7 +78,7 @@ constructor(
                 // (which reads workInfo.progress, unlike the notification coordinator) would
                 // otherwise show "Downloading..." for an item that hasn't started transferring yet.
                 setProgress(workDataOf(KEY_QUEUED to true))
-                DownloadSlotLimiter.acquire(maxParallel)
+                DownloadSlotLimiter.acquire(sourceId, maxParallel)
                 try {
                     setProgress(workDataOf())
                     reportProgress(sourceId, downloadId, itemName, 0, 0L, 0L, 0L)
@@ -271,21 +271,25 @@ constructor(
 
     private fun completeNotification(itemName: String): Notification {
         return NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle(applicationContext.getString(CoreR.string.download_complete_item, itemName))
+            .setContentTitle(applicationContext.getString(CoreR.string.download_complete))
+            .setContentText(itemName)
             .setSmallIcon(CoreR.drawable.ic_download)
             .setOngoing(false)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(downloadsContentIntent(applicationContext))
             .build()
     }
 
     private fun failedNotification(itemName: String): Notification {
         return NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle(applicationContext.getString(CoreR.string.download_failed_item, itemName))
+            .setContentTitle(applicationContext.getString(CoreR.string.download_failed))
+            .setContentText(itemName)
             .setSmallIcon(CoreR.drawable.ic_download)
             .setOngoing(false)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(downloadsContentIntent(applicationContext))
             .build()
     }
 

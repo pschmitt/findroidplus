@@ -113,6 +113,7 @@ fun DownloadsScreen(
         onToggleGroupSelection = viewModel::setGroupSelected,
         onDownloadAction = viewModel::onDownloadAction,
         onSwipeDeleteRequest = { id, title -> pendingDelete = id to title },
+        onPauseAllClick = viewModel::pauseAll,
     )
 
     if (clearAllDialogOpen) {
@@ -169,6 +170,7 @@ private fun DownloadsScreenLayout(
     onToggleGroupSelection: (Set<UUID>, Boolean) -> Unit = { _, _ -> },
     onDownloadAction: (UUID, DownloadAction) -> Unit = { _, _ -> },
     onSwipeDeleteRequest: (UUID, String) -> Unit = { _, _ -> },
+    onPauseAllClick: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val allIds =
@@ -198,6 +200,14 @@ private fun DownloadsScreenLayout(
                     }
                 },
                 actions = {
+                    if (!selectionMode && state.downloadProgress.isNotEmpty()) {
+                        IconButton(onClick = onPauseAllClick) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_pause),
+                                contentDescription = stringResource(CoreR.string.pause_all_downloads),
+                            )
+                        }
+                    }
                     if (!state.isEmpty) {
                         IconButton(onClick = onTrashClick) {
                             Icon(
@@ -455,7 +465,14 @@ private fun DownloadRow(
             Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
             when {
                 activeProgress != null -> {
-                    if (!isPending) {
+                    if (isPending) {
+                        IconButton(onClick = { onDownloadAction(DownloadAction.Force) }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_fast_forward),
+                                contentDescription = stringResource(CoreR.string.download_action_force),
+                            )
+                        }
+                    } else {
                         IconButton(
                             onClick = {
                                 onDownloadAction(

@@ -24,9 +24,11 @@ interface Downloader {
 
     suspend fun resumeDownload(downloadId: Long): UiText?
 
-    suspend fun deleteItem(item: FindroidItem, source: FindroidSource)
+    // Jumps a queued download to the front of the line, pausing one other running download to
+    // make room for it. No-op if downloadId isn't currently queued (e.g. it already started).
+    suspend fun forceDownload(downloadId: Long)
 
-    suspend fun getProgress(downloadId: Long?): Pair<Int, Int>
+    suspend fun deleteItem(item: FindroidItem, source: FindroidSource)
 
     fun getProgressFlow(downloadId: Long): Flow<DownloadProgress>
 }

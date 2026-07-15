@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -19,18 +21,20 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
 import dev.jdtech.jellyfin.viewmodels.DeepLinkViewModel
 import dev.jdtech.jellyfin.viewmodels.MainViewModel
+import dev.jdtech.jellyfin.work.EXTRA_OPEN_DOWNLOADS
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val deepLinkViewModel: DeepLinkViewModel by viewModels()
+    private var openDownloadsRequested by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
 
-        intent?.data?.let { deepLinkViewModel.resolve(it) }
+        handleIntent(intent)
 
         setContent {
             val state by viewModel.state.collectAsStateWithLifecycle()
@@ -63,6 +67,12 @@ class MainActivity : AppCompatActivity() {
                         }
                         if (deepLinkTarget != null) deepLinkViewModel.consumeTarget()
                     }
+                    LaunchedEffect(openDownloadsRequested) {
+                        if (openDownloadsRequested) {
+                            navController.navigate(DownloadsRoute)
+                            openDownloadsRequested = false
+                        }
+                    }
                 }
             }
         }
@@ -70,6 +80,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
         intent.data?.let { deepLinkViewModel.resolve(it) }
+        if (intent.getBooleanExtra(EXTRA_OPEN_DOWNLOADS, false)) {
+            openDownloadsRequested = true
+        }
     }
 }

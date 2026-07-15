@@ -187,11 +187,18 @@ constructor(
             when (action) {
                 DownloadAction.Pause -> downloader.pauseDownload(downloadId)
                 DownloadAction.Resume -> downloader.resumeDownload(downloadId)
+                DownloadAction.Force -> downloader.forceDownload(downloadId)
                 DownloadAction.Cancel -> {
                     downloader.cancelDownload(downloadId)
                     refresh()
                 }
             }
+        }
+    }
+
+    fun pauseAll() {
+        viewModelScope.launch {
+            downloadIdsByItem.values.toList().forEach { downloader.pauseDownload(it) }
         }
     }
 

@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film.components
 import android.app.DownloadManager
 import android.os.Environment
 import android.os.StatFs
-import android.text.format.Formatter
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
@@ -42,7 +39,6 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
-import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -57,6 +53,7 @@ fun ItemButtonsBar(
     onDownloadClick: (storageIndex: Int) -> Unit,
     onDownloadCancelClick: () -> Unit,
     onDownloadDeleteClick: () -> Unit,
+    onDownloadForceClick: () -> Unit = {},
     onTrailerClick: (uri: String) -> Unit,
     modifier: Modifier = Modifier,
     downloaderState: DownloaderState? = null,
@@ -240,22 +237,10 @@ fun ItemButtonsBar(
                             state = downloaderState,
                             onCancelClick = { cancelDownloadDialogOpen = true },
                             onRetryClick = { onDownloadClick(selectedStorageIndex) },
+                            onForceClick = onDownloadForceClick,
                         )
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
                     }
-                }
-                if (!downloaderState.isDownloading && item.isDownloaded()) {
-                    val sizeBytes =
-                        item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.size ?: 0L
-                    Text(
-                        text =
-                            stringResource(
-                                CoreR.string.downloaded_file_size,
-                                Formatter.formatFileSize(context, sizeBytes),
-                            ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
         }

@@ -19,6 +19,24 @@ class DownloadActionReceiver : BroadcastReceiver() {
     @Inject lateinit var database: ServerDatabaseDao
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == ACTION_PAUSE_ALL) {
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    DownloadNotificationCoordinator.activeDownloadIds().forEach { downloadId ->
+                        val sourceId = database.getSourceByDownloadId(downloadId)?.id
+                        downloader.pauseDownload(downloadId)
+                        if (sourceId != null) {
+                            DownloadNotificationCoordinator.remove(context, sourceId)
+                        }
+                    }
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
         val downloadId = intent.getLongExtra(EXTRA_DOWNLOAD_ID, -1L)
         if (downloadId == -1L) return
         if (intent.action != ACTION_CANCEL && intent.action != ACTION_PAUSE) return
@@ -50,6 +68,7 @@ class DownloadActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_CANCEL = "dev.jdtech.jellyfin.action.CANCEL_DOWNLOAD"
         const val ACTION_PAUSE = "dev.jdtech.jellyfin.action.PAUSE_DOWNLOAD"
+        const val ACTION_PAUSE_ALL = "dev.jdtech.jellyfin.action.PAUSE_ALL_DOWNLOADS"
         const val EXTRA_DOWNLOAD_ID = "EXTRA_DOWNLOAD_ID"
         const val EXTRA_NOTIFICATION_ID = "EXTRA_NOTIFICATION_ID"
     }

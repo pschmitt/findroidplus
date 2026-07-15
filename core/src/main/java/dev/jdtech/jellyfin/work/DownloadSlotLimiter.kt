@@ -16,12 +16,14 @@ import kotlinx.coroutines.sync.withLock
  * next free slot - a plain poll-and-retry loop gives no such guarantee.
  */
 internal object DownloadSlotLimiter {
+    private data class Waiter(val sourceId: String, val deferred: CompletableDeferred<Unit>)
+
     private val mutex = Mutex()
     private var limit = 1
     private var active = 0
-    private val waiters = ArrayDeque<CompletableDeferred<Unit>>()
+    private val waiters = ArrayDeque<Waiter>()
 
-    suspend fun acquire(maxParallel: Int) {
+    suspend fun acquire(sourceId: String, maxParallel: Int) {
         val deferred = CompletableDeferred<Unit>()
         mutex.withLock {
             limit = maxParallel.coerceAtLeast(1)
@@ -29,7 +31,7 @@ internal object DownloadSlotLimiter {
                 active++
                 deferred.complete(Unit)
             } else {
-                waiters.addLast(deferred)
+                waiters.addLast(Waiter(sourceId, deferred))
             }
         }
         deferred.await()
@@ -40,8 +42,29 @@ internal object DownloadSlotLimiter {
             active = (active - 1).coerceAtLeast(0)
             while (active < limit && waiters.isNotEmpty()) {
                 active++
-                waiters.removeFirst().complete(Unit)
+                waiters.removeFirst().deferred.complete(Unit)
             }
+        }
+    }
+
+    /**
+     * Cuts [sourceId] to the front of the line and lets it start right away, going one over
+     * [limit] until whichever download the caller pauses in response releases its slot back.
+     * Returns false if [sourceId] isn't currently waiting (e.g. it already started on its own).
+     */
+    suspend fun forcePromote(sourceId: String): Boolean {
+        mutex.withLock {
+            val iterator = waiters.iterator()
+            while (iterator.hasNext()) {
+                val waiter = iterator.next()
+                if (waiter.sourceId == sourceId) {
+                    iterator.remove()
+                    active++
+                    waiter.deferred.complete(Unit)
+                    return true
+                }
+            }
+            return false
         }
     }
 }

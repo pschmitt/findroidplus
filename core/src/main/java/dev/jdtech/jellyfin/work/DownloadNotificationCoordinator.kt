@@ -57,6 +57,7 @@ internal object DownloadNotificationCoordinator {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setContentIntent(downloadsContentIntent(context))
 
         when (snapshot.size) {
             0 ->
@@ -136,6 +137,20 @@ internal object DownloadNotificationCoordinator {
                 -1L
             }
 
+        val progressText =
+            if (percent >= 0) {
+                context.getString(
+                    CoreR.string.download_progress_status,
+                    percent,
+                    formatDownloadSpeed(context, speedBytesPerSecond),
+                    formatEta(etaSeconds),
+                )
+            } else {
+                context.getString(CoreR.string.download_queued)
+            }
+        val runningNames = running.joinToString(", ") { it.itemName }
+        val collapsedText = if (runningNames.isNotEmpty()) "$runningNames • $progressText" else progressText
+
         builder
             .setContentTitle(
                 context.getString(
@@ -144,19 +159,43 @@ internal object DownloadNotificationCoordinator {
                     snapshot.size,
                 )
             )
-            .setContentText(
-                if (percent >= 0) {
-                    context.getString(
-                        CoreR.string.download_progress_status,
-                        percent,
-                        formatDownloadSpeed(context, speedBytesPerSecond),
-                        formatEta(etaSeconds),
-                    )
-                } else {
-                    context.getString(CoreR.string.download_queued)
-                }
-            )
+            .setContentText(collapsedText)
+            .setStyle(inboxStyle(context, snapshot, progressText))
             .setProgress(100, percent.coerceAtLeast(0), percent < 0)
+            .addAction(
+                CoreR.drawable.ic_pause,
+                context.getString(CoreR.string.download_action_pause),
+                actionPendingIntent(context, DownloadActionReceiver.ACTION_PAUSE_ALL, downloadId = -1L),
+            )
+    }
+
+    /** downloadIds of every currently tracked (queued or running) download. */
+    fun activeDownloadIds(): List<Long> = entries.values.map { it.downloadId }
+
+    /** downloadIds of downloads currently transferring bytes, i.e. holding a slot. */
+    fun runningDownloadIds(): List<Long> = entries.values.filter { !it.queued }.map { it.downloadId }
+
+    private fun inboxStyle(
+        context: Context,
+        snapshot: List<Entry>,
+        summaryText: String,
+    ): NotificationCompat.InboxStyle {
+        val style = NotificationCompat.InboxStyle()
+        style.setSummaryText(summaryText)
+        // Running entries first so the items currently being transferred are visible without
+        // scrolling past whatever's still queued behind the parallel-download slot limiter.
+        snapshot
+            .sortedBy { it.queued }
+            .forEach { entry ->
+                val status =
+                    if (entry.queued) {
+                        context.getString(CoreR.string.download_queued)
+                    } else {
+                        "${entry.percent.coerceAtLeast(0)}%"
+                    }
+                style.addLine("${entry.itemName} · $status")
+            }
+        return style
     }
 
     private fun actionPendingIntent(context: Context, action: String, downloadId: Long): PendingIntent {
