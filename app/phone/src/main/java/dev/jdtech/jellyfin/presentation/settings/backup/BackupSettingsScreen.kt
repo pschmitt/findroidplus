@@ -270,6 +270,31 @@ private fun BackupSettingsScreenLayout(
                 OutlinedButton(onClick = onChooseFolderClick) {
                     Text(text = stringResource(CoreR.string.backup_choose_folder))
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(painter = painterResource(CoreR.drawable.ic_lock), contentDescription = null)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    var passwordText by
+                        rememberSaveable(state.autoBackupPassword) {
+                            mutableStateOf(state.autoBackupPassword.orEmpty())
+                        }
+                    OutlinedTextField(
+                        value = passwordText,
+                        onValueChange = { value ->
+                            passwordText = value
+                            onAction(BackupSettingsAction.OnAutoBackupPasswordChanged(value))
+                        },
+                        label = { Text(text = stringResource(CoreR.string.backup_auto_password)) },
+                        supportingText = {
+                            Text(text = stringResource(CoreR.string.backup_auto_password_summary))
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

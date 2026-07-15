@@ -8,11 +8,11 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * Optional-password encryption for backup files. Only used for manual, on-demand exports - the
- * password is typed fresh each time and never persisted (see BackupManager). AES-256-GCM with a
- * PBKDF2-derived key; format is `[MAGIC][flag byte][salt(16)+iv(12)+ciphertext] or [MAGIC][flag
- * byte][plain bytes]`, so restore can tell up-front whether a password is needed instead of
- * guessing from a failed parse.
+ * Optional-password encryption for backup files, used both for manual "Back up now" exports (the
+ * password is typed fresh each time) and scheduled auto-backups (the password comes from
+ * AppPreferences.autoBackupPassword, if set). AES-256-GCM with a PBKDF2-derived key; format is
+ * `[MAGIC][flag byte][salt(16)+iv(12)+ciphertext] or [MAGIC][flag byte][plain bytes]`, so restore
+ * can tell up-front whether a password is needed instead of guessing from a failed parse.
  */
 object BackupCrypto {
     private val MAGIC = byteArrayOf('F'.code.toByte(), 'R'.code.toByte(), 'B'.code.toByte(), '1'.code.toByte())

@@ -36,6 +36,7 @@ constructor(
                 autoBackupIntervalMinutes =
                     appPreferences.getValue(appPreferences.autoBackupIntervalMinutes),
                 autoBackupFolderUri = appPreferences.getValue(appPreferences.autoBackupFolderUri),
+                autoBackupPassword = appPreferences.getValue(appPreferences.autoBackupPassword),
                 lastBackupTimestamp = appPreferences.getValue(appPreferences.lastBackupTimestamp),
             )
     }
@@ -59,6 +60,13 @@ constructor(
             is BackupSettingsAction.OnFolderPicked -> {
                 appPreferences.setValue(appPreferences.autoBackupFolderUri, action.uri.toString())
                 reschedule()
+                load()
+            }
+            is BackupSettingsAction.OnAutoBackupPasswordChanged -> {
+                appPreferences.setValue(
+                    appPreferences.autoBackupPassword,
+                    if (action.password.isEmpty()) null else action.password,
+                )
                 load()
             }
             is BackupSettingsAction.OnBackupNow -> {

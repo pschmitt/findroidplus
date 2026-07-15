@@ -18,9 +18,9 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Writes an unencrypted backup to the user-chosen SAF folder. Auto-backups are always
- * unencrypted (see BackupCrypto's design note) - only the manual "Back up now" export supports a
- * password, typed fresh each time.
+ * Writes a backup to the user-chosen SAF folder, encrypted with the configured auto-backup
+ * password if one is set (see AppPreferences.autoBackupPassword), same as an unencrypted export
+ * when left blank.
  */
 @HiltWorker
 class AutoBackupWorker
@@ -47,8 +47,9 @@ constructor(
                     folder.createFile("application/octet-stream", fileName)
                         ?: return@withContext Result.failure()
 
+                val password = appPreferences.getValue(appPreferences.autoBackupPassword)
                 val envelope = backupManager.buildBackup()
-                backupManager.writeBackup(envelope, file.uri, password = null)
+                backupManager.writeBackup(envelope, file.uri, password = password)
                 appPreferences.setValue(appPreferences.lastBackupTimestamp, System.currentTimeMillis())
                 Result.success()
             } catch (e: Exception) {

@@ -92,6 +92,9 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val autoBackupEnabled = Preference("pref_backup_auto_enabled", false)
     val autoBackupIntervalMinutes = Preference("pref_backup_auto_interval_minutes", 24 * 60)
     val autoBackupFolderUri = Preference<String?>("pref_backup_auto_folder_uri", null)
+    // Used to encrypt scheduled auto-backups, same as the optional password typed for a manual
+    // "Back up now" export. Left blank, auto-backups are unencrypted.
+    val autoBackupPassword = Preference<String?>("pref_backup_auto_password", null)
     val lastBackupTimestamp = Preference("pref_backup_last_timestamp", 0L)
     val pendingRestoreDownloads = Preference<String?>("pref_backup_pending_restore_downloads", null)
 

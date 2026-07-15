@@ -11,5 +11,7 @@ sealed interface BackupSettingsAction {
 
     data class OnFolderPicked(val uri: Uri) : BackupSettingsAction
 
+    data class OnAutoBackupPasswordChanged(val password: String) : BackupSettingsAction
+
     data class OnBackupNow(val uri: Uri, val password: String?) : BackupSettingsAction
 }
