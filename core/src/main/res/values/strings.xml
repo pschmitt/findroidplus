@@ -260,6 +260,10 @@
     <string name="pvr_queue_status_failed">Failed</string>
     <string name="title_calendar">Calendar</string>
     <string name="title_discover">Discover</string>
+    <string name="discover_clear_search">Clear search</string>
+    <string name="discover_filter_all">All</string>
+    <string name="discover_filter_movies">Movies</string>
+    <string name="discover_filter_shows">Shows</string>
     <string name="discover_search_hint">Search movies &amp; shows to request…</string>
     <string name="discover_request">Request</string>
     <string name="discover_requested_toast">Requested “%1$s”</string>

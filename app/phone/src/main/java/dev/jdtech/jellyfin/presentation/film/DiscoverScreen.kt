@@ -6,22 +6,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,14 +37,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,6 +97,13 @@ fun DiscoverScreen(viewModel: DiscoverViewModel = hiltViewModel()) {
     )
 }
 
+/** Media-type filter for search results - presentation-only, so it lives in the composable. */
+private enum class DiscoverFilter {
+    ALL,
+    MOVIES,
+    SHOWS,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiscoverScreenLayout(
@@ -92,6 +112,14 @@ private fun DiscoverScreenLayout(
     onRequest: (SeerrSearchItem) -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    var filter by rememberSaveable { mutableStateOf(DiscoverFilter.ALL) }
+
+    val filteredResults =
+        when (filter) {
+            DiscoverFilter.ALL -> state.results
+            DiscoverFilter.MOVIES -> state.results.filter { it.mediaType == SeerrMediaType.MOVIE }
+            DiscoverFilter.SHOWS -> state.results.filter { it.mediaType == SeerrMediaType.TV }
+        }
 
     Scaffold(
         modifier =
@@ -118,7 +146,18 @@ private fun DiscoverScreenLayout(
                         contentDescription = null,
                     )
                 },
+                trailingIcon = {
+                    if (state.query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChanged("") }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_x),
+                                contentDescription = stringResource(CoreR.string.discover_clear_search),
+                            )
+                        }
+                    }
+                },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 modifier =
                     Modifier.fillMaxWidth()
                         .padding(
@@ -127,42 +166,90 @@ private fun DiscoverScreenLayout(
                         ),
             )
 
-            state.error?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+            if (state.query.isNotBlank()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                     modifier = Modifier.padding(horizontal = MaterialTheme.spacings.default),
-                )
-            }
-
-            if (state.isSearching) {
-                Box(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                ) {
+                    FilterChip(
+                        selected = filter == DiscoverFilter.ALL,
+                        onClick = { filter = DiscoverFilter.ALL },
+                        label = { Text(stringResource(CoreR.string.discover_filter_all)) },
+                    )
+                    FilterChip(
+                        selected = filter == DiscoverFilter.MOVIES,
+                        onClick = { filter = DiscoverFilter.MOVIES },
+                        label = { Text(stringResource(CoreR.string.discover_filter_movies)) },
+                    )
+                    FilterChip(
+                        selected = filter == DiscoverFilter.SHOWS,
+                        onClick = { filter = DiscoverFilter.SHOWS },
+                        label = { Text(stringResource(CoreR.string.discover_filter_shows)) },
+                    )
                 }
             }
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (state.query.isNotBlank()) {
-                    if (state.results.isEmpty() && !state.isSearching && state.error == null) {
-                        item {
-                            Text(
-                                text = stringResource(CoreR.string.discover_no_results),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(MaterialTheme.spacings.default),
+            // Reserve the height so results don't jump when the indicator appears/disappears.
+            Box(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacings.small)) {
+                if (state.isSearching) {
+                    LinearProgressIndicator(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = MaterialTheme.spacings.default)
+                                .align(Alignment.Center)
+                    )
+                }
+            }
+
+            state.error?.let { error ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacings.default,
+                                vertical = MaterialTheme.spacings.small,
                             )
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .padding(MaterialTheme.spacings.small),
+                ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_alert_circle),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+
+            when {
+                state.query.isNotBlank() -> {
+                    if (filteredResults.isEmpty() && !state.isSearching && state.error == null) {
+                        EmptyHint(text = stringResource(CoreR.string.discover_no_results))
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(
+                                items = filteredResults,
+                                key = { "result-${it.mediaType}-${it.tmdbId}" },
+                            ) { item ->
+                                DiscoverResultRow(
+                                    item = item,
+                                    requestedThisSession = item.tmdbId in state.requestedTmdbIds,
+                                    onRequest = { onRequest(item) },
+                                )
+                            }
                         }
                     }
-                    items(items = state.results, key = { "result-${it.mediaType}-${it.tmdbId}" }) {
-                        item ->
-                        DiscoverResultRow(
-                            item = item,
-                            requestedThisSession = item.tmdbId in state.requestedTmdbIds,
-                            onRequest = { onRequest(item) },
-                        )
-                    }
-                } else {
-                    if (state.recentRequests.isNotEmpty()) {
+                }
+                state.recentRequests.isNotEmpty() -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
                             Text(
                                 text = stringResource(CoreR.string.discover_recent_requests),
@@ -195,26 +282,47 @@ private fun DiscoverScreenLayout(
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = mediaTypeLabel(request.mediaType),
                                         style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                StatusText(status = request.mediaStatus)
+                                StatusChip(status = request.mediaStatus)
                             }
                         }
-                    } else if (state.error == null) {
-                        item {
-                            Text(
-                                text = stringResource(CoreR.string.discover_empty_hint),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(MaterialTheme.spacings.default),
-                            )
-                        }
+                    }
+                }
+                else -> {
+                    if (state.error == null) {
+                        EmptyHint(text = stringResource(CoreR.string.discover_empty_hint))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyHint(text: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacings.large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            painter = painterResource(CoreR.drawable.ic_sparkles),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(48.dp),
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -242,25 +350,32 @@ private fun DiscoverResultRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text =
                     listOfNotNull(item.year?.toString(), mediaTypeLabel(item.mediaType))
                         .joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            item.overview?.let { overview ->
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = overview,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         when {
-            requestedThisSession ->
-                Text(
-                    text = stringResource(CoreR.string.discover_status_requested),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            requestedThisSession -> StatusChip(status = null)
             item.status == SeerrMediaStatus.NOT_REQUESTED ->
                 Button(onClick = onRequest) {
                     Text(text = stringResource(CoreR.string.discover_request))
                 }
-            else -> StatusText(status = item.status)
+            else -> StatusChip(status = item.status)
         }
     }
 }
@@ -269,7 +384,7 @@ private fun DiscoverResultRow(
 private fun SeerrPoster(posterUrl: String?) {
     Box(
         modifier =
-            Modifier.width(56.dp)
+            Modifier.width(64.dp)
                 .aspectRatio(2f / 3f)
                 .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceContainer)
@@ -291,25 +406,60 @@ private fun SeerrPoster(posterUrl: String?) {
     }
 }
 
+/**
+ * Colored pill making the item's lifecycle scannable at a glance. `null` renders the
+ * just-requested-in-this-session marker (the search payload's own status is stale then).
+ */
 @Composable
-private fun StatusText(status: SeerrMediaStatus) {
-    val (textRes, color) =
+private fun StatusChip(status: SeerrMediaStatus?) {
+    data class ChipStyle(val textRes: Int, val container: Color, val content: Color)
+
+    val style =
         when (status) {
             SeerrMediaStatus.AVAILABLE ->
-                CoreR.string.discover_status_available to MaterialTheme.colorScheme.primary
+                ChipStyle(
+                    CoreR.string.discover_status_available,
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             SeerrMediaStatus.PARTIALLY_AVAILABLE ->
-                CoreR.string.discover_status_partially_available to
-                    MaterialTheme.colorScheme.primary
+                ChipStyle(
+                    CoreR.string.discover_status_partially_available,
+                    MaterialTheme.colorScheme.tertiaryContainer,
+                    MaterialTheme.colorScheme.onTertiaryContainer,
+                )
             SeerrMediaStatus.PROCESSING ->
-                CoreR.string.discover_status_processing to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                ChipStyle(
+                    CoreR.string.discover_status_processing,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
             SeerrMediaStatus.PENDING ->
-                CoreR.string.discover_status_pending to MaterialTheme.colorScheme.onSurfaceVariant
-            SeerrMediaStatus.NOT_REQUESTED ->
-                CoreR.string.discover_status_requested to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                ChipStyle(
+                    CoreR.string.discover_status_pending,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            SeerrMediaStatus.NOT_REQUESTED,
+            null ->
+                ChipStyle(
+                    CoreR.string.discover_status_requested,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
         }
-    Text(text = stringResource(textRes), style = MaterialTheme.typography.labelMedium, color = color)
+    Box(
+        modifier =
+            Modifier.clip(CircleShape)
+                .background(style.container)
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = stringResource(style.textRes),
+            style = MaterialTheme.typography.labelSmall,
+            color = style.content,
+        )
+    }
 }
 
 @Composable
@@ -323,7 +473,7 @@ private fun mediaTypeLabel(mediaType: SeerrMediaType): String =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@androidx.compose.ui.tooling.preview.Preview
+@Preview
 private fun DiscoverScreenLayoutPreview() {
     FindroidTheme {
         DiscoverScreenLayout(
@@ -337,7 +487,8 @@ private fun DiscoverScreenLayoutPreview() {
                                 mediaType = SeerrMediaType.MOVIE,
                                 title = "Dune",
                                 year = 2021,
-                                overview = null,
+                                overview =
+                                    "Paul Atreides, a brilliant and gifted young man born into a great destiny.",
                                 posterUrl = null,
                                 status = SeerrMediaStatus.AVAILABLE,
                             ),
