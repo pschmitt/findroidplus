@@ -138,6 +138,7 @@ class JellyfinRepositoryImpl(
                     startIndex = startIndex,
                     limit = limit,
                     searchTerm = searchTerm,
+                    fields = listOf(ItemFields.PROVIDER_IDS),
                 )
                 .content
                 .items
@@ -189,6 +190,7 @@ class JellyfinRepositoryImpl(
                     personIds = personIds,
                     includeItemTypes = includeTypes,
                     recursive = recursive,
+                    fields = listOf(ItemFields.PROVIDER_IDS),
                 )
                 .content
                 .items
@@ -204,6 +206,7 @@ class JellyfinRepositoryImpl(
                     includeItemTypes =
                         listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.EPISODE),
                     recursive = true,
+                    fields = listOf(ItemFields.PROVIDER_IDS),
                 )
                 .content
                 .items
@@ -218,6 +221,7 @@ class JellyfinRepositoryImpl(
                     searchTerm = query,
                     includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
                     recursive = true,
+                    fields = listOf(ItemFields.PROVIDER_IDS),
                 )
                 .content
                 .items
@@ -244,6 +248,7 @@ class JellyfinRepositoryImpl(
                     jellyfinApi.userId!!,
                     limit = 12,
                     includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.EPISODE),
+                    fields = listOf(ItemFields.PROVIDER_IDS),
                 )
                 .content
                 .items
@@ -253,7 +258,12 @@ class JellyfinRepositoryImpl(
     override suspend fun getLatestMedia(parentId: UUID): List<FindroidItem> =
         withContext(Dispatchers.IO) {
             jellyfinApi.userLibraryApi
-                .getLatestMedia(jellyfinApi.userId!!, parentId = parentId, limit = 16)
+                .getLatestMedia(
+                    jellyfinApi.userId!!,
+                    parentId = parentId,
+                    limit = 16,
+                    fields = listOf(ItemFields.PROVIDER_IDS),
+                )
                 .content
                 .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
         }
