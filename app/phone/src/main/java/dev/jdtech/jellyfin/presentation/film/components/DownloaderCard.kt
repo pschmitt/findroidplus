@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.models.UiText
+import dev.jdtech.jellyfin.utils.DownloadProgress
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.formatDownloadSpeed
@@ -64,6 +65,7 @@ fun DownloaderCard(
             DownloadManager.STATUS_PENDING -> stringResource(CoreR.string.download_queued)
             DownloadManager.STATUS_PAUSED -> stringResource(CoreR.string.download_paused)
             DownloadManager.STATUS_FAILED -> stringResource(CoreR.string.download_failed)
+            DownloadProgress.STATUS_VERIFYING -> stringResource(CoreR.string.download_verifying)
             else -> stringResource(CoreR.string.download_downloading)
         }
 
@@ -195,6 +197,14 @@ fun DownloaderCard(
                             FilledTonalIconButton(onClick = onRetryClick) {
                                 Icon(
                                     painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                                    contentDescription = null,
+                                )
+                            }
+                        }
+                        DownloadProgress.STATUS_VERIFYING -> {
+                            FilledTonalIconButton(onClick = onCancelClick) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_x),
                                     contentDescription = null,
                                 )
                             }

@@ -16,4 +16,10 @@ data class DownloadProgress(
     val totalBytes: Long = 0L,
     val speedBytesPerSecond: Long = 0L,
     val etaSeconds: Long = -1L,
-)
+) {
+    companion object {
+        // Synthetic status, not a real DownloadManager constant (those are 1/2/4/8/16) - reported
+        // once the file finishes downloading and is being re-read to compute/verify its checksum.
+        const val STATUS_VERIFYING = 32
+    }
+}

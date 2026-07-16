@@ -42,7 +42,10 @@ import dev.jdtech.jellyfin.work.DownloadSlotLimiter
 import dev.jdtech.jellyfin.work.ImagesDownloaderWorker
 import dev.jdtech.jellyfin.work.VideoDownloadWorker
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import java.util.UUID
 import kotlin.Exception
 import kotlin.math.ceil
@@ -358,9 +361,8 @@ class DownloaderImpl(
 
         sources.forEachIndexed { index, sourceDto ->
             try {
-                moveFile(File(sourceDto.path), fromDir, toDir)?.let { newPath ->
-                    database.setSourcePath(sourceDto.id, newPath)
-                }
+                moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)
+                    ?.let { newPath -> database.setSourcePath(sourceDto.id, newPath) }
                 for (mediaStream in database.getMediaStreamsBySourceId(sourceDto.id)) {
                     moveFile(File(mediaStream.path), fromDir, toDir)?.let { newPath ->
                         database.setMediaStreamPath(mediaStream.id, newPath)
@@ -414,20 +416,51 @@ class DownloaderImpl(
 
     /**
      * Copies [oldFile] (which must live under [fromDir]) to the equivalent relative path under
-     * [toDir], verifies the copy by size, deletes the original, and returns the new path. Uses
-     * copy+delete rather than [File.renameTo] since the two storage volumes here are typically
-     * different filesystems, and renameTo silently fails (returns false) across filesystems on
-     * some platforms rather than falling back to a copy.
+     * [toDir], verifies the copy, deletes the original, and returns the new path. Uses copy+delete
+     * rather than [File.renameTo] since the two storage volumes here are typically different
+     * filesystems, and renameTo silently fails (returns false) across filesystems on some
+     * platforms rather than falling back to a copy.
+     *
+     * When [expectedChecksum] is available (the primary video file, once downloaded with a
+     * checksum recorded - see VideoDownloadWorker), the copy is verified by SHA-256 computed in
+     * the same pass as the copy, not just a length check. Media stream files and sources
+     * downloaded before checksums existed fall back to the length-only check.
      */
-    private fun moveFile(oldFile: File, fromDir: File, toDir: File): String? {
+    private fun moveFile(
+        oldFile: File,
+        fromDir: File,
+        toDir: File,
+        expectedChecksum: String? = null,
+    ): String? {
         if (!oldFile.exists()) return null
         val relativePath = oldFile.path.removePrefix(fromDir.path).trimStart(File.separatorChar)
         val newFile = File(toDir, relativePath)
         newFile.parentFile?.mkdirs()
-        oldFile.copyTo(newFile, overwrite = true)
-        if (newFile.length() != oldFile.length()) {
-            newFile.delete()
-            throw IOException("Copied file size mismatch for ${oldFile.path}")
+
+        if (expectedChecksum != null) {
+            val digest = MessageDigest.getInstance("SHA-256")
+            FileInputStream(oldFile).use { input ->
+                FileOutputStream(newFile).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        output.write(buffer, 0, read)
+                        digest.update(buffer, 0, read)
+                    }
+                }
+            }
+            val actualChecksum = digest.digest().joinToString("") { "%02x".format(it) }
+            if (actualChecksum != expectedChecksum) {
+                newFile.delete()
+                throw IOException("Checksum mismatch after moving ${oldFile.path}")
+            }
+        } else {
+            oldFile.copyTo(newFile, overwrite = true)
+            if (newFile.length() != oldFile.length()) {
+                newFile.delete()
+                throw IOException("Copied file size mismatch for ${oldFile.path}")
+            }
         }
         oldFile.delete()
         return newFile.path
@@ -478,6 +511,20 @@ class DownloaderImpl(
                 WorkInfo.State.RUNNING -> {
                     if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_QUEUED, false)) {
                         return@map DownloadProgress(status = DownloadManager.STATUS_PENDING)
+                    }
+                    if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_VERIFYING, false)) {
+                        val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
+                        val hashedBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
+                        val percent =
+                            if (totalBytes > 0 && hashedBytes >= 0) {
+                                hashedBytes.times(100).div(totalBytes).toInt()
+                            } else {
+                                -1
+                            }
+                        return@map DownloadProgress(
+                            status = DownloadProgress.STATUS_VERIFYING,
+                            percent = percent,
+                        )
                     }
 
                     val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)

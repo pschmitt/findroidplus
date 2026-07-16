@@ -195,6 +195,8 @@
     <string name="downloading_item">Downloading %1$s</string>
     <string name="download_complete">Download complete</string>
     <string name="download_queued">Queued</string>
+    <string name="download_verifying">Verifying…</string>
+    <string name="download_verifying_status">Verifying %1$d%%</string>
     <string name="download_progress_status">%1$d%% • %2$s • ETA %3$s</string>
     <string name="download_progress_speed_only">%1$s</string>
     <string name="download_speed_eta">%1$s • ETA %2$s</string>

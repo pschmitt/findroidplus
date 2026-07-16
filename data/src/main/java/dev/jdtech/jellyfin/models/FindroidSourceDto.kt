@@ -12,6 +12,10 @@ data class FindroidSourceDto(
     val type: FindroidSourceType,
     val path: String,
     val downloadId: Long? = null,
+    // SHA-256 hex digest computed once the download finishes, used to detect corruption after a
+    // storage move (see DownloaderImpl.moveFile). Null for remote sources and for local sources
+    // downloaded before this field existed.
+    val checksum: String? = null,
 )
 
 fun FindroidSource.toFindroidSourceDto(itemId: UUID, path: String): FindroidSourceDto {

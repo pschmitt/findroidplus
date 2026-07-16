@@ -39,7 +39,7 @@ import dev.jdtech.jellyfin.models.User
             FindroidSegmentDto::class,
             AutoDownloadRuleDto::class,
         ],
-    version = 11,
+    version = 12,
     autoMigrations =
         [
             AutoMigration(from = 2, to = 3),
@@ -50,6 +50,7 @@ import dev.jdtech.jellyfin.models.User
             AutoMigration(from = 8, to = 9),
             AutoMigration(from = 9, to = 10),
             AutoMigration(from = 10, to = 11),
+            AutoMigration(from = 11, to = 12),
         ],
 )
 @TypeConverters(Converters::class)

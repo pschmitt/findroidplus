@@ -15,6 +15,7 @@ data class FindroidSource(
     val size: Long,
     val mediaStreams: List<FindroidMediaStream>,
     val downloadId: Long? = null,
+    val checksum: String? = null,
 )
 
 suspend fun MediaSourceInfo.toFindroidSource(
@@ -55,6 +56,7 @@ fun FindroidSourceDto.toFindroidSource(serverDatabaseDao: ServerDatabaseDao): Fi
         mediaStreams =
             serverDatabaseDao.getMediaStreamsBySourceId(id).map { it.toFindroidMediaStream() },
         downloadId = downloadId,
+        checksum = checksum,
     )
 }
 

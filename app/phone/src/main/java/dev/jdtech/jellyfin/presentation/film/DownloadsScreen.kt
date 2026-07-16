@@ -614,6 +614,7 @@ private fun DownloadRow(
     val activeProgress = progress?.takeIf { it.status != DownloadManager.STATUS_SUCCESSFUL }
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
     val isPaused = activeProgress?.status == DownloadManager.STATUS_PAUSED
+    val isVerifying = activeProgress?.status == DownloadProgress.STATUS_VERIFYING
     val sizeBytes = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.size ?: 0L
     val swipeEnabled = activeProgress == null && !selectionMode
 
@@ -649,6 +650,7 @@ private fun DownloadRow(
                             when {
                                 isPending -> stringResource(CoreR.string.download_queued)
                                 isPaused -> stringResource(CoreR.string.download_paused)
+                                isVerifying -> stringResource(CoreR.string.download_verifying)
                                 activeProgress.percent >= 0 ->
                                     stringResource(
                                         CoreR.string.download_progress_status,
@@ -692,7 +694,7 @@ private fun DownloadRow(
                                 contentDescription = stringResource(CoreR.string.download_action_force),
                             )
                         }
-                    } else {
+                    } else if (!isVerifying) {
                         IconButton(
                             onClick = {
                                 onDownloadAction(

@@ -19,8 +19,10 @@ import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -86,6 +88,9 @@ constructor(
                 } finally {
                     DownloadSlotLimiter.release()
                 }
+
+                val checksum = verifyAndHash(File(destinationPath), sourceId, downloadId, itemName)
+                database.setSourceChecksum(sourceId, checksum)
 
                 val destFile = File(destinationPath)
                 val finalFile = File(finalPath)
@@ -209,6 +214,54 @@ constructor(
         }
     }
 
+    /**
+     * Re-reads the just-downloaded file end to end to compute its SHA-256 checksum, reported as a
+     * distinct "Verifying" phase (notification + WorkManager progress) rather than folded silently
+     * into the download itself. A separate pass (rather than hashing while writing) is deliberate:
+     * it reads the complete file regardless of how many pause/resume cycles built it up, so the
+     * checksum is always over the final bytes, not whatever happened to be in a hasher's memory
+     * across worker restarts.
+     */
+    private suspend fun verifyAndHash(
+        file: File,
+        sourceId: String,
+        downloadId: Long,
+        itemName: String,
+    ): String {
+        val totalBytes = file.length()
+        val digest = MessageDigest.getInstance("SHA-256")
+        var hashedSoFar = 0L
+        var lastReportMs = System.currentTimeMillis()
+
+        reportVerifying(sourceId, downloadId, itemName, 0)
+        setProgress(workDataOf(KEY_VERIFYING to true, KEY_DOWNLOADED to 0L, KEY_TOTAL to totalBytes))
+
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(BUFFER_SIZE)
+            while (!isStopped) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                digest.update(buffer, 0, read)
+                hashedSoFar += read
+
+                val now = System.currentTimeMillis()
+                if (now - lastReportMs >= PROGRESS_INTERVAL_MS) {
+                    val percent =
+                        if (totalBytes > 0) (hashedSoFar.times(100).div(totalBytes)).toInt() else 0
+                    setProgress(
+                        workDataOf(KEY_VERIFYING to true, KEY_DOWNLOADED to hashedSoFar, KEY_TOTAL to totalBytes)
+                    )
+                    reportVerifying(sourceId, downloadId, itemName, percent)
+                    lastReportMs = now
+                }
+            }
+        }
+
+        if (isStopped) throw IOException("Verification cancelled")
+
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
     private fun reportQueued(sourceId: String, downloadId: Long, itemName: String) {
         DownloadNotificationCoordinator.update(
             applicationContext,
@@ -217,6 +270,20 @@ constructor(
                 itemName = itemName,
                 downloadId = downloadId,
                 queued = true,
+            ),
+        )
+    }
+
+    private fun reportVerifying(sourceId: String, downloadId: Long, itemName: String, percent: Int) {
+        DownloadNotificationCoordinator.update(
+            applicationContext,
+            sourceId,
+            DownloadNotificationCoordinator.Entry(
+                itemName = itemName,
+                downloadId = downloadId,
+                queued = false,
+                verifying = true,
+                percent = percent,
             ),
         )
     }
@@ -304,6 +371,7 @@ constructor(
         const val KEY_DOWNLOADED = "KEY_DOWNLOADED"
         const val KEY_TOTAL = "KEY_TOTAL"
         const val KEY_QUEUED = "KEY_QUEUED"
+        const val KEY_VERIFYING = "KEY_VERIFYING"
 
         private const val CHANNEL_ID = "downloads"
         private const val BUFFER_SIZE = 64 * 1024

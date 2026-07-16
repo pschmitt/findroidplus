@@ -27,6 +27,7 @@ internal object DownloadNotificationCoordinator {
         val itemName: String,
         val downloadId: Long,
         val queued: Boolean,
+        val verifying: Boolean = false,
         val percent: Int = -1,
         val downloadedBytes: Long = 0L,
         val totalBytes: Long = 0L,
@@ -77,6 +78,20 @@ internal object DownloadNotificationCoordinator {
             builder
                 .setContentText(context.getString(CoreR.string.download_queued))
                 .setProgress(0, 0, true)
+                .addAction(
+                    CoreR.drawable.ic_x,
+                    context.getString(CoreR.string.download_action_cancel),
+                    actionPendingIntent(context, DownloadActionReceiver.ACTION_CANCEL, entry.downloadId),
+                )
+            return
+        }
+
+        if (entry.verifying) {
+            builder
+                .setContentText(
+                    context.getString(CoreR.string.download_verifying_status, entry.percent.coerceAtLeast(0))
+                )
+                .setProgress(100, entry.percent.coerceAtLeast(0), entry.percent < 0)
                 .addAction(
                     CoreR.drawable.ic_x,
                     context.getString(CoreR.string.download_action_cancel),
@@ -188,10 +203,14 @@ internal object DownloadNotificationCoordinator {
             .sortedBy { it.queued }
             .forEach { entry ->
                 val status =
-                    if (entry.queued) {
-                        context.getString(CoreR.string.download_queued)
-                    } else {
-                        "${entry.percent.coerceAtLeast(0)}%"
+                    when {
+                        entry.queued -> context.getString(CoreR.string.download_queued)
+                        entry.verifying ->
+                            context.getString(
+                                CoreR.string.download_verifying_status,
+                                entry.percent.coerceAtLeast(0),
+                            )
+                        else -> "${entry.percent.coerceAtLeast(0)}%"
                     }
                 style.addLine("${entry.itemName} · $status")
             }

@@ -117,6 +117,9 @@ interface ServerDatabaseDao {
     @Query("UPDATE sources SET downloadId = :downloadId WHERE id = :id")
     fun setSourceDownloadId(id: String, downloadId: Long)
 
+    @Query("UPDATE sources SET checksum = :checksum WHERE id = :id")
+    fun setSourceChecksum(id: String, checksum: String)
+
     @Query("UPDATE sources SET path = :path WHERE id = :id")
     fun setSourcePath(id: String, path: String)
 
