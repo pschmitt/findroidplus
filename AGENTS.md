@@ -29,12 +29,17 @@ Repository instructions for AI coding agents working on Findroid.
     `.git/`, `build/`, `.gradle/`).
   - `just gradle [host] <tasks...>` — sync, then run arbitrary Gradle tasks remotely via
     `nix develop --command ./gradlew <tasks>`.
-  - `just build-phone-debug` / `just build-tv-debug` — build the libre-flavor debug APK.
+  - `just build [flags]` — build the libre-flavor APK remotely. Flags: `--tv`/`--phone`
+    (default `--phone`), `--debug`/`--release` (default `--debug`), `--host=<host>`.
+    E.g. `just build --debug` (phone debug, the common case) or `just build --tv --release`.
   - `just lint` — remote `ktfmtCheck` (mirrors `.github/workflows/lint.yaml`).
   - `just test` — remote unit test suites for `:data` and `:core`.
-  - `just fetch-phone-debug` / `just fetch-tv-debug` — scp the built APK split back to
-    `./dist/` locally.
-  - `just build-and-fetch-phone-debug` — build + fetch in one step.
+  - `just fetch [flags]` — scp the built APK split back to `./dist/` locally. Same flags
+    as `just build`, plus `--abi=<abi>` (default `arm64-v8a`).
+  - `just build-fetch [flags]` — build + fetch in one step. Same flags as `just build`.
+  - Flag parsing for `build`/`fetch`/`build-fetch`/`deploy` is shared via
+    `.just-parse-flags.sh` (not a real just recipe — plain bash, invoked by those recipes
+    since just has no native flag/option parser).
   - Manually, the equivalent is:
     1. `rsync -az --delete --exclude='.git/' --exclude='**/build/' --exclude='.gradle/' --exclude='**/.gradle/' ./ rofl-13.brkn.lol:~/devel/private/pschmitt/findroid-verify/`
     2. `ssh rofl-13.brkn.lol 'cd ~/devel/private/pschmitt/findroid-verify && nix develop --command ./gradlew <tasks>'`
@@ -70,8 +75,8 @@ Repository instructions for AI coding agents working on Findroid.
     and Termux's `sshd` has no `sftp-server` subsystem configured anyway (plain `scp`
     fails with "Connection closed" unless you pass `-O` for the legacy protocol). `adb
     install` sidesteps all of that.
-  - `just deploy-phone-debug` — build the phone debug APK remotely, fetch it, and
-    install it on the Mi Pad 4 in one step.
+  - `just deploy [flags]` — build the APK remotely, fetch it, and install it on the
+    Mi Pad 4 in one step. Same flags as `just build`, e.g. `just deploy --debug`.
   - `just mipad-logcat [filter]` — tail `logcat` from the device, optionally grepped.
   - `just mipad-uninstall <pkg>` — `adb uninstall` a package (see the signature-mismatch
     gotcha below).

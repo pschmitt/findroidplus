@@ -32,11 +32,27 @@ sync host=remote_host:
 gradle host=remote_host *tasks: (sync host)
     ssh {{host}} 'cd {{remote_path}} && nix develop --command ./gradlew {{tasks}}'
 
-# Build the phone debug APK (libre flavor) remotely
-build-phone-debug host=remote_host: (gradle host ":app:phone:assembleLibreDebug")
+# Build an APK remotely. Flags: --tv/--phone (default phone), --debug/--release (default debug), --host=<host>
+build *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -r variant flavor host abi < <("{{justfile_directory()}}/.just-parse-flags.sh" {{remote_host}} {{mipad_abi}} -- {{flags}})
+    just gradle "$host" ":app:${variant}:assembleLibre${flavor^}"
 
-# Build the TV debug APK (libre flavor) remotely
-build-tv-debug host=remote_host: (gradle host ":app:tv:assembleLibreDebug")
+# Copy a built APK split back to ./dist locally. Same flags as `build`, plus --abi=<abi>
+fetch *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -r variant flavor host abi < <("{{justfile_directory()}}/.just-parse-flags.sh" {{remote_host}} {{mipad_abi}} -- {{flags}})
+    mkdir -p {{local_dist}}
+    scp "$host:{{remote_path}}/app/${variant}/build/outputs/apk/libre/${flavor}/${variant}-libre-${abi}-${flavor}.apk" {{local_dist}}/
+
+# Build an APK remotely and copy it back to ./dist. Same flags as `build`.
+build-fetch *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just build {{flags}}
+    just fetch {{flags}}
 
 # ktfmt check via Gradle, remotely (mirrors .github/workflows/lint.yaml)
 lint host=remote_host: (gradle host "ktfmtCheck")
@@ -46,19 +62,6 @@ test host=remote_host: (gradle host ":data:testLibreDebugUnitTest" ":core:testLi
 
 # Remote `./gradlew clean`
 clean host=remote_host: (gradle host "clean")
-
-# Copy the built phone debug APK split back to ./dist locally
-fetch-phone-debug host=remote_host abi=mipad_abi:
-    mkdir -p {{local_dist}}
-    scp {{host}}:{{remote_path}}/app/phone/build/outputs/apk/libre/debug/phone-libre-{{abi}}-debug.apk {{local_dist}}/
-
-# Copy the built TV debug APK split back to ./dist locally
-fetch-tv-debug host=remote_host abi=mipad_abi:
-    mkdir -p {{local_dist}}
-    scp {{host}}:{{remote_path}}/app/tv/build/outputs/apk/libre/debug/tv-libre-{{abi}}-debug.apk {{local_dist}}/
-
-# Build the phone debug APK remotely and copy it back to ./dist
-build-and-fetch-phone-debug host=remote_host abi=mipad_abi: (build-phone-debug host) (fetch-phone-debug host abi)
 
 # --- Mi Pad 4 test device (rooted, Termux SSH on port 8022) --------------
 
@@ -120,9 +123,13 @@ mipad-logcat filter="":
         adb -s "$target" logcat
     fi
 
-# Build the phone debug APK remotely, fetch it, and install it on the Mi Pad 4
-deploy-phone-debug host=remote_host abi=mipad_abi: (build-and-fetch-phone-debug host abi)
-    just mipad-install {{local_dist}}/phone-libre-{{abi}}-debug.apk
+# Build an APK remotely, fetch it, and install it on the Mi Pad 4. Same flags as `build`.
+deploy *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -r variant flavor host abi < <("{{justfile_directory()}}/.just-parse-flags.sh" {{remote_host}} {{mipad_abi}} -- {{flags}})
+    just build-fetch {{flags}}
+    just mipad-install "{{local_dist}}/${variant}-libre-${abi}-${flavor}.apk"
 
 # --- Formatting / hooks ----------------------------------------------------
 
