@@ -1,11 +1,14 @@
 package dev.jdtech.jellyfin.settings.presentation.settings
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Environment
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.settings.R
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.presentation.enums.DeviceType
@@ -28,10 +31,25 @@ import kotlinx.coroutines.launch
 private val CONCRETE_DOWNLOAD_LOCATIONS = setOf("internal", "external")
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(private val appPreferences: AppPreferences) :
-    ViewModel() {
+class SettingsViewModel
+@Inject
+constructor(
+    private val appPreferences: AppPreferences,
+    @param:ApplicationContext private val context: Context,
+) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state = _state.asStateFlow()
+
+    /**
+     * "Internal"/"External"/"Ask" only makes sense to offer a choice when a removable volume
+     * (SD card/USB) actually exists - on a device with only built-in storage there's nothing to
+     * choose between, so the whole preference is disabled rather than left offering options that
+     * don't do anything different from each other. Duplicates the removable-volume check in
+     * core/utils/DownloadStorage.kt rather than depending on it - `core` depends on `settings`,
+     * not the other way around, so reusing it here isn't possible.
+     */
+    private fun hasRemovableStorage(): Boolean =
+        context.getExternalFilesDirs(null).any { it != null && Environment.isExternalStorageRemovable(it) }
 
     private val eventsChannel = Channel<SettingsEvent>()
     val events = eventsChannel.receiveAsFlow()
@@ -672,6 +690,7 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.download_location,
                                                     iconDrawableId = R.drawable.ic_hard_drive,
+                                                    enabled = hasRemovableStorage(),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference =
                                                         appPreferences.downloadLocation,
