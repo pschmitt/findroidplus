@@ -163,16 +163,17 @@ constructor(
     }
 
     fun deleteSelected() {
-        viewModelScope.launch {
-            downloader.deleteItems(_state.value.selectedIds.toList())
-            refresh()
-        }
+        deleteItems(_state.value.selectedIds.toList())
     }
 
     fun deleteItem(id: UUID) {
+        deleteItems(listOf(id))
+    }
+
+    fun deleteItems(ids: List<UUID>) {
         viewModelScope.launch {
-            downloader.deleteItems(listOf(id))
-            _state.value = _state.value.copy(selectedIds = _state.value.selectedIds - id)
+            downloader.deleteItems(ids)
+            _state.value = _state.value.copy(selectedIds = _state.value.selectedIds - ids.toSet())
             refresh()
         }
     }

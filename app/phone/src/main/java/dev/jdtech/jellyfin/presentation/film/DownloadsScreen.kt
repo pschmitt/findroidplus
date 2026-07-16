@@ -101,6 +101,7 @@ fun DownloadsScreen(
     var clearAllDialogOpen by remember { mutableStateOf(false) }
     var deleteSelectedDialogOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PendingDownloadDelete?>(null) }
+    var pendingGroupDelete by remember { mutableStateOf<DownloadShowGroup?>(null) }
 
     val allItems = state.movies + state.showGroups.flatMap { it.episodes }
     val totalSizeBytes =
@@ -130,6 +131,7 @@ fun DownloadsScreen(
         onSwipeDeleteRequest = { id, title, path, sizeBytes ->
             pendingDelete = PendingDownloadDelete(id, title, path, sizeBytes)
         },
+        onSwipeDeleteGroupRequest = { group -> pendingGroupDelete = group },
         onPauseAllClick = viewModel::pauseAll,
         onResumeAllClick = viewModel::resumeAll,
         onShowClick = onShowClick,
@@ -180,6 +182,25 @@ fun DownloadsScreen(
             onDismiss = { pendingDelete = null },
         )
     }
+
+    pendingGroupDelete?.let { group ->
+        val groupSizeBytes =
+            remember(group) {
+                group.episodes.sumOf {
+                    it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                }
+            }
+        DeleteShowDownloadsDialog(
+            seriesName = group.seriesName,
+            episodeCount = group.episodes.size,
+            sizeBytes = groupSizeBytes,
+            onConfirm = {
+                viewModel.deleteItems(group.episodes.map { it.id })
+                pendingGroupDelete = null
+            },
+            onDismiss = { pendingGroupDelete = null },
+        )
+    }
 }
 
 private data class PendingDownloadDelete(
@@ -202,6 +223,7 @@ private fun DownloadsScreenLayout(
     onToggleGroupSelection: (Set<UUID>, Boolean) -> Unit = { _, _ -> },
     onDownloadAction: (UUID, DownloadAction) -> Unit = { _, _ -> },
     onSwipeDeleteRequest: (UUID, String, String?, Long?) -> Unit = { _, _, _, _ -> },
+    onSwipeDeleteGroupRequest: (DownloadShowGroup) -> Unit = {},
     onPauseAllClick: () -> Unit = {},
     onResumeAllClick: () -> Unit = {},
     onShowClick: (UUID) -> Unit = {},
@@ -375,6 +397,12 @@ private fun DownloadsScreenLayout(
                         group.episodes.any {
                             state.downloadProgress[it.id]?.status == DownloadManager.STATUS_PENDING
                         }
+                    val hasActiveDownload =
+                        group.episodes.any {
+                            state.downloadProgress[it.id]?.status?.let { status ->
+                                status != DownloadManager.STATUS_SUCCESSFUL
+                            } == true
+                        }
                     val groupCollapsed = group.seriesId in collapsedGroupIds
                     stickyHeader {
                         ShowGroupHeader(
@@ -392,6 +420,8 @@ private fun DownloadsScreenLayout(
                                     if (groupCollapsed) collapsedGroupIds - group.seriesId
                                     else collapsedGroupIds + group.seriesId
                             },
+                            swipeEnabled = !selectionMode && !hasActiveDownload,
+                            onSwipeDeleteRequest = { onSwipeDeleteGroupRequest(group) },
                         )
                     }
                     if (groupCollapsed) return@forEach
@@ -523,6 +553,8 @@ private fun ShowGroupHeader(
     onForceClick: () -> Unit = {},
     collapsed: Boolean = false,
     onToggleCollapsed: () -> Unit = {},
+    swipeEnabled: Boolean = false,
+    onSwipeDeleteRequest: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val downloadedSizeBytes =
@@ -532,65 +564,67 @@ private fun ShowGroupHeader(
             }
         }
 
-    Card {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .combinedClickable(
-                        onClick = { if (selectionMode) onToggle() else onClick() },
-                        onLongClick = onLongClick,
-                    )
-                    .padding(
-                        horizontal = MaterialTheme.spacings.default,
-                        vertical = MaterialTheme.spacings.small,
-                    ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(modifier = Modifier.width(32.dp).clip(MaterialTheme.shapes.extraSmall)) {
-                ItemPoster(item = group.episodes.first(), direction = Direction.VERTICAL)
-            }
-            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = group.seriesName,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (downloadedSizeBytes > 0) {
+    SwipeToDeleteContainer(enabled = swipeEnabled, onSwipeDeleteRequest = onSwipeDeleteRequest) {
+        Card {
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { if (selectionMode) onToggle() else onClick() },
+                            onLongClick = onLongClick,
+                        )
+                        .padding(
+                            horizontal = MaterialTheme.spacings.default,
+                            vertical = MaterialTheme.spacings.small,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.width(32.dp).clip(MaterialTheme.shapes.extraSmall)) {
+                    ItemPoster(item = group.episodes.first(), direction = Direction.VERTICAL)
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = Formatter.formatFileSize(context, downloadedSizeBytes),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = group.seriesName,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                    if (downloadedSizeBytes > 0) {
+                        Text(
+                            text = Formatter.formatFileSize(context, downloadedSizeBytes),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
-            }
-            if (!selectionMode && canForce) {
-                IconButton(onClick = onForceClick) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_fast_forward),
-                        contentDescription = stringResource(CoreR.string.download_action_force),
-                    )
+                if (!selectionMode && canForce) {
+                    IconButton(onClick = onForceClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_fast_forward),
+                            contentDescription = stringResource(CoreR.string.download_action_force),
+                        )
+                    }
                 }
-            }
-            if (!selectionMode) {
-                IconButton(onClick = onToggleCollapsed) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                if (collapsed) CoreR.drawable.ic_chevron_down
-                                else CoreR.drawable.ic_chevron_up
-                            ),
-                        contentDescription =
-                            stringResource(
-                                if (collapsed) CoreR.string.expand else CoreR.string.collapse
-                            ),
-                    )
+                if (!selectionMode) {
+                    IconButton(onClick = onToggleCollapsed) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    if (collapsed) CoreR.drawable.ic_chevron_down
+                                    else CoreR.drawable.ic_chevron_up
+                                ),
+                            contentDescription =
+                                stringResource(
+                                    if (collapsed) CoreR.string.expand else CoreR.string.collapse
+                                ),
+                        )
+                    }
                 }
-            }
-            if (selectionMode) {
-                Checkbox(checked = checked, onCheckedChange = { onToggle() })
+                if (selectionMode) {
+                    Checkbox(checked = checked, onCheckedChange = { onToggle() })
+                }
             }
         }
     }
@@ -735,50 +769,62 @@ private fun DownloadRow(
         }
     }
 
-    if (swipeEnabled) {
-        val density = LocalDensity.current
-        val scope = rememberCoroutineScope()
-        val offsetX = remember { Animatable(0f) }
-        val maxSwipePx = with(density) { 96.dp.toPx() }
-        val thresholdPx = maxSwipePx / 2f
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier =
-                    Modifier.matchParentSize().padding(horizontal = MaterialTheme.spacings.default),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_trash),
-                    contentDescription = stringResource(CoreR.string.delete_download),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-            Box(
-                modifier =
-                    Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                        .background(MaterialTheme.colorScheme.background)
-                        .draggable(
-                            orientation = Orientation.Horizontal,
-                            state =
-                                rememberDraggableState { delta ->
-                                    scope.launch {
-                                        offsetX.snapTo((offsetX.value + delta).coerceIn(-maxSwipePx, 0f))
-                                    }
-                                },
-                            onDragStopped = {
-                                if (offsetX.value < -thresholdPx) {
-                                    onSwipeDeleteRequest()
-                                }
-                                scope.launch { offsetX.animateTo(0f) }
-                            },
-                        )
-            ) {
-                content()
-            }
-        }
-    } else {
+    SwipeToDeleteContainer(enabled = swipeEnabled, onSwipeDeleteRequest = onSwipeDeleteRequest) {
         content()
+    }
+}
+
+@Composable
+private fun SwipeToDeleteContainer(
+    enabled: Boolean,
+    onSwipeDeleteRequest: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (!enabled) {
+        content()
+        return
+    }
+
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    val maxSwipePx = with(density) { 96.dp.toPx() }
+    val thresholdPx = maxSwipePx / 2f
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier =
+                Modifier.matchParentSize().padding(horizontal = MaterialTheme.spacings.default),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_trash),
+                contentDescription = stringResource(CoreR.string.delete_download),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        }
+        Box(
+            modifier =
+                Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                    .background(MaterialTheme.colorScheme.background)
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state =
+                            rememberDraggableState { delta ->
+                                scope.launch {
+                                    offsetX.snapTo((offsetX.value + delta).coerceIn(-maxSwipePx, 0f))
+                                }
+                            },
+                        onDragStopped = {
+                            if (offsetX.value < -thresholdPx) {
+                                onSwipeDeleteRequest()
+                            }
+                            scope.launch { offsetX.animateTo(0f) }
+                        },
+                    )
+        ) {
+            content()
+        }
     }
 }
 
@@ -864,6 +910,68 @@ private fun DeleteSingleDownloadDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (sizeBytes != null) {
+                    Text(
+                        text = Formatter.formatFileSize(context, sizeBytes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(
+                    text = stringResource(CoreR.string.delete_download),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Icon(painter = painterResource(CoreR.drawable.ic_x), contentDescription = null)
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = stringResource(CoreR.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DeleteShowDownloadsDialog(
+    seriesName: String,
+    episodeCount: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    sizeBytes: Long? = null,
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        icon = {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_trash),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
+        title = { Text(text = stringResource(CoreR.string.clear_season_downloads)) },
+        text = {
+            Column {
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.delete_show_downloads_message,
+                            episodeCount,
+                            seriesName,
+                        )
+                )
                 if (sizeBytes != null) {
                     Text(
                         text = Formatter.formatFileSize(context, sizeBytes),

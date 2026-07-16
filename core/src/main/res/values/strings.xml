@@ -222,4 +222,5 @@
     <string name="manage_downloads_select_all">Select all</string>
     <string name="delete_selected_downloads">Delete selected downloads</string>
     <string name="delete_selected_downloads_message">This will delete %1$d selected episode(s) from this device.</string>
+    <string name="delete_show_downloads_message">This will delete %1$d downloaded episode(s) of %2$s from this device.</string>
 </resources>
