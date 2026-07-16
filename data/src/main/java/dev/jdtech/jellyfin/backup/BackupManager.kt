@@ -110,6 +110,11 @@ class BackupManager(
     private fun dumpPreferences(): Map<String, PrefValue> {
         val result = mutableMapOf<String, PrefValue>()
         for ((key, value) in appPreferences.sharedPreferences.all) {
+            // Ephemeral in-flight state, not a user setting - must never round-trip through a
+            // backup. If it were captured here, restoring an old backup could resurrect a stale
+            // pending-download signal that overrides whatever the user answers in the restore
+            // flow's own "redownload?" prompt (see RestoreBackupViewModel.OnRedownloadNo).
+            if (key == appPreferences.pendingRestoreDownloads.backendName) continue
             result[key] =
                 when (value) {
                     is Boolean -> PrefValue.BoolValue(value)

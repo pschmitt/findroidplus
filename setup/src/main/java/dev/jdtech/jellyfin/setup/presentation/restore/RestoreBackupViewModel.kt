@@ -43,6 +43,10 @@ constructor(
                 _state.value = _state.value.copy(downloadPromptAnswered = true)
             }
             is RestoreBackupAction.OnRedownloadNo -> {
+                // Explicitly clear rather than just leaving it untouched: a prior backup could
+                // have captured a non-null value (e.g. from an earlier "Yes") that would
+                // otherwise silently override this "No" answer once Home reads it.
+                appPreferences.setValue(appPreferences.pendingRestoreDownloads, null)
                 _state.value = _state.value.copy(downloadPromptAnswered = true)
             }
             is RestoreBackupAction.OnBackClick -> Unit
