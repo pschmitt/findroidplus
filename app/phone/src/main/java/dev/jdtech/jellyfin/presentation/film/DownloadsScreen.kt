@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -65,12 +66,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
+import dev.jdtech.jellyfin.core.presentation.dummy.dummyQueueStatus
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadAction
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadShowGroup
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsState
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
+import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueGroup
+import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueUiItem
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.PvrSource
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
@@ -241,6 +247,7 @@ private fun DownloadsScreenLayout(
 
     var moviesCollapsed by remember { mutableStateOf(false) }
     var collapsedGroupIds by remember { mutableStateOf(emptySet<UUID>()) }
+    var pvrQueueCollapsed by remember { mutableStateOf(false) }
 
     // Reset whenever there's no active batch, so the next delete shows the card fresh even if
     // the user dismissed a previous one.
@@ -456,6 +463,25 @@ private fun DownloadsScreenLayout(
                                 )
                             },
                         )
+                    }
+                }
+                if (state.pvrQueueGroups.isNotEmpty()) {
+                    stickyHeader {
+                        SectionHeader(
+                            text = stringResource(CoreR.string.pvr_queue_section_title),
+                            collapsed = pvrQueueCollapsed,
+                            onToggleCollapsed = { pvrQueueCollapsed = !pvrQueueCollapsed },
+                        )
+                    }
+                    if (!pvrQueueCollapsed) {
+                        state.pvrQueueGroups.forEach { group ->
+                            items(items = group.items) { queueItem ->
+                                PvrQueueRow(
+                                    queueItem = queueItem,
+                                    onClick = { queueItem.item?.let(onItemClick) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -774,6 +800,96 @@ private fun DownloadRow(
     }
 }
 
+/**
+ * Read-only row for a single Sonarr/Radarr queue entry - same visual shape as [DownloadRow]
+ * (poster, title, progress bar, status text) but with no pause/resume/cancel/delete actions,
+ * since these items live on the PVR side, not locally. When [PvrQueueUiItem.item] is null (the
+ * queue entry couldn't be matched to a local Jellyfin item), a placeholder icon is shown instead
+ * of a poster and the row isn't clickable.
+ */
+@Composable
+private fun PvrQueueRow(queueItem: PvrQueueUiItem, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val status = queueItem.status
+    val isProblem = status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
+    val statusText =
+        when (status.status) {
+            QueueItemStatus.QUEUED -> stringResource(CoreR.string.download_queued)
+            QueueItemStatus.DOWNLOADING ->
+                if (status.percent >= 0) {
+                    stringResource(
+                        CoreR.string.download_progress_status,
+                        status.percent,
+                        formatDownloadSpeed(context, status.speedBytesPerSecond),
+                        formatEta(status.etaSeconds),
+                    )
+                } else {
+                    stringResource(CoreR.string.download_downloading)
+                }
+            QueueItemStatus.IMPORTING -> stringResource(CoreR.string.pvr_queue_status_importing)
+            QueueItemStatus.WARNING ->
+                status.errorMessage ?: stringResource(CoreR.string.pvr_queue_status_warning)
+            QueueItemStatus.FAILED ->
+                status.errorMessage ?: stringResource(CoreR.string.pvr_queue_status_failed)
+        }
+
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .let { if (queueItem.item != null) it.clickable(onClick = onClick) else it }
+                .padding(
+                    horizontal = MaterialTheme.spacings.default,
+                    vertical = MaterialTheme.spacings.small,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
+            val item = queueItem.item
+            if (item != null) {
+                ItemPoster(item = item, direction = Direction.HORIZONTAL)
+            } else {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .aspectRatio(1.77f)
+                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_film),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = queueItem.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodySmall,
+                color =
+                    if (isProblem) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (status.percent >= 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { status.percent.coerceIn(0, 100) / 100f },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun SwipeToDeleteContainer(
     enabled: Boolean,
@@ -1006,6 +1122,45 @@ private fun DeleteShowDownloadsDialog(
     )
 }
 
+private val dummyPvrQueueGroups =
+    listOf(
+        PvrQueueGroup(
+            source = PvrSource.SONARR,
+            items =
+                listOf(
+                    PvrQueueUiItem(
+                        itemId = dummyEpisode.id,
+                        title = "${dummyEpisode.seriesName} - S${dummyEpisode.parentIndexNumber}E${dummyEpisode.indexNumber}",
+                        item = dummyEpisode,
+                        status = dummyQueueStatus,
+                    ),
+                    PvrQueueUiItem(
+                        itemId = null,
+                        title = "Some Unsynced Show - S01E02",
+                        item = null,
+                        status = dummyQueueStatus.copy(status = QueueItemStatus.QUEUED, percent = -1),
+                    ),
+                ),
+        ),
+        PvrQueueGroup(
+            source = PvrSource.RADARR,
+            items =
+                listOf(
+                    PvrQueueUiItem(
+                        itemId = dummyMovie.id,
+                        title = dummyMovie.name,
+                        item = dummyMovie,
+                        status =
+                            dummyQueueStatus.copy(
+                                source = PvrSource.RADARR,
+                                status = QueueItemStatus.WARNING,
+                                errorMessage = "Sample import warning",
+                            ),
+                    )
+                ),
+        ),
+    )
+
 @PreviewScreenSizes
 @Composable
 private fun DownloadsScreenLayoutPreview() {
@@ -1022,6 +1177,7 @@ private fun DownloadsScreenLayoutPreview() {
                                 episodes = listOf(dummyEpisode),
                             )
                         ),
+                    pvrQueueGroups = dummyPvrQueueGroups,
                 )
         )
     }

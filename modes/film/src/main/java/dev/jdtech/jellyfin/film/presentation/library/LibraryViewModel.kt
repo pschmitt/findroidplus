@@ -8,6 +8,7 @@ import dev.jdtech.jellyfin.models.CollectionType
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.util.UUID
 import javax.inject.Inject
@@ -25,6 +26,7 @@ constructor(
     private val jellyfinRepository: JellyfinRepository,
     private val appPreferences: AppPreferences,
     private val libraryItemsCache: LibraryItemsCache,
+    private val queueStatusRepository: QueueStatusRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LibraryState())
     val state = _state.asStateFlow()
@@ -36,6 +38,14 @@ constructor(
     lateinit var sortOrder: SortOrder
 
     private var searchJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            queueStatusRepository.getQueueStatusFlow().collect { queueStatusByItemId ->
+                _state.value = _state.value.copy(queueStatus = queueStatusByItemId)
+            }
+        }
+    }
 
     fun setup(parentId: UUID, libraryType: CollectionType) {
         this.parentId = parentId

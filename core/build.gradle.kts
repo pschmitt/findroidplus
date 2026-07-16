@@ -51,9 +51,12 @@ dependencies {
     implementation(libs.jellyfin.core)
     implementation(libs.material)
     implementation(libs.okhttp)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.timber)
     implementation(libs.slf4j.api)
     implementation(libs.slf4j.android)
+
+    testImplementation(libs.junit)
 
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.androidx.test.runner)

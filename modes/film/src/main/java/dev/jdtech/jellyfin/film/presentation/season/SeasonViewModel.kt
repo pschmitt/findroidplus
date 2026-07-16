@@ -14,6 +14,7 @@ import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
@@ -39,6 +40,7 @@ constructor(
     private val downloader: Downloader,
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val appPreferences: AppPreferences,
+    private val queueStatusRepository: QueueStatusRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SeasonState())
     val state = _state.asStateFlow()
@@ -47,6 +49,7 @@ constructor(
 
     private val downloadIdsByEpisode = mutableMapOf<UUID, Long>()
     private val progressJobs = mutableMapOf<UUID, Job>()
+    private var queueStatusJob: Job? = null
 
     lateinit var seasonId: UUID
     private var seriesId: UUID? = null
@@ -77,10 +80,25 @@ constructor(
                     )
                 )
                 reconcileDownloadProgress(episodes)
+                observeQueueStatus(episodes)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
         }
+    }
+
+    private fun observeQueueStatus(episodes: List<FindroidEpisode>) {
+        val episodeIds = episodes.map { it.id }.toSet()
+        queueStatusJob?.cancel()
+        queueStatusJob =
+            viewModelScope.launch {
+                queueStatusRepository.getQueueStatusFlow().collect { queueStatusByItemId ->
+                    _state.value =
+                        _state.value.copy(
+                            queueStatus = queueStatusByItemId.filterKeys { it in episodeIds }
+                        )
+                }
+            }
     }
 
     private fun reconcileDownloadProgress(episodes: List<FindroidEpisode>) {
@@ -237,5 +255,6 @@ constructor(
     override fun onCleared() {
         super.onCleared()
         progressJobs.values.forEach { it.cancel() }
+        queueStatusJob?.cancel()
     }
 }

@@ -234,6 +234,7 @@ private fun LibraryScreenLayout(
                             direction = Direction.VERTICAL,
                             onClick = { onAction(LibraryAction.OnItemClick(item)) },
                             modifier = Modifier.animateItem(),
+                            queueStatus = state.queueStatus[item.id],
                         )
                     }
                 }

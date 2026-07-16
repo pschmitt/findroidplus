@@ -165,6 +165,23 @@
     <string name="backup_last_never">Never</string>
     <string name="backup_now_success">Backup created</string>
     <string name="backup_now_error">Backup failed: %1$s</string>
+    <string name="integrations_title">Integrations</string>
+    <string name="integrations_sonarr">Sonarr</string>
+    <string name="integrations_radarr">Radarr</string>
+    <string name="integrations_enable_sonarr">Enable Sonarr</string>
+    <string name="integrations_enable_radarr">Enable Radarr</string>
+    <string name="integrations_server_url">Server URL</string>
+    <string name="integrations_server_url_hint">http://192.168.1.10:8989</string>
+    <string name="integrations_api_key">API key</string>
+    <string name="integrations_test_connection">Test connection</string>
+    <string name="integrations_test_connection_success">Connected - %1$d items found</string>
+    <string name="integrations_test_connection_error">Connection failed: %1$s</string>
+    <string name="integrations_poll_interval">Poll interval</string>
+    <string name="integrations_poll_interval_summary">How often to check Sonarr/Radarr for queue updates. Between 5 and 1440 minutes.</string>
+    <string name="queue_status_queued">Queued</string>
+    <string name="queue_status_importing">Importing</string>
+    <string name="queue_status_warning">Warning</string>
+    <string name="queue_status_failed">Failed</string>
     <string name="restore_backup">Restore from backup</string>
     <string name="restore_backup_choose_file">Choose backup file</string>
     <string name="restore_backup_password_title">Password required</string>
@@ -223,4 +240,8 @@
     <string name="delete_selected_downloads">Delete selected downloads</string>
     <string name="delete_selected_downloads_message">This will delete %1$d selected episode(s) from this device.</string>
     <string name="delete_show_downloads_message">This will delete %1$d downloaded episode(s) of %2$s from this device.</string>
+    <string name="pvr_queue_section_title">Downloading (Sonarr/Radarr)</string>
+    <string name="pvr_queue_status_importing">Importing…</string>
+    <string name="pvr_queue_status_warning">Warning</string>
+    <string name="pvr_queue_status_failed">Failed</string>
 </resources>

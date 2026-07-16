@@ -262,6 +262,7 @@ private fun SeasonScreenLayout(
                         onClick = { onAction(SeasonAction.NavigateToItem(episode)) },
                         modifier = Modifier.padding(start = paddingStart, end = paddingEnd),
                         downloadProgress = state.downloadProgress[episode.id],
+                        queueStatus = state.queueStatus[episode.id],
                     )
                 }
             }

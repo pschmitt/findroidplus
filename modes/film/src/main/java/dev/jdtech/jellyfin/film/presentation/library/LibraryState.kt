@@ -2,8 +2,10 @@ package dev.jdtech.jellyfin.film.presentation.library
 
 import androidx.paging.PagingData
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -14,4 +16,5 @@ data class LibraryState(
     val isLoading: Boolean = false,
     val error: Exception? = null,
     val searchQuery: String = "",
+    val queueStatus: Map<UUID, QueueStatus> = emptyMap(),
 )

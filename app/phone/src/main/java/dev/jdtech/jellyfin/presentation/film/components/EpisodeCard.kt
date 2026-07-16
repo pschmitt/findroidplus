@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -38,6 +39,7 @@ fun EpisodeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     downloadProgress: DownloadProgress? = null,
+    queueStatus: QueueStatus? = null,
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
 
@@ -63,6 +65,8 @@ fun EpisodeCard(
                     DownloadedBadge()
                 } else if (downloadProgress != null) {
                     DownloadingBadge(progress = downloadProgress)
+                } else if (queueStatus != null) {
+                    QueueBadge(status = queueStatus)
                 }
                 if (episode.played) PlayedBadge()
             }
