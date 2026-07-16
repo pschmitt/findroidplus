@@ -56,6 +56,7 @@ import dev.jdtech.jellyfin.presentation.settings.AboutScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.backup.BackupSettingsScreen
+import dev.jdtech.jellyfin.presentation.settings.integrations.IntegrationsSettingsScreen
 import dev.jdtech.jellyfin.presentation.setup.addresses.ServerAddressesScreen
 import dev.jdtech.jellyfin.presentation.setup.addserver.AddServerScreen
 import dev.jdtech.jellyfin.presentation.setup.login.LoginScreen
@@ -119,6 +120,8 @@ data class LibraryRoute(
 @Serializable data object AboutRoute
 
 @Serializable data object BackupSettingsRoute
+
+@Serializable data object IntegrationsSettingsRoute
 
 @Serializable data object RestoreBackupRoute
 
@@ -553,11 +556,17 @@ fun NavigationRoot(
                     navigateToBackupSettings = {
                         navController.safeNavigate(BackupSettingsRoute)
                     },
+                    navigateToIntegrationsSettings = {
+                        navController.safeNavigate(IntegrationsSettingsRoute)
+                    },
                     navigateBack = { navController.safePopBackStack() },
                 )
             }
             composable<BackupSettingsRoute> {
                 BackupSettingsScreen(navigateBack = { navController.safePopBackStack() })
+            }
+            composable<IntegrationsSettingsRoute> {
+                IntegrationsSettingsScreen(navigateBack = { navController.safePopBackStack() })
             }
             composable<RestoreBackupRoute> {
                 RestoreBackupScreen(onBackClick = { navController.safePopBackStack() })

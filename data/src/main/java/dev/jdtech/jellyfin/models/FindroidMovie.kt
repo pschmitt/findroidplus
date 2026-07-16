@@ -32,6 +32,7 @@ data class FindroidMovie(
     override val images: FindroidImages,
     override val chapters: List<FindroidChapter>,
     override val trickplayInfo: Map<String, FindroidTrickplayInfo>?,
+    val tmdbId: String? = null,
 ) : FindroidItem, FindroidSources
 
 suspend fun BaseItemDto.toFindroidMovie(
@@ -68,6 +69,7 @@ suspend fun BaseItemDto.toFindroidMovie(
         chapters = toFindroidChapters(),
         trickplayInfo =
             trickplay?.mapValues { it.value[it.value.keys.max()]!!.toFindroidTrickplayInfo() },
+        tmdbId = providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
     )
 }
 
@@ -104,5 +106,6 @@ fun FindroidMovieDto.toFindroidMovie(database: ServerDatabaseDao, userId: UUID):
         images = toLocalFindroidImages(itemId = id),
         chapters = chapters ?: emptyList(),
         trickplayInfo = trickplayInfos,
+        tmdbId = tmdbId,
     )
 }

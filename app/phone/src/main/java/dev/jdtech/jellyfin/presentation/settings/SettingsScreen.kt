@@ -73,6 +73,7 @@ fun SettingsScreen(
     navigateToAbout: () -> Unit,
     navigateToAutoDownloadRules: () -> Unit,
     navigateToBackupSettings: () -> Unit,
+    navigateToIntegrationsSettings: () -> Unit,
     navigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -93,6 +94,7 @@ fun SettingsScreen(
             is SettingsEvent.NavigateToAbout -> navigateToAbout()
             is SettingsEvent.NavigateToAutoDownloadRules -> navigateToAutoDownloadRules()
             is SettingsEvent.NavigateToBackupSettings -> navigateToBackupSettings()
+            is SettingsEvent.NavigateToIntegrationsSettings -> navigateToIntegrationsSettings()
             is SettingsEvent.UpdateTheme -> {
                 val uiModeManager = context.getSystemService(UiModeManager::class.java)
                 val nightMode =

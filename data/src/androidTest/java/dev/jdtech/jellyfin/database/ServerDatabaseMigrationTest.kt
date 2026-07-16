@@ -46,4 +46,31 @@ class ServerDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate12To13_addsTvdbIdAndTmdbIdColumnsWithNullDefault() {
+        val v12 = helper.createDatabase(testDbName, 12)
+        v12.execSQL(
+            "INSERT INTO shows (id, serverId, name, originalTitle, overview, runtimeTicks, communityRating, officialRating, status, productionYear, endDate) VALUES ('show1', 's', 'Show', NULL, 'overview', 0, NULL, NULL, 'Ended', NULL, NULL)"
+        )
+        v12.execSQL(
+            "INSERT INTO movies (id, serverId, name, originalTitle, overview, runtimeTicks, premiereDate, communityRating, officialRating, status, productionYear, endDate, chapters) VALUES ('movie1', 's', 'Movie', NULL, 'overview', 0, NULL, NULL, NULL, 'Ended', NULL, NULL, NULL)"
+        )
+        v12.close()
+
+        val db = helper.runMigrationsAndValidate(testDbName, 13, true)
+
+        val showCursor = db.query("SELECT tvdbId FROM shows WHERE id = 'show1'")
+        showCursor.use {
+            assert(it.moveToFirst()) { "Pre-migration show row should survive the migration" }
+            assert(it.isNull(0)) { "tvdbId should default to NULL for old rows" }
+        }
+
+        val movieCursor = db.query("SELECT tmdbId FROM movies WHERE id = 'movie1'")
+        movieCursor.use {
+            assert(it.moveToFirst()) { "Pre-migration movie row should survive the migration" }
+            assert(it.isNull(0)) { "tmdbId should default to NULL for old rows" }
+        }
+        db.close()
+    }
 }

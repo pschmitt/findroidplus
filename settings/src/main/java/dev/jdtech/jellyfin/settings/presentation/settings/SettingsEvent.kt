@@ -9,6 +9,8 @@ sealed interface SettingsEvent {
 
     data object NavigateToBackupSettings : SettingsEvent
 
+    data object NavigateToIntegrationsSettings : SettingsEvent
+
     data object NavigateToAbout : SettingsEvent
 
     data object NavigateToAutoDownloadRules : SettingsEvent

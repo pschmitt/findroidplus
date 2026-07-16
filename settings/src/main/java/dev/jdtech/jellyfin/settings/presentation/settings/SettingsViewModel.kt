@@ -618,6 +618,21 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                 preferences =
                     listOf(
                         PreferenceCategory(
+                            nameStringResource = R.string.settings_category_integrations,
+                            iconDrawableId = R.drawable.ic_network,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToIntegrationsSettings)
+                                }
+                            },
+                        )
+                    )
+            ),
+            PreferenceGroup(
+                preferences =
+                    listOf(
+                        PreferenceCategory(
                             nameStringResource = R.string.title_download,
                             iconDrawableId = R.drawable.ic_download,
                             supportedDeviceTypes = listOf(DeviceType.PHONE),

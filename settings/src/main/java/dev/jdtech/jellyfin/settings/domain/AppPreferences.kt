@@ -116,6 +116,14 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // Offline mode
     val offlineMode = Preference("pref_offline_mode", false)
 
+    // PVR (Sonarr/Radarr) - the API keys are secrets and are stored separately, through
+    // SecureCredentialStore, not here.
+    val sonarrEnabled = Preference("pref_pvr_sonarr_enabled", false)
+    val sonarrBaseUrl = Preference<String?>("pref_pvr_sonarr_base_url", null)
+    val radarrEnabled = Preference("pref_pvr_radarr_enabled", false)
+    val radarrBaseUrl = Preference<String?>("pref_pvr_radarr_base_url", null)
+    val pvrPollIntervalMinutes = Preference("pref_pvr_poll_interval_minutes", 15)
+
     inline fun <reified T> getValue(preference: Preference<T>): T {
         return try {
             @Suppress("UNCHECKED_CAST")

@@ -29,6 +29,7 @@ import dev.jdtech.jellyfin.work.AutoBackupScheduler
 import dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker
 import dev.jdtech.jellyfin.work.AutoDownloadWorker
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
+import dev.jdtech.jellyfin.work.QueueStatusScheduler
 import dev.jdtech.jellyfin.work.SyncWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -74,6 +75,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         scheduleAutoDownload(workManager)
         scheduleAutoDeleteWatched(workManager)
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
+        QueueStatusScheduler.schedule(applicationContext, appPreferences)
     }
 
     @OptIn(ExperimentalCoilApi::class, ExperimentalTime::class)
