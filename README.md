@@ -20,8 +20,8 @@ pointed at this repository, or grab an APK directly from the
 
 [<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60">][obtainium-link]
 
-The badge tracks the `phone`/`release` APK (the same `dev.pschmitt.findroidplus` applicationId
-as a Play Store install, arch auto-selected) from the ["latest"](https://github.com/pschmitt/findroidplus/releases/tag/latest)
+The badge tracks the `phone`/`release` APK (applicationId `dev.pschmitt.findroidplus`, no
+`.debug` suffix, arch auto-selected) from the ["latest"](https://github.com/pschmitt/findroidplus/releases/tag/latest)
 pre-release build. Want the TV build or a debuggable variant instead? Add the app normally in
 Obtainium via this repo's URL and adjust the APK filter regex/prerelease settings, or just grab
 the specific APK from the [Releases page](https://github.com/pschmitt/findroidplus/releases).
