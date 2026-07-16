@@ -44,6 +44,7 @@ import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderViewModel
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
+import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyVideoMetadata
 import dev.jdtech.jellyfin.film.presentation.movie.MovieAction
 import dev.jdtech.jellyfin.film.presentation.movie.MovieState
@@ -58,6 +59,9 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
+import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
+import dev.jdtech.jellyfin.presentation.film.components.QueueBadge
+import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
@@ -101,6 +105,20 @@ fun MovieScreen(
                 }
             }
         }
+    }
+
+    ObserveAsEvents(viewModel.searchEvents) { event ->
+        val message =
+            when (event) {
+                is SearchEvent.SearchTriggered -> context.getString(CoreR.string.search_triggered_toast)
+                is SearchEvent.ReleaseGrabbed -> context.getString(CoreR.string.release_grabbed_toast)
+                is SearchEvent.Failed ->
+                    context.getString(
+                        CoreR.string.search_failed_toast,
+                        event.message ?: context.getString(CoreR.string.unknown_error),
+                    )
+            }
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     MovieScreenLayout(
@@ -227,6 +245,16 @@ private fun MovieScreenLayout(
                                 )
                             }
                         }
+                        state.queueStatus?.let { queueStatus ->
+                            QueueBadge(status = queueStatus)
+                        }
+                        if (movie.tmdbId != null) {
+                            PvrSearchButton(
+                                onAutomaticSearch = { onAction(MovieAction.SearchMovieAutomatic) },
+                                onManualSearch = { onAction(MovieAction.OpenReleasePicker) },
+                                contentDescription = stringResource(CoreR.string.search_movie),
+                            )
+                        }
                     }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     val deleteDownload: () -> Unit = {
@@ -321,6 +349,14 @@ private fun MovieScreenLayout(
             onBackClick = { onAction(MovieAction.OnBackClick) },
             onHomeClick = { onAction(MovieAction.OnHomeClick) },
             onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
+        )
+    }
+
+    state.releasePicker?.let { releasePicker ->
+        ReleasePickerSheet(
+            state = releasePicker,
+            onGrab = { release -> onAction(MovieAction.GrabRelease(release)) },
+            onDismissRequest = { onAction(MovieAction.DismissReleasePicker) },
         )
     }
 }

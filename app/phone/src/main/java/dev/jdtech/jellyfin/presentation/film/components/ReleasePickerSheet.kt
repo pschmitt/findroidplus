@@ -33,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -42,13 +42,13 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 /**
  * Sonarr's manual/interactive search - lists candidate releases (from
  * [dev.jdtech.jellyfin.repository.SonarrSearchRepository.getReleases]) for the user to grab one
- * themselves, as opposed to [EpisodeSearchButton]'s automatic-search option where Sonarr picks.
+ * themselves, as opposed to [PvrSearchButton]'s automatic-search option where Sonarr picks.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleasePickerSheet(
     state: ReleasePickerState,
-    onGrab: (SonarrRelease) -> Unit,
+    onGrab: (PvrRelease) -> Unit,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
@@ -95,7 +95,7 @@ fun ReleasePickerSheet(
 }
 
 @Composable
-private fun ReleaseRow(release: SonarrRelease, onGrab: () -> Unit) {
+private fun ReleaseRow(release: PvrRelease, onGrab: () -> Unit) {
     val context = LocalContext.current
     Row(
         modifier =
@@ -172,7 +172,7 @@ private fun ReleasePickerSheetContentPreview() {
                     isLoading = false,
                     releases =
                         listOf(
-                            SonarrRelease(
+                            PvrRelease(
                                 guid = "1",
                                 indexerId = 1,
                                 indexer = "Indexer A",
@@ -180,7 +180,7 @@ private fun ReleasePickerSheetContentPreview() {
                                 size = 1_500_000_000L,
                                 seeders = 42,
                             ),
-                            SonarrRelease(
+                            PvrRelease(
                                 guid = "2",
                                 indexerId = 2,
                                 indexer = "Indexer B",

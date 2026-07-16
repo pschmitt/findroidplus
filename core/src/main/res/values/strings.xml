@@ -262,6 +262,7 @@
     <string name="calendar_status_upcoming">Upcoming</string>
     <string name="calendar_status_unmonitored">Not monitored</string>
     <string name="search_episode">Search episode</string>
+    <string name="search_movie">Search movie</string>
     <string name="search_episode_automatic">Search automatically</string>
     <string name="search_episode_manual">Search manually…</string>
     <string name="search_triggered_toast">Search started</string>

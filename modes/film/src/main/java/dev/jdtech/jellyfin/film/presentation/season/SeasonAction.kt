@@ -1,6 +1,6 @@
 package dev.jdtech.jellyfin.film.presentation.season
 
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.models.FindroidItem
 import java.util.UUID
@@ -40,7 +40,7 @@ sealed interface SeasonAction {
 
     data class OpenReleasePicker(val episodeNumber: Int, val knownEpisodeId: Int?) : SeasonAction
 
-    data class GrabRelease(val release: SonarrRelease) : SeasonAction
+    data class GrabRelease(val release: PvrRelease) : SeasonAction
 
     data object DismissReleasePicker : SeasonAction
 }

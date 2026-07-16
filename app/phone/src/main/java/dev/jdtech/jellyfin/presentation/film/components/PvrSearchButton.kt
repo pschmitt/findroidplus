@@ -20,23 +20,24 @@ import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
 /**
- * A magnifier icon that opens a small menu offering Sonarr's two search modes: an automatic
- * search (Sonarr grabs the best release itself) or a manual/interactive one (opens
+ * A magnifier icon that opens a small menu offering Sonarr/Radarr's two search modes: an
+ * automatic search (the service grabs the best release itself) or a manual/interactive one (opens
  * [ReleasePickerSheet] to pick a specific release). Used from the Season screen's episode rows,
- * the Episode detail screen, and Sonarr Calendar entries.
+ * the Episode/Movie detail screens, and Calendar entries.
  */
 @Composable
-fun EpisodeSearchButton(
+fun PvrSearchButton(
     onAutomaticSearch: () -> Unit,
     onManualSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    contentDescription: String = stringResource(CoreR.string.search_episode),
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     IconButton(onClick = { menuExpanded = true }, modifier = modifier) {
         Icon(
             painter = painterResource(CoreR.drawable.ic_search),
-            contentDescription = stringResource(CoreR.string.search_episode),
+            contentDescription = contentDescription,
             modifier = Modifier.size(20.dp),
         )
     }
@@ -60,6 +61,6 @@ fun EpisodeSearchButton(
 
 @Composable
 @Preview
-private fun EpisodeSearchButtonPreview() {
-    FindroidTheme { EpisodeSearchButton(onAutomaticSearch = {}, onManualSearch = {}) }
+private fun PvrSearchButtonPreview() {
+    FindroidTheme { PvrSearchButton(onAutomaticSearch = {}, onManualSearch = {}) }
 }

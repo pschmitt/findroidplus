@@ -13,16 +13,19 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.AutomaticSearchOutcome
+import dev.jdtech.jellyfin.repository.RadarrSearchRepository
 import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Waits for a Sonarr automatic search (triggered from the Season/Episode/Calendar screens via
- * [SonarrSearchRepository.searchEpisode]) to actually finish, then posts a notification - the
- * search can easily outlive the ViewModel that triggered it (the user has usually moved on long
- * before Sonarr/Prowlarr answers), so this can't just be a coroutine in that ViewModel's scope.
+ * Waits for a Sonarr/Radarr automatic search (triggered from the Season/Episode/Movie/Calendar
+ * screens via [SonarrSearchRepository.searchEpisode] / [RadarrSearchRepository.searchMovie]) to
+ * actually finish, then posts a notification - the search can easily outlive the ViewModel that
+ * triggered it (the user has usually moved on long before the service/Prowlarr answers), so this
+ * can't just be a coroutine in that ViewModel's scope. [KEY_SOURCE] decides which service's
+ * repository to poll; [KEY_TARGET_ID] is a Sonarr episode id or Radarr movie id accordingly.
  */
 @HiltWorker
 class AutomaticSearchWorker
@@ -31,15 +34,22 @@ constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val sonarrSearchRepository: SonarrSearchRepository,
+    private val radarrSearchRepository: RadarrSearchRepository,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result =
         withContext(Dispatchers.IO) {
-            val episodeId = inputData.getInt(KEY_EPISODE_ID, -1)
+            val source = inputData.getString(KEY_SOURCE)
+            val targetId = inputData.getInt(KEY_TARGET_ID, -1)
             val commandId = inputData.getInt(KEY_COMMAND_ID, -1)
-            if (episodeId == -1 || commandId == -1) return@withContext Result.failure()
+            if (targetId == -1 || commandId == -1) return@withContext Result.failure()
 
-            sonarrSearchRepository
-                .awaitAutomaticSearchResult(episodeId, commandId)
+            val outcome =
+                when (source) {
+                    SOURCE_SONARR -> sonarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
+                    SOURCE_RADARR -> radarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
+                    else -> return@withContext Result.failure()
+                }
+            outcome
                 .onSuccess { notify(it, commandId) }
                 .onFailure { Timber.w(it, "Failed to check automatic search result") }
 
@@ -49,8 +59,7 @@ constructor(
     private fun notify(outcome: AutomaticSearchOutcome, commandId: Int) {
         createNotificationChannel()
 
-        val episodeCode = "S%02dE%02d".format(outcome.seasonNumber, outcome.episodeNumber)
-        val title = outcome.seriesTitle?.let { "$it $episodeCode" } ?: episodeCode
+        val title = outcome.title
         val text =
             applicationContext.getString(
                 if (outcome.succeeded) {
@@ -100,8 +109,12 @@ constructor(
     }
 
     companion object {
-        const val KEY_EPISODE_ID = "KEY_EPISODE_ID"
+        const val KEY_SOURCE = "KEY_SOURCE"
+        const val KEY_TARGET_ID = "KEY_TARGET_ID"
         const val KEY_COMMAND_ID = "KEY_COMMAND_ID"
+
+        const val SOURCE_SONARR = "sonarr"
+        const val SOURCE_RADARR = "radarr"
 
         private const val CHANNEL_ID = "automatic_search"
         private const val NOTIFICATION_ID_BASE = 279_413_000

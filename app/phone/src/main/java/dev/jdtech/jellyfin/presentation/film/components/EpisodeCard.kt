@@ -111,7 +111,7 @@ fun EpisodeCard(
             }
         }
         if (onSearchAutomatic != null && onSearchManual != null) {
-            EpisodeSearchButton(
+            PvrSearchButton(
                 onAutomaticSearch = onSearchAutomatic,
                 onManualSearch = onSearchManual,
                 modifier = Modifier.align(Alignment.CenterVertically),

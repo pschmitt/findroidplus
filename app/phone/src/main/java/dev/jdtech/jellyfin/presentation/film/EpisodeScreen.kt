@@ -59,7 +59,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
-import dev.jdtech.jellyfin.presentation.film.components.EpisodeSearchButton
+import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
@@ -399,7 +399,7 @@ private fun EpisodeScreenLayout(
                         }
                 }
                 if (state.seriesTvdbId != null) {
-                    EpisodeSearchButton(
+                    PvrSearchButton(
                         onAutomaticSearch = { onAction(EpisodeAction.SearchEpisodeAutomatic) },
                         onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
                     )

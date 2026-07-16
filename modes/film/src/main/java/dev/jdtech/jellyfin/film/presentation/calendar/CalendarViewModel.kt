@@ -3,11 +3,13 @@ package dev.jdtech.jellyfin.film.presentation.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.models.CalendarEntry
+import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.repository.CalendarRepository
+import dev.jdtech.jellyfin.repository.RadarrSearchRepository
 import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -23,12 +25,17 @@ class CalendarViewModel
 constructor(
     private val calendarRepository: CalendarRepository,
     private val sonarrSearchRepository: SonarrSearchRepository,
+    private val radarrSearchRepository: RadarrSearchRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(CalendarState())
     val state = _state.asStateFlow()
 
     private val searchEventsChannel = Channel<SearchEvent>()
     val searchEvents = searchEventsChannel.receiveAsFlow()
+
+    // Which service the currently open release picker's releases came from, so grabRelease can
+    // route the grab back to the same one. Only meaningful while `state.releasePicker` is set.
+    private var releasePickerSource: PvrSource? = null
 
     init {
         load()
@@ -38,24 +45,41 @@ constructor(
         load()
     }
 
-    /** No-op when [entry] has no [CalendarEntry.episodeId] (Radarr entries, or an unmatched Sonarr
-     * entry - see CalendarMatching.kt) - the UI only exposes this action for Sonarr entries. */
-    fun searchEpisodeAutomatic(entry: CalendarEntry) {
-        val episodeId = entry.episodeId ?: return
+    /** No-op when [entry] has neither a [CalendarEntry.episodeId] nor a [CalendarEntry.movieId]
+     * (an unmatched entry - see CalendarMatching.kt) - the UI only exposes this action when one
+     * of the two is present. */
+    fun searchAutomatic(entry: CalendarEntry) {
         viewModelScope.launch {
-            val event =
-                sonarrSearchRepository
-                    .searchEpisode(episodeId)
-                    .fold({ SearchEvent.SearchTriggered }, { SearchEvent.Failed(it.message) })
-            searchEventsChannel.send(event)
+            val result =
+                when {
+                    entry.episodeId != null -> sonarrSearchRepository.searchEpisode(entry.episodeId!!)
+                    entry.movieId != null -> radarrSearchRepository.searchMovie(entry.movieId!!)
+                    else -> return@launch
+                }
+            searchEventsChannel.send(
+                result.fold({ SearchEvent.SearchTriggered }, { SearchEvent.Failed(it.message) })
+            )
         }
     }
 
     fun openReleasePicker(entry: CalendarEntry) {
-        val episodeId = entry.episodeId ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(releasePicker = ReleasePickerState())
-            val result = sonarrSearchRepository.getReleases(episodeId)
+            val result =
+                when {
+                    entry.episodeId != null -> {
+                        releasePickerSource = PvrSource.SONARR
+                        sonarrSearchRepository.getReleases(entry.episodeId!!)
+                    }
+                    entry.movieId != null -> {
+                        releasePickerSource = PvrSource.RADARR
+                        radarrSearchRepository.getReleases(entry.movieId!!)
+                    }
+                    else -> {
+                        _state.value = _state.value.copy(releasePicker = null)
+                        return@launch
+                    }
+                }
             _state.value =
                 _state.value.copy(
                     releasePicker = result.getOrNull()?.let { ReleasePickerState(isLoading = false, releases = it) }
@@ -64,9 +88,13 @@ constructor(
         }
     }
 
-    fun grabRelease(release: SonarrRelease) {
+    fun grabRelease(release: PvrRelease) {
         viewModelScope.launch {
-            val result = sonarrSearchRepository.grabRelease(release)
+            val result =
+                when (releasePickerSource) {
+                    PvrSource.RADARR -> radarrSearchRepository.grabRelease(release)
+                    else -> sonarrSearchRepository.grabRelease(release)
+                }
             _state.value = _state.value.copy(releasePicker = null)
             searchEventsChannel.send(
                 result.fold({ SearchEvent.ReleaseGrabbed }, { SearchEvent.Failed(it.message) })

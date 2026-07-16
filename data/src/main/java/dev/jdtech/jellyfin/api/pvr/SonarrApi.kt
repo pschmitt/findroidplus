@@ -79,14 +79,14 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command")
             val body = json.encodeToString(SonarrCommandRequest(name = "EpisodeSearch", episodeIds = listOf(episodeId)))
-            json.decodeFromString<SonarrCommandResponse>(execute(url, body)).id
+            json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
         }
 
     /** Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via [searchEpisode]. */
-    suspend fun getCommandStatus(commandId: Int): SonarrCommandResponse =
+    suspend fun getCommandStatus(commandId: Int): PvrCommandResponse =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command", commandId.toString())
-            json.decodeFromString<SonarrCommandResponse>(execute(url))
+            json.decodeFromString<PvrCommandResponse>(execute(url))
         }
 
     /** Single-episode lookup - see [SonarrEpisodeDetail]. */
@@ -104,17 +104,17 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
      * comes from `AppPreferences.pvrSearchTimeout` (Settings > Network), since how long is
      * reasonable to wait depends entirely on the user's indexers.
      */
-    suspend fun getReleases(episodeId: Int, readTimeoutMs: Long): List<SonarrRelease> =
+    suspend fun getReleases(episodeId: Int, readTimeoutMs: Long): List<PvrRelease> =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "release", queryParams = mapOf("episodeId" to episodeId.toString()))
-            json.decodeFromString<List<SonarrRelease>>(execute(url, readTimeoutMs = readTimeoutMs))
+            json.decodeFromString<List<PvrRelease>>(execute(url, readTimeoutMs = readTimeoutMs))
         }
 
     /** Grabs a specific release returned by [getReleases]. */
     suspend fun grabRelease(guid: String, indexerId: Int): Unit =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "release")
-            val body = json.encodeToString(SonarrGrabReleaseRequest(guid = guid, indexerId = indexerId))
+            val body = json.encodeToString(PvrGrabReleaseRequest(guid = guid, indexerId = indexerId))
             execute(url, body)
         }
 

@@ -1,6 +1,6 @@
 package dev.jdtech.jellyfin.repository
 
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.models.AutomaticSearchOutcome
 
 /**
@@ -42,8 +42,8 @@ interface SonarrSearchRepository {
      * [SonarrSearchRepositoryImpl]) since this call is expensive - Sonarr polls every enabled
      * indexer (directly or via a proxy like Prowlarr) before answering.
      */
-    suspend fun getReleases(episodeId: Int): Result<List<SonarrRelease>>
+    suspend fun getReleases(episodeId: Int): Result<List<PvrRelease>>
 
     /** Grabs a specific release returned by [getReleases]. */
-    suspend fun grabRelease(release: SonarrRelease): Result<Unit>
+    suspend fun grabRelease(release: PvrRelease): Result<Unit>
 }

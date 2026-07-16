@@ -8,8 +8,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
-import dev.jdtech.jellyfin.repository.SonarrSearchRepository
-import dev.jdtech.jellyfin.repository.SonarrSearchRepositoryImpl
+import dev.jdtech.jellyfin.repository.RadarrSearchRepository
+import dev.jdtech.jellyfin.repository.RadarrSearchRepositoryImpl
 import dev.jdtech.jellyfin.security.SecureCredentialStore
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.work.AutomaticSearchWorker
@@ -17,24 +17,24 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object SonarrSearchModule {
+object RadarrSearchModule {
     @Singleton
     @Provides
-    fun provideSonarrSearchRepository(
+    fun provideRadarrSearchRepository(
         appPreferences: AppPreferences,
         secureCredentialStore: SecureCredentialStore,
         workManager: WorkManager,
-    ): SonarrSearchRepository {
-        return SonarrSearchRepositoryImpl(
+    ): RadarrSearchRepository {
+        return RadarrSearchRepositoryImpl(
             appPreferences = appPreferences,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
-            scheduleCompletionCheck = { episodeId, commandId ->
+            radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
+            scheduleCompletionCheck = { movieId, commandId ->
                 val request =
                     OneTimeWorkRequestBuilder<AutomaticSearchWorker>()
                         .setInputData(
                             workDataOf(
-                                AutomaticSearchWorker.KEY_SOURCE to AutomaticSearchWorker.SOURCE_SONARR,
-                                AutomaticSearchWorker.KEY_TARGET_ID to episodeId,
+                                AutomaticSearchWorker.KEY_SOURCE to AutomaticSearchWorker.SOURCE_RADARR,
+                                AutomaticSearchWorker.KEY_TARGET_ID to movieId,
                                 AutomaticSearchWorker.KEY_COMMAND_ID to commandId,
                             )
                         )

@@ -44,14 +44,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarState
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarViewModel
 import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.PvrSource
-import dev.jdtech.jellyfin.presentation.film.components.EpisodeSearchButton
+import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -97,7 +97,7 @@ fun CalendarScreen(
                 PvrSource.RADARR -> onMovieClick(itemId)
             }
         },
-        onSearchAutomatic = viewModel::searchEpisodeAutomatic,
+        onSearchAutomatic = viewModel::searchAutomatic,
         onSearchManual = viewModel::openReleasePicker,
         onGrabRelease = viewModel::grabRelease,
         onDismissReleasePicker = viewModel::dismissReleasePicker,
@@ -111,7 +111,7 @@ private fun CalendarScreenLayout(
     onEntryClick: (CalendarEntry) -> Unit = {},
     onSearchAutomatic: (CalendarEntry) -> Unit = {},
     onSearchManual: (CalendarEntry) -> Unit = {},
-    onGrabRelease: (SonarrRelease) -> Unit = {},
+    onGrabRelease: (PvrRelease) -> Unit = {},
     onDismissReleasePicker: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -146,13 +146,13 @@ private fun CalendarScreenLayout(
                             entry = entry,
                             onClick = { onEntryClick(entry) },
                             onSearchAutomatic =
-                                if (entry.episodeId != null) {
+                                if (entry.episodeId != null || entry.movieId != null) {
                                     { onSearchAutomatic(entry) }
                                 } else {
                                     null
                                 },
                             onSearchManual =
-                                if (entry.episodeId != null) {
+                                if (entry.episodeId != null || entry.movieId != null) {
                                     { onSearchManual(entry) }
                                 } else {
                                     null
@@ -286,7 +286,7 @@ private fun CalendarEntryRow(
         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
         CalendarEntryBadge(entry = entry)
         if (onSearchAutomatic != null && onSearchManual != null) {
-            EpisodeSearchButton(onAutomaticSearch = onSearchAutomatic, onManualSearch = onSearchManual)
+            PvrSearchButton(onAutomaticSearch = onSearchAutomatic, onManualSearch = onSearchManual)
         }
     }
 }

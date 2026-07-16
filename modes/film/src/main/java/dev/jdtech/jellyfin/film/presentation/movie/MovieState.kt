@@ -1,7 +1,9 @@
 package dev.jdtech.jellyfin.film.presentation.movie
 
+import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.models.VideoMetadata
 
 data class MovieState(
@@ -11,5 +13,7 @@ data class MovieState(
     val director: FindroidItemPerson? = null,
     val writers: List<FindroidItemPerson> = emptyList(),
     val dateFormat: String = "system",
+    val releasePicker: ReleasePickerState? = null,
+    val queueStatus: QueueStatus? = null,
     val error: Exception? = null,
 )

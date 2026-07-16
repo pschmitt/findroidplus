@@ -83,6 +83,7 @@ fun matchRadarrCalendar(
             hasFile = entry.hasFile,
             monitored = entry.monitored,
             images = movie?.images,
+            movieId = entry.id,
         )
     }
 }

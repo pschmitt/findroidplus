@@ -130,16 +130,20 @@ data class SonarrEpisodeDto(
 
 // endregion
 
-// region Sonarr - POST /api/v3/command, GET /api/v3/command/{id}
-// POST triggers an automatic search: Sonarr picks and grabs the best matching release itself, with
-// no release list surfaced to the caller (compare GET/POST /api/v3/release below, which is the
-// interactive/manual counterpart). Sonarr answers the POST as soon as the command is *queued*, not
-// once it finishes - GET /api/v3/command/{id} is polled afterwards to find out when/how it ended,
-// so the app can notify the user once the search actually completes.
+// region Sonarr/Radarr - POST /api/v3/command, GET /api/v3/command/{id}
+// POST triggers an automatic search: the PVR service picks and grabs the best matching release
+// itself, with no release list surfaced to the caller (compare GET/POST /api/v3/release below,
+// which is the interactive/manual counterpart). The POST is answered as soon as the command is
+// *queued*, not once it finishes - GET /api/v3/command/{id} is polled afterwards to find out
+// when/how it ended, so the app can notify the user once the search actually completes. The
+// request payloads differ per service ("EpisodeSearch" + episodeIds vs "MoviesSearch" + movieIds),
+// the response shape is identical.
 
 @Serializable data class SonarrCommandRequest(val name: String, val episodeIds: List<Int>)
 
-@Serializable data class SonarrCommandResponse(val id: Int, val status: String? = null)
+@Serializable data class RadarrCommandRequest(val name: String, val movieIds: List<Int>)
+
+@Serializable data class PvrCommandResponse(val id: Int, val status: String? = null)
 
 // endregion
 
@@ -159,19 +163,21 @@ data class SonarrEpisodeDetail(
 
 // endregion
 
-// region Sonarr - GET /api/v3/release?episodeId=X, POST /api/v3/release
-// GET lists candidate releases for an episode (interactive/manual search) without grabbing
-// anything; POSTing a release's guid+indexerId back grabs that specific one. Only the fields
-// Findroid's release picker needs are modeled - Sonarr's release resource has many more.
+// region Sonarr/Radarr - GET /api/v3/release?episodeId=X (Sonarr) / ?movieId=X (Radarr),
+// POST /api/v3/release
+// GET lists candidate releases (interactive/manual search) without grabbing anything; POSTing a
+// release's guid+indexerId back grabs that specific one. Sonarr and Radarr use the same release
+// resource shape, so one set of DTOs serves both. Only the fields Findroid's release picker needs
+// are modeled - the release resource has many more.
 
-@Serializable data class SonarrGrabReleaseRequest(val guid: String, val indexerId: Int)
+@Serializable data class PvrGrabReleaseRequest(val guid: String, val indexerId: Int)
 
-@Serializable data class SonarrQualityName(val name: String? = null)
+@Serializable data class PvrQualityName(val name: String? = null)
 
-@Serializable data class SonarrReleaseQuality(val quality: SonarrQualityName? = null)
+@Serializable data class PvrReleaseQuality(val quality: PvrQualityName? = null)
 
 @Serializable
-data class SonarrRelease(
+data class PvrRelease(
     val guid: String,
     val indexerId: Int = 0,
     val indexer: String? = null,
@@ -179,7 +185,7 @@ data class SonarrRelease(
     val size: Long = 0L,
     val seeders: Int? = null,
     val ageHours: Double? = null,
-    val quality: SonarrReleaseQuality? = null,
+    val quality: PvrReleaseQuality? = null,
     val rejected: Boolean = false,
     val rejections: List<String> = emptyList(),
 )

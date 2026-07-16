@@ -3,7 +3,7 @@ package dev.jdtech.jellyfin.film.presentation.episode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.jdtech.jellyfin.api.pvr.SonarrRelease
+import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
@@ -123,7 +123,7 @@ constructor(
         }
     }
 
-    private fun grabRelease(release: SonarrRelease) {
+    private fun grabRelease(release: PvrRelease) {
         viewModelScope.launch {
             val result = sonarrSearchRepository.grabRelease(release)
             _state.value = _state.value.copy(releasePicker = null)
