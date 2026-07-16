@@ -33,6 +33,7 @@
     <string name="season_number">Season %1$d</string>
     <string name="episode_number">Episode %1$d</string>
     <string name="next_up">Next Up</string>
+    <string name="next_episode_airs">Next episode: %1$s airs %2$s</string>
     <string name="libraries">Libraries</string>
     <string name="series_poster">Series poster</string>
     <string name="collection_no_media">This collection does not contain any media</string>
@@ -245,4 +246,8 @@
     <string name="pvr_queue_status_importing">Importing…</string>
     <string name="pvr_queue_status_warning">Warning</string>
     <string name="pvr_queue_status_failed">Failed</string>
+    <string name="title_calendar">Calendar</string>
+    <string name="calendar_empty">Nothing upcoming</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_tomorrow">Tomorrow</string>
 </resources>

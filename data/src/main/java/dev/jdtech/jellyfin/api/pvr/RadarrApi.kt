@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.api.pvr
 
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -30,6 +31,22 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
             val url = buildUrl("api", "v3", "queue", queryParams = mapOf("pageSize" to "250"))
             val response = json.decodeFromString<RadarrQueueResponse>(execute(url))
             response.records
+        }
+
+    suspend fun getCalendar(start: LocalDate, end: LocalDate): List<RadarrCalendarEntry> =
+        withContext(Dispatchers.IO) {
+            // Radarr's calendar entries are full movie objects (tmdbId already present per
+            // entry), so no separate getMovie() call/join is needed, unlike getQueue(). Radarr has
+            // no includeSeries-style flag to pass here. LocalDate.toString() already produces the
+            // YYYY-MM-DD format this endpoint expects.
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "calendar",
+                    queryParams = mapOf("start" to start.toString(), "end" to end.toString()),
+                )
+            json.decodeFromString<List<RadarrCalendarEntry>>(execute(url))
         }
 
     private fun buildUrl(

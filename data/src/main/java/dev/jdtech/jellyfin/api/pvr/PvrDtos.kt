@@ -87,3 +87,45 @@ data class RadarrQueueResponse(
 )
 
 // endregion
+
+// region Sonarr - GET /api/v3/calendar
+// Unlike /queue, /calendar accepts includeSeries=true, which embeds the series object (with
+// tvdbId) directly on each entry - no separate getSeries() call/join needed to resolve tvdbId.
+// The endpoint returns a flat JSON array, not a paginated {records: [...]} wrapper.
+
+@Serializable
+data class SonarrCalendarSeries(val tvdbId: Int = 0, val title: String = "")
+
+@Serializable
+data class SonarrCalendarEntry(
+    val id: Int,
+    val seriesId: Int = 0,
+    val seasonNumber: Int = 0,
+    val episodeNumber: Int = 0,
+    val title: String? = null,
+    val airDateUtc: String? = null,
+    val hasFile: Boolean = false,
+    val monitored: Boolean = false,
+    val series: SonarrCalendarSeries? = null,
+)
+
+// endregion
+
+// region Radarr - GET /api/v3/calendar
+// Radarr's calendar entries are full movie objects (same shape as /api/v3/movie), so tmdbId is
+// already present per entry - no separate getMovie() call/join needed. Also a flat JSON array,
+// same as Sonarr's calendar endpoint.
+
+@Serializable
+data class RadarrCalendarEntry(
+    val id: Int,
+    val tmdbId: Int = 0,
+    val title: String = "",
+    val hasFile: Boolean = false,
+    val monitored: Boolean = false,
+    val inCinemas: String? = null,
+    val digitalRelease: String? = null,
+    val physicalRelease: String? = null,
+)
+
+// endregion

@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.api.pvr
 
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -37,6 +38,26 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
                 )
             val response = json.decodeFromString<SonarrQueueResponse>(execute(url))
             response.records
+        }
+
+    suspend fun getCalendar(start: LocalDate, end: LocalDate): List<SonarrCalendarEntry> =
+        withContext(Dispatchers.IO) {
+            // includeSeries=true embeds the series object (with tvdbId) on each entry, so no
+            // separate getSeries() call/join is needed to resolve tvdbId (unlike getQueue()).
+            // LocalDate.toString() already produces the YYYY-MM-DD format this endpoint expects.
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "calendar",
+                    queryParams =
+                        mapOf(
+                            "start" to start.toString(),
+                            "end" to end.toString(),
+                            "includeSeries" to "true",
+                        ),
+                )
+            json.decodeFromString<List<SonarrCalendarEntry>>(execute(url))
         }
 
     private fun buildUrl(

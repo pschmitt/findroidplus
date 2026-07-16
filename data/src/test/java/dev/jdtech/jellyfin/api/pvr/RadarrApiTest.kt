@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.api.pvr
 
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -86,5 +87,40 @@ class RadarrApiTest {
             val recordedRequest = server.takeRequest()
             assertEquals("test-api-key", recordedRequest.getHeader("X-Api-Key"))
             assertTrue(recordedRequest.path.orEmpty().contains("pageSize=250"))
+        }
+
+    @Test
+    fun `getCalendar decodes a flat array and requests start and end, with no includeSeries param`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setBody(
+                    """
+                    [
+                        {
+                            "id": 21,
+                            "tmdbId": 98765,
+                            "title": "Some Movie",
+                            "hasFile": false,
+                            "monitored": true,
+                            "digitalRelease": "2024-07-24T00:00:00Z"
+                        }
+                    ]
+                    """
+                        .trimIndent()
+                )
+            )
+
+            val entries = api.getCalendar(LocalDate.of(2024, 7, 21), LocalDate.of(2024, 8, 20))
+
+            assertEquals(1, entries.size)
+            assertEquals(21, entries[0].id)
+            assertEquals(98765, entries[0].tmdbId)
+            assertEquals("2024-07-24T00:00:00Z", entries[0].digitalRelease)
+
+            val recordedRequest = server.takeRequest()
+            assertEquals("test-api-key", recordedRequest.getHeader("X-Api-Key"))
+            assertTrue(recordedRequest.path.orEmpty().contains("start=2024-07-21"))
+            assertTrue(recordedRequest.path.orEmpty().contains("end=2024-08-20"))
+            assertTrue(!recordedRequest.path.orEmpty().contains("includeSeries"))
         }
 }

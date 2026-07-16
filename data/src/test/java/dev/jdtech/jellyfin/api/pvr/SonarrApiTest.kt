@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.api.pvr
 
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -90,5 +91,43 @@ class SonarrApiTest {
         val recordedRequest = server.takeRequest()
         assertEquals("test-api-key", recordedRequest.getHeader("X-Api-Key"))
         assertTrue(recordedRequest.path.orEmpty().contains("pageSize=250"))
+    }
+
+    @Test
+    fun `getCalendar decodes a flat array and requests start, end and includeSeries`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                [
+                    {
+                        "id": 55,
+                        "seriesId": 1,
+                        "seasonNumber": 3,
+                        "episodeNumber": 5,
+                        "title": "Some Episode",
+                        "airDateUtc": "2024-07-24T01:00:00Z",
+                        "hasFile": false,
+                        "monitored": true,
+                        "series": {"tvdbId": 12345, "title": "Some Show"}
+                    }
+                ]
+                """
+                    .trimIndent()
+            )
+        )
+
+        val entries = api.getCalendar(LocalDate.of(2024, 7, 21), LocalDate.of(2024, 8, 20))
+
+        assertEquals(1, entries.size)
+        assertEquals(55, entries[0].id)
+        assertEquals(3, entries[0].seasonNumber)
+        assertEquals(5, entries[0].episodeNumber)
+        assertEquals(12345, entries[0].series?.tvdbId)
+
+        val recordedRequest = server.takeRequest()
+        assertEquals("test-api-key", recordedRequest.getHeader("X-Api-Key"))
+        assertTrue(recordedRequest.path.orEmpty().contains("start=2024-07-21"))
+        assertTrue(recordedRequest.path.orEmpty().contains("end=2024-08-20"))
+        assertTrue(recordedRequest.path.orEmpty().contains("includeSeries=true"))
     }
 }

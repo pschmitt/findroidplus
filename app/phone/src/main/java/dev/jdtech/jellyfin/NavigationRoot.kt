@@ -42,6 +42,7 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.film.AutoDownloadRulesScreen
+import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
 import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.film.EpisodeScreen
@@ -83,6 +84,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object HomeRoute
 
 @Serializable data object DownloadsRoute
+
+@Serializable data object CalendarRoute
 
 @Serializable data object AutoDownloadRulesRoute
 
@@ -165,6 +168,12 @@ val downloadsTab =
         icon = CoreR.drawable.ic_download,
         route = DownloadsRoute,
     )
+val calendarTab =
+    TabBarItem(
+        title = CoreR.string.title_calendar,
+        icon = CoreR.drawable.ic_calendar,
+        route = CalendarRoute,
+    )
 
 @Composable
 fun NavigationRoot(
@@ -194,7 +203,10 @@ fun NavigationRoot(
 
     val navigationItems =
         when (isOfflineMode) {
-            false -> listOf(homeTab) + mediaState.libraries.map(::libraryTab) + listOf(downloadsTab)
+            false ->
+                listOf(homeTab) +
+                    mediaState.libraries.map(::libraryTab) +
+                    listOf(downloadsTab, calendarTab)
             true -> listOf(homeTab, downloadsTab)
         }
 
@@ -413,6 +425,16 @@ fun NavigationRoot(
                                     )
                             )
                         )
+                    },
+                )
+            }
+            composable<CalendarRoute> {
+                CalendarScreen(
+                    onShowClick = { showId ->
+                        navController.safeNavigate(ShowRoute(showId = showId.toString()))
+                    },
+                    onMovieClick = { movieId ->
+                        navController.safeNavigate(MovieRoute(movieId = movieId.toString()))
                     },
                 )
             }
