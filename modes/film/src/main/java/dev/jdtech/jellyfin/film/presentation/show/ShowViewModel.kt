@@ -6,12 +6,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
+import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
+import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
@@ -38,6 +40,7 @@ constructor(
     private val downloader: Downloader,
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val appPreferences: AppPreferences,
+    private val calendarRepository: CalendarRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShowState())
     val state = _state.asStateFlow()
@@ -52,6 +55,7 @@ constructor(
             try {
                 val show = repository.getShow(showId)
                 val nextUp = getNextUp(showId)
+                val nextAiring = if (nextUp == null) getNextAiring(showId) else null
                 val seasons = repository.getSeasons(showId)
                 val actors = getActors(show)
                 val director = getDirector(show)
@@ -63,6 +67,7 @@ constructor(
                     _state.value.copy(
                         show = show,
                         nextUp = nextUp,
+                        nextAiring = nextAiring,
                         seasons = seasons,
                         actors = actors,
                         director = director,
@@ -164,6 +169,17 @@ constructor(
     private suspend fun getNextUp(showId: UUID): FindroidEpisode? {
         val nextUpItems = repository.getNextUp(showId)
         return nextUpItems.getOrNull(0)
+    }
+
+    private suspend fun getNextAiring(showId: UUID): CalendarEntry? {
+        return try {
+            calendarRepository
+                .getUpcoming()
+                .filter { it.itemId == showId }
+                .minByOrNull { it.date }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private suspend fun getActors(item: FindroidShow): List<FindroidItemPerson> {

@@ -67,6 +67,7 @@ import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.utils.formatCalendarDate
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import dev.jdtech.jellyfin.utils.getShowDateString
 import java.util.UUID
@@ -317,6 +318,20 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                             )
                         }
                         Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    }
+                    if (state.nextUp == null) {
+                        state.nextAiring?.let { nextAiring ->
+                            Text(
+                                text =
+                                    stringResource(
+                                        CoreR.string.next_episode_airs,
+                                        nextAiring.subtitle.orEmpty(),
+                                        formatCalendarDate(nextAiring.date),
+                                    ),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        }
                     }
                 }
 

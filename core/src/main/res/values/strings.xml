@@ -33,6 +33,7 @@
     <string name="season_number">Season %1$d</string>
     <string name="episode_number">Episode %1$d</string>
     <string name="next_up">Next Up</string>
+    <string name="next_episode_airs">Next episode: %1$s airs %2$s</string>
     <string name="libraries">Libraries</string>
     <string name="series_poster">Series poster</string>
     <string name="collection_no_media">This collection does not contain any media</string>
