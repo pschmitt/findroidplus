@@ -173,6 +173,7 @@
     <string name="integrations_server_url">Server URL</string>
     <string name="integrations_server_url_hint">http://192.168.1.10:8989</string>
     <string name="integrations_api_key">API key</string>
+    <string name="integrations_paste_api_key">Paste from clipboard</string>
     <string name="integrations_test_connection">Test connection</string>
     <string name="integrations_test_connection_success">Connected - %1$d items found</string>
     <string name="integrations_test_connection_error">Connection failed: %1$s</string>

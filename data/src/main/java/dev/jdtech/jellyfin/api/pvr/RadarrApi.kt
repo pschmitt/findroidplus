@@ -45,10 +45,15 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
     private fun execute(url: String): String {
         val request = Request.Builder().url(url).get().build()
         client.newCall(request).execute().use { response ->
+            val body = response.body.string()
             if (!response.isSuccessful) {
-                throw PvrApiException("Radarr request to $url failed with HTTP ${response.code}")
+                val snippet = body.take(200).ifBlank { "(empty body)" }
+                throw PvrApiException(
+                    "Radarr request to $url failed with HTTP ${response.code}: $snippet",
+                    httpCode = response.code,
+                )
             }
-            return response.body.string()
+            return body
         }
     }
 

@@ -37,4 +37,4 @@ internal object PvrHttpClient {
 }
 
 /** Thrown when a Sonarr/Radarr request completes but with a non-2xx HTTP status. */
-class PvrApiException(message: String) : IOException(message)
+class PvrApiException(message: String, val httpCode: Int) : IOException(message)
