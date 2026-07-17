@@ -19,7 +19,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * existing single-Jellyfin-server assumption.
  */
 class RadarrApi(private val baseUrl: String, private val apiKey: String) {
-    private val client by lazy { PvrHttpClient.create(apiKey) }
+    private val client by lazy { PvrHttpClient.create(apiKey, PvrService.RADARR) }
 
     suspend fun getMovie(): List<RadarrMovie> =
         withContext(Dispatchers.IO) {

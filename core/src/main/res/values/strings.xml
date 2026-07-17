@@ -193,6 +193,11 @@
     <string name="integrations_test_connection">Test connection</string>
     <string name="integrations_test_connection_success">Connected - %1$d items found</string>
     <string name="integrations_test_connection_error">Connection failed: %1$s</string>
+    <string name="integrations_advanced_http">Advanced HTTP</string>
+    <string name="integrations_custom_headers">Custom headers</string>
+    <string name="integrations_custom_headers_hint">One per line: Header-Name: value</string>
+    <string name="integrations_basic_auth_username">Basic auth username</string>
+    <string name="integrations_basic_auth_password">Basic auth password</string>
     <string name="integrations_poll_interval">Poll interval</string>
     <string name="integrations_poll_interval_summary">How often to check Sonarr/Radarr for queue updates. Between 5 and 1440 minutes.</string>
     <string name="integrations_release_cache">Release search cache</string>

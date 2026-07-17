@@ -19,7 +19,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * existing single-Jellyfin-server assumption.
  */
 class SonarrApi(private val baseUrl: String, private val apiKey: String) {
-    private val client by lazy { PvrHttpClient.create(apiKey) }
+    private val client by lazy { PvrHttpClient.create(apiKey, PvrService.SONARR) }
 
     suspend fun getSeries(): List<SonarrSeries> =
         withContext(Dispatchers.IO) {

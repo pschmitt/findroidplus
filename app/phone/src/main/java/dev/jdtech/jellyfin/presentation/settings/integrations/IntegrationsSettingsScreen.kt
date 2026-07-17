@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.api.pvr.PvrService
 import dev.jdtech.jellyfin.settings.R as SettingsR
 
 @Composable
@@ -120,6 +121,9 @@ private fun IntegrationsSettingsScreenLayout(
                 enabled = state.sonarrEnabled,
                 baseUrl = state.sonarrBaseUrl,
                 apiKey = state.sonarrApiKey,
+                httpHeaders = state.sonarrHttpHeaders,
+                basicAuthUsername = state.sonarrBasicAuthUsername,
+                basicAuthPassword = state.sonarrBasicAuthPassword,
                 testState = state.sonarrTestState,
                 onEnabledChanged = {
                     onAction(IntegrationsSettingsAction.OnSonarrEnabledChanged(it))
@@ -133,6 +137,16 @@ private fun IntegrationsSettingsScreenLayout(
                 onTestConnectionClick = {
                     onAction(IntegrationsSettingsAction.OnTestSonarrConnection)
                 },
+                onAdvancedSettingsChanged = { headers, username, password ->
+                    onAction(
+                        IntegrationsSettingsAction.OnAdvancedSettingsChanged(
+                            PvrService.SONARR,
+                            headers,
+                            username,
+                            password,
+                        )
+                    )
+                },
             )
 
             HorizontalDivider()
@@ -144,6 +158,9 @@ private fun IntegrationsSettingsScreenLayout(
                 enabled = state.radarrEnabled,
                 baseUrl = state.radarrBaseUrl,
                 apiKey = state.radarrApiKey,
+                httpHeaders = state.radarrHttpHeaders,
+                basicAuthUsername = state.radarrBasicAuthUsername,
+                basicAuthPassword = state.radarrBasicAuthPassword,
                 testState = state.radarrTestState,
                 onEnabledChanged = {
                     onAction(IntegrationsSettingsAction.OnRadarrEnabledChanged(it))
@@ -157,6 +174,16 @@ private fun IntegrationsSettingsScreenLayout(
                 onTestConnectionClick = {
                     onAction(IntegrationsSettingsAction.OnTestRadarrConnection)
                 },
+                onAdvancedSettingsChanged = { headers, username, password ->
+                    onAction(
+                        IntegrationsSettingsAction.OnAdvancedSettingsChanged(
+                            PvrService.RADARR,
+                            headers,
+                            username,
+                            password,
+                        )
+                    )
+                },
             )
 
             HorizontalDivider()
@@ -168,6 +195,9 @@ private fun IntegrationsSettingsScreenLayout(
                 enabled = state.seerrEnabled,
                 baseUrl = state.seerrBaseUrl,
                 apiKey = state.seerrApiKey,
+                httpHeaders = state.seerrHttpHeaders,
+                basicAuthUsername = state.seerrBasicAuthUsername,
+                basicAuthPassword = state.seerrBasicAuthPassword,
                 testState = state.seerrTestState,
                 onEnabledChanged = {
                     onAction(IntegrationsSettingsAction.OnSeerrEnabledChanged(it))
@@ -180,6 +210,16 @@ private fun IntegrationsSettingsScreenLayout(
                 },
                 onTestConnectionClick = {
                     onAction(IntegrationsSettingsAction.OnTestSeerrConnection)
+                },
+                onAdvancedSettingsChanged = { headers, username, password ->
+                    onAction(
+                        IntegrationsSettingsAction.OnAdvancedSettingsChanged(
+                            PvrService.SEERR,
+                            headers,
+                            username,
+                            password,
+                        )
+                    )
                 },
             )
 
@@ -246,11 +286,15 @@ private fun PvrServiceSection(
     enabled: Boolean,
     baseUrl: String,
     apiKey: String,
+    httpHeaders: String,
+    basicAuthUsername: String,
+    basicAuthPassword: String,
     testState: PvrTestState,
     onEnabledChanged: (Boolean) -> Unit,
     onBaseUrlChanged: (String) -> Unit,
     onApiKeyChanged: (String) -> Unit,
     onTestConnectionClick: () -> Unit,
+    onAdvancedSettingsChanged: (headers: String, username: String, password: String) -> Unit,
 ) {
     val clipboardManager = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
@@ -286,6 +330,13 @@ private fun PvrServiceSection(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
+            )
+
+            PvrAdvancedHttpFields(
+                headers = httpHeaders,
+                basicAuthUsername = basicAuthUsername,
+                basicAuthPassword = basicAuthPassword,
+                onChanged = onAdvancedSettingsChanged,
             )
 
             OutlinedTextField(
@@ -369,5 +420,44 @@ private fun PvrServiceSection(
                 else -> Unit
             }
         }
+    }
+}
+
+@Composable
+private fun PvrAdvancedHttpFields(
+    headers: String,
+    basicAuthUsername: String,
+    basicAuthPassword: String,
+    onChanged: (headers: String, username: String, password: String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(CoreR.string.integrations_advanced_http),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        OutlinedTextField(
+            value = headers,
+            onValueChange = { onChanged(it, basicAuthUsername, basicAuthPassword) },
+            label = { Text(stringResource(CoreR.string.integrations_custom_headers)) },
+            placeholder = { Text(stringResource(CoreR.string.integrations_custom_headers_hint)) },
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = basicAuthUsername,
+            onValueChange = { onChanged(headers, it, basicAuthPassword) },
+            label = { Text(stringResource(CoreR.string.integrations_basic_auth_username)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = basicAuthPassword,
+            onValueChange = { onChanged(headers, basicAuthUsername, it) },
+            label = { Text(stringResource(CoreR.string.integrations_basic_auth_password)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.Credentials
 import timber.log.Timber
 
 /**
@@ -26,13 +27,24 @@ internal object PvrHttpClient {
             .build()
     }
 
-    fun create(apiKey: String): OkHttpClient {
-        return baseClient.newBuilder().addInterceptor(ApiKeyInterceptor(apiKey)).build()
+    fun create(apiKey: String, service: PvrService): OkHttpClient {
+        return baseClient.newBuilder().addInterceptor(AuthInterceptor(apiKey, service)).build()
     }
 
-    private class ApiKeyInterceptor(private val apiKey: String) : Interceptor {
+    private class AuthInterceptor(private val apiKey: String, private val service: PvrService) :
+        Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request().newBuilder().header(API_KEY_HEADER, apiKey).build()
+            val advanced = PvrAdvancedSettings.provider(service)
+            val requestBuilder = chain.request().newBuilder().header(API_KEY_HEADER, apiKey)
+            if (!advanced.basicAuthUsername.isNullOrBlank() && !advanced.basicAuthPassword.isNullOrBlank()) {
+                requestBuilder.header(
+                    "Authorization",
+                    Credentials.basic(advanced.basicAuthUsername, advanced.basicAuthPassword),
+                )
+            }
+            // Apply custom headers last so an explicit Authorization header wins over Basic auth.
+            advanced.headers.forEach { (name, value) -> requestBuilder.header(name, value) }
+            val request = requestBuilder.build()
             return chain.proceed(request)
         }
     }

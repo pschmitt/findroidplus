@@ -25,6 +25,11 @@ import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.api.pvr.PvrAdvancedConfig
+import dev.jdtech.jellyfin.api.pvr.PvrAdvancedSettings
+import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
+import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.security.SecureCredentialStore
 import dev.jdtech.jellyfin.work.AutoBackupScheduler
 import dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker
 import dev.jdtech.jellyfin.work.AutoDownloadWorker
@@ -41,6 +46,8 @@ import timber.log.Timber
 class BaseApplication : Application(), Configuration.Provider, SingletonImageLoader.Factory {
     @Inject lateinit var appPreferences: AppPreferences
 
+    @Inject lateinit var secureCredentialStore: SecureCredentialStore
+
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
@@ -53,6 +60,32 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         // the release builds users actually run, which leaves no trace in logcat when diagnosing
         // e.g. a Sonarr search failure after the fact (see PvrHttpClient/SonarrSearchRepositoryImpl).
         Timber.plant(Timber.DebugTree())
+
+        PvrAdvancedSettings.provider = { service ->
+            val (headersKey, usernameKey, passwordKey) =
+                when (service) {
+                    PvrService.SONARR -> Triple(
+                        PvrCredentialKeys.SONARR_HTTP_HEADERS,
+                        PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
+                    )
+                    PvrService.RADARR -> Triple(
+                        PvrCredentialKeys.RADARR_HTTP_HEADERS,
+                        PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
+                    )
+                    PvrService.SEERR -> Triple(
+                        PvrCredentialKeys.SEERR_HTTP_HEADERS,
+                        PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
+                    )
+                }
+            PvrAdvancedConfig(
+                headers = PvrAdvancedConfig.parseHeaders(secureCredentialStore.getString(headersKey)),
+                basicAuthUsername = secureCredentialStore.getString(usernameKey),
+                basicAuthPassword = secureCredentialStore.getString(passwordKey),
+            )
+        }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             val mode =

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.pvr.SeerrApi
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
+import dev.jdtech.jellyfin.api.pvr.PvrService
 import dev.jdtech.jellyfin.api.pvr.RadarrApi
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
 import dev.jdtech.jellyfin.security.SecureCredentialStore
@@ -40,13 +41,22 @@ constructor(
                 sonarrEnabled = appPreferences.getValue(appPreferences.sonarrEnabled),
                 sonarrBaseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty(),
                 sonarrApiKey = secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY).orEmpty(),
+                sonarrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.SONARR_HTTP_HEADERS).orEmpty(),
+                sonarrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME).orEmpty(),
+                sonarrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD).orEmpty(),
                 radarrEnabled = appPreferences.getValue(appPreferences.radarrEnabled),
                 radarrBaseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty(),
                 radarrApiKey = secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY).orEmpty(),
+                radarrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.RADARR_HTTP_HEADERS).orEmpty(),
+                radarrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME).orEmpty(),
+                radarrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD).orEmpty(),
                 seerrEnabled = appPreferences.getValue(appPreferences.seerrEnabled),
                 seerrBaseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty(),
                 seerrApiKey =
                     secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY).orEmpty(),
+                seerrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.SEERR_HTTP_HEADERS).orEmpty(),
+                seerrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME).orEmpty(),
+                seerrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD).orEmpty(),
                 pvrPollIntervalMinutes =
                     appPreferences.getValue(appPreferences.pvrPollIntervalMinutes),
                 pvrReleaseCacheMinutes =
@@ -128,6 +138,7 @@ constructor(
                         seerrTestState = PvrTestState.Idle,
                     )
             }
+            is IntegrationsSettingsAction.OnAdvancedSettingsChanged -> updateAdvancedSettings(action)
             is IntegrationsSettingsAction.OnTestSeerrConnection -> testSeerrConnection()
             is IntegrationsSettingsAction.OnPollIntervalChanged -> {
                 appPreferences.setValue(appPreferences.pvrPollIntervalMinutes, action.minutes)
@@ -138,6 +149,48 @@ constructor(
                 _state.value = _state.value.copy(pvrReleaseCacheMinutes = action.minutes)
             }
         }
+    }
+
+    private fun updateAdvancedSettings(action: IntegrationsSettingsAction.OnAdvancedSettingsChanged) {
+        val (headersKey, usernameKey, passwordKey) =
+            when (action.service) {
+                PvrService.SONARR -> Triple(
+                    PvrCredentialKeys.SONARR_HTTP_HEADERS,
+                    PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
+                    PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
+                )
+                PvrService.RADARR -> Triple(
+                    PvrCredentialKeys.RADARR_HTTP_HEADERS,
+                    PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
+                    PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
+                )
+                PvrService.SEERR -> Triple(
+                    PvrCredentialKeys.SEERR_HTTP_HEADERS,
+                    PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
+                    PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
+                )
+            }
+        secureCredentialStore.putString(headersKey, action.headers.ifBlank { null })
+        secureCredentialStore.putString(usernameKey, action.basicAuthUsername.ifBlank { null })
+        secureCredentialStore.putString(passwordKey, action.basicAuthPassword.ifBlank { null })
+        _state.value =
+            when (action.service) {
+                PvrService.SONARR -> _state.value.copy(
+                    sonarrHttpHeaders = action.headers,
+                    sonarrBasicAuthUsername = action.basicAuthUsername,
+                    sonarrBasicAuthPassword = action.basicAuthPassword,
+                )
+                PvrService.RADARR -> _state.value.copy(
+                    radarrHttpHeaders = action.headers,
+                    radarrBasicAuthUsername = action.basicAuthUsername,
+                    radarrBasicAuthPassword = action.basicAuthPassword,
+                )
+                PvrService.SEERR -> _state.value.copy(
+                    seerrHttpHeaders = action.headers,
+                    seerrBasicAuthUsername = action.basicAuthUsername,
+                    seerrBasicAuthPassword = action.basicAuthPassword,
+                )
+            }
     }
 
     private fun persistApiKeyDebounced(credentialKey: String, value: String) {

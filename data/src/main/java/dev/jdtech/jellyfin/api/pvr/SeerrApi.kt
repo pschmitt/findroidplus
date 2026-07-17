@@ -18,7 +18,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * injected as a Hilt singleton, since the user can reconfigure either at runtime.
  */
 class SeerrApi(private val baseUrl: String, private val apiKey: String) {
-    private val client by lazy { PvrHttpClient.create(apiKey) }
+    private val client by lazy { PvrHttpClient.create(apiKey, PvrService.SEERR) }
 
     /** Combined TMDB-backed movie/series/person search. */
     suspend fun search(query: String, page: Int = 1): SeerrSearchResponse =
