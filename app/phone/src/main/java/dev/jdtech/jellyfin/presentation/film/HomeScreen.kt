@@ -1,5 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.app.Activity
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,7 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -21,6 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -28,6 +35,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
@@ -41,7 +49,6 @@ import dev.jdtech.jellyfin.film.presentation.search.SearchViewModel
 import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.SeerrSearchItem
-import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.FilmSearchBar
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeDiscoverSection
@@ -65,6 +72,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searchState by searchViewModel.state.collectAsStateWithLifecycle()
 
@@ -81,6 +89,7 @@ fun HomeScreen(
                 is HomeAction.OnFavoritesClick -> onFavoritesClick()
                 is HomeAction.OnSettingsClick -> onSettingsClick()
                 is HomeAction.OnManageServers -> onManageServers()
+                is HomeAction.OnEnableOfflineMode -> (context as? Activity)?.recreate()
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -176,7 +185,26 @@ private fun HomeScreenLayout(
         }
 
         if (state.error != null && showErrorDialog) {
-            ErrorDialog(exception = state.error!!, onDismissRequest = { showErrorDialog = false })
+            AlertDialog(
+                onDismissRequest = { showErrorDialog = false },
+                title = { Text(stringResource(CoreR.string.no_server_connection)) },
+                text = { Text(state.error!!.message ?: stringResource(CoreR.string.unknown_error)) },
+                confirmButton = {
+                    TextButton(onClick = { onAction(HomeAction.OnEnableOfflineMode) }) {
+                        Text(stringResource(CoreR.string.enable_offline_mode))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showErrorDialog = false
+                            onAction(HomeAction.OnRetryClick)
+                        }
+                    ) {
+                        Text(stringResource(CoreR.string.retry))
+                    }
+                },
+            )
         }
     }
 

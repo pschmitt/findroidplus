@@ -242,6 +242,9 @@ constructor(
             is HomeAction.OnRetryClick -> {
                 loadData()
             }
+            is HomeAction.OnEnableOfflineMode -> {
+                appPreferences.setValue(appPreferences.offlineMode, true)
+            }
             else -> Unit
         }
     }

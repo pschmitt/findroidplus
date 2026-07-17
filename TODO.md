@@ -121,16 +121,16 @@ compilation for the phone and TV apps on rofl-13.
       upstream "Findroid"
 - [x] Media view: icons for the All / Movies / Shows / Requested filter items (Seerr
       logo for Requested)
-- [ ] Connections settings: fold the dedicated Jellyfin "Servers" and "Users" screens
+- [x] Connections settings: fold the dedicated Jellyfin "Servers" and "Users" screens
       into the Connections view itself, configured inline just like Sonarr/Radarr/Seerr
-- [ ] Sonarr/Radarr/Seerr configs: optional "advanced" settings — extra HTTP request
+- [x] Sonarr/Radarr/Seerr configs: optional "advanced" settings — extra HTTP request
       header(s), HTTP basic auth, etc.
 - [x] Settings: every entry gets an icon (Theme, Gestures, …)
 - [x] Default image/media cache size: 50 MB
 - [x] Downloads view: friendly empty state when nothing is downloaded yet — short hint
       text plus a link to Home ("To download media, open an episode/movie and press the
       download button")
-- [ ] Graceful degradation everywhere: Sonarr/Radarr/Seerr down → clear non-blocking
+- [x] Graceful degradation everywhere: Sonarr/Radarr/Seerr down → clear non-blocking
       errors; Jellyfin down → offer enabling Offline mode; no crashes or silent spinners
 
 Status: **in progress** (started 2026-07-17).
