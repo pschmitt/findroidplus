@@ -312,7 +312,6 @@
     <string name="calendar_empty">Nothing upcoming</string>
     <string name="calendar_today">Today</string>
     <string name="calendar_tomorrow">Tomorrow</string>
-    <string name="calendar_status_available">Already available</string>
     <string name="calendar_air_time">Airs at %1$s</string>
     <string name="search_episode">Search episode</string>
     <string name="search_episodes">Search episodes</string>

@@ -212,14 +212,30 @@ private fun SeerrMediaScreenLayout(
                                 Text(detail.title)
                             }
                         }
+                        // Seerr only tracks request/availability status at the season/show level,
+                        // so AVAILABLE/PARTIALLY_AVAILABLE don't mean anything precise for a
+                        // single episode - an episode is either in the library or it isn't. Once
+                        // there's an episode in view, resolve the chip from that binary fact
+                        // instead of projecting the season's aggregate status onto it; the
+                        // request-lifecycle states (NOT_REQUESTED/PENDING/PROCESSING) still
+                        // describe the season accurately either way, so those pass through as-is.
+                        val displayStatus =
+                            when {
+                                detail.episode == null -> detail.status
+                                state.jellyfinEpisodeId != null -> SeerrMediaStatus.AVAILABLE
+                                detail.status == SeerrMediaStatus.AVAILABLE ||
+                                    detail.status == SeerrMediaStatus.PARTIALLY_AVAILABLE -> null
+                                else -> detail.status
+                            }
                         // The chip renders NOT_REQUESTED as "Requested" (its just-requested
                         // marker), so only show it once there actually is a request or status.
                         if (
-                            detail.status != SeerrMediaStatus.NOT_REQUESTED ||
-                                detail.cancellableRequestIds.isNotEmpty()
+                            displayStatus != null &&
+                                (displayStatus != SeerrMediaStatus.NOT_REQUESTED ||
+                                    detail.cancellableRequestIds.isNotEmpty())
                         ) {
                             Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            SeerrStatusChip(status = detail.status)
+                            SeerrStatusChip(status = displayStatus)
                         }
                         state.queueStatus?.let { queueStatus ->
                             Spacer(Modifier.height(MaterialTheme.spacings.small))

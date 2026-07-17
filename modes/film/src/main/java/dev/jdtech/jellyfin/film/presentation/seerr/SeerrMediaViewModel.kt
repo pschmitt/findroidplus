@@ -96,13 +96,14 @@ constructor(
                 .getDetails(tmdbId, mediaType, seasonNumber, episodeNumber)
                 .fold(
                     onSuccess = { detail ->
-                        val (showId, seasonId) = findJellyfinDestination(detail)
+                        val (showId, seasonId, episodeId) = findJellyfinDestination(detail)
                         _state.value =
                             _state.value.copy(
                                 isLoading = false,
                                 detail = detail,
                                 jellyfinShowId = showId,
                                 jellyfinSeasonId = seasonId,
+                                jellyfinEpisodeId = episodeId,
                             )
                     },
                     onFailure = { e ->
@@ -115,15 +116,15 @@ constructor(
 
     private suspend fun findJellyfinDestination(
         detail: dev.jdtech.jellyfin.models.SeerrMediaDetail
-    ): Pair<java.util.UUID?, java.util.UUID?> {
-        if (detail.mediaType != SeerrMediaType.TV) return null to null
+    ): Triple<java.util.UUID?, java.util.UUID?, java.util.UUID?> {
+        if (detail.mediaType != SeerrMediaType.TV) return Triple(null, null, null)
         return runCatching {
                 val show =
                     jellyfinRepository
                         .getItems(includeTypes = listOf(BaseItemKind.SERIES), recursive = true)
                         .filterIsInstance<dev.jdtech.jellyfin.models.FindroidShow>()
                         .firstOrNull { it.tmdbId == detail.tmdbId.toString() }
-                        ?: return@runCatching null to null
+                        ?: return@runCatching Triple(null, null, null)
                 val seasonNumber = detail.episode?.seasonNumber ?: detail.season?.seasonNumber
                 val seasonId =
                     seasonNumber?.let {
@@ -131,9 +132,19 @@ constructor(
                             season.indexNumber == it
                         }?.id
                     }
-                show.id to seasonId
+                val episode = detail.episode
+                val episodeId =
+                    if (episode != null && seasonId != null) {
+                        jellyfinRepository
+                            .getEpisodes(seriesId = show.id, seasonId = seasonId)
+                            .firstOrNull { it.indexNumber == episode.episodeNumber }
+                            ?.id
+                    } else {
+                        null
+                    }
+                Triple(show.id, seasonId, episodeId)
             }
-            .getOrDefault(null to null)
+            .getOrDefault(Triple(null, null, null))
     }
 
     private fun observeQueueStatus(

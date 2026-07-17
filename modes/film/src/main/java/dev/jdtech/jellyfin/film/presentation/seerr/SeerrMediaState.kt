@@ -15,6 +15,10 @@ data class SeerrMediaState(
     val queueStatus: QueueStatus? = null,
     val jellyfinShowId: UUID? = null,
     val jellyfinSeasonId: UUID? = null,
+    // Set only when detail.episode is non-null and this exact episode (not just its season) is
+    // matched in the library - the one genuine binary "is THIS episode available" signal, since
+    // Seerr only tracks request/availability status at the season/show level.
+    val jellyfinEpisodeId: UUID? = null,
     val releasePicker: ReleasePickerState? = null,
     val error: Exception? = null,
 )
