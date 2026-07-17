@@ -34,6 +34,24 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
         }
 
     /**
+     * Discovery lists for the Home screen - same result shape as [search]. [path] is the
+     * discover endpoint's last segment: "trending" (mixed movies/series), "movies" or "tv"
+     * (both popularity-sorted).
+     */
+    suspend fun discover(path: String, page: Int = 1): SeerrSearchResponse =
+        withContext(Dispatchers.IO) {
+            val url =
+                buildUrl(
+                    "api",
+                    "v1",
+                    "discover",
+                    path,
+                    queryParams = mapOf("page" to page.toString()),
+                )
+            json.decodeFromString<SeerrSearchResponse>(execute(url))
+        }
+
+    /**
      * Files a request; Seerr routes it to Sonarr/Radarr with the server-side defaults
      * (quality profile, root folder). Series requests ask for all seasons - Seerr's
      * "seasons": "all" shorthand - since Findroid doesn't offer per-season picking (yet).
@@ -134,6 +152,10 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
     companion object {
         const val MEDIA_TYPE_MOVIE = "movie"
         const val MEDIA_TYPE_TV = "tv"
+
+        const val DISCOVER_TRENDING = "trending"
+        const val DISCOVER_MOVIES = "movies"
+        const val DISCOVER_TV = "tv"
 
         private val json = Json { ignoreUnknownKeys = true }
     }

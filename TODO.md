@@ -81,6 +81,11 @@ phone/TV compile) and a CI-signed install on the Mi Pad 4.
       brand look (yellow arrow on the near-black disc); enable toggle on the same
       line as `<LOGO> Name <TOGGLE>`
 - [ ] Home: Seerr-powered show/movie discovery rows (trending/popular, requestable)
-- [ ] Settings: merge "Servers", "Integrations" and "Users" into one section
+- [x] Settings: merge "Servers", "Integrations" and "Users" into one section
+      ("Connections" group)
+- [ ] Seerr items not yet in the library get a tap action opening a dedicated detail
+      view (poster/backdrop, overview, status, request action)
+- [ ] "Unrequest" support: cancel a movie/show's open Seerr requests from the detail
+      view (Seerr requests are per movie/season, so this lands at that granularity)
 
 Status: **in progress**.

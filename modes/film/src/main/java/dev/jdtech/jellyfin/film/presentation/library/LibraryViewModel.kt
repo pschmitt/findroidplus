@@ -237,7 +237,7 @@ constructor(
     private fun requestSeerr(item: SeerrSearchItem) {
         viewModelScope.launch {
             seerrRepository
-                .request(item)
+                .request(item.tmdbId, item.mediaType)
                 .fold(
                     onSuccess = {
                         _state.value =

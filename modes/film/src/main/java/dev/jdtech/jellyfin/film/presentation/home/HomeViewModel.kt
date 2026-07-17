@@ -13,13 +13,17 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.models.HomeSection
 import dev.jdtech.jellyfin.models.UiText
+import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.SeerrRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
 import dev.jdtech.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -33,6 +37,8 @@ constructor(
     val appPreferences: AppPreferences,
     val database: ServerDatabaseDao,
     val downloader: Downloader,
+    private val seerrRepository: SeerrRepository,
+    private val pvrConfiguration: PvrConfiguration,
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state = _state.asStateFlow()
@@ -60,6 +66,7 @@ constructor(
                 loadResumeItems()
                 loadNextUpItems()
                 loadViews()
+                loadDiscover()
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
@@ -190,6 +197,44 @@ constructor(
             }
 
         _state.emit(_state.value.copy(views = items))
+    }
+
+    /**
+     * Seerr-backed discovery rows at the bottom of Home. Failures are silently dropped
+     * (discovery is bonus content - a broken Seerr instance must not take down Home), and
+     * sections that fail or come back empty simply don't appear.
+     */
+    private suspend fun loadDiscover() {
+        if (
+            !appPreferences.getValue(appPreferences.homeDiscover) ||
+                !pvrConfiguration.isSeerrConfigured()
+        ) {
+            _state.emit(_state.value.copy(discoverSections = emptyList()))
+            return
+        }
+
+        Timber.i("Loading Seerr discovery sections")
+        val sections = coroutineScope {
+            val trending =
+                async { FilmR.string.home_discover_trending to seerrRepository.getTrending() }
+            val movies =
+                async {
+                    FilmR.string.home_discover_popular_movies to
+                        seerrRepository.getPopularMovies()
+                }
+            val shows =
+                async {
+                    FilmR.string.home_discover_popular_shows to seerrRepository.getPopularShows()
+                }
+            listOf(trending.await(), movies.await(), shows.await()).mapNotNull { (titleRes, result) ->
+                result
+                    .getOrNull()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { HomeDiscoverSection(titleRes = titleRes, items = it) }
+            }
+        }
+
+        _state.emit(_state.value.copy(discoverSections = sections))
     }
 
     fun onAction(action: HomeAction) {

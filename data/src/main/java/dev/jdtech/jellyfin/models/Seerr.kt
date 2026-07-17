@@ -49,3 +49,25 @@ data class SeerrRequestItem(
     val posterUrl: String?,
     val mediaStatus: SeerrMediaStatus,
 )
+
+/** Full detail payload backing the dedicated Seerr media view. */
+data class SeerrMediaDetail(
+    val tmdbId: Int,
+    val mediaType: SeerrMediaType,
+    val title: String,
+    val year: Int?,
+    val overview: String?,
+    val posterUrl: String?,
+    val backdropUrl: String?,
+    val genres: List<String>,
+    /** Movies only. */
+    val runtimeMinutes: Int?,
+    /** Series only. */
+    val numberOfSeasons: Int?,
+    val status: SeerrMediaStatus,
+    /**
+     * Ids of the media's open (not-declined) requests - non-empty means the item can be
+     * "unrequested" by deleting these.
+     */
+    val cancellableRequestIds: List<Int>,
+)

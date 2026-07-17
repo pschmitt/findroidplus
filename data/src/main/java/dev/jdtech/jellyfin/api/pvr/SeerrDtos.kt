@@ -35,9 +35,18 @@ data class SeerrSearchResult(
 
 /**
  * Seerr's media availability: 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE,
- * 5=AVAILABLE (see `SeerrMediaStatus.fromCode`).
+ * 5=AVAILABLE (see `SeerrMediaStatus.fromCode`). The detail endpoints additionally embed the
+ * open requests for the media - needed to cancel ("unrequest") from the detail view, since
+ * DELETE /request/{id} wants request ids, not TMDB ids.
  */
-@Serializable data class SeerrMediaInfo(val status: Int = 0)
+@Serializable
+data class SeerrMediaInfo(
+    val status: Int = 0,
+    val requests: List<SeerrMediaRequestRef> = emptyList(),
+)
+
+/** `status` is the request workflow state: 1=PENDING approval, 2=APPROVED, 3=DECLINED. */
+@Serializable data class SeerrMediaRequestRef(val id: Int, val status: Int = 0)
 
 // endregion
 
@@ -86,12 +95,36 @@ data class SeerrRequestMedia(
 // endregion
 
 // region GET /api/v1/movie/{tmdbId}, GET /api/v1/tv/{tmdbId}
+// Rich TMDB detail payloads, used both to resolve titles/posters for the requests list and to
+// back the dedicated Seerr media detail view.
 
 @Serializable
-data class SeerrMovieDetails(val id: Int, val title: String = "", val posterPath: String? = null)
+data class SeerrMovieDetails(
+    val id: Int,
+    val title: String = "",
+    val posterPath: String? = null,
+    val backdropPath: String? = null,
+    val overview: String? = null,
+    val releaseDate: String? = null,
+    val runtime: Int? = null,
+    val genres: List<SeerrGenre> = emptyList(),
+    val mediaInfo: SeerrMediaInfo? = null,
+)
 
 @Serializable
-data class SeerrTvDetails(val id: Int, val name: String = "", val posterPath: String? = null)
+data class SeerrTvDetails(
+    val id: Int,
+    val name: String = "",
+    val posterPath: String? = null,
+    val backdropPath: String? = null,
+    val overview: String? = null,
+    val firstAirDate: String? = null,
+    val numberOfSeasons: Int? = null,
+    val genres: List<SeerrGenre> = emptyList(),
+    val mediaInfo: SeerrMediaInfo? = null,
+)
+
+@Serializable data class SeerrGenre(val id: Int = 0, val name: String = "")
 
 // endregion
 
