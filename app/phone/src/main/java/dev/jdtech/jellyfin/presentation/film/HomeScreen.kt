@@ -40,9 +40,11 @@ import dev.jdtech.jellyfin.film.presentation.search.SearchState
 import dev.jdtech.jellyfin.film.presentation.search.SearchViewModel
 import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.SeerrSearchItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.FilmSearchBar
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
+import dev.jdtech.jellyfin.presentation.film.components.HomeDiscoverSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
 import dev.jdtech.jellyfin.presentation.film.components.HomeSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeView
@@ -59,6 +61,7 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onManageServers: () -> Unit,
     onItemClick: (item: FindroidItem) -> Unit,
+    onSeerrItemClick: (item: SeerrSearchItem) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
@@ -73,6 +76,7 @@ fun HomeScreen(
         onAction = { action ->
             when (action) {
                 is HomeAction.OnItemClick -> onItemClick(action.item)
+                is HomeAction.OnSeerrItemClick -> onSeerrItemClick(action.item)
                 is HomeAction.OnLibraryClick -> onLibraryClick(action.library)
                 is HomeAction.OnFavoritesClick -> onFavoritesClick()
                 is HomeAction.OnSettingsClick -> onSettingsClick()
@@ -155,6 +159,14 @@ private fun HomeScreenLayout(
                 items(state.views, key = { it.id }) { view ->
                     HomeView(
                         view = view,
+                        itemsPadding = itemsPadding,
+                        onAction = onAction,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+                items(state.discoverSections, key = { it.titleRes }) { section ->
+                    HomeDiscoverSection(
+                        section = section,
                         itemsPadding = itemsPadding,
                         onAction = onAction,
                         modifier = Modifier.animateItem(),
