@@ -268,7 +268,18 @@ private fun SeerrMediaScreenLayout(
                                     onClick = { showCancelDialog = true },
                                     enabled = !state.isSubmitting,
                                 ) {
-                                    Text(text = stringResource(CoreR.string.seerr_cancel_request))
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(MaterialTheme.spacings.small)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_seerr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Text(text = stringResource(CoreR.string.seerr_cancel_request))
+                                    }
                                 }
                             }
                         }
