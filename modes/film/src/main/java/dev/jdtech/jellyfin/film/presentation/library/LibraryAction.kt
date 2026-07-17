@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.film.presentation.library
 
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.SeerrSearchItem
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
 
@@ -12,4 +13,8 @@ sealed interface LibraryAction {
     data class ChangeSorting(val sortBy: SortBy, val sortOrder: SortOrder) : LibraryAction
 
     data class OnSearchQueryChange(val query: String) : LibraryAction
+
+    data class ChangeFilter(val filter: MediaFilter) : LibraryAction
+
+    data class OnSeerrRequest(val item: SeerrSearchItem) : LibraryAction
 }

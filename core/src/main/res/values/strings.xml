@@ -8,6 +8,7 @@
     <string name="discard">Discard</string>
     <string name="title_home">Home</string>
     <string name="title_media">Libraries</string>
+    <string name="title_media_tab">Media</string>
     <string name="title_favorite">Favorites</string>
     <string name="title_settings">Settings</string>
     <string name="title_download">Downloads</string>
@@ -260,18 +261,13 @@
     <string name="pvr_queue_status_warning">Warning</string>
     <string name="pvr_queue_status_failed">Failed</string>
     <string name="title_calendar">Calendar</string>
-    <string name="title_discover">Discover</string>
-    <string name="discover_clear_search">Clear search</string>
     <string name="discover_filter_all">All</string>
     <string name="discover_filter_movies">Movies</string>
     <string name="discover_filter_shows">Shows</string>
-    <string name="discover_search_hint">Search movies &amp; shows to request…</string>
     <string name="discover_request">Request</string>
     <string name="discover_requested_toast">Requested “%1$s”</string>
     <string name="discover_request_failed_toast">Request failed: %1$s</string>
     <string name="discover_recent_requests">Recent requests</string>
-    <string name="discover_empty_hint">Search for a movie or show to request it via Seerr</string>
-    <string name="discover_no_results">No results</string>
     <string name="discover_status_available">Available</string>
     <string name="discover_status_partially_available">Partially available</string>
     <string name="discover_status_processing">Processing</string>
@@ -279,6 +275,7 @@
     <string name="discover_status_requested">Requested</string>
     <string name="discover_type_movie">Movie</string>
     <string name="discover_type_show">Show</string>
+    <string name="media_seerr_section">Not in your library — request via Seerr</string>
     <string name="calendar_empty">Nothing upcoming</string>
     <string name="calendar_today">Today</string>
     <string name="calendar_tomorrow">Tomorrow</string>

@@ -44,7 +44,6 @@ import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.film.AutoDownloadRulesScreen
 import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
-import dev.jdtech.jellyfin.presentation.film.DiscoverScreen
 import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.film.EpisodeScreen
 import dev.jdtech.jellyfin.presentation.film.FavoritesScreen
@@ -88,7 +87,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object CalendarRoute
 
-@Serializable data object DiscoverRoute
+// The merged movies+shows browse view - replaces the per-library Movies/Shows tabs.
+@Serializable data object MediaRoute
 
 @Serializable data object AutoDownloadRulesRoute
 
@@ -165,6 +165,12 @@ private fun libraryTab(library: FindroidCollection) =
 
 val homeTab =
     TabBarItem(title = CoreR.string.title_home, icon = CoreR.drawable.ic_home, route = HomeRoute)
+val mediaTab =
+    TabBarItem(
+        title = CoreR.string.title_media_tab,
+        icon = CoreR.drawable.ic_library,
+        route = MediaRoute,
+    )
 val downloadsTab =
     TabBarItem(
         title = CoreR.string.title_download,
@@ -176,12 +182,6 @@ val calendarTab =
         title = CoreR.string.title_calendar,
         icon = CoreR.drawable.ic_calendar,
         route = CalendarRoute,
-    )
-val discoverTab =
-    TabBarItem(
-        title = CoreR.string.title_discover,
-        icon = CoreR.drawable.ic_sparkles,
-        route = DiscoverRoute,
     )
 
 /** Plain "open Settings at its root", not scrolled to any particular section. */
@@ -226,14 +226,21 @@ fun NavigationRoot(
 
     val mediaState by mediaViewModel.state.collectAsStateWithLifecycle()
 
+    // Movies and TV show libraries are merged into a single "Media" tab; any other library
+    // types (box sets, mixed, folders, ...) keep their own tab.
+    val (mergedLibraries, standaloneLibraries) =
+        mediaState.libraries.partition {
+            it.type == CollectionType.Movies || it.type == CollectionType.TvShows
+        }
+
     val navigationItems =
         when (isOfflineMode) {
             false ->
                 listOf(homeTab) +
-                    mediaState.libraries.map(::libraryTab) +
+                    (if (mergedLibraries.isNotEmpty()) listOf(mediaTab) else emptyList()) +
+                    standaloneLibraries.map(::libraryTab) +
                     listOf(downloadsTab) +
-                    (if (mediaState.showCalendarTab) listOf(calendarTab) else emptyList()) +
-                    (if (mediaState.showDiscoverTab) listOf(discoverTab) else emptyList())
+                    (if (mediaState.showCalendarTab) listOf(calendarTab) else emptyList())
             true -> listOf(homeTab, downloadsTab)
         }
 
@@ -435,18 +442,7 @@ fun NavigationRoot(
                     onShowClick = { showId ->
                         navController.safeNavigate(ShowRoute(showId = showId.toString()))
                     },
-                    onMoviesClick = {
-                        mediaState.libraries.firstOrNull { it.type == CollectionType.Movies }
-                            ?.let { library ->
-                                navController.safeNavigate(
-                                    LibraryRoute(
-                                        libraryId = library.id.toString(),
-                                        libraryName = library.name,
-                                        libraryType = library.type,
-                                    )
-                                )
-                            }
-                    },
+                    onMoviesClick = { navController.safeNavigate(MediaRoute) },
                     onSettingsClick = {
                         navController.safeNavigate(
                             SettingsRoute(
@@ -470,7 +466,18 @@ fun NavigationRoot(
                     },
                 )
             }
-            composable<DiscoverRoute> { DiscoverScreen() }
+            composable<MediaRoute> {
+                LibraryScreen(
+                    libraryId = null,
+                    libraryName = stringResource(CoreR.string.title_media_tab),
+                    libraryType = CollectionType.Mixed,
+                    showBackButton = false,
+                    onItemClick = { item ->
+                        navigateToItem(navController = navController, item = item)
+                    },
+                    navigateBack = { navController.safePopBackStack() },
+                )
+            }
             composable<AutoDownloadRulesRoute> {
                 AutoDownloadRulesScreen(
                     navigateBack = { navController.safePopBackStack() },

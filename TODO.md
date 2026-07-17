@@ -36,3 +36,30 @@ Rename the package and app to distinguish this fork from upstream Findroid.
       fatal errors in logcat).
 
 Status: **done**.
+
+## FINDROID-2: PVR/Seerr integration polish, round 2
+
+Batch of UX todos around the Sonarr/Radarr/Seerr integrations and general navigation.
+
+- [x] Rename the Jellyseerr integration to Seerr (rebrand); persisted pref/credential
+      keys keep the legacy `jellyseerr` names so existing devices/backups keep working
+- [x] Integrations settings: add the Sonarr/Radarr/Seerr brand logos (page was bland)
+- [x] Integrations settings: "Get API key" link per service opening its web UI
+      settings page (`{baseUrl}/settings/general` for Sonarr/Radarr, `{baseUrl}/settings`
+      for Seerr)
+- [x] Merge the Movies and TV Shows views into a single "Media" tab
+      (All/Movies/Shows filter chips)
+- [x] Native Seerr integration: no separate Discover tab; searching in Media also
+      searches Seerr so missing content can be requested in place (recent requests show
+      when opening search)
+- [ ] Devices without cellular connectivity (e.g. Mi Pad 4): disable the "Download
+      using mobile data" setting, like "Download location" is disabled without
+      external storage
+- [ ] Navigation: the settings cog only appears on some views - show it consistently
+      on all top-level views
+- [ ] Pause/delete downloads in Sonarr/Radarr/Seerr (queue item actions, request
+      cancellation)
+- [ ] Download dialog: behaves awkwardly when a show already has an auto-download rule
+      and the download button is hit on a single episode - make it ergonomically sound
+
+Status: **in progress**.
