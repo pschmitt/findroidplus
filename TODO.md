@@ -161,7 +161,19 @@ season-level Seerr requests and the downloads-list load delay still open.
 - [ ] Review upstream Findroid's dependency updates since this fork diverged and
       selectively pull in the ones that still make sense (don't blindly merge -
       this fork has diverged substantially from upstream in places)
-- [ ] Enable Renovate or Dependabot on this repo so dependency versions stay
-      current going forward without manual tracking
+- [x] Enable Renovate or Dependabot on this repo so dependency versions stay
+      current going forward without manual tracking. Went with Dependabot
+      (`.github/dependabot.yml`, `gradle` + `github-actions` ecosystems, weekly,
+      kotlin/ksp grouped) — zero extra setup, activates as soon as this is merged
+      to `main`. Removed the stale `renovate.json` (inherited from upstream via
+      `sync-upstream` merges; the Renovate GitHub App was never actually installed
+      on this fork, confirmed via `gh pr list` finding no Renovate PRs against
+      `pschmitt/findroidplus`) to avoid confusion/duplicate automation later.
+      **Manual follow-up**: none needed for Dependabot itself. Optionally, enable
+      "Dependabot alerts" under Settings > Code security (currently disabled on
+      this fork per the GitHub API) if security-vulnerability alerts are wanted
+      too — that's a separate toggle from version updates.
 
-Status: not started.
+Status: in progress (2026-07-18) - automation enabled; the manual "review and
+selectively pull in upstream dependency updates" item is still open and requires
+human judgment.
