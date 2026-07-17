@@ -11,6 +11,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,7 +57,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -84,7 +84,7 @@ import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsEvent
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueUiItem
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
-import dev.jdtech.jellyfin.models.PvrDiskSpaceResult
+import dev.jdtech.jellyfin.models.PvrServiceDiskSpace
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.isDownloaded
@@ -97,6 +97,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.DeleteProgress
+import dev.jdtech.jellyfin.utils.DeviceStorageStats
 import dev.jdtech.jellyfin.utils.DownloadProgress
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import dev.jdtech.jellyfin.utils.formatDownloadSpeed
@@ -411,15 +412,12 @@ private fun DownloadsScreenLayout(
             }
             PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (
-                    totalLocalSizeBytes > 0 ||
-                        state.diskSpace.sonarr != null ||
-                        state.diskSpace.radarr != null
-                ) {
+                if (state.deviceStorage != null || state.diskSpace.storage != null) {
                     item {
                         DownloadsStorageSummaryCard(
                             localUsedBytes = totalLocalSizeBytes,
-                            diskSpace = state.diskSpace,
+                            deviceStorage = state.deviceStorage,
+                            pvrStorage = state.diskSpace.storage,
                         )
                     }
                 }
@@ -622,78 +620,91 @@ private fun DownloadsEmptyState(onGoToHomeClick: () -> Unit, modifier: Modifier 
 }
 
 /**
- * Storage at a glance: on-device space used by downloads, plus free space on each configured PVR
- * service's root folders - see [PvrDiskSpaceResult] for why there's no Jellyfin-server number
- * (the server API has no storage endpoint at all).
+ * Storage at a glance: on-device space used by downloads, plus a single PVR-side number - see
+ * [dev.jdtech.jellyfin.models.PvrDiskSpaceResult] for why Sonarr/Radarr never both get a row, and
+ * why there's no Jellyfin-server number at all (the server API has no storage endpoint).
  */
 @Composable
 private fun DownloadsStorageSummaryCard(
     localUsedBytes: Long,
-    diskSpace: PvrDiskSpaceResult,
+    deviceStorage: DeviceStorageStats?,
+    pvrStorage: PvrServiceDiskSpace?,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     Card(modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
         Column(
             modifier = Modifier.padding(MaterialTheme.spacings.default),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         ) {
-            Text(
-                text = stringResource(CoreR.string.storage_summary_title),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            StorageSummaryRow(
-                iconRes = CoreR.drawable.ic_smartphone,
-                label = stringResource(CoreR.string.storage_summary_on_device),
-                value = Formatter.formatFileSize(context, localUsedBytes),
-            )
-            diskSpace.sonarr?.let { sonarr ->
-                StorageSummaryRow(
-                    iconRes = CoreR.drawable.ic_sonarr,
-                    tintIcon = false,
-                    label = stringResource(CoreR.string.integrations_sonarr),
-                    value =
-                        stringResource(
-                            CoreR.string.storage_summary_free,
-                            Formatter.formatFileSize(context, sonarr.freeBytes),
-                        ),
+            deviceStorage?.let { device ->
+                StorageUsageBar(
+                    iconRes = CoreR.drawable.ic_smartphone,
+                    label = stringResource(CoreR.string.storage_summary_on_device),
+                    usedBytes = localUsedBytes,
+                    totalBytes = device.totalBytes,
                 )
             }
-            diskSpace.radarr?.let { radarr ->
-                StorageSummaryRow(
-                    iconRes = CoreR.drawable.ic_radarr,
-                    tintIcon = false,
-                    label = stringResource(CoreR.string.integrations_radarr),
-                    value =
-                        stringResource(
-                            CoreR.string.storage_summary_free,
-                            Formatter.formatFileSize(context, radarr.freeBytes),
-                        ),
+            pvrStorage?.let { pvr ->
+                StorageUsageBar(
+                    iconRes = CoreR.drawable.ic_server,
+                    label = stringResource(CoreR.string.storage_summary_pvr),
+                    usedBytes = (pvr.totalBytes - pvr.freeBytes).coerceAtLeast(0L),
+                    totalBytes = pvr.totalBytes,
                 )
             }
         }
     }
 }
 
+/** One storage row: icon/label/"X of Y used" header, plus a color-coded usage bar below it. */
 @Composable
-private fun StorageSummaryRow(iconRes: Int, label: String, value: String, tintIcon: Boolean = true) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            tint = if (tintIcon) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun StorageUsageBar(
+    iconRes: Int,
+    label: String,
+    usedBytes: Long,
+    totalBytes: Long,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val fraction =
+        if (totalBytes > 0) (usedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f) else 0f
+    val barColor =
+        when {
+            fraction >= 0.9f -> MaterialTheme.colorScheme.error
+            fraction >= 0.7f -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.primary
+        }
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text =
+                    stringResource(
+                        CoreR.string.storage_used_of_total,
+                        Formatter.formatFileSize(context, usedBytes),
+                        Formatter.formatFileSize(context, totalBytes),
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
+        LinearProgressIndicator(
+            progress = { fraction },
+            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+            color = barColor,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
     }
 }

@@ -219,14 +219,15 @@ data class PvrRelease(
 
 // endregion
 
-// region Sonarr/Radarr - GET /api/v3/diskspace
-// One entry per root folder the service manages; both APIs return the same shape. A flat JSON
-// array, same as /calendar.
+// region Sonarr/Radarr - GET /api/v3/rootfolder
+// One entry per *configured* TV-shows/movies storage location - unlike /diskspace (which also
+// reports every other mount point the service's host can see, not just the ones actually used
+// for the library), this only lists folders the user explicitly set up as a root folder, complete
+// with free/total space already embedded. Both APIs return the same shape; a flat JSON array.
 
 @Serializable
-data class PvrDiskSpaceDto(
+data class PvrRootFolderDto(
     val path: String = "",
-    val label: String? = null,
     val freeSpace: Long = 0L,
     val totalSpace: Long = 0L,
 )

@@ -70,11 +70,11 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
             json.decodeFromString<List<SonarrEpisodeDto>>(execute(url))
         }
 
-    /** Free/total space per root folder Sonarr manages. */
-    suspend fun getDiskSpace(): List<PvrDiskSpaceDto> =
+    /** The configured TV-shows storage location(s), with free/total space already embedded. */
+    suspend fun getRootFolders(): List<PvrRootFolderDto> =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v3", "diskspace")
-            json.decodeFromString<List<PvrDiskSpaceDto>>(execute(url))
+            val url = buildUrl("api", "v3", "rootfolder")
+            json.decodeFromString<List<PvrRootFolderDto>>(execute(url))
         }
 
     /**

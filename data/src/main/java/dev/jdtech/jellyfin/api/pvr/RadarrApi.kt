@@ -27,11 +27,11 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
             json.decodeFromString<List<RadarrMovie>>(execute(url))
         }
 
-    /** Free/total space per root folder Radarr manages. */
-    suspend fun getDiskSpace(): List<PvrDiskSpaceDto> =
+    /** The configured movies storage location(s), with free/total space already embedded. */
+    suspend fun getRootFolders(): List<PvrRootFolderDto> =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v3", "diskspace")
-            json.decodeFromString<List<PvrDiskSpaceDto>>(execute(url))
+            val url = buildUrl("api", "v3", "rootfolder")
+            json.decodeFromString<List<PvrRootFolderDto>>(execute(url))
         }
 
     suspend fun getQueue(): List<RadarrQueueItem> =

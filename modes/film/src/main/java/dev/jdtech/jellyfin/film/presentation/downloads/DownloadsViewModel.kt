@@ -91,14 +91,18 @@ constructor(
                     )
             }
         }
-        refreshDiskSpace()
+        refreshStorage()
     }
 
-    // Disk space doesn't change minute to minute, so this is a one-shot fetch on entering the
+    // Storage numbers don't change minute to minute, so this is a one-shot fetch on entering the
     // screen and on pull-to-refresh, not part of the polling loops above.
-    private fun refreshDiskSpace() {
+    private fun refreshStorage() {
         viewModelScope.launch {
             _state.value = _state.value.copy(diskSpace = pvrDiskSpaceRepository.getDiskSpace())
+        }
+        viewModelScope.launch {
+            val deviceStorage = withContext(Dispatchers.IO) { downloader.getStorageStats() }
+            _state.value = _state.value.copy(deviceStorage = deviceStorage)
         }
     }
 
@@ -156,7 +160,7 @@ constructor(
             queueStatusRepository.refreshNow()
             refreshDownloads()
         }
-        refreshDiskSpace()
+        refreshStorage()
     }
 
     private fun reconcileDownloadProgress(movies: List<FindroidMovie>, episodes: List<FindroidEpisode>) {

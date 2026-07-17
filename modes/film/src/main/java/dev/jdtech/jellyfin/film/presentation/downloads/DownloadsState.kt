@@ -8,6 +8,7 @@ import dev.jdtech.jellyfin.models.PvrFetchError
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.utils.DeleteProgress
+import dev.jdtech.jellyfin.utils.DeviceStorageStats
 import dev.jdtech.jellyfin.utils.DownloadProgress
 import java.util.UUID
 
@@ -23,6 +24,7 @@ data class DownloadsState(
     val pvrQueueGroups: List<PvrQueueGroup> = emptyList(),
     val pvrErrors: List<PvrFetchError> = emptyList(),
     val diskSpace: PvrDiskSpaceResult = PvrDiskSpaceResult(),
+    val deviceStorage: DeviceStorageStats? = null,
 ) {
     val isEmpty: Boolean
         get() = movies.isEmpty() && showGroups.isEmpty()

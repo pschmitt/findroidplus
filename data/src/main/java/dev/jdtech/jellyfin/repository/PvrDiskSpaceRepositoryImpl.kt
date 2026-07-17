@@ -1,6 +1,6 @@
 package dev.jdtech.jellyfin.repository
 
-import dev.jdtech.jellyfin.api.pvr.PvrDiskSpaceDto
+import dev.jdtech.jellyfin.api.pvr.PvrRootFolderDto
 import dev.jdtech.jellyfin.api.pvr.RadarrApi
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
 import dev.jdtech.jellyfin.models.PvrDiskSpaceResult
@@ -29,7 +29,8 @@ class PvrDiskSpaceRepositoryImpl(
     override suspend fun getDiskSpace(): PvrDiskSpaceResult = coroutineScope {
         val sonarrDeferred = async { fetchSonarr() }
         val radarrDeferred = async { fetchRadarr() }
-        PvrDiskSpaceResult(sonarr = sonarrDeferred.await(), radarr = radarrDeferred.await())
+        // Assume Sonarr/Radarr share the same disk (see PvrDiskSpaceResult) - only surface one.
+        PvrDiskSpaceResult(storage = sonarrDeferred.await() ?: radarrDeferred.await())
     }
 
     private suspend fun fetchSonarr(): PvrServiceDiskSpace? {
@@ -39,11 +40,11 @@ class PvrDiskSpaceRepositoryImpl(
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
 
         return try {
-            SonarrApi(baseUrl, apiKey).getDiskSpace().toServiceDiskSpace()
+            SonarrApi(baseUrl, apiKey).getRootFolders().toServiceDiskSpace()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.w(e, "Failed to fetch Sonarr disk space")
+            Timber.w(e, "Failed to fetch Sonarr root folder disk space")
             null
         }
     }
@@ -55,22 +56,20 @@ class PvrDiskSpaceRepositoryImpl(
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
 
         return try {
-            RadarrApi(baseUrl, apiKey).getDiskSpace().toServiceDiskSpace()
+            RadarrApi(baseUrl, apiKey).getRootFolders().toServiceDiskSpace()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.w(e, "Failed to fetch Radarr disk space")
+            Timber.w(e, "Failed to fetch Radarr root folder disk space")
             null
         }
     }
 
-    private fun List<PvrDiskSpaceDto>.toServiceDiskSpace(): PvrServiceDiskSpace? =
-        distinctBy { it.path }
-            .takeIf { it.isNotEmpty() }
-            ?.let { spaces ->
-                PvrServiceDiskSpace(
-                    freeBytes = spaces.sumOf { it.freeSpace },
-                    totalBytes = spaces.sumOf { it.totalSpace },
-                )
-            }
+    // The largest configured root folder, not a sum across all of them - a service can have more
+    // than one root folder sharing the same underlying volume (see PvrServiceDiskSpace), which
+    // summing would double-count. The largest one is taken as "the" root folder rather than the
+    // first, since load order isn't guaranteed to put the main library first.
+    private fun List<PvrRootFolderDto>.toServiceDiskSpace(): PvrServiceDiskSpace? =
+        maxByOrNull { it.totalSpace }
+            ?.let { PvrServiceDiskSpace(freeBytes = it.freeSpace, totalBytes = it.totalSpace) }
 }

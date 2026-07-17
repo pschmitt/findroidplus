@@ -271,9 +271,9 @@
     <string name="delete_selected_downloads_message">This will delete %1$d selected episode(s) from this device.</string>
     <string name="delete_show_downloads_message">This will delete %1$d downloaded episode(s) of %2$s from this device.</string>
     <string name="pvr_queue_section_title">Pending downloads</string>
-    <string name="storage_summary_title">Storage</string>
     <string name="storage_summary_on_device">On this device</string>
-    <string name="storage_summary_free">%1$s free</string>
+    <string name="storage_summary_pvr">PVR storage</string>
+    <string name="storage_used_of_total">%1$s of %2$s used</string>
     <string name="pvr_download_channel_name">PVR downloads</string>
     <string name="pvr_download_finished_notification">Download finished</string>
     <string name="pvr_queue_status_importing">Importing…</string>

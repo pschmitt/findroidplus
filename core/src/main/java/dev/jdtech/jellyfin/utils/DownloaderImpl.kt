@@ -492,6 +492,18 @@ class DownloaderImpl(
         }
     }
 
+    override fun getStorageStats(storageIndex: Int): DeviceStorageStats? {
+        val storageLocation = context.getExternalFilesDirs(null).getOrNull(storageIndex) ?: return null
+        if (Environment.getExternalStorageState(storageLocation) != Environment.MEDIA_MOUNTED) {
+            return null
+        }
+        val stats = StatFs(storageLocation.path)
+        return DeviceStorageStats(
+            totalBytes = stats.blockCountLong * stats.blockSizeLong,
+            availableBytes = stats.availableBlocksLong * stats.blockSizeLong,
+        )
+    }
+
     override fun getProgressFlow(downloadId: Long): Flow<DownloadProgress> {
         val sourceId =
             database.getSourceByDownloadId(downloadId)?.id

@@ -66,4 +66,8 @@ interface Downloader {
     // or null if none has run yet / the last one fully drained. Backed by WorkManager's unique
     // work info for the shared "deleteDownloads" work chain.
     fun getDeleteProgressFlow(): Flow<DeleteProgress?>
+
+    // Total/available bytes on storageIndex's volume (see downloadItem's storageIndex), for a
+    // storage-usage summary UI. Null if that volume isn't mounted.
+    fun getStorageStats(storageIndex: Int = 0): DeviceStorageStats?
 }
