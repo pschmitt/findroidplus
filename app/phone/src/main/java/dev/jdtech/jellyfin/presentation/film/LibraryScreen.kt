@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -509,6 +512,32 @@ private fun MediaFilterChip(
         selected = state.filter == filter,
         onClick = { onAction(LibraryAction.ChangeFilter(filter)) },
         label = { Text(stringResource(labelRes)) },
+        leadingIcon = {
+            when (filter) {
+                // The Seerr mark is a brand-colored asset (same one as on the Integrations
+                // settings screen), so it is drawn as-is instead of tinted like the
+                // monochrome icons.
+                MediaFilter.REQUESTED ->
+                    Image(
+                        painter = painterResource(CoreR.drawable.ic_seerr),
+                        contentDescription = null,
+                        modifier = Modifier.size(FilterChipDefaults.IconSize),
+                    )
+                else ->
+                    Icon(
+                        painter =
+                            painterResource(
+                                when (filter) {
+                                    MediaFilter.ALL -> CoreR.drawable.ic_layout_grid
+                                    MediaFilter.MOVIES -> CoreR.drawable.ic_film
+                                    else -> CoreR.drawable.ic_tv
+                                }
+                            ),
+                        contentDescription = null,
+                        modifier = Modifier.size(FilterChipDefaults.IconSize),
+                    )
+            }
+        },
     )
 }
 
