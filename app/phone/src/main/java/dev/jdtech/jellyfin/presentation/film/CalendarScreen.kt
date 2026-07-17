@@ -1,6 +1,5 @@
 package dev.jdtech.jellyfin.presentation.film
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -37,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,20 +44,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.R as CoreR
-import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarState
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarViewModel
 import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
-import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
-import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
-import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -74,24 +67,9 @@ fun CalendarScreen(
     onSettingsClick: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.refresh() }
-
-    ObserveAsEvents(viewModel.searchEvents) { event ->
-        val message =
-            when (event) {
-                is SearchEvent.SearchTriggered -> context.getString(CoreR.string.search_triggered_toast)
-                is SearchEvent.ReleaseGrabbed -> context.getString(CoreR.string.release_grabbed_toast)
-                is SearchEvent.Failed ->
-                    context.getString(
-                        CoreR.string.search_failed_toast,
-                        event.message ?: context.getString(CoreR.string.unknown_error),
-                    )
-            }
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-    }
 
     CalendarScreenLayout(
         state = state,
@@ -114,10 +92,6 @@ fun CalendarScreen(
                 tmdbId != null -> onSeerrClick(entry)
             }
         },
-        onSearchAutomatic = viewModel::searchAutomatic,
-        onSearchManual = viewModel::openReleasePicker,
-        onGrabRelease = viewModel::grabRelease,
-        onDismissReleasePicker = viewModel::dismissReleasePicker,
         onRefresh = viewModel::refresh,
         onSettingsClick = onSettingsClick,
     )
@@ -128,10 +102,6 @@ fun CalendarScreen(
 private fun CalendarScreenLayout(
     state: CalendarState,
     onEntryClick: (CalendarEntry) -> Unit = {},
-    onSearchAutomatic: (CalendarEntry) -> Unit = {},
-    onSearchManual: (CalendarEntry) -> Unit = {},
-    onGrabRelease: (PvrRelease) -> Unit = {},
-    onDismissReleasePicker: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
 ) {
@@ -194,31 +164,11 @@ private fun CalendarScreenLayout(
                             clickable =
                                 entry.itemId != null || entry.tmdbId != null,
                             onClick = { onEntryClick(entry) },
-                            onSearchAutomatic =
-                                if (entry.episodeId != null || entry.movieId != null) {
-                                    { onSearchAutomatic(entry) }
-                                } else {
-                                    null
-                                },
-                            onSearchManual =
-                                if (entry.episodeId != null || entry.movieId != null) {
-                                    { onSearchManual(entry) }
-                                } else {
-                                    null
-                                },
                         )
                     }
                 }
                 }
             }
-        }
-
-        state.releasePicker?.let { releasePicker ->
-            ReleasePickerSheet(
-                state = releasePicker,
-                onGrab = onGrabRelease,
-                onDismissRequest = onDismissReleasePicker,
-            )
         }
     }
 }
@@ -272,8 +222,6 @@ private fun CalendarEntryRow(
     entry: CalendarEntry,
     clickable: Boolean,
     onClick: () -> Unit,
-    onSearchAutomatic: (() -> Unit)? = null,
-    onSearchManual: (() -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -348,36 +296,26 @@ private fun CalendarEntryRow(
                 )
             }
         }
-        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-        CalendarEntryBadge(entry = entry)
-        if (onSearchAutomatic != null && onSearchManual != null) {
-            PvrSearchButton(onAutomaticSearch = onSearchAutomatic, onManualSearch = onSearchManual)
+        if (entry.hasFile) {
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            CalendarDownloadedIndicator()
         }
     }
 }
 
 /**
- * PVR status indicator - NOT related to Findroid's own on-device downloads (compare
- * [dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar]'s download button). This
- * reflects whether Sonarr/Radarr itself has already grabbed/imported the file on the *server*:
- * - [CalendarEntry.hasFile]: Sonarr/Radarr already has it - it should already be in Jellyfin.
- * - [CalendarEntry.monitored] (and no file yet): tracked, still upcoming.
- * - neither: Sonarr/Radarr isn't monitoring this release at all.
+ * Shown when Sonarr/Radarr already has this release's file on the *server* - NOT related to
+ * Findroid's own on-device downloads (compare
+ * [dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar]'s download button). Uses the
+ * same "downloaded" glyph as [dev.jdtech.jellyfin.presentation.film.components.DownloadedBadge]
+ * rather than a checkmark, which elsewhere in the app means "watched".
  */
 @Composable
-private fun CalendarEntryBadge(entry: CalendarEntry) {
-    val (icon, description) =
-        when {
-            entry.hasFile -> CoreR.drawable.ic_check to CoreR.string.calendar_status_available
-            entry.monitored -> CoreR.drawable.ic_calendar to CoreR.string.calendar_status_upcoming
-            else -> CoreR.drawable.ic_x to CoreR.string.calendar_status_unmonitored
-        }
+private fun CalendarDownloadedIndicator() {
     Icon(
-        painter = painterResource(icon),
-        contentDescription = stringResource(description),
-        tint =
-            if (entry.hasFile) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
+        painter = painterResource(CoreR.drawable.ic_download),
+        contentDescription = stringResource(CoreR.string.calendar_status_available),
+        tint = MaterialTheme.colorScheme.primary,
     )
 }
 
@@ -391,7 +329,7 @@ private val dummyCalendarEntries: List<Pair<LocalDate, List<CalendarEntry>>> =
                     title = "House of the Dragon",
                     subtitle = "S03E05 - The Red Dragon and the Gold",
                     itemId = UUID.randomUUID(),
-                    hasFile = false,
+                    hasFile = true,
                     monitored = true,
                 )
             ),
