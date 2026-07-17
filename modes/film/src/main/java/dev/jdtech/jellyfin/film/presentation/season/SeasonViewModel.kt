@@ -85,7 +85,8 @@ constructor(
                 val autoDownloadEnabled = isAutoDownloadEnabled(season.seriesId, seasonId)
                 val existingScope = getExistingScope(season.seriesId)
                 val downloadsSizeBytes = downloadsSizeBytes(seasonId)
-                val seriesTvdbId = repository.getShow(season.seriesId).tvdbId
+                val series = repository.getShow(season.seriesId)
+                val seriesTvdbId = series.tvdbId
                 _state.emit(
                     _state.value.copy(
                         season = season,
@@ -95,6 +96,7 @@ constructor(
                         hasDownloads = downloadsSizeBytes > 0,
                         downloadsSizeBytes = downloadsSizeBytes,
                         seriesTvdbId = seriesTvdbId,
+                        seriesTmdbId = series.tmdbId?.toIntOrNull(),
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
                     )
                 )

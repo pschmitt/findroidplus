@@ -35,7 +35,7 @@ import java.time.LocalDate
 /**
  * A Sonarr-known episode not yet in the Jellyfin library - visually distinct from a real
  * [EpisodeCard] on purpose: dimmed with no poster (there isn't one yet). It can still open the
- * release picker, matching the actionable upcoming entries in Calendar.
+ * Seerr detail view, matching the actionable upcoming entries in Calendar.
  */
 @Composable
 fun UpcomingEpisodeCard(

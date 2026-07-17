@@ -34,6 +34,8 @@ sealed interface SeasonAction {
 
     data class NavigateToSeries(val seriesId: UUID) : SeasonAction
 
+    data class NavigateToSeerr(val tmdbId: Int) : SeasonAction
+
     /** [knownEpisodeId] is Sonarr's numeric episode id when already known (upcoming episode rows),
      * `null` for real episodes - resolved from [SeasonState.seriesTvdbId] instead. */
     data class SearchEpisodeAutomatic(val episodeNumber: Int, val knownEpisodeId: Int?) : SeasonAction

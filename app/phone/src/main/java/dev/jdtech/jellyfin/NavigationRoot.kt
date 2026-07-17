@@ -617,6 +617,11 @@ fun NavigationRoot(
                             launchSingleTop = true
                         }
                     },
+                    navigateToSeerr = { tmdbId ->
+                        navController.safeNavigate(
+                            SeerrMediaRoute(tmdbId = tmdbId, mediaType = SeerrMediaType.TV.name)
+                        )
+                    },
                     navigateToSettings = { navController.safeNavigate(settingsRootRoute()) },
                 )
             }
