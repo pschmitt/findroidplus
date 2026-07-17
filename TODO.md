@@ -146,15 +146,30 @@ phone and Mi Pad 4.
       usage bars (IEC/binary units - GiB/TiB - to match Sonarr/Radarr's own UI)
 - [x] Download widgets (item detail pages + PVR queue rows): show the download
       size on the same line as the speed/ETA text
-- [ ] Seerr: allow requesting/searching a specific season of a show that isn't in
+- [x] Fix the on-device storage bar's flakiness: `DownloadsViewModel` read
+      `_state.value` (the receiver of `.copy(...)`) *before* an in-flight
+      suspending call resolved, so whichever of the two independent
+      diskSpace/deviceStorage fetches finished second could silently overwrite
+      the other's update with a stale snapshot - a genuine, timing-sensitive
+      lost-update race. Converted every state mutation in the ViewModel to the
+      atomic `_state.update { it.copy(...) }` form.
+- [x] Seerr: allow requesting/searching a specific season of a show that isn't in
       the Jellyfin library yet, not just the whole series - most requests are for
-      "just season 1", not the entire show
-- [ ] Downloads screen: the local download list takes a noticeable moment to
-      appear on open - investigate why (should be instant, it's just a local DB
-      read)
+      "just season 1", not the entire show. `SeerrApi.createRequest` now sends
+      `seasons: [N]` instead of `seasons: "all"` when a season-scoped view fires
+      the request. Follow-up not yet done: a season-list UI with per-season
+      status on the show-level Seerr view (needs new DTOs modeling Jellyseerr's
+      `mediaInfo.seasons` array - out of scope for this pass).
+- [x] Downloads screen: the local download list took a noticeable moment to
+      appear on open - root-caused to an N+1 query pattern in
+      `toFindroidMovie`/`toFindroidEpisode` (one `getUserDataOrCreateNew`/
+      `getSources`/`getTrickplayInfo` round trip, plus one
+      `getMediaStreamsBySourceId` per source, *per row*), plus `toFindroidMovie`
+      redundantly calling `getSources` twice. Added batched
+      `toFindroidMovies`/`toFindroidEpisodes` (`IN (...)`-based DAO queries) used
+      by the Downloads screen instead.
 
-Status: in progress (2026-07-18) - storage summary and download-size shipped;
-season-level Seerr requests and the downloads-list load delay still open.
+Status: **done** (2026-07-18). All four items shipped and merged.
 
 ## FINDROID-7: Dependency currency (Renovate/Dependabot)
 
