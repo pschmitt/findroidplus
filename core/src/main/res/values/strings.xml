@@ -286,6 +286,10 @@
     <string name="seerr_cancel_request_message">Cancel the request for “%1$s”?</string>
     <string name="seerr_request_cancelled_toast">Cancelled request for “%1$s”</string>
     <string name="seerr_cancel_failed_toast">Cancel failed: %1$s</string>
+    <plurals name="seerr_seasons">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
+    </plurals>
     <string name="calendar_empty">Nothing upcoming</string>
     <string name="calendar_today">Today</string>
     <string name="calendar_tomorrow">Tomorrow</string>

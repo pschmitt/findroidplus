@@ -97,6 +97,8 @@ fun LibraryScreen(
     onItemClick: (item: FindroidItem) -> Unit,
     navigateBack: () -> Unit,
     onSettingsClick: () -> Unit = {},
+    // Opens the dedicated Seerr detail screen for a search result or recent request row.
+    onSeerrItemClick: (tmdbId: Int, mediaType: SeerrMediaType) -> Unit = { _, _ -> },
     showBackButton: Boolean = true,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -140,6 +142,7 @@ fun LibraryScreen(
         isMergedMedia = libraryId == null,
         showBackButton = showBackButton,
         onSettingsClick = onSettingsClick,
+        onSeerrItemClick = onSeerrItemClick,
         onAction = { action ->
             when (action) {
                 is LibraryAction.OnItemClick -> onItemClick(action.item)
@@ -159,6 +162,7 @@ private fun LibraryScreenLayout(
     isMergedMedia: Boolean = false,
     showBackButton: Boolean = true,
     onSettingsClick: () -> Unit = {},
+    onSeerrItemClick: (tmdbId: Int, mediaType: SeerrMediaType) -> Unit = { _, _ -> },
     onAction: (LibraryAction) -> Unit,
 ) {
     val contentPadding = PaddingValues(all = MaterialTheme.spacings.default)
@@ -367,6 +371,7 @@ private fun LibraryScreenLayout(
                                 } else {
                                     null
                                 },
+                            onClick = { onSeerrItemClick(request.tmdbId, request.mediaType) },
                         )
                     }
                 }
@@ -412,6 +417,7 @@ private fun LibraryScreenLayout(
                             item = result,
                             requestedThisSession = result.tmdbId in state.requestedTmdbIds,
                             onRequest = { onAction(LibraryAction.OnSeerrRequest(result)) },
+                            onClick = { onSeerrItemClick(result.tmdbId, result.mediaType) },
                         )
                     }
                 }

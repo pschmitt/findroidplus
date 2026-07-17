@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,17 +36,21 @@ import dev.jdtech.jellyfin.models.SeerrRequestItem
 import dev.jdtech.jellyfin.models.SeerrSearchItem
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
-/** A Seerr search result: poster, title/year/overview, and a request button or status chip. */
+/**
+ * A Seerr search result: poster, title/year/overview, and a request button or status chip.
+ * [onClick] (when non-null) makes the whole row tappable - opens the media's detail screen.
+ */
 @Composable
 fun SeerrResultRow(
     item: SeerrSearchItem,
     requestedThisSession: Boolean,
     onRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     // No horizontal padding of its own - the hosting list/grid's content padding provides it.
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().seerrRowClickable(onClick),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -97,10 +102,11 @@ fun SeerrRequestRow(
     request: SeerrRequestItem,
     modifier: Modifier = Modifier,
     onCancel: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     // No horizontal padding of its own - the hosting list/grid's content padding provides it.
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().seerrRowClickable(onClick),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -213,6 +219,15 @@ fun SeerrStatusChip(status: SeerrMediaStatus?) {
         )
     }
 }
+
+/** Makes a Seerr row tappable (clipped so the ripple gets rounded corners) - no-op when null. */
+@Composable
+private fun Modifier.seerrRowClickable(onClick: (() -> Unit)?): Modifier =
+    if (onClick != null) {
+        this.clip(MaterialTheme.shapes.small).clickable(onClick = onClick)
+    } else {
+        this
+    }
 
 @Composable
 fun seerrMediaTypeLabel(mediaType: SeerrMediaType): String =
