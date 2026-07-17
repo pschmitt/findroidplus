@@ -41,6 +41,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.film.AutoDownloadRulesScreen
 import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
@@ -52,6 +53,7 @@ import dev.jdtech.jellyfin.presentation.film.LibraryScreen
 import dev.jdtech.jellyfin.presentation.film.MovieScreen
 import dev.jdtech.jellyfin.presentation.film.PersonScreen
 import dev.jdtech.jellyfin.presentation.film.SeasonScreen
+import dev.jdtech.jellyfin.presentation.film.SeerrMediaScreen
 import dev.jdtech.jellyfin.presentation.film.ShowScreen
 import dev.jdtech.jellyfin.presentation.settings.AboutScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
@@ -104,6 +106,10 @@ data class LibraryRoute(
 )
 
 @Serializable data class CollectionRoute(val collectionId: String, val collectionName: String)
+
+// Detail view for a Seerr media item that isn't in the library (yet) - keyed by TMDB id.
+// mediaType is a SeerrMediaType enum name.
+@Serializable data class SeerrMediaRoute(val tmdbId: Int, val mediaType: String)
 
 @Serializable data object FavoritesRoute
 
@@ -478,6 +484,11 @@ fun NavigationRoot(
                     },
                     navigateBack = { navController.safePopBackStack() },
                     onSettingsClick = { navController.safeNavigate(settingsRootRoute()) },
+                    onSeerrItemClick = { tmdbId, mediaType ->
+                        navController.safeNavigate(
+                            SeerrMediaRoute(tmdbId = tmdbId, mediaType = mediaType.name)
+                        )
+                    },
                 )
             }
             composable<AutoDownloadRulesRoute> {
@@ -508,6 +519,19 @@ fun NavigationRoot(
                     },
                     navigateBack = { navController.safePopBackStack() },
                     onSettingsClick = { navController.safeNavigate(settingsRootRoute()) },
+                    onSeerrItemClick = { tmdbId, mediaType ->
+                        navController.safeNavigate(
+                            SeerrMediaRoute(tmdbId = tmdbId, mediaType = mediaType.name)
+                        )
+                    },
+                )
+            }
+            composable<SeerrMediaRoute> { backStackEntry ->
+                val route: SeerrMediaRoute = backStackEntry.toRoute()
+                SeerrMediaScreen(
+                    tmdbId = route.tmdbId,
+                    mediaType = SeerrMediaType.valueOf(route.mediaType),
+                    navigateBack = { navController.safePopBackStack() },
                 )
             }
             composable<CollectionRoute> { backStackEntry ->
