@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,7 +19,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,12 +32,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
@@ -63,6 +59,7 @@ import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
+import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -236,41 +233,13 @@ private fun EpisodeScreenLayout(
                 )
                 Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    Row(
+                    ItemMetaRow(
+                        dateText = episode.premiereDate?.format(state.dateFormat),
+                        runtimeTicks = episode.runtimeTicks,
+                        communityRating = episode.communityRating,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                        verticalAlignment = Alignment.Bottom,
-                    ) {
-                        episode.premiereDate?.let { premiereDate ->
-                            Text(
-                                text = premiereDate.format(state.dateFormat),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Text(
-                            text =
-                                stringResource(
-                                    CoreR.string.runtime_minutes,
-                                    episode.runtimeTicks.div(600000000),
-                                ),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        episode.communityRating?.let { communityRating ->
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_star),
-                                    contentDescription = null,
-                                    tint = Color("#F2C94C".toColorInt()),
-                                )
-                                Spacer(Modifier.width(MaterialTheme.spacings.extraSmall))
-                                Text(
-                                    text = "%.1f".format(communityRating),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     val deleteDownload: () -> Unit = {
                         onDownloaderAction(DownloaderAction.DeleteDownload(episode))
                         Toast.makeText(
@@ -344,6 +313,16 @@ private fun EpisodeScreenLayout(
                             )
                         },
                         onInfoClick = state.videoMetadata?.let { { infoDialogOpen = true } },
+                        trailingContent = {
+                            if (state.seriesTvdbId != null && state.sonarrConfigured) {
+                                PvrSearchButton(
+                                    onAutomaticSearch = {
+                                        onAction(EpisodeAction.SearchEpisodeAutomatic)
+                                    },
+                                    onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
+                                )
+                            }
+                        },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     if (infoDialogOpen && state.videoMetadata != null) {
@@ -397,12 +376,6 @@ private fun EpisodeScreenLayout(
                                 )
                             )
                         }
-                }
-                if (state.seriesTvdbId != null && state.sonarrConfigured) {
-                    PvrSearchButton(
-                        onAutomaticSearch = { onAction(EpisodeAction.SearchEpisodeAutomatic) },
-                        onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
-                    )
                 }
             }
         }

@@ -71,3 +71,16 @@ Batch of UX todos around the Sonarr/Radarr/Seerr integrations and general naviga
 
 Status: **done** (2026-07-17). Verified via remote builds on rofl-13 (unit tests +
 phone/TV compile) and a CI-signed install on the Mi Pad 4.
+
+## FINDROID-3: UI overhaul round
+
+- [x] Episode/movie detail pages: simpler, organized, ergonomic (dot-separated meta
+      line, compact icon action row instead of labeled button bar, PVR search moved
+      into the action row)
+- [x] Integrations settings: Radarr logo looked odd (white disc) - use the official
+      brand look (yellow arrow on the near-black disc); enable toggle on the same
+      line as `<LOGO> Name <TOGGLE>`
+- [ ] Home: Seerr-powered show/movie discovery rows (trending/popular, requestable)
+- [ ] Settings: merge "Servers", "Integrations" and "Users" into one section
+
+Status: **in progress**.

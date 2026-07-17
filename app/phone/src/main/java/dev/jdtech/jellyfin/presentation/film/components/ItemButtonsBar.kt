@@ -4,26 +4,20 @@ import android.app.DownloadManager
 import android.os.Environment
 import android.os.StatFs
 import android.text.format.Formatter
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -53,12 +47,6 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.displayNameWithContext
 import dev.jdtech.jellyfin.utils.resolveDownloadStorageIndex
-
-private data class OverflowAction(
-    @DrawableRes val iconRes: Int,
-    @StringRes val labelRes: Int,
-    val onClick: () -> Unit,
-)
 
 @Composable
 fun ItemButtonsBar(
@@ -143,138 +131,94 @@ fun ItemButtonsBar(
             modifier = modifier,
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
+            // One compact row of icon actions instead of a wrapping bar of labeled buttons:
+            // toggles (played/favorite) use the standard checked container color rather than a
+            // red icon tint, and the former overflow menu's actions are simply always visible.
+            // Each icon carries a content description; destructive delete is error-tinted.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             ) {
-                FilledTonalButton(onClick = onMarkAsPlayedClick) {
+                FilledTonalIconToggleButton(
+                    checked = item.played,
+                    onCheckedChange = { onMarkAsPlayedClick() },
+                ) {
                     Icon(
                         painter = painterResource(CoreR.drawable.ic_check),
-                        contentDescription = null,
-                        tint = if (item.played) Color.Red else LocalContentColor.current,
-                    )
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                    Text(
-                        text =
+                        contentDescription =
                             stringResource(
                                 if (item.played) CoreR.string.unmark_as_played
                                 else CoreR.string.mark_as_played
-                            )
+                            ),
                     )
                 }
-                FilledTonalButton(onClick = onMarkAsFavoriteClick) {
-                    when (item.favorite) {
-                        true -> {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_heart_filled),
-                                contentDescription = null,
-                                tint = Color.Red,
-                            )
-                        }
-                        false -> {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_heart),
-                                contentDescription = null,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                    Text(
-                        text =
+                FilledTonalIconToggleButton(
+                    checked = item.favorite,
+                    onCheckedChange = { onMarkAsFavoriteClick() },
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                if (item.favorite) CoreR.drawable.ic_heart_filled
+                                else CoreR.drawable.ic_heart
+                            ),
+                        contentDescription =
                             stringResource(
                                 if (item.favorite) CoreR.string.remove_from_favorites
                                 else CoreR.string.add_to_favorites
-                            )
+                            ),
                     )
                 }
                 val canRestart = item.playbackPositionTicks.div(600000000) > 0
-                val overflowActions =
-                    buildList {
-                        if (canRestart) {
-                            add(
-                                OverflowAction(
-                                    iconRes = CoreR.drawable.ic_rotate_ccw,
-                                    labelRes = CoreR.string.restart_from_beginning,
-                                    onClick = { onPlayClick(true) },
-                                )
-                            )
-                        }
-                        trailerUri?.let { uri ->
-                            add(
-                                OverflowAction(
-                                    iconRes = CoreR.drawable.ic_film,
-                                    labelRes = CoreR.string.watch_trailer,
-                                    onClick = { onTrailerClick(uri) },
-                                )
-                            )
-                        }
-                        onInfoClick?.let { infoClick ->
-                            add(
-                                OverflowAction(
-                                    iconRes = CoreR.drawable.ic_info,
-                                    labelRes = CoreR.string.info,
-                                    onClick = infoClick,
-                                )
-                            )
-                        }
-                    }
-                if (overflowActions.size == 1) {
-                    val action = overflowActions.first()
-                    FilledTonalButton(onClick = action.onClick) {
-                        Icon(painter = painterResource(action.iconRes), contentDescription = null)
-                        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                        Text(text = stringResource(action.labelRes))
-                    }
-                } else if (overflowActions.size > 1) {
-                    var overflowMenuExpanded by remember { mutableStateOf(false) }
-                    FilledTonalIconButton(onClick = { overflowMenuExpanded = true }) {
+                if (canRestart) {
+                    FilledTonalIconButton(onClick = { onPlayClick(true) }) {
                         Icon(
-                            painter = painterResource(CoreR.drawable.ic_more_vertical),
-                            contentDescription = stringResource(CoreR.string.more_options),
+                            painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                            contentDescription =
+                                stringResource(CoreR.string.restart_from_beginning),
                         )
                     }
-                    DropdownMenu(
-                        expanded = overflowMenuExpanded,
-                        onDismissRequest = { overflowMenuExpanded = false },
-                    ) {
-                        overflowActions.forEach { action ->
-                            DropdownMenuItem(
-                                text = { Text(text = stringResource(action.labelRes)) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(action.iconRes),
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    overflowMenuExpanded = false
-                                    action.onClick()
-                                },
-                            )
-                        }
+                }
+                trailerUri?.let { uri ->
+                    FilledTonalIconButton(onClick = { onTrailerClick(uri) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_film),
+                            contentDescription = stringResource(CoreR.string.watch_trailer),
+                        )
+                    }
+                }
+                onInfoClick?.let { infoClick ->
+                    FilledTonalIconButton(onClick = infoClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_info),
+                            contentDescription = stringResource(CoreR.string.info),
+                        )
                     }
                 }
                 trailingContent()
                 if (downloaderState != null && !downloaderState.isDownloading) {
                     if (item.isDownloaded()) {
-                        FilledTonalButton(onClick = { deleteDownloadDialogOpen = true }) {
+                        // Size/path details live in the confirmation dialog this opens.
+                        FilledTonalIconButton(
+                            onClick = { deleteDownloadDialogOpen = true },
+                            colors =
+                                IconButtonDefaults.filledTonalIconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                        ) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
-                                contentDescription = null,
-                            )
-                            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                            Text(
-                                text =
+                                contentDescription =
                                     downloadedSource?.size?.let { size ->
                                         stringResource(
                                             CoreR.string.delete_download_with_size,
                                             Formatter.formatFileSize(context, size),
                                         )
-                                    } ?: stringResource(CoreR.string.delete_download)
+                                    } ?: stringResource(CoreR.string.delete_download),
                             )
                         }
                     } else if (item.canDownload || item is FindroidShow || item is FindroidSeason) {
-                        FilledTonalButton(
+                        FilledTonalIconButton(
                             onClick = {
                                 if (enableDownloadDialog) {
                                     downloadScopeDialogOpen = true
@@ -285,11 +229,9 @@ fun ItemButtonsBar(
                         ) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_download),
-                                contentDescription = null,
+                                contentDescription = stringResource(CoreR.string.download),
                                 tint = downloadIconTint ?: LocalContentColor.current,
                             )
-                            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                            Text(text = stringResource(CoreR.string.download))
                         }
                     }
                 }
