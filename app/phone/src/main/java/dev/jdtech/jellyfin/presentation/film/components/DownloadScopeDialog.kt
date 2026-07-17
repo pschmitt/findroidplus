@@ -58,13 +58,13 @@ fun DownloadScopeDialog(
     onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var thisEpisodeOnly by remember {
-        mutableStateOf(
-            showEpisodeOption &&
-                initialSelection.seasonIds.isEmpty() &&
-                !initialSelection.alsoFutureSeasons
-        )
-    }
+    val hasExistingRule =
+        initialSelection.seasonIds.isNotEmpty() || initialSelection.alsoFutureSeasons
+    // Opened from an episode, the overwhelmingly common intent is "download this one" - so
+    // preselect it even when the show already has an auto-download rule. The rule's selection is
+    // kept in the (deselected) bulk section below for editing, and stays untouched when the user
+    // confirms with "this episode" selected.
+    var thisEpisodeOnly by remember { mutableStateOf(showEpisodeOption) }
     var selectedSeasonIds by remember { mutableStateOf(initialSelection.seasonIds) }
     var alsoFutureSeasons by remember { mutableStateOf(initialSelection.alsoFutureSeasons) }
     var alsoFollowNew by remember { mutableStateOf(initialAlsoFollowNew) }
@@ -85,10 +85,17 @@ fun DownloadScopeDialog(
                         icon = CoreR.drawable.ic_play,
                         onToggle = {
                             thisEpisodeOnly = true
-                            selectedSeasonIds = emptySet()
-                            alsoFutureSeasons = false
+                            selectedSeasonIds = initialSelection.seasonIds
+                            alsoFutureSeasons = initialSelection.alsoFutureSeasons
                         },
                     )
+                    if (hasExistingRule && thisEpisodeOnly) {
+                        Text(
+                            text = stringResource(CoreR.string.download_scope_existing_rule_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 if (seasons == null) {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
