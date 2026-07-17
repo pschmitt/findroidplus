@@ -33,11 +33,44 @@ gradle host=remote_host *tasks: (sync host)
     ssh {{host}} 'cd {{remote_path}} && nix develop --command ./gradlew {{tasks}}'
 
 # Build an APK remotely. Flags: --tv/--phone (default phone), --debug/--release (default debug), --host=<host>
+# Release builds are signed with the persistent CI keystore (fetched from the rbw entry
+# "Findroid CI Signing Keystore" and staged on the build host only for the duration of the
+# build). Without CI_KEYSTORE_*, Gradle silently signs with the host's throwaway
+# ~/.android/debug.keystore and devices carrying CI-signed installs (GitHub releases /
+# Obtainium) reject the APK with INSTALL_FAILED_UPDATE_INCOMPATIBLE.
 build *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     read -r variant flavor host abi < <("{{justfile_directory()}}/.just-parse-flags.sh" {{remote_host}} {{mipad_abi}} -- {{flags}})
-    just gradle "$host" ":app:${variant}:assembleLibre${flavor^}"
+    if [[ "$flavor" != "release" ]]
+    then
+      just gradle "$host" ":app:${variant}:assembleLibre${flavor^}"
+      exit 0
+    fi
+    if ! rbw unlocked >/dev/null 2>&1
+    then
+      printf 'rbw is locked - run "rbw unlock" first (needed for the CI signing keystore)\n' >&2
+      exit 2
+    fi
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+    rbw attachment get "Findroid CI Signing Keystore" --attachment findroid-ci.jks --output "$tmpdir/findroid-ci.jks"
+    rbw attachment get "Findroid CI Signing Keystore" --attachment findroid-ci-keystore.env --output "$tmpdir/findroid-ci-keystore.env"
+    just sync "$host"
+    ssh "$host" 'mkdir -p ~/.findroid-ci-tmp && chmod 700 ~/.findroid-ci-tmp'
+    scp -q "$tmpdir/findroid-ci.jks" "$tmpdir/findroid-ci-keystore.env" "$host:.findroid-ci-tmp/"
+    # The keystore is shredded on the host whether or not the build succeeds.
+    ssh "$host" "
+      set -a
+      . ~/.findroid-ci-tmp/findroid-ci-keystore.env
+      set +a
+      export CI_KEYSTORE_PATH=\$HOME/.findroid-ci-tmp/findroid-ci.jks
+      cd {{remote_path}} && nix develop --command ./gradlew ':app:${variant}:assembleLibre${flavor^}'
+      rc=\$?
+      shred -u ~/.findroid-ci-tmp/* 2>/dev/null || true
+      rmdir ~/.findroid-ci-tmp 2>/dev/null || true
+      exit \$rc
+    "
 
 # Copy a built APK split back to ./dist locally. Same flags as `build`, plus --abi=<abi>
 fetch *flags:
