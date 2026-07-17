@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarState
 import dev.jdtech.jellyfin.film.presentation.calendar.CalendarViewModel
@@ -57,6 +60,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.UUID
+import org.jellyfin.sdk.model.api.BaseItemKind
 
 @Composable
 fun CalendarScreen(
@@ -297,26 +301,45 @@ private fun CalendarEntryRow(
             }
         }
         if (entry.hasFile) {
-            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-            CalendarDownloadedIndicator()
+            entry.playbackTarget?.let { (itemId, itemKind) ->
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                CalendarPlayButton(itemId = itemId, itemKind = itemKind)
+            }
         }
     }
 }
 
 /**
- * Shown when Sonarr/Radarr already has this release's file on the *server* - NOT related to
- * Findroid's own on-device downloads (compare
- * [dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar]'s download button). Uses the
- * same "downloaded" glyph as [dev.jdtech.jellyfin.presentation.film.components.DownloadedBadge]
- * rather than a checkmark, which elsewhere in the app means "watched".
+ * The playable Jellyfin item for an entry Sonarr/Radarr already has a file for - null if it
+ * hasn't been matched into the library yet ([CalendarEntry.episodeItemId]/[CalendarEntry.itemId]
+ * unresolved), in which case there's nothing to play.
+ */
+private val CalendarEntry.playbackTarget: Pair<UUID, BaseItemKind>?
+    get() =
+        when (source) {
+            PvrSource.SONARR -> episodeItemId?.let { it to BaseItemKind.EPISODE }
+            PvrSource.RADARR -> itemId?.let { it to BaseItemKind.MOVIE }
+        }
+
+/**
+ * Launches playback directly (bypassing the detail screen), the same Intent-to-PlayerActivity
+ * call MovieScreen/EpisodeScreen use for their own Play actions - a plain checkmark or download
+ * icon here would either clash with "watched" elsewhere in the app or read as an on-device
+ * download action, so this is an actual shortcut instead of a status glyph.
  */
 @Composable
-private fun CalendarDownloadedIndicator() {
-    Icon(
-        painter = painterResource(CoreR.drawable.ic_download),
-        contentDescription = stringResource(CoreR.string.calendar_status_available),
-        tint = MaterialTheme.colorScheme.primary,
-    )
+private fun CalendarPlayButton(itemId: UUID, itemKind: BaseItemKind) {
+    val context = LocalContext.current
+    IconButton(
+        onClick = {
+            val intent = Intent(context, PlayerActivity::class.java)
+            intent.putExtra("itemId", itemId.toString())
+            intent.putExtra("itemKind", itemKind.serialName)
+            context.startActivity(intent)
+        }
+    ) {
+        Icon(painter = painterResource(CoreR.drawable.ic_play), contentDescription = stringResource(CoreR.string.play))
+    }
 }
 
 private val dummyCalendarEntries: List<Pair<LocalDate, List<CalendarEntry>>> =
@@ -329,6 +352,7 @@ private val dummyCalendarEntries: List<Pair<LocalDate, List<CalendarEntry>>> =
                     title = "House of the Dragon",
                     subtitle = "S03E05 - The Red Dragon and the Gold",
                     itemId = UUID.randomUUID(),
+                    episodeItemId = UUID.randomUUID(),
                     hasFile = true,
                     monitored = true,
                 )
