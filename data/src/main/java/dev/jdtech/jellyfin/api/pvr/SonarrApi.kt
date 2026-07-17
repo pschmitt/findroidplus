@@ -82,6 +82,14 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
             json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
         }
 
+    /** Triggers Sonarr's automatic search for every missing episode in a series. */
+    suspend fun searchSeries(seriesId: Int): Int =
+        withContext(Dispatchers.IO) {
+            val url = buildUrl("api", "v3", "command")
+            val body = json.encodeToString(SonarrSeriesCommandRequest(name = "SeriesSearch", seriesId = seriesId))
+            json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
+        }
+
     /** Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via [searchEpisode]. */
     suspend fun getCommandStatus(commandId: Int): PvrCommandResponse =
         withContext(Dispatchers.IO) {

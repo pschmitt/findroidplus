@@ -11,7 +11,12 @@ import kotlinx.serialization.Serializable
 // region Sonarr - GET /api/v3/series
 
 @Serializable
-data class SonarrSeries(val id: Int, val tvdbId: Int = 0, val title: String = "")
+data class SonarrSeries(
+    val id: Int,
+    val tvdbId: Int = 0,
+    val tmdbId: Int = 0,
+    val title: String = "",
+)
 
 // endregion
 
@@ -154,6 +159,8 @@ data class SonarrEpisodeDto(
 // the response shape is identical.
 
 @Serializable data class SonarrCommandRequest(val name: String, val episodeIds: List<Int>)
+
+@Serializable data class SonarrSeriesCommandRequest(val name: String, val seriesId: Int)
 
 @Serializable data class RadarrCommandRequest(val name: String, val movieIds: List<Int>)
 

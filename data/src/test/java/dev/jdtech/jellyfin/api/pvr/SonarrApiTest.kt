@@ -35,6 +35,7 @@ class SonarrApiTest {
                     {
                         "id": 1,
                         "tvdbId": 12345,
+                        "tmdbId": 67890,
                         "title": "Some Show",
                         "someUnknownField": {"nested": true},
                         "seasons": [{"seasonNumber": 1}]
@@ -50,6 +51,7 @@ class SonarrApiTest {
         assertEquals(1, series.size)
         assertEquals(1, series[0].id)
         assertEquals(12345, series[0].tvdbId)
+        assertEquals(67890, series[0].tmdbId)
         assertEquals("Some Show", series[0].title)
     }
 
@@ -144,6 +146,21 @@ class SonarrApiTest {
         val body = recordedRequest.body.readUtf8()
         assertTrue(body.contains("\"name\":\"EpisodeSearch\""))
         assertTrue(body.contains("\"episodeIds\":[10]"))
+    }
+
+    @Test
+    fun `searchSeries POSTs a SeriesSearch command with the series id and returns the command id`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"id": 43, "status": "queued"}"""))
+
+        val commandId = api.searchSeries(seriesId = 11)
+
+        assertEquals(43, commandId)
+        val recordedRequest = server.takeRequest()
+        assertEquals("POST", recordedRequest.method)
+        assertTrue(recordedRequest.path.orEmpty().endsWith("/api/v3/command"))
+        val body = recordedRequest.body.readUtf8()
+        assertTrue(body.contains("\"name\":\"SeriesSearch\""))
+        assertTrue(body.contains("\"seriesId\":11"))
     }
 
     @Test

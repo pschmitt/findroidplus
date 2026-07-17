@@ -78,8 +78,7 @@ fun SeerrMediaScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // The viewmodel's ActionFailed event doesn't say which action failed - remember it here so
-    // the failure toast can match ("Request failed" vs "Cancel failed").
+    // Request and cancel share their failure event, so remember which label to show for it.
     var lastActionWasCancel by remember { mutableStateOf(false) }
 
     LaunchedEffect(true) { viewModel.loadDetail(tmdbId = tmdbId, mediaType = mediaType) }
@@ -91,6 +90,13 @@ fun SeerrMediaScreen(
                     context.getString(CoreR.string.discover_requested_toast, event.title)
                 is SeerrMediaEvent.RequestCancelled ->
                     context.getString(CoreR.string.seerr_request_cancelled_toast, event.title)
+                is SeerrMediaEvent.SearchTriggered ->
+                    context.getString(CoreR.string.search_triggered_toast)
+                is SeerrMediaEvent.SearchFailed ->
+                    context.getString(
+                        CoreR.string.search_failed_toast,
+                        event.message ?: context.getString(CoreR.string.unknown_error),
+                    )
                 is SeerrMediaEvent.ActionFailed ->
                     context.getString(
                         if (lastActionWasCancel) {
@@ -187,6 +193,23 @@ private fun SeerrMediaScreenLayout(state: SeerrMediaState, onAction: (SeerrMedia
                                 ) {
                                     Text(text = stringResource(CoreR.string.seerr_cancel_request))
                                 }
+                            }
+                        }
+                        if (state.pvrSearchConfigured) {
+                            Spacer(Modifier.height(MaterialTheme.spacings.small))
+                            OutlinedButton(
+                                onClick = { onAction(SeerrMediaAction.OnSearchInPvr) },
+                                enabled = !state.isSubmitting,
+                            ) {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            when (detail.mediaType) {
+                                                SeerrMediaType.MOVIE -> CoreR.string.search_movie
+                                                SeerrMediaType.TV -> CoreR.string.search_episodes
+                                            }
+                                        )
+                                )
                             }
                         }
                     }

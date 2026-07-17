@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.SeerrMediaType
+import dev.jdtech.jellyfin.pvr.PvrConfiguration
+import dev.jdtech.jellyfin.repository.RadarrSearchRepository
 import dev.jdtech.jellyfin.repository.SeerrRepository
+import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,13 +21,22 @@ sealed interface SeerrMediaEvent {
 
     data class RequestCancelled(val title: String) : SeerrMediaEvent
 
+    data object SearchTriggered : SeerrMediaEvent
+
+    data class SearchFailed(val message: String?) : SeerrMediaEvent
+
     data class ActionFailed(val message: String?) : SeerrMediaEvent
 }
 
 @HiltViewModel
 class SeerrMediaViewModel
 @Inject
-constructor(private val seerrRepository: SeerrRepository) : ViewModel() {
+constructor(
+    private val seerrRepository: SeerrRepository,
+    private val sonarrSearchRepository: SonarrSearchRepository,
+    private val radarrSearchRepository: RadarrSearchRepository,
+    private val pvrConfiguration: PvrConfiguration,
+) : ViewModel() {
     private val _state = MutableStateFlow(SeerrMediaState())
     val state = _state.asStateFlow()
 
@@ -38,7 +50,16 @@ constructor(private val seerrRepository: SeerrRepository) : ViewModel() {
         this.tmdbId = tmdbId
         this.mediaType = mediaType
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value =
+                _state.value.copy(
+                    isLoading = true,
+                    error = null,
+                    pvrSearchConfigured =
+                        when (mediaType) {
+                            SeerrMediaType.MOVIE -> pvrConfiguration.isRadarrConfigured()
+                            SeerrMediaType.TV -> pvrConfiguration.isSonarrConfigured()
+                        },
+                )
             seerrRepository
                 .getDetails(tmdbId, mediaType)
                 .fold(
@@ -57,8 +78,25 @@ constructor(private val seerrRepository: SeerrRepository) : ViewModel() {
         when (action) {
             is SeerrMediaAction.OnRequest -> request()
             is SeerrMediaAction.OnCancelRequest -> cancelRequests()
+            is SeerrMediaAction.OnSearchInPvr -> searchInPvr()
             is SeerrMediaAction.OnRetryClick -> loadDetail(tmdbId, mediaType)
             else -> Unit
+        }
+    }
+
+    private fun searchInPvr() {
+        val detail = _state.value.detail ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSubmitting = true)
+            val result =
+                when (detail.mediaType) {
+                    SeerrMediaType.MOVIE -> radarrSearchRepository.searchMovieByTmdbId(detail.tmdbId)
+                    SeerrMediaType.TV -> sonarrSearchRepository.searchSeriesByTmdbId(detail.tmdbId)
+                }
+            eventsChannel.send(
+                result.fold({ SeerrMediaEvent.SearchTriggered }, { SeerrMediaEvent.SearchFailed(it.message) })
+            )
+            _state.value = _state.value.copy(isSubmitting = false)
         }
     }
 

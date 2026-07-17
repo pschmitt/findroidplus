@@ -35,6 +35,21 @@ class SonarrSearchRepositoryImpl(
 
     private data class CachedReleases(val releases: List<PvrRelease>, val fetchedAtMs: Long)
 
+    override suspend fun searchSeriesByTmdbId(tmdbId: Int): Result<Unit> {
+        val result =
+            runAction { api ->
+                val seriesId =
+                    api.getSeries().firstOrNull { it.tmdbId == tmdbId }?.id
+                        ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+                api.searchSeries(seriesId)
+            }
+        result.onSuccess {
+            // A series search can change any episode's available releases.
+            releaseCache.clear()
+        }
+        return result.map {}
+    }
+
     override suspend fun resolveEpisodeId(
         seriesTvdbId: String,
         seasonNumber: Int,

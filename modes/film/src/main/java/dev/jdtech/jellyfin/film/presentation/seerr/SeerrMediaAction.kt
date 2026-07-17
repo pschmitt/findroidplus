@@ -6,6 +6,8 @@ sealed interface SeerrMediaAction {
     /** Cancels all of the media's open requests - the "unrequest" action. */
     data object OnCancelRequest : SeerrMediaAction
 
+    data object OnSearchInPvr : SeerrMediaAction
+
     data object OnRetryClick : SeerrMediaAction
 
     data object OnBackClick : SeerrMediaAction

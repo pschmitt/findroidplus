@@ -191,49 +191,6 @@ private fun EpisodeScreenLayout(
                             enabled = episode.canPlay,
                             modifier = Modifier.align(Alignment.Center),
                         )
-                        Column(
-                            modifier =
-                                Modifier.align(Alignment.BottomStart)
-                                    .padding(start = paddingStart, end = paddingEnd)
-                        ) {
-                            val seasonName =
-                                episode.seasonName
-                                    ?: run {
-                                        stringResource(
-                                            CoreR.string.season_number,
-                                            episode.parentIndexNumber,
-                                        )
-                                    }
-                            Text(
-                                text = episode.name,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 3,
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                            Text(
-                                text = episode.seriesName,
-                                modifier =
-                                    Modifier.clickable {
-                                        onAction(EpisodeAction.NavigateToShow(episode.seriesId))
-                                    },
-                                maxLines = 1,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                            Text(
-                                text =
-                                    "$seasonName - " +
-                                        stringResource(
-                                            id = CoreR.string.episode_number,
-                                            episode.indexNumber,
-                                        ),
-                                modifier =
-                                    Modifier.clickable {
-                                        onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
-                                    },
-                                maxLines = 1,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
                         if (state.videoMetadata != null) {
                             IconButton(
                                 onClick = { infoDialogOpen = true },
@@ -256,6 +213,39 @@ private fun EpisodeScreenLayout(
                 )
                 Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    Text(
+                        text = episode.name,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Text(
+                        text = episode.seriesName,
+                        modifier =
+                            Modifier.clickable {
+                                onAction(EpisodeAction.NavigateToShow(episode.seriesId))
+                            },
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    val seasonName =
+                        episode.seasonName
+                            ?: stringResource(CoreR.string.season_number, episode.parentIndexNumber)
+                    Text(
+                        text =
+                            "$seasonName - " +
+                                stringResource(
+                                    id = CoreR.string.episode_number,
+                                    episode.indexNumber,
+                                ),
+                        modifier =
+                            Modifier.clickable {
+                                onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
+                            },
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     ItemMetaRow(
                         dateText = episode.premiereDate?.format(state.dateFormat),
                         runtimeTicks = episode.runtimeTicks,

@@ -10,6 +10,9 @@ import dev.jdtech.jellyfin.models.AutomaticSearchOutcome
  * empty/default value.
  */
 interface RadarrSearchRepository {
+    /** Resolves a Radarr movie by TMDB id and starts its automatic search. */
+    suspend fun searchMovieByTmdbId(tmdbId: Int): Result<Unit>
+
     /**
      * Resolves Radarr's internal numeric movie id for a movie, matched by its TMDB id (the only
      * provider id both Jellyfin's movie metadata and Radarr are guaranteed to share). `null` when

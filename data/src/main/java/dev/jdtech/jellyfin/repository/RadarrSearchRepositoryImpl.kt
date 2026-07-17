@@ -29,6 +29,15 @@ class RadarrSearchRepositoryImpl(
 
     private data class CachedReleases(val releases: List<PvrRelease>, val fetchedAtMs: Long)
 
+    override suspend fun searchMovieByTmdbId(tmdbId: Int): Result<Unit> {
+        val movieId =
+            runAction { api ->
+                api.getMovie().firstOrNull { it.tmdbId == tmdbId }?.id
+                    ?: throw IllegalArgumentException("Could not find this movie in Radarr")
+            }
+        return movieId.fold({ searchMovie(it) }, { Result.failure(it) })
+    }
+
     override suspend fun resolveMovieId(tmdbId: String): Int? {
         val api = api() ?: return null
         return api.getMovie().firstOrNull { it.tmdbId.toString() == tmdbId }?.id

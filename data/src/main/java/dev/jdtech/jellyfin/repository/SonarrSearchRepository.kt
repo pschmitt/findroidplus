@@ -11,6 +11,13 @@ import dev.jdtech.jellyfin.models.AutomaticSearchOutcome
  */
 interface SonarrSearchRepository {
     /**
+     * Triggers Sonarr's automatic search for all missing episodes in the series identified by its
+     * TMDB id. A series-level search has no single episode completion to observe, unlike
+     * [searchEpisode].
+     */
+    suspend fun searchSeriesByTmdbId(tmdbId: Int): Result<Unit>
+
+    /**
      * Resolves Sonarr's internal numeric episode id for a show/season/episode, needed by callers
      * that only have a [dev.jdtech.jellyfin.models.FindroidEpisode] (whose tvdb id and
      * season/episode numbers are the only thing Findroid can match against Sonarr) rather than a
