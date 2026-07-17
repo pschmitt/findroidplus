@@ -77,7 +77,7 @@ build *flags:
         echo 'release build did not refresh its APK artifact' >&2
         rc=1
       fi
-      if [[ \$rc -eq 0 ]] && ! unzip -p "\$artifact" 'classes*.dex' | strings | grep -Fxq "\$GIT_REVISION"
+      if [[ \$rc -eq 0 ]] && ! (cd {{remote_path}} && nix develop --command sh -c 'unzip -p "\$1" "classes*.dex" | strings | grep -Fxq "\$2"' sh "\$artifact" "\$GIT_REVISION")
       then
         echo "release APK does not contain expected revision: \$GIT_REVISION" >&2
         rc=1
