@@ -392,7 +392,15 @@ constructor(
     fun openManualImport(item: PvrQueueUiItem, source: PvrSource) {
         val downloadId = item.status.downloadId ?: return
         _state.update {
-            it.copy(manualImport = ManualImportSheetState(source = source, downloadId = downloadId, title = item.title))
+            it.copy(
+                manualImport =
+                    ManualImportSheetState(
+                        source = source,
+                        downloadId = downloadId,
+                        queueItemId = item.queueItemId,
+                        title = item.title,
+                    )
+            )
         }
         viewModelScope.launch {
             queueStatusRepository
@@ -450,6 +458,34 @@ constructor(
                             it.copy(manualImport = it.manualImport?.copy(isImporting = false, error = e.message))
                         }
                         eventsChannel.send(DownloadsEvent.ManualImportFailed(e.message))
+                    },
+                )
+        }
+    }
+
+    /**
+     * Rejects the whole release the "manage imports" sheet is reviewing - removes its queue entry
+     * and (usually) blocklists it, e.g. a release Sonarr/Radarr flagged as suspicious or one where
+     * none of the files are worth importing. Distinct from [confirmManualImport], which imports a
+     * subset of the files instead of discarding the release outright.
+     */
+    fun rejectManualImport(removeFromClient: Boolean, blocklist: Boolean) {
+        val current = _state.value.manualImport ?: return
+        if (current.isRejecting) return
+        _state.update { it.copy(manualImport = it.manualImport?.copy(isRejecting = true)) }
+        viewModelScope.launch {
+            queueStatusRepository
+                .removeQueueItem(current.source, current.queueItemId, removeFromClient, blocklist)
+                .fold(
+                    onSuccess = {
+                        _state.update { it.copy(manualImport = null) }
+                        eventsChannel.send(DownloadsEvent.PvrQueueItemRemoved(current.title))
+                    },
+                    onFailure = { e ->
+                        _state.update {
+                            it.copy(manualImport = it.manualImport?.copy(isRejecting = false, error = e.message))
+                        }
+                        eventsChannel.send(DownloadsEvent.PvrQueueItemRemoveFailed(e.message))
                     },
                 )
         }

@@ -73,9 +73,13 @@ data class PvrQueueGroup(val source: PvrSource, val items: List<PvrQueueUiItem>)
 data class ManualImportSheetState(
     val source: PvrSource,
     val downloadId: String,
+    // The underlying queue row's own id - not [downloadId] - needed to reject the whole release
+    // (remove + blocklist) rather than import it. See DownloadsViewModel.rejectManualImport.
+    val queueItemId: Int,
     val title: String,
     val isLoading: Boolean = true,
     val isImporting: Boolean = false,
+    val isRejecting: Boolean = false,
     val candidates: List<ManualImportCandidate> = emptyList(),
     val selectedIds: Set<Int> = emptySet(),
     val error: String? = null,

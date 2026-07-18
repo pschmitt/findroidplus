@@ -221,6 +221,7 @@ fun DownloadsScreen(
             state = manualImport,
             onToggleSelection = viewModel::toggleManualImportSelection,
             onConfirm = viewModel::confirmManualImport,
+            onReject = viewModel::rejectManualImport,
             onDismissRequest = viewModel::closeManualImport,
         )
     }

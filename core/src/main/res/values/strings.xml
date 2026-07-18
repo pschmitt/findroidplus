@@ -314,6 +314,7 @@
     <string name="manual_import_empty">No files found for this download</string>
     <string name="manual_import_cannot_import">Couldn\'t determine what this file belongs to - use Sonarr/Radarr\'s own web UI to assign it manually</string>
     <string name="manual_import_confirm">Import %1$d selected</string>
+    <string name="manual_import_reject">Delete &amp; blacklist</string>
     <string name="manual_import_completed_toast">Import started</string>
     <string name="manual_import_failed_toast">Import failed: %1$s</string>
     <string name="seerr_cancel_request">Cancel request</string>

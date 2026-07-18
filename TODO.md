@@ -242,5 +242,13 @@ Status: **done** (2026-07-18).
       those still requires Sonarr/Radarr's own web UI, since assigning a
       different episode/movie to a file isn't implemented yet (a real, but
       separate, follow-up from surfacing the review UI itself).
+- [x] The "manage imports" sheet only offered an import action - no way to
+      reject a release outright (delete + blacklist) without backing out to
+      the queue row's trash icon. Found via a real case: Sonarr flagged a
+      "Silo" release with `Caution: Found potentially dangerous file with
+      extension: .scr` (a disguised Windows executable, not a real video
+      file) - exactly the situation where the right move is reject-and-
+      blacklist, not import. Added a "Delete & blacklist" action to the sheet
+      (same removeFromClient/blocklist confirmation as the row-level one).
 
 Status: **done** (2026-07-18).

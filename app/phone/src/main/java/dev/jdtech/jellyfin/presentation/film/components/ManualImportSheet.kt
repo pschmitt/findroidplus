@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,8 +23,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -50,9 +56,12 @@ fun ManualImportSheet(
     state: ManualImportSheetState,
     onToggleSelection: (Int) -> Unit,
     onConfirm: () -> Unit,
+    onReject: (removeFromClient: Boolean, blocklist: Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
+    var showRejectConfirm by remember { mutableStateOf(false) }
+
     ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
         // The candidate list is wrapped in its own weighted, non-filling Box so it only claims
         // space up to what's left after the header/footer - without this, an unbounded LazyColumn
@@ -120,6 +129,19 @@ fun ManualImportSheet(
                             .padding(MaterialTheme.spacings.medium),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    TextButton(
+                        onClick = { showRejectConfirm = true },
+                        enabled = !state.isImporting && !state.isRejecting,
+                    ) {
+                        if (state.isRejecting) {
+                            CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
+                        } else {
+                            Text(
+                                text = stringResource(CoreR.string.manual_import_reject),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
                     val errorMessage = state.error
                     if (errorMessage != null) {
                         Text(
@@ -131,7 +153,10 @@ fun ManualImportSheet(
                     } else {
                         Spacer(modifier = Modifier.weight(1f))
                     }
-                    Button(onClick = onConfirm, enabled = state.selectedIds.isNotEmpty() && !state.isImporting) {
+                    Button(
+                        onClick = onConfirm,
+                        enabled = state.selectedIds.isNotEmpty() && !state.isImporting && !state.isRejecting,
+                    ) {
                         if (state.isImporting) {
                             CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
                         } else {
@@ -142,6 +167,65 @@ fun ManualImportSheet(
             }
         }
     }
+
+    if (showRejectConfirm) {
+        RejectReleaseDialog(
+            title = state.title,
+            onConfirm = { removeFromClient, blocklist ->
+                showRejectConfirm = false
+                onReject(removeFromClient, blocklist)
+            },
+            onDismiss = { showRejectConfirm = false },
+        )
+    }
+}
+
+/**
+ * Confirms discarding the whole release the manual-import sheet is reviewing - e.g. one
+ * Sonarr/Radarr itself flagged as suspicious (a disguised executable, wrong language, ...), or
+ * where none of the files are worth keeping. Mirrors the queue row's own remove confirmation
+ * (same flags, same defaults), just reachable from within the review sheet instead of requiring
+ * the user to back out to the queue row's trash icon first.
+ */
+@Composable
+private fun RejectReleaseDialog(
+    title: String,
+    onConfirm: (removeFromClient: Boolean, blocklist: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var removeFromClient by remember { mutableStateOf(true) }
+    var blocklist by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        title = { Text(text = stringResource(CoreR.string.pvr_queue_remove_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                Text(text = stringResource(CoreR.string.pvr_queue_remove_message, title))
+                ToggleOptionRow(
+                    checked = removeFromClient,
+                    label = stringResource(CoreR.string.pvr_queue_remove_from_client),
+                    onToggle = { removeFromClient = it },
+                )
+                ToggleOptionRow(
+                    checked = blocklist,
+                    label = stringResource(CoreR.string.pvr_queue_blocklist),
+                    onToggle = { blocklist = it },
+                )
+            }
+        },
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(removeFromClient, blocklist) }) {
+                Text(
+                    text = stringResource(CoreR.string.remove),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+        },
+    )
 }
 
 @Composable
@@ -207,11 +291,13 @@ private fun ManualImportSheetLoadingPreview() {
                 ManualImportSheetState(
                     source = PvrSource.SONARR,
                     downloadId = "abc",
+                    queueItemId = 1,
                     title = "Some Show - Season 1",
                     isLoading = true,
                 ),
             onToggleSelection = {},
             onConfirm = {},
+            onReject = { _, _ -> },
             onDismissRequest = {},
         )
     }
@@ -227,6 +313,7 @@ private fun ManualImportSheetContentPreview() {
                 ManualImportSheetState(
                     source = PvrSource.SONARR,
                     downloadId = "abc",
+                    queueItemId = 1,
                     title = "Some Show - Season 1",
                     isLoading = false,
                     candidates =
@@ -254,6 +341,7 @@ private fun ManualImportSheetContentPreview() {
                 ),
             onToggleSelection = {},
             onConfirm = {},
+            onReject = { _, _ -> },
             onDismissRequest = {},
         )
     }
