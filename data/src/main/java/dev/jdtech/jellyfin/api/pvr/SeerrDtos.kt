@@ -37,16 +37,21 @@ data class SeerrSearchResult(
  * Seerr's media availability: 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE,
  * 5=AVAILABLE (see `SeerrMediaStatus.fromCode`). The detail endpoints additionally embed the
  * open requests for the media - needed to cancel ("unrequest") from the detail view, since
- * DELETE /request/{id} wants request ids, not TMDB ids.
+ * DELETE /request/{id} wants request ids, not TMDB ids. `seasons` is TV-only: Jellyseerr tracks
+ * each season's own availability separately from the show-level aggregate `status`.
  */
 @Serializable
 data class SeerrMediaInfo(
     val status: Int = 0,
     val requests: List<SeerrMediaRequestRef> = emptyList(),
+    val seasons: List<SeerrSeasonMediaInfo> = emptyList(),
 )
 
 /** `status` is the request workflow state: 1=PENDING approval, 2=APPROVED, 3=DECLINED. */
 @Serializable data class SeerrMediaRequestRef(val id: Int, val status: Int = 0)
+
+/** Per-season entry of `SeerrMediaInfo.seasons` - `status` uses the same codes as media-level. */
+@Serializable data class SeerrSeasonMediaInfo(val seasonNumber: Int = 0, val status: Int = 0)
 
 // endregion
 

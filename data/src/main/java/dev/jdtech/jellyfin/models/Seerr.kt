@@ -74,7 +74,16 @@ data class SeerrMediaDetail(
     val season: SeerrSeasonDetail? = null,
     /** Present when the view was opened from a specific upcoming TV episode. */
     val episode: SeerrEpisodeDetail? = null,
+    /**
+     * Series only. Per-season status, as tracked by Seerr - empty when the show has never been
+     * requested at all (a normal state, not an error). Seasons absent from this list simply have
+     * no status yet (implicitly not-requested).
+     */
+    val seasons: List<SeerrSeasonInfo> = emptyList(),
 )
+
+/** A single season's own request/availability status, independent of the show-level aggregate. */
+data class SeerrSeasonInfo(val seasonNumber: Int, val status: SeerrMediaStatus)
 
 data class SeerrSeasonDetail(
     val title: String,

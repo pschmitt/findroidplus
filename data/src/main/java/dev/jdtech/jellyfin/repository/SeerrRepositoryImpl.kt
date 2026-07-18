@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.models.SeerrRequestItem
 import dev.jdtech.jellyfin.models.SeerrSearchItem
 import dev.jdtech.jellyfin.models.SeerrSeasonDetail
+import dev.jdtech.jellyfin.models.SeerrSeasonInfo
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -122,6 +123,13 @@ class SeerrRepositoryImpl(
                     cancellableRequestIds = details.mediaInfo.cancellableRequestIds(),
                     season = season?.first,
                     episode = episode,
+                    seasons =
+                        details.mediaInfo?.seasons.orEmpty().map {
+                            SeerrSeasonInfo(
+                                seasonNumber = it.seasonNumber,
+                                status = SeerrMediaStatus.fromCode(it.status),
+                            )
+                        },
                 )
             }
         }

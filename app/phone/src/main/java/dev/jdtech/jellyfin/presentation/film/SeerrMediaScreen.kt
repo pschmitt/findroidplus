@@ -2,6 +2,7 @@ package dev.jdtech.jellyfin.presentation.film
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -320,6 +322,39 @@ private fun SeerrMediaScreenLayout(
                                 PvrSearchButtonLabel(mediaType = detail.mediaType, manual = true)
                             }
                         }
+                        // Show-level view only - a season/episode view is already scoped to one
+                        // season, so there's nothing to list. This is the only way to reach a
+                        // season-scoped Seerr view directly from the show (the other path is via
+                        // an episode's "back to season" link, further downstream).
+                        if (detail.mediaType == SeerrMediaType.TV && detail.season == null && detail.episode == null) {
+                            detail.numberOfSeasons?.takeIf { it > 0 }?.let { numberOfSeasons ->
+                                Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                                Text(
+                                    text = stringResource(CoreR.string.seasons),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(Modifier.height(MaterialTheme.spacings.small))
+                                Column {
+                                    for (seasonNumber in 1..numberOfSeasons) {
+                                        val seasonStatus =
+                                            detail.seasons
+                                                .firstOrNull { it.seasonNumber == seasonNumber }
+                                                ?.status
+                                        SeerrSeasonRow(
+                                            seasonNumber = seasonNumber,
+                                            status = seasonStatus,
+                                            // No per-row Jellyfin season id is resolved here (the
+                                            // show-level view only resolves one show/season pair
+                                            // total, not all seasons at once) - always route
+                                            // through a fresh season-scoped SeerrMediaRoute load,
+                                            // same as navigateToSeason already does when it has no
+                                            // Jellyfin season id to jump to directly.
+                                            onClick = { navigateToSeason(seasonNumber, null) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                     Spacer(Modifier.height(paddingBottom))
                 }
@@ -429,6 +464,31 @@ private fun PvrSearchButtonLabel(mediaType: SeerrMediaType, manual: Boolean) {
                     }
                 )
         )
+    }
+}
+
+/**
+ * One row in the show-level season list: "Season N" plus its status chip (omitted when the
+ * season has never been touched - matching how the rest of this screen only shows a chip once
+ * there's an actual request/status to report, see the show-level chip above). Tapping always
+ * navigates into a season-scoped Seerr view, letting that screen resolve the Jellyfin ids itself.
+ */
+@Composable
+private fun SeerrSeasonRow(seasonNumber: Int, status: SeerrMediaStatus?, onClick: () -> Unit) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClick = onClick)
+                .padding(vertical = MaterialTheme.spacings.small),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(CoreR.string.season_number, seasonNumber),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        status?.let { SeerrStatusChip(status = it) }
     }
 }
 

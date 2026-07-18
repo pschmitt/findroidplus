@@ -63,6 +63,63 @@ class SeerrApiTest {
     }
 
     @Test
+    fun `getTvDetails parses per-season media info`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {
+                    "id": 1,
+                    "name": "Some Show",
+                    "numberOfSeasons": 3,
+                    "mediaInfo": {
+                        "status": 4,
+                        "requests": [],
+                        "seasons": [
+                            { "seasonNumber": 1, "status": 5 },
+                            { "seasonNumber": 2, "status": 2 }
+                        ]
+                    }
+                }
+                """
+                    .trimIndent()
+            )
+        )
+
+        val details = api.getTvDetails(tmdbId = 1)
+
+        assertEquals(3, details.numberOfSeasons)
+        assertEquals(4, details.mediaInfo?.status)
+        val seasons = details.mediaInfo?.seasons.orEmpty()
+        assertEquals(2, seasons.size)
+        assertEquals(1, seasons[0].seasonNumber)
+        assertEquals(5, seasons[0].status)
+        assertEquals(2, seasons[1].seasonNumber)
+        assertEquals(2, seasons[1].status)
+        val request = server.takeRequest()
+        assertTrue(request.path.orEmpty().endsWith("/api/v1/tv/1"))
+    }
+
+    @Test
+    fun `getTvDetails defaults seasons to empty when mediaInfo is absent`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {
+                    "id": 1,
+                    "name": "Never Requested Show",
+                    "numberOfSeasons": 2
+                }
+                """
+                    .trimIndent()
+            )
+        )
+
+        val details = api.getTvDetails(tmdbId = 1)
+
+        assertEquals(null, details.mediaInfo)
+    }
+
+    @Test
     fun `createRequest without a season number requests all seasons`() = runTest {
         server.enqueue(MockResponse().setBody("{}"))
 
