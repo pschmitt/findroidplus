@@ -137,6 +137,31 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
             execute(url, delete = true)
         }
 
+    /**
+     * Candidate files for a download Radarr couldn't auto-import (e.g. `trackedDownloadState`
+     * `importBlocked`), each with Radarr's own guessed quality mapping and any rejection reasons -
+     * see [RadarrManualImportItem].
+     */
+    suspend fun getManualImportItems(downloadId: String): List<RadarrManualImportItem> =
+        withContext(Dispatchers.IO) {
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "manualimport",
+                    queryParams = mapOf("downloadId" to downloadId),
+                )
+            json.decodeFromString<List<RadarrManualImportItem>>(execute(url))
+        }
+
+    /** Imports the given files using the (possibly user-adjusted) mapping in each [files] entry. */
+    suspend fun triggerManualImport(files: List<RadarrManualImportFile>): Int =
+        withContext(Dispatchers.IO) {
+            val url = buildUrl("api", "v3", "command")
+            val body = json.encodeToString(RadarrManualImportCommandRequest(files = files))
+            json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
+        }
+
     private fun buildUrl(
         vararg pathSegments: String,
         queryParams: Map<String, String> = emptyMap(),

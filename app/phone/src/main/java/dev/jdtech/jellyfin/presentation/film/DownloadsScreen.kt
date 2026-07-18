@@ -78,6 +78,7 @@ import dev.jdtech.jellyfin.film.presentation.downloads.DownloadAction
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadShowGroup
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsState
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
+import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportSheetState
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueGroup
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsEvent
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueUiItem
@@ -91,6 +92,7 @@ import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
+import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -106,6 +108,7 @@ import java.util.UUID
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
     onItemClick: (item: FindroidItem) -> Unit,
@@ -131,12 +134,34 @@ fun DownloadsScreen(
                         CoreR.string.pvr_queue_remove_failed_toast,
                         event.message ?: androidContext.getString(CoreR.string.unknown_error),
                     )
+                is DownloadsEvent.PvrQueueItemsRemoved ->
+                    if (event.failed == 0) {
+                        androidContext.getString(
+                            CoreR.string.pvr_queue_removed_selected_toast,
+                            event.removed,
+                        )
+                    } else {
+                        androidContext.getString(
+                            CoreR.string.pvr_queue_remove_selected_partial_toast,
+                            event.removed,
+                            event.removed + event.failed,
+                            event.failed,
+                        )
+                    }
+                is DownloadsEvent.ManualImportCompleted ->
+                    androidContext.getString(CoreR.string.manual_import_completed_toast)
+                is DownloadsEvent.ManualImportFailed ->
+                    androidContext.getString(
+                        CoreR.string.manual_import_failed_toast,
+                        event.message ?: androidContext.getString(CoreR.string.unknown_error),
+                    )
             }
         Toast.makeText(androidContext, message, Toast.LENGTH_SHORT).show()
     }
 
     var clearAllDialogOpen by remember { mutableStateOf(false) }
     var deleteSelectedDialogOpen by remember { mutableStateOf(false) }
+    var deleteSelectedPvrDialogOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PendingDownloadDelete?>(null) }
     var pendingGroupDelete by remember { mutableStateOf<DownloadShowGroup?>(null) }
     var pendingPvrRemove by remember { mutableStateOf<Pair<PvrQueueUiItem, PvrSource>?>(null) }
@@ -157,10 +182,16 @@ fun DownloadsScreen(
         state = state,
         onSettingsClick = onSettingsClick,
         onTrashClick = {
-            if (state.selectedIds.isNotEmpty()) deleteSelectedDialogOpen = true
-            else clearAllDialogOpen = true
+            when {
+                state.selectedIds.isNotEmpty() -> deleteSelectedDialogOpen = true
+                state.selectedPvrQueueIds.isNotEmpty() -> deleteSelectedPvrDialogOpen = true
+                else -> clearAllDialogOpen = true
+            }
         },
-        onClearSelection = { viewModel.toggleSelectAll(false) },
+        onClearSelection = {
+            if (state.selectedPvrQueueIds.isNotEmpty()) viewModel.togglePvrQueueSelectAll(false)
+            else viewModel.toggleSelectAll(false)
+        },
         onItemClick = onItemClick,
         onToggleSelection = viewModel::toggleSelection,
         onToggleSelectAll = viewModel::toggleSelectAll,
@@ -178,8 +209,20 @@ fun DownloadsScreen(
         onForceGroup = viewModel::forceGroup,
         onPvrRemoveRequest = { item, source -> pendingPvrRemove = item to source },
         onPvrItemClick = onPvrItemClick,
+        onTogglePvrQueueSelection = viewModel::togglePvrQueueSelection,
+        onTogglePvrQueueSelectAll = viewModel::togglePvrQueueSelectAll,
+        onManageImport = viewModel::openManualImport,
         onRefresh = viewModel::refresh,
     )
+
+    state.manualImport?.let { manualImport ->
+        ManualImportSheet(
+            state = manualImport,
+            onToggleSelection = viewModel::toggleManualImportSelection,
+            onConfirm = viewModel::confirmManualImport,
+            onDismissRequest = viewModel::closeManualImport,
+        )
+    }
 
     pendingPvrRemove?.let { (queueItem, source) ->
         RemovePvrQueueItemDialog(
@@ -189,6 +232,17 @@ fun DownloadsScreen(
                 pendingPvrRemove = null
             },
             onDismiss = { pendingPvrRemove = null },
+        )
+    }
+
+    if (deleteSelectedPvrDialogOpen) {
+        RemoveSelectedPvrQueueItemsDialog(
+            count = state.selectedPvrQueueIds.size,
+            onConfirm = { removeFromClient, blocklist ->
+                viewModel.removeSelectedPvrQueueItems(removeFromClient, blocklist)
+                deleteSelectedPvrDialogOpen = false
+            },
+            onDismiss = { deleteSelectedPvrDialogOpen = false },
         )
     }
 
@@ -285,6 +339,9 @@ private fun DownloadsScreenLayout(
     onForceGroup: (List<UUID>) -> Unit = {},
     onPvrRemoveRequest: (PvrQueueUiItem, PvrSource) -> Unit = { _, _ -> },
     onPvrItemClick: (PvrQueueUiItem, PvrSource) -> Unit = { _, _ -> },
+    onTogglePvrQueueSelection: (PvrSource, Int) -> Unit = { _, _ -> },
+    onTogglePvrQueueSelectAll: (Boolean) -> Unit = {},
+    onManageImport: (PvrQueueUiItem, PvrSource) -> Unit = { _, _ -> },
     onRefresh: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -301,6 +358,12 @@ private fun DownloadsScreenLayout(
         }
     val allSelected = allIds.isNotEmpty() && state.selectedIds.containsAll(allIds)
     val selectionMode = state.selectedIds.isNotEmpty()
+    val pvrQueueKeys =
+        remember(state.pvrQueueGroups) {
+            state.pvrQueueGroups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
+        }
+    val pvrAllSelected = pvrQueueKeys.isNotEmpty() && state.selectedPvrQueueIds.containsAll(pvrQueueKeys)
+    val pvrSelectionMode = state.selectedPvrQueueIds.isNotEmpty()
 
     var moviesCollapsed by remember { mutableStateOf(false) }
     var collapsedGroupIds by remember { mutableStateOf(emptySet<UUID>()) }
@@ -337,7 +400,7 @@ private fun DownloadsScreenLayout(
                     )
                 },
                 navigationIcon = {
-                    if (selectionMode) {
+                    if (selectionMode || pvrSelectionMode) {
                         IconButton(onClick = onClearSelection) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_x),
@@ -347,7 +410,7 @@ private fun DownloadsScreenLayout(
                     }
                 },
                 actions = {
-                    if (!selectionMode && state.downloadProgress.isNotEmpty()) {
+                    if (!selectionMode && !pvrSelectionMode && state.downloadProgress.isNotEmpty()) {
                         val allPaused =
                             state.downloadProgress.values.all {
                                 it.status == DownloadManager.STATUS_PAUSED
@@ -367,20 +430,20 @@ private fun DownloadsScreenLayout(
                             )
                         }
                     }
-                    if (!state.isEmpty) {
+                    if (!state.isEmpty || pvrSelectionMode) {
                         IconButton(onClick = onTrashClick) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
                                 contentDescription =
-                                    if (selectionMode) {
-                                        stringResource(CoreR.string.delete_selected_downloads)
-                                    } else {
-                                        stringResource(CoreR.string.clear_all_downloads)
+                                    when {
+                                        selectionMode -> stringResource(CoreR.string.delete_selected_downloads)
+                                        pvrSelectionMode -> stringResource(CoreR.string.pvr_queue_remove_selected_title)
+                                        else -> stringResource(CoreR.string.clear_all_downloads)
                                     },
                             )
                         }
                     }
-                    if (!selectionMode) {
+                    if (!selectionMode && !pvrSelectionMode) {
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_settings),
@@ -548,6 +611,12 @@ private fun DownloadsScreenLayout(
                     stickyHeader {
                         SectionHeader(
                             text = stringResource(CoreR.string.pvr_queue_section_title),
+                            onLongClick =
+                                if (pvrQueueKeys.isNotEmpty()) {
+                                    { onTogglePvrQueueSelectAll(!pvrAllSelected) }
+                                } else {
+                                    null
+                                },
                             collapsed = pvrQueueCollapsed,
                             onToggleCollapsed = { pvrQueueCollapsed = !pvrQueueCollapsed },
                         )
@@ -567,15 +636,26 @@ private fun DownloadsScreenLayout(
                         }
                         state.pvrQueueGroups.forEach { group ->
                             items(items = group.items) { queueItem ->
+                                val key = group.source to queueItem.queueItemId
                                 PvrQueueRow(
                                     queueItem = queueItem,
+                                    selectionMode = pvrSelectionMode,
+                                    checked = key in state.selectedPvrQueueIds,
                                     onClick =
                                         if (queueItem.item != null || queueItem.tmdbId != null) {
                                             { queueItem.item?.let(onItemClick) ?: onPvrItemClick(queueItem, group.source) }
                                         } else {
                                             null
                                         },
+                                    onLongClick = { onTogglePvrQueueSelection(group.source, queueItem.queueItemId) },
+                                    onToggleSelection = { onTogglePvrQueueSelection(group.source, queueItem.queueItemId) },
                                     onRemove = { onPvrRemoveRequest(queueItem, group.source) },
+                                    onManageImport =
+                                        if (queueItem.status.downloadId != null) {
+                                            { onManageImport(queueItem, group.source) }
+                                        } else {
+                                            null
+                                        },
                                 )
                             }
                         }
@@ -747,16 +827,26 @@ private fun DeleteProgressCard(progress: DeleteProgress, onDismiss: () -> Unit) 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SectionHeader(
     text: String,
     onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
     collapsed: Boolean = false,
     onToggleCollapsed: () -> Unit = {},
 ) {
     Card {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .let { modifier ->
+                        if (onLongClick != null) {
+                            modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                        } else {
+                            modifier.clickable(onClick = onClick)
+                        }
+                    },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -1025,11 +1115,17 @@ private fun DownloadRow(
  * PVR's own poster is used when the queue entry has not reached Jellyfin yet. The row remains
  * non-clickable until Jellyfin supplies a matching item.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PvrQueueRow(
     queueItem: PvrQueueUiItem,
     onClick: (() -> Unit)?,
     onRemove: () -> Unit,
+    selectionMode: Boolean = false,
+    checked: Boolean = false,
+    onLongClick: () -> Unit = {},
+    onToggleSelection: () -> Unit = {},
+    onManageImport: (() -> Unit)? = null,
 ) {
     val status = queueItem.status
     val isProblem = status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
@@ -1057,7 +1153,11 @@ private fun PvrQueueRow(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .let { modifier -> onClick?.let { modifier.clickable(onClick = it) } ?: modifier }
+                .combinedClickable(
+                    enabled = selectionMode || onClick != null,
+                    onClick = { if (selectionMode) onToggleSelection() else onClick?.invoke() },
+                    onLongClick = onLongClick,
+                )
                 .padding(
                     horizontal = MaterialTheme.spacings.default,
                     vertical = MaterialTheme.spacings.small,
@@ -1137,12 +1237,24 @@ private fun PvrQueueRow(
             }
         }
         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-        IconButton(onClick = onRemove) {
-            Icon(
-                painter = painterResource(CoreR.drawable.ic_trash),
-                contentDescription = stringResource(CoreR.string.pvr_queue_remove_title),
-                tint = MaterialTheme.colorScheme.error,
-            )
+        if (selectionMode) {
+            Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
+        } else {
+            if (isProblem && onManageImport != null) {
+                IconButton(onClick = onManageImport) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_logs),
+                        contentDescription = stringResource(CoreR.string.pvr_queue_manual_import_action),
+                    )
+                }
+            }
+            IconButton(onClick = onRemove) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = stringResource(CoreR.string.pvr_queue_remove_title),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
@@ -1166,6 +1278,48 @@ private fun RemovePvrQueueItemDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
                 Text(text = stringResource(CoreR.string.pvr_queue_remove_message, title))
+                ToggleOptionRow(
+                    checked = removeFromClient,
+                    label = stringResource(CoreR.string.pvr_queue_remove_from_client),
+                    onToggle = { removeFromClient = it },
+                )
+                ToggleOptionRow(
+                    checked = blocklist,
+                    label = stringResource(CoreR.string.pvr_queue_blocklist),
+                    onToggle = { blocklist = it },
+                )
+            }
+        },
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(removeFromClient, blocklist) }) {
+                Text(
+                    text = stringResource(CoreR.string.remove),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+        },
+    )
+}
+
+/** Bulk version of [RemovePvrQueueItemDialog], for "clear all pending downloads". */
+@Composable
+private fun RemoveSelectedPvrQueueItemsDialog(
+    count: Int,
+    onConfirm: (removeFromClient: Boolean, blocklist: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var removeFromClient by remember { mutableStateOf(true) }
+    var blocklist by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        title = { Text(text = stringResource(CoreR.string.pvr_queue_remove_selected_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                Text(text = stringResource(CoreR.string.pvr_queue_remove_selected_message, count))
                 ToggleOptionRow(
                     checked = removeFromClient,
                     label = stringResource(CoreR.string.pvr_queue_remove_from_client),

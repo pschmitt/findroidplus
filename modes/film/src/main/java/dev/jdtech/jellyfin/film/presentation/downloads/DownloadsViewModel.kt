@@ -90,10 +90,13 @@ constructor(
         }
         viewModelScope.launch {
             queueStatusRepository.getQueueSnapshotFlow().collect { snapshot ->
+                val groups = buildPvrQueueGroups(snapshot.entries)
+                val liveKeys = groups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
                 _state.update {
                     it.copy(
-                        pvrQueueGroups = buildPvrQueueGroups(snapshot.entries),
+                        pvrQueueGroups = groups,
                         pvrErrors = snapshot.errors,
+                        selectedPvrQueueIds = it.selectedPvrQueueIds.intersect(liveKeys),
                     )
                 }
             }
@@ -221,10 +224,19 @@ constructor(
         }
     }
 
+    // Local-download selection and PVR-queue selection are mutually exclusive - both drive the
+    // same top app bar (selection count, clear button, bulk-delete action), and a single bar can't
+    // meaningfully represent two independent selections at once. Every toggle below clears the
+    // other side's selection as soon as it goes from empty to non-empty.
+
     fun toggleSelection(id: UUID) {
         _state.update {
             val selectedIds = it.selectedIds
-            it.copy(selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id)
+            val newSelectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+            it.copy(
+                selectedIds = newSelectedIds,
+                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
+            )
         }
     }
 
@@ -233,14 +245,47 @@ constructor(
             val allIds =
                 (state.movies.map { it.id } + state.showGroups.flatMap { it.episodes }.map { it.id })
                     .toSet()
-            state.copy(selectedIds = if (selectAll) allIds else emptySet())
+            val newSelectedIds = if (selectAll) allIds else emptySet()
+            state.copy(
+                selectedIds = newSelectedIds,
+                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else state.selectedPvrQueueIds,
+            )
         }
     }
 
     fun setGroupSelected(ids: Set<UUID>, selected: Boolean) {
         _state.update {
             val selectedIds = it.selectedIds
-            it.copy(selectedIds = if (selected) selectedIds + ids else selectedIds - ids)
+            val newSelectedIds = if (selected) selectedIds + ids else selectedIds - ids
+            it.copy(
+                selectedIds = newSelectedIds,
+                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
+            )
+        }
+    }
+
+    fun togglePvrQueueSelection(source: PvrSource, queueItemId: Int) {
+        _state.update {
+            val key = source to queueItemId
+            val selected = it.selectedPvrQueueIds
+            val newSelected = if (key in selected) selected - key else selected + key
+            it.copy(
+                selectedPvrQueueIds = newSelected,
+                selectedIds = if (newSelected.isNotEmpty()) emptySet() else it.selectedIds,
+            )
+        }
+    }
+
+    fun togglePvrQueueSelectAll(selectAll: Boolean) {
+        _state.update { state ->
+            val allKeys =
+                state.pvrQueueGroups.flatMap { group -> group.items.map { group.source to it.queueItemId } }
+                    .toSet()
+            val newSelected = if (selectAll) allKeys else emptySet()
+            state.copy(
+                selectedPvrQueueIds = newSelected,
+                selectedIds = if (newSelected.isNotEmpty()) emptySet() else state.selectedIds,
+            )
         }
     }
 
@@ -318,6 +363,93 @@ constructor(
                     },
                     onFailure = { e ->
                         eventsChannel.send(DownloadsEvent.PvrQueueItemRemoveFailed(e.message))
+                    },
+                )
+        }
+    }
+
+    /** Bulk version of [removePvrQueueItem] - e.g. "clear all pending downloads". */
+    fun removeSelectedPvrQueueItems(removeFromClient: Boolean, blocklist: Boolean) {
+        viewModelScope.launch {
+            val selected = _state.value.selectedPvrQueueIds.toList()
+            val failed =
+                queueStatusRepository.removeQueueItems(selected, removeFromClient, blocklist)
+            _state.update { it.copy(selectedPvrQueueIds = emptySet()) }
+            eventsChannel.send(
+                DownloadsEvent.PvrQueueItemsRemoved(
+                    removed = selected.size - failed.size,
+                    failed = failed.size,
+                )
+            )
+        }
+    }
+
+    /**
+     * Opens the "manage imports" sheet for a queue entry (see [ManualImportSheetState]) and kicks
+     * off loading its candidate files. No-ops when the entry has no `downloadId` - shouldn't
+     * happen in practice, but Sonarr/Radarr technically don't guarantee the field.
+     */
+    fun openManualImport(item: PvrQueueUiItem, source: PvrSource) {
+        val downloadId = item.status.downloadId ?: return
+        _state.update {
+            it.copy(manualImport = ManualImportSheetState(source = source, downloadId = downloadId, title = item.title))
+        }
+        viewModelScope.launch {
+            queueStatusRepository
+                .getManualImportCandidates(source, downloadId)
+                .fold(
+                    onSuccess = { candidates ->
+                        _state.update {
+                            it.copy(
+                                manualImport =
+                                    it.manualImport?.copy(
+                                        isLoading = false,
+                                        candidates = candidates,
+                                        selectedIds =
+                                            candidates.filter { c -> c.canImport }.map { c -> c.id }.toSet(),
+                                    )
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        _state.update {
+                            it.copy(manualImport = it.manualImport?.copy(isLoading = false, error = e.message))
+                        }
+                    },
+                )
+        }
+    }
+
+    fun closeManualImport() {
+        _state.update { it.copy(manualImport = null) }
+    }
+
+    fun toggleManualImportSelection(candidateId: Int) {
+        _state.update { state ->
+            val current = state.manualImport ?: return@update state
+            val selected = current.selectedIds
+            val newSelected = if (candidateId in selected) selected - candidateId else selected + candidateId
+            state.copy(manualImport = current.copy(selectedIds = newSelected))
+        }
+    }
+
+    fun confirmManualImport() {
+        val current = _state.value.manualImport ?: return
+        if (current.selectedIds.isEmpty() || current.isImporting) return
+        _state.update { it.copy(manualImport = it.manualImport?.copy(isImporting = true)) }
+        viewModelScope.launch {
+            queueStatusRepository
+                .performManualImport(current.source, current.downloadId, current.selectedIds)
+                .fold(
+                    onSuccess = {
+                        _state.update { it.copy(manualImport = null) }
+                        eventsChannel.send(DownloadsEvent.ManualImportCompleted)
+                    },
+                    onFailure = { e ->
+                        _state.update {
+                            it.copy(manualImport = it.manualImport?.copy(isImporting = false, error = e.message))
+                        }
+                        eventsChannel.send(DownloadsEvent.ManualImportFailed(e.message))
                     },
                 )
         }

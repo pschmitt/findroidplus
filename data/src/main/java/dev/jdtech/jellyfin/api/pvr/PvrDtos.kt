@@ -68,6 +68,9 @@ data class SonarrQueueItem(
     val estimatedCompletionTime: String? = null,
     val errorMessage: String? = null,
     val statusMessages: List<PvrStatusMessage> = emptyList(),
+    // Sonarr's own id for the underlying download-client transfer (not this queue row) - the key
+    // GET/POST /api/v3/manualimport filters/targets by, see the "Manual Import" region below.
+    val downloadId: String? = null,
 )
 
 @Serializable
@@ -98,6 +101,9 @@ data class RadarrQueueItem(
     val estimatedCompletionTime: String? = null,
     val errorMessage: String? = null,
     val statusMessages: List<PvrStatusMessage> = emptyList(),
+    // Radarr's own id for the underlying download-client transfer (not this queue row) - the key
+    // GET/POST /api/v3/manualimport filters/targets by, see the "Manual Import" region below.
+    val downloadId: String? = null,
 )
 
 @Serializable
@@ -272,6 +278,111 @@ data class RadarrCalendarEntry(
     val inCinemas: String? = null,
     val digitalRelease: String? = null,
     val physicalRelease: String? = null,
+)
+
+// endregion
+
+// region Sonarr/Radarr - GET /api/v3/manualimport?downloadId=X, POST /api/v3/command (ManualImport)
+// Surfaces the individual files inside a download Sonarr/Radarr couldn't auto-import (e.g.
+// trackedDownloadState=importBlocked - a season-pack release where the service can't work out
+// every episode, or a rejected quality/language), so the user can review its own guess per file
+// and confirm (or exclude) it rather than the file sitting stuck in the queue forever. Field
+// names/shapes here are grounded in a live Sonarr v3 (4.0.18) response, not just API docs - see
+// the ManualImport DTOs' kdoc for the exact request that produced them.
+//
+// The GET response's `quality`/`languages` objects are round-tripped back verbatim in the POST
+// command below (Sonarr/Radarr's own web UI does the same) - Findroid doesn't attempt to
+// second-guess quality/language detection, only which episode(s)/movie a file maps to and
+// whether to import it at all.
+
+@Serializable data class PvrQualityDetail(val id: Int = 0, val name: String? = null)
+
+@Serializable data class PvrQualityRevision(val version: Int = 1, val real: Int = 0, val isRepack: Boolean = false)
+
+@Serializable
+data class PvrQualityInfo(val quality: PvrQualityDetail? = null, val revision: PvrQualityRevision? = null)
+
+@Serializable data class PvrLanguage(val id: Int = 0, val name: String? = null)
+
+@Serializable data class PvrRejection(val reason: String, val type: String? = null)
+
+@Serializable
+data class SonarrManualImportEpisode(
+    val id: Int,
+    val episodeNumber: Int = 0,
+    val title: String? = null,
+)
+
+@Serializable data class SonarrManualImportSeriesRef(val id: Int = 0, val title: String? = null)
+
+@Serializable
+data class SonarrManualImportItem(
+    // Not a stable identifier across requests (Sonarr recomputes it per call) - only used to
+    // round-trip a file's own guessed mapping back in the ManualImport command below, same as
+    // Sonarr's own web UI does.
+    val id: Int,
+    val path: String? = null,
+    val folderName: String? = null,
+    val name: String? = null,
+    val size: Long = 0L,
+    val seasonNumber: Int? = null,
+    val series: SonarrManualImportSeriesRef? = null,
+    val episodes: List<SonarrManualImportEpisode> = emptyList(),
+    val quality: PvrQualityInfo? = null,
+    val languages: List<PvrLanguage> = emptyList(),
+    val downloadId: String? = null,
+    val rejections: List<PvrRejection> = emptyList(),
+)
+
+@Serializable
+data class RadarrManualImportItem(
+    val id: Int,
+    val path: String? = null,
+    val folderName: String? = null,
+    val name: String? = null,
+    val size: Long = 0L,
+    val movie: RadarrMovie? = null,
+    val quality: PvrQualityInfo? = null,
+    val languages: List<PvrLanguage> = emptyList(),
+    val downloadId: String? = null,
+    val rejections: List<PvrRejection> = emptyList(),
+)
+
+@Serializable
+data class SonarrManualImportFile(
+    val id: Int,
+    val path: String? = null,
+    val folderName: String? = null,
+    val seriesId: Int? = null,
+    val episodeIds: List<Int> = emptyList(),
+    val quality: PvrQualityInfo? = null,
+    val languages: List<PvrLanguage> = emptyList(),
+    val downloadId: String? = null,
+)
+
+@Serializable
+data class RadarrManualImportFile(
+    val id: Int,
+    val path: String? = null,
+    val folderName: String? = null,
+    val movieId: Int? = null,
+    val quality: PvrQualityInfo? = null,
+    val languages: List<PvrLanguage> = emptyList(),
+    val downloadId: String? = null,
+)
+
+@Serializable
+data class SonarrManualImportCommandRequest(
+    val name: String = "ManualImport",
+    val files: List<SonarrManualImportFile>,
+    val importMode: String = "auto",
+)
+
+@Serializable
+data class RadarrManualImportCommandRequest(
+    val name: String = "ManualImport",
+    val files: List<RadarrManualImportFile>,
+    val importMode: String = "auto",
 )
 
 // endregion

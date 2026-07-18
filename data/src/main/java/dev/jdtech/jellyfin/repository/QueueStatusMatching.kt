@@ -1,14 +1,17 @@
 package dev.jdtech.jellyfin.repository
 
+import dev.jdtech.jellyfin.api.pvr.RadarrManualImportItem
 import dev.jdtech.jellyfin.api.pvr.RadarrMovie
 import dev.jdtech.jellyfin.api.pvr.RadarrQueueItem
 import dev.jdtech.jellyfin.api.pvr.PvrImage
 import dev.jdtech.jellyfin.api.pvr.PvrStatusMessage
+import dev.jdtech.jellyfin.api.pvr.SonarrManualImportItem
 import dev.jdtech.jellyfin.api.pvr.SonarrQueueItem
 import dev.jdtech.jellyfin.api.pvr.SonarrSeries
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.ManualImportCandidate
 import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueItemStatus
@@ -148,6 +151,7 @@ private fun SonarrQueueItem.toQueueStatus(): QueueStatus =
         sizeleft = sizeleft,
         timeleft = timeleft,
         errorMessage = errorMessage ?: statusMessages.toDisplayText(),
+        downloadId = downloadId,
     )
 
 private fun RadarrQueueItem.toQueueStatus(): QueueStatus =
@@ -160,6 +164,7 @@ private fun RadarrQueueItem.toQueueStatus(): QueueStatus =
         sizeleft = sizeleft,
         timeleft = timeleft,
         errorMessage = errorMessage ?: statusMessages.toDisplayText(),
+        downloadId = downloadId,
     )
 
 /**
@@ -187,6 +192,7 @@ private fun buildQueueStatus(
     sizeleft: Long,
     timeleft: String?,
     errorMessage: String?,
+    downloadId: String?,
 ): QueueStatus {
     val etaSeconds = parseTimeleftSeconds(timeleft)
     val percent = if (size > 0) (((size - sizeleft) * 100) / size).toInt().coerceIn(0, 100) else -1
@@ -200,6 +206,7 @@ private fun buildQueueStatus(
         speedBytesPerSecond = speedBytesPerSecond,
         etaSeconds = etaSeconds,
         errorMessage = errorMessage,
+        downloadId = downloadId,
     )
 }
 
@@ -240,6 +247,40 @@ internal fun mapQueueItemStatus(
 
 private val FAILED_STATES = setOf("failed", "failedpending")
 private val IMPORTING_STATES = setOf("importpending", "importing", "imported")
+
+/**
+ * Sonarr's guess for which episode(s) a manual-import candidate file belongs to, formatted like
+ * the rest of the app ("S1E6"); multi-episode files (a double-length special, say) join their
+ * episode numbers ("S1E6E7"). Null when Sonarr couldn't determine any episode for the file at all
+ * - see [ManualImportCandidate.canImport].
+ */
+internal fun SonarrManualImportItem.toCandidate(): ManualImportCandidate {
+    val episodeLabel =
+        episodes.takeIf { it.isNotEmpty() }?.let { eps ->
+            val seasonPrefix = seasonNumber?.let { "S$it" }.orEmpty()
+            seasonPrefix + eps.joinToString(separator = "") { "E${it.episodeNumber}" }
+        }
+    return ManualImportCandidate(
+        id = id,
+        name = name ?: path?.substringAfterLast('/') ?: UNKNOWN_TITLE,
+        sizeBytes = size,
+        qualityName = quality?.quality?.name,
+        episodeLabel = episodeLabel,
+        canImport = series?.id != null && episodes.isNotEmpty(),
+        rejections = rejections.map { it.reason },
+    )
+}
+
+internal fun RadarrManualImportItem.toCandidate(): ManualImportCandidate =
+    ManualImportCandidate(
+        id = id,
+        name = name ?: path?.substringAfterLast('/') ?: UNKNOWN_TITLE,
+        sizeBytes = size,
+        qualityName = quality?.quality?.name,
+        episodeLabel = null,
+        canImport = movie?.id != null,
+        rejections = rejections.map { it.reason },
+    )
 
 /** Parses Sonarr/Radarr's `timeleft` duration string ("HH:MM:SS", sometimes "D.HH:MM:SS"). */
 internal fun parseTimeleftSeconds(timeleft: String?): Long {

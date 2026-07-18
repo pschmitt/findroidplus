@@ -1,9 +1,16 @@
 package dev.jdtech.jellyfin.repository
 
+import dev.jdtech.jellyfin.api.pvr.PvrQualityDetail
+import dev.jdtech.jellyfin.api.pvr.PvrQualityInfo
+import dev.jdtech.jellyfin.api.pvr.PvrRejection
 import dev.jdtech.jellyfin.api.pvr.PvrStatusMessage
+import dev.jdtech.jellyfin.api.pvr.RadarrManualImportItem
 import dev.jdtech.jellyfin.api.pvr.RadarrMovie
 import dev.jdtech.jellyfin.api.pvr.RadarrQueueItem
 import dev.jdtech.jellyfin.api.pvr.SonarrEpisode
+import dev.jdtech.jellyfin.api.pvr.SonarrManualImportEpisode
+import dev.jdtech.jellyfin.api.pvr.SonarrManualImportItem
+import dev.jdtech.jellyfin.api.pvr.SonarrManualImportSeriesRef
 import dev.jdtech.jellyfin.api.pvr.SonarrQueueItem
 import dev.jdtech.jellyfin.api.pvr.SonarrSeries
 import dev.jdtech.jellyfin.models.FindroidEpisode
@@ -422,6 +429,69 @@ class QueueStatusMatchingTest {
             result.single().status.errorMessage,
         )
     }
+
+    // endregion
+
+    // region manual import candidate mapping
+
+    @Test
+    fun `SonarrManualImportItem toCandidate formats the episode label and flags importable files`() {
+        // Grounded in a real Sonarr v3 GET /api/v3/manualimport response (Mushoku Tensei S01
+        // season-pack) - a file Sonarr mapped to a specific episode, already imported once.
+        val item =
+            SonarrManualImportItem(
+                id = 1068051129,
+                path = "/downloads/S01E06-A Day Off in Roa [E8841F59].mkv",
+                name = "S01E06-A Day Off in Roa [E8841F59]",
+                size = 914265058,
+                seasonNumber = 1,
+                series = SonarrManualImportSeriesRef(id = 68, title = "Mushoku Tensei"),
+                episodes = listOf(SonarrManualImportEpisode(id = 4602, episodeNumber = 6)),
+                quality = PvrQualityInfo(quality = PvrQualityDetail(id = 7, name = "Bluray-1080p")),
+                downloadId = "ADE418CD87072DDF0E2513500FD39C3282EAE073",
+                rejections =
+                    listOf(PvrRejection(reason = "Episode file already imported at 7/18/2026 4:19:29 AM")),
+            )
+
+        val candidate = item.toCandidate()
+
+        assertEquals(1068051129, candidate.id)
+        assertEquals("S1E6", candidate.episodeLabel)
+        assertEquals("Bluray-1080p", candidate.qualityName)
+        assertEquals(914265058L, candidate.sizeBytes)
+        assertTrue(candidate.canImport)
+        assertEquals(1, candidate.rejections.size)
+    }
+
+    @Test
+    fun `SonarrManualImportItem toCandidate cannot import a file with no episode guess at all`() {
+        // Sonarr couldn't map this file to any episode - a manual episode assignment (not yet
+        // supported) would be needed, so it must not be selectable for import as-is.
+        val item =
+            SonarrManualImportItem(
+                id = 2,
+                name = "Unrecognized.File.mkv",
+                series = null,
+                episodes = emptyList(),
+            )
+
+        val candidate = item.toCandidate()
+
+        assertNull(candidate.episodeLabel)
+        assertTrue(!candidate.canImport)
+    }
+
+    @Test
+    fun `RadarrManualImportItem toCandidate has no episode label and is importable once matched to a movie`() {
+        val matched = RadarrManualImportItem(id = 1, name = "Some.Movie.mkv", movie = RadarrMovie(id = 7, tmdbId = 2000))
+        val unmatched = RadarrManualImportItem(id = 2, name = "Unrecognized.Movie.mkv", movie = null)
+
+        assertNull(matched.toCandidate().episodeLabel)
+        assertTrue(matched.toCandidate().canImport)
+        assertTrue(!unmatched.toCandidate().canImport)
+    }
+
+    // endregion
 
     @Test
     fun `parseTimeleftSeconds parses HH-MM-SS and day-prefixed durations, and blanks as unknown`() {

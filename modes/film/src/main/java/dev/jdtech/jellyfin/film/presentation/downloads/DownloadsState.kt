@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.film.presentation.downloads
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.ManualImportCandidate
 import dev.jdtech.jellyfin.models.PvrDiskSpaceResult
 import dev.jdtech.jellyfin.models.PvrFetchError
 import dev.jdtech.jellyfin.models.PvrSource
@@ -23,6 +24,10 @@ data class DownloadsState(
     val deleteProgress: DeleteProgress? = null,
     val pvrQueueGroups: List<PvrQueueGroup> = emptyList(),
     val pvrErrors: List<PvrFetchError> = emptyList(),
+    // (source, queueItemId) pairs, since Sonarr and Radarr each have their own queue-row id
+    // namespace - a bare Int would collide between the two services.
+    val selectedPvrQueueIds: Set<Pair<PvrSource, Int>> = emptySet(),
+    val manualImport: ManualImportSheetState? = null,
     val diskSpace: PvrDiskSpaceResult = PvrDiskSpaceResult(),
     val deviceStorage: DeviceStorageStats? = null,
 ) {
@@ -59,9 +64,33 @@ data class PvrQueueUiItem(
 
 data class PvrQueueGroup(val source: PvrSource, val items: List<PvrQueueUiItem>)
 
+/**
+ * Drives the "manage imports" bottom sheet - the individual files inside a queue entry
+ * Sonarr/Radarr couldn't fully auto-import (see [ManualImportCandidate]). [selectedIds] defaults
+ * to every importable candidate once loaded; the user deselects files they don't want imported
+ * (e.g. duplicates already on disk).
+ */
+data class ManualImportSheetState(
+    val source: PvrSource,
+    val downloadId: String,
+    val title: String,
+    val isLoading: Boolean = true,
+    val isImporting: Boolean = false,
+    val candidates: List<ManualImportCandidate> = emptyList(),
+    val selectedIds: Set<Int> = emptySet(),
+    val error: String? = null,
+)
+
 /** One-shot feedback for a PVR queue-item removal, shown as a toast. */
 sealed interface DownloadsEvent {
     data class PvrQueueItemRemoved(val title: String) : DownloadsEvent
 
     data class PvrQueueItemRemoveFailed(val message: String?) : DownloadsEvent
+
+    /** [failed] is the count of the [removed] + [failed] total that didn't go through. */
+    data class PvrQueueItemsRemoved(val removed: Int, val failed: Int) : DownloadsEvent
+
+    data object ManualImportCompleted : DownloadsEvent
+
+    data class ManualImportFailed(val message: String?) : DownloadsEvent
 }

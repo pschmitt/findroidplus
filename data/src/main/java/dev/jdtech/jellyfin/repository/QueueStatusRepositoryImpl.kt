@@ -1,13 +1,17 @@
 package dev.jdtech.jellyfin.repository
 
 import dev.jdtech.jellyfin.api.pvr.RadarrApi
+import dev.jdtech.jellyfin.api.pvr.RadarrManualImportFile
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
+import dev.jdtech.jellyfin.api.pvr.SonarrManualImportFile
 import dev.jdtech.jellyfin.api.pvr.SonarrQueueItem
 import dev.jdtech.jellyfin.api.pvr.SonarrSeries
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.ManualImportCandidate
 import dev.jdtech.jellyfin.models.PvrFetchError
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.PvrQueueSnapshot
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueItemStatus
@@ -98,41 +102,14 @@ class QueueStatusRepositoryImpl(
         removeFromClient: Boolean,
         blocklist: Boolean,
     ): Result<Unit> {
-        val serviceName = if (source == PvrSource.SONARR) "Sonarr" else "Radarr"
+        val serviceName = serviceName(source)
         return try {
-            when (source) {
-                PvrSource.SONARR -> {
-                    val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-                    val apiKey = sonarrApiKeyProvider()
-                    if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
-                        return Result.failure(IllegalStateException("Sonarr is not configured"))
-                    }
-                    SonarrApi(baseUrl, apiKey)
-                        .deleteQueueItem(queueItemId, removeFromClient, blocklist)
-                }
-                PvrSource.RADARR -> {
-                    val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-                    val apiKey = radarrApiKeyProvider()
-                    if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
-                        return Result.failure(IllegalStateException("Radarr is not configured"))
-                    }
-                    RadarrApi(baseUrl, apiKey)
-                        .deleteQueueItem(queueItemId, removeFromClient, blocklist)
-                }
-            }
+            deleteQueueItemRemote(source, queueItemId, removeFromClient, blocklist)
             // Drop the entry from the current snapshot before refreshing: the disappearance diff
             // in notifyFinishedDownloads would otherwise read this user-initiated removal as
             // "finished importing" and fire a bogus notification. The refresh then updates the
             // flows right away instead of waiting out the poll interval.
-            refreshMutex.withLock {
-                _queueSnapshot.value =
-                    _queueSnapshot.value.copy(
-                        entries =
-                            _queueSnapshot.value.entries.filterNot {
-                                it.status.source == source && it.queueItemId == queueItemId
-                            }
-                    )
-            }
+            dropFromSnapshot { it.status.source == source && it.queueItemId == queueItemId }
             refreshNow()
             Result.success(Unit)
         } catch (e: CancellationException) {
@@ -142,6 +119,162 @@ class QueueStatusRepositoryImpl(
             Result.failure(mapPvrSearchError(serviceName, e))
         }
     }
+
+    override suspend fun removeQueueItems(
+        items: List<Pair<PvrSource, Int>>,
+        removeFromClient: Boolean,
+        blocklist: Boolean,
+    ): List<Pair<PvrSource, Int>> = coroutineScope {
+        if (items.isEmpty()) return@coroutineScope emptyList()
+
+        // Each removal is its own request/failure domain (no bulk queue-delete endpoint exists),
+        // run concurrently rather than sequentially so an N-item removal doesn't serialize N
+        // network round trips - only the final snapshot filter + refresh below is shared.
+        val failed =
+            items
+                .map { (source, queueItemId) ->
+                    async {
+                        try {
+                            deleteQueueItemRemote(source, queueItemId, removeFromClient, blocklist)
+                            null
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Timber.w(e, "Failed to remove ${serviceName(source)} queue item $queueItemId")
+                            source to queueItemId
+                        }
+                    }
+                }
+                .awaitAll()
+                .filterNotNull()
+
+        val removed = (items - failed.toSet()).toSet()
+        dropFromSnapshot { (it.status.source to it.queueItemId) in removed }
+        refreshNow()
+        failed
+    }
+
+    private suspend fun deleteQueueItemRemote(
+        source: PvrSource,
+        queueItemId: Int,
+        removeFromClient: Boolean,
+        blocklist: Boolean,
+    ) {
+        when (source) {
+            PvrSource.SONARR ->
+                sonarrApiOrThrow().deleteQueueItem(queueItemId, removeFromClient, blocklist)
+            PvrSource.RADARR ->
+                radarrApiOrThrow().deleteQueueItem(queueItemId, removeFromClient, blocklist)
+        }
+    }
+
+    override suspend fun getManualImportCandidates(
+        source: PvrSource,
+        downloadId: String,
+    ): Result<List<ManualImportCandidate>> {
+        val serviceName = serviceName(source)
+        return try {
+            val candidates =
+                when (source) {
+                    PvrSource.SONARR ->
+                        sonarrApiOrThrow().getManualImportItems(downloadId).map { it.toCandidate() }
+                    PvrSource.RADARR ->
+                        radarrApiOrThrow().getManualImportItems(downloadId).map { it.toCandidate() }
+                }
+            Result.success(candidates)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to list $serviceName manual import candidates for $downloadId")
+            Result.failure(mapPvrSearchError(serviceName, e))
+        }
+    }
+
+    override suspend fun performManualImport(
+        source: PvrSource,
+        downloadId: String,
+        selectedIds: Set<Int>,
+    ): Result<Unit> {
+        val serviceName = serviceName(source)
+        return try {
+            when (source) {
+                PvrSource.SONARR -> {
+                    val api = sonarrApiOrThrow()
+                    val files =
+                        api.getManualImportItems(downloadId)
+                            .filter { it.id in selectedIds }
+                            .map { item ->
+                                SonarrManualImportFile(
+                                    id = item.id,
+                                    path = item.path,
+                                    folderName = item.folderName,
+                                    seriesId = item.series?.id,
+                                    episodeIds = item.episodes.map { it.id },
+                                    quality = item.quality,
+                                    languages = item.languages,
+                                    downloadId = item.downloadId,
+                                )
+                            }
+                    api.triggerManualImport(files)
+                }
+                PvrSource.RADARR -> {
+                    val api = radarrApiOrThrow()
+                    val files =
+                        api.getManualImportItems(downloadId)
+                            .filter { it.id in selectedIds }
+                            .map { item ->
+                                RadarrManualImportFile(
+                                    id = item.id,
+                                    path = item.path,
+                                    folderName = item.folderName,
+                                    movieId = item.movie?.id,
+                                    quality = item.quality,
+                                    languages = item.languages,
+                                    downloadId = item.downloadId,
+                                )
+                            }
+                    api.triggerManualImport(files)
+                }
+            }
+            refreshNow()
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to perform $serviceName manual import for $downloadId")
+            Result.failure(mapPvrSearchError(serviceName, e))
+        }
+    }
+
+    private suspend fun dropFromSnapshot(predicate: (PvrQueueEntry) -> Boolean) {
+        refreshMutex.withLock {
+            _queueSnapshot.value =
+                _queueSnapshot.value.copy(
+                    entries = _queueSnapshot.value.entries.filterNot(predicate)
+                )
+        }
+    }
+
+    private suspend fun sonarrApiOrThrow(): SonarrApi {
+        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
+        val apiKey = sonarrApiKeyProvider()
+        if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
+            throw IllegalStateException("Sonarr is not configured")
+        }
+        return SonarrApi(baseUrl, apiKey)
+    }
+
+    private suspend fun radarrApiOrThrow(): RadarrApi {
+        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
+        val apiKey = radarrApiKeyProvider()
+        if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
+            throw IllegalStateException("Radarr is not configured")
+        }
+        return RadarrApi(baseUrl, apiKey)
+    }
+
+    private fun serviceName(source: PvrSource): String =
+        if (source == PvrSource.SONARR) "Sonarr" else "Radarr"
 
     /**
      * A queue entry that was queued/downloading/importing in the [previous] snapshot and is gone

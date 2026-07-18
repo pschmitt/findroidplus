@@ -220,3 +220,27 @@ human judgment.
       now show Sonarr/Radarr's real explanation instead of a generic label.
 
 Status: **done** (2026-07-18).
+
+## FINDROID-9: PVR queue bulk actions + manual import review
+
+- [x] Downloads screen: no way to clear every pending Sonarr/Radarr download at
+      once - long-pressing the "Pending downloads" section header (or a single
+      row) now enters a selection mode mirroring the existing local-downloads
+      one (checkboxes, top-bar count/clear/bulk-remove), reusing the
+      removeFromClient/blocklist confirmation. `QueueStatusRepository` gained a
+      `removeQueueItems` batch method (concurrent per-item Sonarr/Radarr calls,
+      one shared snapshot refresh at the end - the v3 API has no bulk
+      queue-delete endpoint).
+- [x] Added a "manage imports" review UI for downloads Sonarr/Radarr couldn't
+      fully auto-import (`trackedDownloadState=importBlocked`, etc.) - lists the
+      individual files via `GET /api/v3/manualimport?downloadId=X` (service's
+      own guessed episode/quality mapping + rejection reasons per file, grounded
+      in a live Sonarr response) with a per-file checkbox, and imports the
+      selected ones via `POST /api/v3/command` (`ManualImport`). Reachable from
+      a new icon on `WARNING`/`FAILED` queue rows. Files Sonarr couldn't map to
+      any episode at all are shown (for visibility) but not selectable - fixing
+      those still requires Sonarr/Radarr's own web UI, since assigning a
+      different episode/movie to a file isn't implemented yet (a real, but
+      separate, follow-up from surfacing the review UI itself).
+
+Status: **done** (2026-07-18).

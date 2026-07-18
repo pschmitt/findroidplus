@@ -53,6 +53,10 @@ data class QueueStatus(
     val speedBytesPerSecond: Long = 0L,
     val etaSeconds: Long = -1L,
     val errorMessage: String? = null,
+    // The underlying download-client transfer's id (distinct from the queue row's own id) - what
+    // GET/POST /api/v3/manualimport filters/targets by. Null when the PVR service didn't report
+    // one (should not happen in practice, but the field is optional on the wire).
+    val downloadId: String? = null,
 )
 
 enum class PvrSource { SONARR, RADARR }
