@@ -54,80 +54,89 @@ fun ManualImportSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
-        Column(
-            modifier =
-                Modifier.padding(
-                    horizontal = MaterialTheme.spacings.medium,
-                    vertical = MaterialTheme.spacings.medium,
-                )
-        ) {
-            Text(text = stringResource(CoreR.string.manual_import_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = state.title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        HorizontalDivider()
-        when {
-            state.isLoading ->
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            state.error != null && state.candidates.isEmpty() ->
-                Text(
-                    text = stringResource(CoreR.string.manual_import_loading_failed, state.error.orEmpty()),
-                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            state.candidates.isEmpty() ->
-                Text(
-                    text = stringResource(CoreR.string.manual_import_empty),
-                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            else ->
-                LazyColumn(contentPadding = PaddingValues(horizontal = MaterialTheme.spacings.medium)) {
-                    itemsIndexed(items = state.candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
-                        ManualImportRow(
-                            candidate = candidate,
-                            checked = candidate.id in state.selectedIds,
-                            onToggle = { onToggleSelection(candidate.id) },
-                        )
-                        if (index != state.candidates.lastIndex) {
-                            HorizontalDivider()
-                        }
-                    }
-                }
-        }
-        if (state.candidates.isNotEmpty()) {
-            Row(
+        // The candidate list is wrapped in its own weighted, non-filling Box so it only claims
+        // space up to what's left after the header/footer - without this, an unbounded LazyColumn
+        // as a plain Column child greedily fills all remaining sheet height, pushing the "Import
+        // selected" button below the visible viewport (the sheet itself doesn't scroll as a whole).
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
                 modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(MaterialTheme.spacings.medium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val errorMessage = state.error
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f),
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacings.medium,
+                        vertical = MaterialTheme.spacings.medium,
                     )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+            ) {
+                Text(text = stringResource(CoreR.string.manual_import_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = state.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            HorizontalDivider()
+            Box(modifier = Modifier.weight(1f, fill = false)) {
+                when {
+                    state.isLoading ->
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    state.error != null && state.candidates.isEmpty() ->
+                        Text(
+                            text = stringResource(CoreR.string.manual_import_loading_failed, state.error.orEmpty()),
+                            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    state.candidates.isEmpty() ->
+                        Text(
+                            text = stringResource(CoreR.string.manual_import_empty),
+                            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    else ->
+                        LazyColumn(contentPadding = PaddingValues(horizontal = MaterialTheme.spacings.medium)) {
+                            itemsIndexed(items = state.candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
+                                ManualImportRow(
+                                    candidate = candidate,
+                                    checked = candidate.id in state.selectedIds,
+                                    onToggle = { onToggleSelection(candidate.id) },
+                                )
+                                if (index != state.candidates.lastIndex) {
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
                 }
-                Button(onClick = onConfirm, enabled = state.selectedIds.isNotEmpty() && !state.isImporting) {
-                    if (state.isImporting) {
-                        CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
+            }
+            if (state.candidates.isNotEmpty()) {
+                HorizontalDivider()
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(MaterialTheme.spacings.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val errorMessage = state.error
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f),
+                        )
                     } else {
-                        Text(text = stringResource(CoreR.string.manual_import_confirm, state.selectedIds.size))
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    Button(onClick = onConfirm, enabled = state.selectedIds.isNotEmpty() && !state.isImporting) {
+                        if (state.isImporting) {
+                            CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
+                        } else {
+                            Text(text = stringResource(CoreR.string.manual_import_confirm, state.selectedIds.size))
+                        }
                     }
                 }
             }
