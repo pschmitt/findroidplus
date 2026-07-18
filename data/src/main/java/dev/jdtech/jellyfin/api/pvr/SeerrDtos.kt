@@ -103,6 +103,18 @@ data class SeerrRequestMedia(
 // Rich TMDB detail payloads, used both to resolve titles/posters for the requests list and to
 // back the dedicated Seerr media detail view.
 
+/**
+ * One TMDB-sourced video (trailer/teaser/clip/featurette/...) - `site` is almost always
+ * "YouTube", and `url` is already a full playable link (`https://www.youtube.com/watch?v={key}`),
+ * not just the bare video id.
+ */
+@Serializable
+data class SeerrRelatedVideo(
+    val url: String? = null,
+    val site: String? = null,
+    val type: String? = null,
+)
+
 @Serializable
 data class SeerrMovieDetails(
     val id: Int,
@@ -114,6 +126,7 @@ data class SeerrMovieDetails(
     val runtime: Int? = null,
     val genres: List<SeerrGenre> = emptyList(),
     val mediaInfo: SeerrMediaInfo? = null,
+    val relatedVideos: List<SeerrRelatedVideo> = emptyList(),
 )
 
 @Serializable
@@ -127,6 +140,7 @@ data class SeerrTvDetails(
     val numberOfSeasons: Int? = null,
     val genres: List<SeerrGenre> = emptyList(),
     val mediaInfo: SeerrMediaInfo? = null,
+    val relatedVideos: List<SeerrRelatedVideo> = emptyList(),
 )
 
 @Serializable

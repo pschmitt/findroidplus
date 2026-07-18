@@ -2,6 +2,7 @@ package dev.jdtech.jellyfin.repository
 
 import dev.jdtech.jellyfin.api.pvr.SeerrApi
 import dev.jdtech.jellyfin.api.pvr.SeerrMediaInfo
+import dev.jdtech.jellyfin.api.pvr.SeerrRelatedVideo
 import dev.jdtech.jellyfin.api.pvr.SeerrSearchResult
 import dev.jdtech.jellyfin.models.SeerrEpisodeDetail
 import dev.jdtech.jellyfin.models.SeerrMediaDetail
@@ -68,6 +69,7 @@ class SeerrRepositoryImpl(
                     overview = details.overview?.takeIf { it.isNotBlank() },
                     posterUrl = details.posterPath?.toPosterUrl(),
                     backdropUrl = details.backdropPath?.toBackdropUrl(),
+                    trailerUrl = details.relatedVideos.firstTrailerUrl(),
                     genres = details.genres.map { it.name }.filter { it.isNotBlank() },
                     runtimeMinutes = details.runtime?.takeIf { it > 0 },
                     numberOfSeasons = null,
@@ -116,6 +118,7 @@ class SeerrRepositoryImpl(
                     overview = details.overview?.takeIf { it.isNotBlank() },
                     posterUrl = details.posterPath?.toPosterUrl(),
                     backdropUrl = details.backdropPath?.toBackdropUrl(),
+                    trailerUrl = details.relatedVideos.firstTrailerUrl(),
                     genres = details.genres.map { it.name }.filter { it.isNotBlank() },
                     runtimeMinutes = null,
                     numberOfSeasons = details.numberOfSeasons?.takeIf { it > 0 },
@@ -238,6 +241,17 @@ class SeerrRepositoryImpl(
     /** Declined requests can't be cancelled - there is nothing left to undo. */
     private fun SeerrMediaInfo?.cancellableRequestIds(): List<Int> =
         this?.requests?.filter { it.status != REQUEST_STATUS_DECLINED }?.map { it.id }.orEmpty()
+
+    /**
+     * TMDB lists every kind of video (teasers, clips, featurettes, ...) with no reliable ordering
+     * - prefer an explicit "Trailer", falling back to the first YouTube video at all so there's
+     * still something to play if TMDB only tagged it as a "Teaser" or similar.
+     */
+    private fun List<SeerrRelatedVideo>.firstTrailerUrl(): String? {
+        val youtubeVideos = filter { it.site.equals("YouTube", ignoreCase = true) && it.url != null }
+        return youtubeVideos.firstOrNull { it.type.equals("Trailer", ignoreCase = true) }?.url
+            ?: youtubeVideos.firstOrNull()?.url
+    }
 
     private suspend fun <T> runAction(block: suspend (SeerrApi) -> T): Result<T> {
         val api =

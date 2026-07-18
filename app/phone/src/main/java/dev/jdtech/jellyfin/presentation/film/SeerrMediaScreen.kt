@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -165,6 +166,8 @@ private fun SeerrMediaScreenLayout(
     onAction: (SeerrMediaAction) -> Unit,
 ) {
     val safePadding = rememberSafePadding()
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
     val paddingEnd = safePadding.end + MaterialTheme.spacings.default
@@ -301,6 +304,32 @@ private fun SeerrMediaScreenLayout(
                                             modifier = Modifier.size(18.dp),
                                         )
                                         Text(text = stringResource(CoreR.string.seerr_cancel_request))
+                                    }
+                                }
+                            }
+                            // Not in the library yet - there's nothing to play, but TMDB usually
+                            // has a trailer, so offer that instead while the request works its
+                            // way through Sonarr/Radarr.
+                            detail.trailerUrl?.let { trailerUrl ->
+                                OutlinedButton(
+                                    onClick = {
+                                        try {
+                                            uriHandler.openUri(trailerUrl)
+                                        } catch (e: IllegalArgumentException) {
+                                            Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) {
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(MaterialTheme.spacings.small)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_film),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Text(text = stringResource(CoreR.string.trailer))
                                     }
                                 }
                             }

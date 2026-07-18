@@ -252,3 +252,19 @@ Status: **done** (2026-07-18).
       (same removeFromClient/blocklist confirmation as the row-level one).
 
 Status: **done** (2026-07-18).
+
+## FINDROID-10: Trailer button for not-yet-in-library Seerr media
+
+- [x] Movies/shows the user has only requested via Seerr (not in the Jellyfin
+      library yet) had no trailer option, unlike already-imported items - added
+      a "Trailer" button to the Seerr media detail view. Jellyseerr's
+      `/api/v1/movie|tv/{tmdbId}` detail responses already embed a
+      `relatedVideos` array (confirmed live against the real instance) with
+      TMDB's videos (trailers/teasers/clips/...), each with a ready-to-open
+      YouTube URL - added `SeerrRelatedVideo`/`relatedVideos` to the DTOs and
+      picks the first "Trailer"-typed YouTube entry (falling back to any
+      YouTube video if TMDB didn't tag one as a trailer). Opens the same way
+      library-item trailers already do (`LocalUriHandler.openUri`, i.e. the
+      YouTube app or a browser) - no new playback mechanism needed.
+
+Status: **done** (2026-07-18).

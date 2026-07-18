@@ -59,6 +59,8 @@ data class SeerrMediaDetail(
     val overview: String?,
     val posterUrl: String?,
     val backdropUrl: String?,
+    /** First YouTube trailer TMDB has for this title, if any - see `SeerrRelatedVideo`. */
+    val trailerUrl: String? = null,
     val genres: List<String>,
     /** Movies only. */
     val runtimeMinutes: Int?,
