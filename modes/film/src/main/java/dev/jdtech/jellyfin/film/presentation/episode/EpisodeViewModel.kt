@@ -8,6 +8,7 @@ import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
@@ -24,6 +25,7 @@ import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
 import dev.jdtech.jellyfin.utils.Downloader
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +47,7 @@ constructor(
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val sonarrSearchRepository: SonarrSearchRepository,
     private val pvrConfiguration: PvrConfiguration,
+    @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
     private val _state = MutableStateFlow(EpisodeState())
     val state = _state.asStateFlow()
@@ -160,7 +163,10 @@ constructor(
         onlyUnwatched: Boolean,
     ) {
         val episode = _state.value.episode ?: return
-        viewModelScope.launch {
+        // Deliberately not viewModelScope - see ShowViewModel.downloadWithScope's kdoc for why:
+        // it would otherwise be silently cancelled (truncating the batch) as soon as the user
+        // navigates away from this screen while the enqueue loop is still running.
+        externalScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             val userId = repository.getUserId()
 

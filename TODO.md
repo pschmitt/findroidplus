@@ -289,5 +289,32 @@ Status: **done** (2026-07-18).
       (plus a small color-coded caption below, e.g. "1.2 GiB used by
       downloads") - the server storage row is unchanged, since there's no
       equivalent "ours vs. other" split available for it.
+- [x] Downloads screen: the storage summary card was visibly narrower than the
+      show-title cards right above/below it in the same list - it had an
+      outer `Card` margin *in addition to* its inner content padding, while
+      every other card in that list (`SectionHeader`, `ShowGroupHeader`) is
+      edge-to-edge with a single padding layer. Removed the redundant outer
+      margin so widths match.
+
+Status: **done** (2026-07-18).
+
+## FINDROID-12: Bulk-download truncated by leaving the screen mid-enqueue
+
+- [x] "Download > Entire show" for a real show ("Alien: Earth", 8 episodes)
+      only queued 4-5 episodes instead of all 8 - reproduced live and traced
+      to `ShowViewModel`/`SeasonViewModel`/`EpisodeViewModel`'s
+      `downloadWithScope` running its per-episode enqueue loop in
+      `viewModelScope`, which is cancelled the instant the user navigates away
+      from that screen (e.g. tapping another tab to check download progress -
+      exactly what triggered it in testing) - silently truncating whatever
+      part of the batch hadn't been enqueued yet, with no error or indication
+      to the user. `DownloaderImpl.kt` already carried a TODO flagging this
+      exact class of bug. Added a process-lifetime `@ApplicationScope`
+      `CoroutineScope` (Hilt-provided, `core/.../di/ApplicationScopeModule.kt`,
+      same pattern already used for `QueueStatusRepositoryImpl`'s poll loop)
+      and moved all three `downloadWithScope` enqueue loops onto it instead of
+      `viewModelScope`. Verified live: re-ran the same "download entire show,
+      then immediately switch tabs" sequence and all 8 episodes queued
+      correctly this time.
 
 Status: **done** (2026-07-18).

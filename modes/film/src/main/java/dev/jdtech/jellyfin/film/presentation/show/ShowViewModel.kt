@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.FindroidEpisode
@@ -24,6 +25,7 @@ import dev.jdtech.jellyfin.utils.clearDownloads
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +43,7 @@ constructor(
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val appPreferences: AppPreferences,
     private val calendarRepository: CalendarRepository,
+    @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShowState())
     val state = _state.asStateFlow()
@@ -102,7 +105,12 @@ constructor(
         alsoFollowNew: Boolean,
         onlyUnwatched: Boolean,
     ) {
-        viewModelScope.launch {
+        // Deliberately not viewModelScope: enqueuing a full show/season can take a while (one
+        // network round trip per episode), and viewModelScope is cancelled the instant this
+        // screen is popped off the back stack (e.g. the user taps another tab to check on
+        // progress) - which silently truncated the batch partway through. externalScope survives
+        // that navigation so every episode gets enqueued regardless of what the user does next.
+        externalScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             val userId = repository.getUserId()
 

@@ -719,7 +719,10 @@ private fun DownloadsStorageSummaryCard(
     pvrStorage: PvrServiceDiskSpace?,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
+    // Edge-to-edge, matching every other Card in this list (SectionHeader, ShowGroupHeader) -
+    // this previously had an outer margin *in addition to* the inner Column padding below, making
+    // it visibly narrower than the show-title cards right above/below it in the same list.
+    Card(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(MaterialTheme.spacings.default),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
