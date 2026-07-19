@@ -514,6 +514,12 @@ class DownloaderImpl(
         }
     }
 
+    override fun resolvePreferredStorageIndex(): Int {
+        val preference = appPreferences.getValue(appPreferences.downloadLocation)
+        val resolved = resolveDownloadStorageIndex(context, preference)
+        return if (resolved >= 0) resolved else 0
+    }
+
     override fun getProgressFlow(downloadId: Long): Flow<DownloadProgress> {
         val sourceId =
             database.getSourceByDownloadId(downloadId)?.id

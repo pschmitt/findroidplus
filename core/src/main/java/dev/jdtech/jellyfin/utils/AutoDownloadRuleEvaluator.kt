@@ -26,6 +26,11 @@ class AutoDownloadRuleEvaluator {
         val ruleCreatedAt =
             Instant.ofEpochMilli(rule.createdAt).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
+        // Resolved once per evaluate() call, not per episode - the preference can't change
+        // mid-loop, and this is what makes every episode land on the user's actually-configured
+        // download location instead of always ending up on storage index 0 regardless of it.
+        val storageIndex = downloader.resolvePreferredStorageIndex()
+
         val ruleSeasonId = rule.seasonId
         val seasonIds =
             try {
@@ -76,7 +81,7 @@ class AutoDownloadRuleEvaluator {
                     }
 
                     val sourceId = episode.sources.firstOrNull()?.id ?: continue
-                    downloader.downloadItem(episode, sourceId, storageIndex = 0)
+                    downloader.downloadItem(episode, sourceId, storageIndex = storageIndex)
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to queue download for episode ${episode.id}")
                 }

@@ -72,4 +72,11 @@ interface Downloader {
     // covers everywhere a download could actually live, not just index 0. A volume that fails to
     // read (unmounted, StatFs error) is simply omitted rather than the whole list failing.
     fun getAllStorageStats(): List<DeviceStorageStats>
+
+    // Resolves the user's configured "download location" preference (internal/external/ask) to a
+    // concrete getExternalFilesDirs() index, falling back to 0 when the preference is "ask" or
+    // its preferred volume isn't currently mounted - there's no one to ask in a non-interactive
+    // context (a bulk/auto-download batch, or the background AutoDownloadWorker), so this is the
+    // storageIndex every such caller should use instead of hardcoding 0 regardless of preference.
+    fun resolvePreferredStorageIndex(): Int
 }

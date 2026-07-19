@@ -380,5 +380,21 @@ Status: **done** (2026-07-19).
       once there's more than one) and attributes each local download to the
       *correct* volume by matching its file path's prefix against each
       volume's root, instead of assuming everything is on index 0.
+- [x] The multi-volume display above surfaced a *real* download-location bug:
+      new downloads kept landing on internal storage even with "External"
+      configured as the download location. Root cause: `AutoDownloadRuleEvaluator`
+      (used by every season/show bulk download and by `AutoDownloadWorker`'s
+      background auto-downloads - i.e. the path `DownloadScopeDialog` actually
+      goes through) hardcoded `storageIndex = 0` for every episode, completely
+      ignoring the configured preference. Only the single-item quick-download
+      path (`ItemButtonsBar.startDownload()`) resolved it correctly. Added
+      `Downloader.resolvePreferredStorageIndex()` (wraps the existing
+      `resolveDownloadStorageIndex()` helper, falling back to 0 only for "ask"
+      or an unmounted preferred volume) and use it in the evaluator instead of
+      the hardcoded 0.
+- [x] Reverted the Material3 "stop indicator" dot removed from progress bars
+      earlier this fork's history - re-added across Downloads/Settings/the
+      downloader card.
+- [x] Renamed the Downloads storage label "On this device" to "This Device".
 
 Status: **done** (2026-07-19).

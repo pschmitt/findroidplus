@@ -893,7 +893,6 @@ private fun DeleteProgressCard(progress: DeleteProgress, onDismiss: () -> Unit) 
                         if (progress.total > 0) progress.done / progress.total.toFloat() else 0f
                     },
                     modifier = Modifier.fillMaxWidth().height(3.dp),
-                    drawStopIndicator = {},
                 )
             }
             Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
@@ -1117,7 +1116,6 @@ private fun DownloadRow(
                         LinearProgressIndicator(
                             progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
                             modifier = Modifier.fillMaxWidth().height(3.dp),
-                            drawStopIndicator = {},
                         )
                     }
                 } else {
@@ -1312,7 +1310,6 @@ private fun PvrQueueRow(
                 LinearProgressIndicator(
                     progress = { status.percent.coerceIn(0, 100) / 100f },
                     modifier = Modifier.fillMaxWidth().height(3.dp),
-                    drawStopIndicator = {},
                 )
             }
         }

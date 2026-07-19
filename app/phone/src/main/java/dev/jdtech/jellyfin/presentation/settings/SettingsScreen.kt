@@ -261,7 +261,6 @@ private fun RelocateProgressCard(progress: RelocateDownloadsProgress) {
                     if (progress.total > 0) progress.done / progress.total.toFloat() else 0f
                 },
                 modifier = Modifier.fillMaxWidth(),
-                drawStopIndicator = {},
             )
         }
     }
