@@ -89,6 +89,15 @@ constructor(
             }
         }
         viewModelScope.launch {
+            downloader.getMigrateProgressFlow().collect { progress ->
+                val wasRunning = _state.value.moveProgress != null
+                _state.update { it.copy(moveProgress = progress) }
+                // Storage usage shifted between volumes - refresh the summary bars once the
+                // batch actually finishes, not on every intermediate progress tick.
+                if (wasRunning && progress == null) refreshStorage()
+            }
+        }
+        viewModelScope.launch {
             queueStatusRepository.getQueueSnapshotFlow().collect { snapshot ->
                 val groups = buildPvrQueueGroups(snapshot.entries)
                 val liveKeys = groups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
@@ -302,6 +311,16 @@ constructor(
             downloader.deleteItems(ids)
             _state.update { it.copy(selectedIds = it.selectedIds - ids.toSet()) }
             refreshDownloads()
+        }
+    }
+
+    /** Moves the current selection to a different storage volume - see [Downloader.migrateItems]. */
+    fun migrateSelected(toStorageIndex: Int) {
+        val ids = _state.value.selectedIds.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            downloader.migrateItems(ids, toStorageIndex)
+            _state.update { it.copy(selectedIds = it.selectedIds - ids.toSet()) }
         }
     }
 

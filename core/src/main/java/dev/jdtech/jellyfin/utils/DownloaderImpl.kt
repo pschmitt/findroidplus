@@ -17,6 +17,7 @@ import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSource
+import dev.jdtech.jellyfin.models.FindroidSourceDto
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
@@ -39,6 +40,7 @@ import dev.jdtech.jellyfin.work.DeleteDownloadsWorker
 import dev.jdtech.jellyfin.work.DownloadNotificationCoordinator
 import dev.jdtech.jellyfin.work.DownloadSlotLimiter
 import dev.jdtech.jellyfin.work.ImagesDownloaderWorker
+import dev.jdtech.jellyfin.work.MigrateDownloadsWorker
 import dev.jdtech.jellyfin.work.VideoDownloadWorker
 import java.io.File
 import java.io.FileInputStream
@@ -360,17 +362,82 @@ class DownloaderImpl(
 
         sources.forEachIndexed { index, sourceDto ->
             try {
-                moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)
-                    ?.let { newPath -> database.setSourcePath(sourceDto.id, newPath) }
-                for (mediaStream in database.getMediaStreamsBySourceId(sourceDto.id)) {
-                    moveFile(File(mediaStream.path), fromDir, toDir)?.let { newPath ->
-                        database.setMediaStreamPath(mediaStream.id, newPath)
-                    }
-                }
+                moveSourceFiles(sourceDto, fromDir, toDir)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to move download ${sourceDto.id} to new storage location")
             }
             onProgress(index + 1, sources.size)
+        }
+    }
+
+    override suspend fun moveItems(
+        itemIds: List<UUID>,
+        toStorageIndex: Int,
+        onProgress: suspend (done: Int, total: Int) -> Unit,
+    ) {
+        if (itemIds.isEmpty()) return
+        val storageLocations = context.getExternalFilesDirs(null)
+        val toDir = storageLocations.getOrNull(toStorageIndex) ?: return
+        val mountedDirs = storageLocations.filterNotNull()
+
+        val sources =
+            database.getSourcesForItems(itemIds).filter {
+                it.type == FindroidSourceType.LOCAL && !it.path.startsWith(toDir.path)
+            }
+
+        sources.forEachIndexed { index, sourceDto ->
+            try {
+                // A selected item could in principle already be on a *different* volume than the
+                // one most downloads happen to live on, so this is resolved per-source rather than
+                // assuming a single shared fromDir the way the whole-volume moveDownloads() can.
+                val fromDir = mountedDirs.firstOrNull { sourceDto.path.startsWith(it.path) }
+                if (fromDir != null) {
+                    moveSourceFiles(sourceDto, fromDir, toDir)
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to migrate download ${sourceDto.id} to new storage location")
+            }
+            onProgress(index + 1, sources.size)
+        }
+    }
+
+    override suspend fun migrateItems(itemIds: List<UUID>, toStorageIndex: Int) {
+        if (itemIds.isEmpty()) return
+        val request =
+            OneTimeWorkRequestBuilder<MigrateDownloadsWorker>()
+                .setInputData(
+                    workDataOf(
+                        MigrateDownloadsWorker.KEY_ITEM_IDS to
+                            itemIds.map { it.toString() }.toTypedArray(),
+                        MigrateDownloadsWorker.KEY_TO_STORAGE_INDEX to toStorageIndex,
+                    )
+                )
+                .build()
+        // APPEND (not KEEP/REPLACE) for the same reason as deleteItems(): a migrate triggered
+        // while an earlier batch is still running queues after it instead of being dropped.
+        workManager.enqueueUniqueWork(MIGRATE_DOWNLOADS_WORK_NAME, ExistingWorkPolicy.APPEND, request)
+    }
+
+    override fun getMigrateProgressFlow(): Flow<MigrateProgress?> {
+        return workManager.getWorkInfosForUniqueWorkFlow(MIGRATE_DOWNLOADS_WORK_NAME).map { infos ->
+            val active = infos.firstOrNull { !it.state.isFinished } ?: return@map null
+            MigrateProgress(
+                done = active.progress.getInt(MigrateDownloadsWorker.KEY_DONE, 0),
+                total = active.progress.getInt(MigrateDownloadsWorker.KEY_TOTAL, 0),
+            )
+        }
+    }
+
+    /** Shared per-source move: the file itself plus any external media stream files. */
+    private fun moveSourceFiles(sourceDto: FindroidSourceDto, fromDir: File, toDir: File) {
+        moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)?.let {
+            newPath ->
+            database.setSourcePath(sourceDto.id, newPath)
+        }
+        for (mediaStream in database.getMediaStreamsBySourceId(sourceDto.id)) {
+            moveFile(File(mediaStream.path), fromDir, toDir)?.let { newPath ->
+                database.setMediaStreamPath(mediaStream.id, newPath)
+            }
         }
     }
 
@@ -681,5 +748,6 @@ class DownloaderImpl(
 
     companion object {
         private const val DELETE_DOWNLOADS_WORK_NAME = "deleteDownloads"
+        private const val MIGRATE_DOWNLOADS_WORK_NAME = "migrateDownloads"
     }
 }

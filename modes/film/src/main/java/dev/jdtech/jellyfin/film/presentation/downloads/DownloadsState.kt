@@ -11,6 +11,7 @@ import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.utils.DeleteProgress
 import dev.jdtech.jellyfin.utils.DeviceStorageStats
 import dev.jdtech.jellyfin.utils.DownloadProgress
+import dev.jdtech.jellyfin.utils.MigrateProgress
 import java.util.UUID
 
 data class DownloadsState(
@@ -22,6 +23,7 @@ data class DownloadsState(
     val selectedIds: Set<UUID> = emptySet(),
     val downloadProgress: Map<UUID, DownloadProgress> = emptyMap(),
     val deleteProgress: DeleteProgress? = null,
+    val moveProgress: MigrateProgress? = null,
     val pvrQueueGroups: List<PvrQueueGroup> = emptyList(),
     val pvrErrors: List<PvrFetchError> = emptyList(),
     // (source, queueItemId) pairs, since Sonarr and Radarr each have their own queue-row id

@@ -79,4 +79,24 @@ interface Downloader {
     // context (a bulk/auto-download batch, or the background AutoDownloadWorker), so this is the
     // storageIndex every such caller should use instead of hardcoding 0 regardless of preference.
     fun resolvePreferredStorageIndex(): Int
+
+    // Moves the LOCAL sources of exactly these items to toStorageIndex's volume (a source already
+    // there is left alone) - the selection-scoped counterpart to moveDownloads()'s whole-volume
+    // move, called directly by MigrateDownloadsWorker. [onProgress] reports (done, total) as each
+    // item finishes. Prefer migrateItems() from UI code - this is the piece the worker runs.
+    suspend fun moveItems(
+        itemIds: List<UUID>,
+        toStorageIndex: Int,
+        onProgress: suspend (done: Int, total: Int) -> Unit = { _, _ -> },
+    )
+
+    // Enqueues a background migration of exactly these items (e.g. the Downloads screen's
+    // selection) to toStorageIndex's volume, via the same "survives the app being backgrounded"
+    // WorkManager pattern as deleteItems().
+    suspend fun migrateItems(itemIds: List<UUID>, toStorageIndex: Int)
+
+    // Emits the progress of the currently running (or most recently finished) migrateItems()
+    // batch, or null if none has run yet / the last one fully drained - mirrors
+    // getDeleteProgressFlow().
+    fun getMigrateProgressFlow(): Flow<MigrateProgress?>
 }

@@ -96,10 +96,12 @@ import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
+import dev.jdtech.jellyfin.presentation.film.components.StorageSelectionDialog
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.DeleteProgress
+import dev.jdtech.jellyfin.utils.MigrateProgress
 import dev.jdtech.jellyfin.utils.DeviceStorageStats
 import dev.jdtech.jellyfin.utils.DownloadProgress
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
@@ -165,6 +167,7 @@ fun DownloadsScreen(
     var clearAllDialogOpen by remember { mutableStateOf(false) }
     var deleteSelectedDialogOpen by remember { mutableStateOf(false) }
     var deleteSelectedPvrDialogOpen by remember { mutableStateOf(false) }
+    var migrateDialogOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PendingDownloadDelete?>(null) }
     var pendingGroupDelete by remember { mutableStateOf<DownloadShowGroup?>(null) }
     var pendingPvrRemove by remember { mutableStateOf<Pair<PvrQueueUiItem, PvrSource>?>(null) }
@@ -191,6 +194,7 @@ fun DownloadsScreen(
                 else -> clearAllDialogOpen = true
             }
         },
+        onMigrateClick = { migrateDialogOpen = true },
         onClearSelection = {
             if (state.selectedPvrQueueIds.isNotEmpty()) viewModel.togglePvrQueueSelectAll(false)
             else viewModel.toggleSelectAll(false)
@@ -236,6 +240,31 @@ fun DownloadsScreen(
                 pendingPvrRemove = null
             },
             onDismiss = { pendingPvrRemove = null },
+        )
+    }
+
+    if (migrateDialogOpen) {
+        val locations =
+            remember(state.deviceStorages) {
+                state.deviceStorages.map { storage ->
+                    val locationLabel =
+                        androidContext.getString(
+                            if (storage.isRemovable) CoreR.string.external else CoreR.string.internal
+                        )
+                    androidContext.getString(
+                        CoreR.string.storage_name,
+                        locationLabel,
+                        storage.availableBytes / 1_000_000,
+                    )
+                }
+            }
+        StorageSelectionDialog(
+            storageLocations = locations,
+            onSelect = { index ->
+                viewModel.migrateSelected(index)
+                migrateDialogOpen = false
+            },
+            onDismiss = { migrateDialogOpen = false },
         )
     }
 
@@ -327,6 +356,7 @@ private fun DownloadsScreenLayout(
     state: DownloadsState,
     onSettingsClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
+    onMigrateClick: () -> Unit = {},
     onClearSelection: () -> Unit = {},
     onItemClick: (FindroidItem) -> Unit = {},
     onToggleSelection: (UUID) -> Unit = {},
@@ -380,6 +410,10 @@ private fun DownloadsScreenLayout(
     LaunchedEffect(state.deleteProgress == null) {
         if (state.deleteProgress == null) deleteProgressDismissed = false
     }
+    var moveProgressDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(state.moveProgress == null) {
+        if (state.moveProgress == null) moveProgressDismissed = false
+    }
 
     Scaffold(
         modifier =
@@ -387,12 +421,22 @@ private fun DownloadsScreenLayout(
                 .recalculateWindowInsets()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         bottomBar = {
-            state.deleteProgress?.let { progress ->
-                if (!deleteProgressDismissed) {
-                    DeleteProgressCard(
-                        progress = progress,
-                        onDismiss = { deleteProgressDismissed = true },
-                    )
+            Column {
+                state.deleteProgress?.let { progress ->
+                    if (!deleteProgressDismissed) {
+                        DeleteProgressCard(
+                            progress = progress,
+                            onDismiss = { deleteProgressDismissed = true },
+                        )
+                    }
+                }
+                state.moveProgress?.let { progress ->
+                    if (!moveProgressDismissed) {
+                        MoveProgressCard(
+                            progress = progress,
+                            onDismiss = { moveProgressDismissed = true },
+                        )
+                    }
                 }
             }
         },
@@ -432,6 +476,14 @@ private fun DownloadsScreenLayout(
                                         if (allPaused) CoreR.string.resume_all_downloads
                                         else CoreR.string.pause_all_downloads
                                     ),
+                            )
+                        }
+                    }
+                    if (selectionMode && state.deviceStorages.size > 1) {
+                        IconButton(onClick = onMigrateClick) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_arrow_down_up),
+                                contentDescription = stringResource(CoreR.string.migrate_selected_downloads),
                             )
                         }
                     }
@@ -748,7 +800,7 @@ private fun DownloadsStorageSummaryCard(
                 // than silently implying Findroid's downloads are the only thing using space.
                 val deviceUsedBytes = (device.totalBytes - device.availableBytes).coerceAtLeast(0L)
                 StorageUsageBar(
-                    iconRes = CoreR.drawable.ic_smartphone,
+                    iconRes = if (device.isRemovable) CoreR.drawable.ic_database else CoreR.drawable.ic_smartphone,
                     label =
                         if (deviceStorages.size > 1) {
                             stringResource(
@@ -882,6 +934,43 @@ private fun DeleteProgressCard(progress: DeleteProgress, onDismiss: () -> Unit) 
                     text =
                         stringResource(
                             CoreR.string.delete_downloads_progress,
+                            progress.done,
+                            progress.total,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = {
+                        if (progress.total > 0) progress.done / progress.total.toFloat() else 0f
+                    },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_x),
+                    contentDescription = stringResource(CoreR.string.cancel),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoveProgressCard(progress: MigrateProgress, onDismiss: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.migrate_downloads_progress,
                             progress.done,
                             progress.total,
                         ),

@@ -398,3 +398,25 @@ Status: **done** (2026-07-19).
 - [x] Renamed the Downloads storage label "On this device" to "This Device".
 
 Status: **done** (2026-07-19).
+
+## FINDROID-16: Migrate selected downloads between storage volumes
+
+- [x] The External storage row reused the same phone icon as Internal - gave
+      it a distinct icon (`ic_database`) so the two are visually
+      distinguishable at a glance, not just by label text.
+- [x] Added a way to move specific selected downloads (not everything on a
+      volume) to a different storage location: long-press to select
+      movies/episodes on the Downloads screen (existing multi-select), then a
+      new "migrate" icon in the top bar (before the trash icon) opens a
+      storage picker and moves just the selection there. Only shown when more
+      than one storage volume actually exists (`state.deviceStorages.size > 1`)
+      - meaningless on a device with no external/removable storage.
+      `Downloader.migrateItems()`/`moveItems()` mirror the existing
+      `deleteItems()`/`deleteItem()` pair (a new `MigrateDownloadsWorker`,
+      backed by WorkManager so it survives the app being backgrounded, same as
+      bulk-delete) - the selection-scoped counterpart to the existing
+      whole-volume `moveDownloads()` used when the download-location
+      preference changes in Settings. Progress shown via a bottom card
+      mirroring the existing delete-progress one.
+
+Status: **done** (2026-07-19).

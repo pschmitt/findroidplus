@@ -50,4 +50,14 @@ class FakeDownloader : Downloader {
     override fun getAllStorageStats(): List<DeviceStorageStats> = error("not used")
 
     override fun resolvePreferredStorageIndex(): Int = error("not used")
+
+    override suspend fun moveItems(
+        itemIds: List<UUID>,
+        toStorageIndex: Int,
+        onProgress: suspend (done: Int, total: Int) -> Unit,
+    ) = error("not used")
+
+    override suspend fun migrateItems(itemIds: List<UUID>, toStorageIndex: Int) = error("not used")
+
+    override fun getMigrateProgressFlow(): Flow<MigrateProgress?> = error("not used")
 }
