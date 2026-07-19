@@ -260,6 +260,10 @@
     <string name="download_action_resume">Resume</string>
     <string name="download_action_cancel">Cancel</string>
     <string name="download_action_force">Force</string>
+    <string name="download_action_redownload">Re-download</string>
+    <string name="download_row_broken">File missing - tap to re-download</string>
+    <string name="broken_downloads_banner_message">%1$d download(s) have a missing or empty file - e.g. after removing or reformatting a storage volume</string>
+    <string name="broken_downloads_banner_action">Re-download all</string>
     <string name="pause_all_downloads">Pause all downloads</string>
     <string name="resume_all_downloads">Resume all downloads</string>
     <string name="downloading_items_count">Downloading %1$d of %2$d episodes</string>

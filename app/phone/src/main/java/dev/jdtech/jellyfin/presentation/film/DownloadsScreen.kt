@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -92,6 +93,7 @@ import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.PvrServiceDiskSpace
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueItemStatus
+import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
@@ -228,6 +230,8 @@ fun DownloadsScreen(
         onTogglePvrQueueSelectAll = viewModel::togglePvrQueueSelectAll,
         onManageImport = viewModel::openManualImport,
         onRefresh = viewModel::refresh,
+        onRedownloadRequest = viewModel::redownloadItem,
+        onRedownloadAllBrokenClick = viewModel::redownloadAllBroken,
     )
 
     state.manualImport?.let { manualImport ->
@@ -372,6 +376,8 @@ private fun DownloadsScreenLayout(
     onTogglePvrQueueSelectAll: (Boolean) -> Unit = {},
     onManageImport: (PvrQueueUiItem, PvrSource) -> Unit = { _, _ -> },
     onRefresh: () -> Unit = {},
+    onRedownloadRequest: (FindroidItem) -> Unit = {},
+    onRedownloadAllBrokenClick: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val allIds =
@@ -386,6 +392,10 @@ private fun DownloadsScreenLayout(
             }
         }
     val totalLocalSizeBytes = remember(localSources) { localSources.sumOf { it.size } }
+    val brokenCount =
+        remember(state.movies, state.showGroups) {
+            (state.movies + state.showGroups.flatMap { it.episodes }).count { it.isDownloadBroken() }
+        }
     val allSelected = allIds.isNotEmpty() && state.selectedIds.containsAll(allIds)
     val selectionMode = state.selectedIds.isNotEmpty()
     val pvrQueueKeys =
@@ -526,6 +536,14 @@ private fun DownloadsScreenLayout(
                         )
                     }
                 }
+                if (brokenCount > 0) {
+                    item {
+                        BrokenDownloadsBanner(
+                            count = brokenCount,
+                            onRedownloadAllClick = onRedownloadAllBrokenClick,
+                        )
+                    }
+                }
                 if (selectionMode) {
                     item {
                         Row(
@@ -579,6 +597,7 @@ private fun DownloadsScreenLayout(
                                 },
                                 deviceStorages = state.deviceStorages,
                                 isMigrating = movie.id in state.migratingIds,
+                                onRedownloadRequest = { onRedownloadRequest(movie) },
                             )
                         }
                     }
@@ -652,6 +671,7 @@ private fun DownloadsScreenLayout(
                             },
                             deviceStorages = state.deviceStorages,
                             isMigrating = episode.id in state.migratingIds,
+                            onRedownloadRequest = { onRedownloadRequest(episode) },
                         )
                     }
                 }
@@ -757,6 +777,49 @@ private fun DownloadsEmptyState(onGoToHomeClick: () -> Unit, modifier: Modifier 
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
         Button(onClick = onGoToHomeClick) {
             Text(text = stringResource(CoreR.string.downloads_empty_go_home))
+        }
+    }
+}
+
+/**
+ * Shown whenever one or more downloaded items have a missing/empty local file (see
+ * [dev.jdtech.jellyfin.models.isDownloadBroken]) - most commonly after a storage volume the
+ * downloads lived on got removed or reformatted. A single button re-downloads every broken item
+ * at once rather than making the user hunt each one down individually in a long list.
+ */
+@Composable
+private fun BrokenDownloadsBanner(
+    count: Int,
+    onRedownloadAllClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacings.default),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_alert_circle),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(CoreR.string.broken_downloads_banner_message, count),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
+                Button(onClick = onRedownloadAllClick) {
+                    Icon(painter = painterResource(CoreR.drawable.ic_download), contentDescription = null)
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                    Text(text = stringResource(CoreR.string.broken_downloads_banner_action))
+                }
+            }
         }
     }
 }
@@ -1200,11 +1263,16 @@ private fun DownloadRow(
     onSwipeDeleteRequest: () -> Unit,
     deviceStorages: List<DeviceStorageStats> = emptyList(),
     isMigrating: Boolean = false,
+    onRedownloadRequest: () -> Unit = {},
 ) {
     val activeProgress = progress?.takeIf { it.status != DownloadManager.STATUS_SUCCESSFUL }
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
     val isPaused = activeProgress?.status == DownloadManager.STATUS_PAUSED
     val isVerifying = activeProgress?.status == DownloadProgress.STATUS_VERIFYING
+    // Only meaningful once the row has settled (not mid-download/mid-move, where the file is
+    // legitimately incomplete/absent right now) - a resting completed source is never
+    // legitimately 0 bytes, so outside those states it means the file vanished from disk.
+    val isBroken = activeProgress == null && !isMigrating && item.isDownloadBroken()
     val localSource = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
     val sizeBytes = localSource?.size ?: 0L
     val storageIcon = remember(localSource?.path, deviceStorages) {
@@ -1224,6 +1292,9 @@ private fun DownloadRow(
                                 // is about to change and the bytes at the old one may already be
                                 // gone, so opening it for playback is unsafe until that settles.
                                 isMigrating -> {}
+                                // Nothing on disk to play - use the re-download/delete icons
+                                // instead of guessing what a tap here should do.
+                                isBroken -> {}
                                 else -> onClick()
                             }
                         },
@@ -1287,6 +1358,22 @@ private fun DownloadRow(
                         // Indeterminate - MigrateDownloadsWorker only reports an aggregate
                         // done/total for the whole batch, not this item's own progress.
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
+                    }
+                    isBroken -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_alert_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(CoreR.string.download_row_broken),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                     else -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1356,6 +1443,24 @@ private fun DownloadRow(
                         modifier = Modifier.size(24.dp).padding(2.dp),
                         strokeWidth = 2.dp,
                     )
+                }
+                // No play button here either - there's nothing playable on disk. Offer the two
+                // ways out instead: try again, or give up and remove the dangling entry (the
+                // trash icon here is a shortcut for the same swipe-to-delete gesture below).
+                isBroken -> {
+                    IconButton(onClick = onRedownloadRequest) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_download),
+                            contentDescription = stringResource(CoreR.string.download_action_redownload),
+                        )
+                    }
+                    IconButton(onClick = onSwipeDeleteRequest) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = stringResource(CoreR.string.delete_download),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
                 item.isDownloaded() -> {
                     IconButton(onClick = onClick) {

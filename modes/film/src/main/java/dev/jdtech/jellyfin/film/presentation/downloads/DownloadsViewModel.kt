@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.PvrSource
+import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloading
 import dev.jdtech.jellyfin.models.toFindroidEpisodes
 import dev.jdtech.jellyfin.models.toFindroidMovies
@@ -349,6 +350,40 @@ constructor(
             it.copy(selectedIds = it.selectedIds - ids.toSet(), migratingIds = it.migratingIds + ids)
         }
         viewModelScope.launch { downloader.migrateItems(ids, toStorageIndex) }
+    }
+
+    /**
+     * Re-triggers a download for an item whose local file is missing/empty on disk (see
+     * [dev.jdtech.jellyfin.models.isDownloadBroken]) - e.g. after the storage volume it lived on
+     * got reformatted. [Downloader.downloadItem] re-inserts the source row in place (same id,
+     * `OnConflictStrategy.REPLACE`) rather than erroring on the stale one, so no explicit
+     * delete-first step is needed.
+     */
+    fun redownloadItem(item: FindroidItem) {
+        viewModelScope.launch {
+            redownload(item, downloader.resolvePreferredStorageIndex())
+            refreshDownloads()
+        }
+    }
+
+    /** Bulk version of [redownloadItem] - every broken movie/episode currently in the list. */
+    fun redownloadAllBroken() {
+        viewModelScope.launch {
+            val broken =
+                (_state.value.movies + _state.value.showGroups.flatMap { it.episodes }).filter {
+                    it.isDownloadBroken()
+                }
+            if (broken.isEmpty()) return@launch
+            val storageIndex = downloader.resolvePreferredStorageIndex()
+            broken.forEach { redownload(it, storageIndex) }
+            refreshDownloads()
+        }
+    }
+
+    private suspend fun redownload(item: FindroidItem, storageIndex: Int) {
+        val sourceId =
+            item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.id ?: return
+        downloader.downloadItem(item, sourceId, storageIndex)
     }
 
     fun onDownloadAction(itemId: UUID, action: DownloadAction) {

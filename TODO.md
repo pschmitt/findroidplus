@@ -530,3 +530,37 @@ Status: **done** (2026-07-19).
       different, already-bulk flow with no single "this file" semantics.
 
 Status: **done** (2026-07-19).
+
+## FINDROID-21: Detect and recover downloads whose local file vanished
+
+- [x] Reported bug: reformatting an SD card used as a download location wipes
+      the files on disk, but the DB still has LOCAL source rows pointing at
+      them, so the Downloads screen kept listing those episodes/movies as
+      downloaded - showing "0 B" for their size (`FindroidSource.size` is a
+      live `File(path).length()` read, which silently returns 0 for a
+      vanished file instead of throwing) and still offering Play, which would
+      fail against a file that's gone.
+- [x] Added `FindroidItem.isDownloadBroken()` (data/.../FindroidItem.kt): a
+      completed (non-`.download`) LOCAL source is never legitimately 0
+      bytes, so `size <= 0` is an unambiguous "file's actually missing"
+      signal - cheap, no extra I/O beyond the stat already happening.
+- [x] Downloads screen rows for a broken item show an error-tinted "File
+      missing - tap to re-download" status instead of the (misleading) "0 B"
+      size, and swap the play button for two icons: re-download and delete
+      (reusing the existing swipe-to-delete path). Tapping the row body is a
+      no-op rather than guessing "play" or "re-download" - same treatment as
+      the migrating-row guard added earlier this session.
+- [x] `DownloadsViewModel.redownloadItem()`/`redownloadAllBroken()` just call
+      `Downloader.downloadItem()` again for the broken source(s) -
+      `insertSource` is `OnConflictStrategy.REPLACE` on the same id, so it
+      overwrites the stale row in place with no explicit delete-first step
+      (confirmed via `AutoDownloadRuleEvaluator`'s identical re-trigger
+      pattern). Progress tracking falls out for free: the fresh `.download`
+      path makes `reconcileDownloadProgress()`'s existing `isDownloading()`
+      check pick it up on the next refresh, same as any other new download.
+- [x] Added a dismissless `BrokenDownloadsBanner` card (shown above the
+      movies/shows list whenever `brokenCount > 0`) with a single "Re-download
+      all" button, so a whole reformatted volume's worth of broken items
+      doesn't need re-downloading one row at a time.
+
+Status: **done** (2026-07-19).

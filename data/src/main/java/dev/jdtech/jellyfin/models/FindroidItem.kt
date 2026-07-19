@@ -51,6 +51,20 @@ fun FindroidItem.isDownloaded(): Boolean {
 }
 
 /**
+ * A completed local download whose file is actually missing or empty on disk right now - e.g.
+ * the storage volume it lived on got reformatted or unmounted. [FindroidSource.size] is a live
+ * `File(path).length()` read (see `FindroidSourceDto.toFindroidSource`), which silently returns 0
+ * for a vanished file rather than throwing - a completed (non-`.download`) source is never
+ * legitimately 0 bytes, so this is an unambiguous signal to stop offering Play and surface a
+ * re-download/delete choice instead.
+ */
+fun FindroidItem.isDownloadBroken(): Boolean {
+    return sources
+        .filter { it.type == FindroidSourceType.LOCAL && !it.path.endsWith(".download") }
+        .any { it.size <= 0L }
+}
+
+/**
  * TMDB id, when known - only [FindroidMovie]/[FindroidShow] carry one (Jellyfin's own
  * `ProviderIds["Tmdb"]`, a nullable String there since it's Jellyfin-sourced metadata, not
  * guaranteed present). Used to match a Jellyfin library item against a Seerr search result, whose
