@@ -1660,15 +1660,20 @@ private fun MigrateDownloadsDialog(
 
     var selectedTargetIndex by
         remember(selectedSources, deviceStorages) {
-            // Default to whichever volume already holds the *most* of the selection - migrating
-            // then consolidates the smaller group into it, moving fewer items than the other way
-            // around. Irrelevant when the selection isn't mixed: there's only one non-source
-            // volume anyway.
+            // Default to a volume the selection isn't already entirely on, so there's actually
+            // something to move - the common case (selection lives on one volume) must default
+            // to the *other* one, not to itself (which would make every item a no-op and leave
+            // nothing to migrate). Only once every volume already holds part of the selection
+            // (a genuinely mixed pick spanning all of them) does "most of the selection" become
+            // the sensible default, since every choice then moves something regardless - and
+            // picking the majority's volume moves the fewest items.
+            val absentIndices = deviceStorages.indices.filterNot { it in presentIndices }
             mutableStateOf(
-                deviceStorages.indices
-                    .maxByOrNull { index ->
+                absentIndices.firstOrNull()
+                    ?: deviceStorages.indices.maxByOrNull { index ->
                         selectedSources.count { it.path.startsWith(deviceStorages[index].path) }
-                    } ?: 0
+                    }
+                    ?: 0
             )
         }
 
