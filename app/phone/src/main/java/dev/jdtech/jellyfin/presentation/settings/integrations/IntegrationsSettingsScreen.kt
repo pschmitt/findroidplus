@@ -1,30 +1,42 @@
 package dev.jdtech.jellyfin.presentation.settings.integrations
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,26 +44,37 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.models.DiscoveredServer
 import dev.jdtech.jellyfin.models.ServerWithAddresses
+import dev.jdtech.jellyfin.models.User
 import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.presentation.setup.components.DiscoveredServerItem
+import dev.jdtech.jellyfin.presentation.setup.components.LoadingButton
 import dev.jdtech.jellyfin.settings.R as SettingsR
 import dev.jdtech.jellyfin.setup.R as SetupR
+import java.util.UUID
 
 @Composable
 fun IntegrationsSettingsScreen(
@@ -115,6 +138,7 @@ private fun IntegrationsSettingsScreenLayout(
                 onLogin = { username, password ->
                     onAction(IntegrationsSettingsAction.OnLoginJellyfinUser(username, password))
                 },
+                onQuickConnect = { onAction(IntegrationsSettingsAction.OnQuickConnectClick) },
                 onDeleteUser = { onAction(IntegrationsSettingsAction.OnDeleteJellyfinUser(it)) },
             )
 
@@ -286,19 +310,54 @@ private fun IntegrationsSettingsScreenLayout(
 private fun JellyfinConnectionSection(
     state: IntegrationsSettingsState,
     onServerSelected: (String) -> Unit,
-    onUserSelected: (java.util.UUID) -> Unit,
+    onUserSelected: (UUID) -> Unit,
     onAddServer: (String) -> Unit,
     onDeleteServer: (String) -> Unit,
     onLogin: (String, String) -> Unit,
-    onDeleteUser: (java.util.UUID) -> Unit,
+    onQuickConnect: () -> Unit,
+    onDeleteUser: (UUID) -> Unit,
 ) {
     var serverAddress by rememberSaveable { mutableStateOf("") }
+    // Collapsed by default once at least one server exists - there's no reason to greet an
+    // already-configured user with an open "add server" text box every time they open Settings.
+    var addServerExpanded by rememberSaveable { mutableStateOf(false) }
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var showLoginForm by rememberSaveable { mutableStateOf(false) }
     var serverToDelete by remember { mutableStateOf<ServerWithAddresses?>(null) }
-    var userToDelete by remember { mutableStateOf<dev.jdtech.jellyfin.models.User?>(null) }
+    var userToDelete by remember { mutableStateOf<User?>(null) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Once a server is successfully added the list grows - collapse the inline form and clear
+    // the address field instead of leaving a stale "add server" box open under the server it
+    // just created.
+    var previousServerCount by remember { mutableIntStateOf(state.jellyfinServers.size) }
+    LaunchedEffect(state.jellyfinServers.size) {
+        if (state.jellyfinServers.size > previousServerCount) {
+            addServerExpanded = false
+            serverAddress = ""
+        }
+        previousServerCount = state.jellyfinServers.size
+    }
+
+    // Same idea once a login succeeds: fold the username/password form back away instead of
+    // leaving it dangling open below the user who just signed in.
+    val hasCurrentUser = state.currentUserId != null
+    LaunchedEffect(hasCurrentUser) {
+        if (hasCurrentUser) {
+            showLoginForm = false
+            username = ""
+            password = ""
+        }
+    }
+
+    val showAddServerForm = state.jellyfinServers.isEmpty() || addServerExpanded
+    val signedInUserName =
+        state.jellyfinUsers.firstOrNull { it.id.toString() == state.currentUserId }?.name.orEmpty()
+    val knownUserIds = state.jellyfinUsers.map { it.id }.toSet()
+    val selectablePublicUsers = state.jellyfinPublicUsers.filterNot { it.id in knownUserIds }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painter = painterResource(CoreR.drawable.ic_logo),
@@ -311,119 +370,252 @@ private fun JellyfinConnectionSection(
                 style = MaterialTheme.typography.titleMedium,
             )
         }
+
         if (state.jellyfinServers.isEmpty()) {
             Text(
                 text = stringResource(CoreR.string.integrations_no_jellyfin_server),
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
-            state.jellyfinServers.forEach { server ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = { onServerSelected(server.server.id) },
-                        modifier = Modifier.weight(1f),
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                state.jellyfinServers.forEach { server ->
+                    JellyfinServerRow(
+                        server = server,
+                        selected = state.currentServerId == server.server.id,
                         enabled = !state.jellyfinOperationInProgress,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(server.server.name)
-                            server.addresses.firstOrNull()?.let { address ->
-                                Text(address.address, style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                        if (state.currentServerId == server.server.id) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_check),
-                                contentDescription = null,
+                        onClick = { onServerSelected(server.server.id) },
+                        onDeleteClick = { serverToDelete = server },
+                    )
+                }
+            }
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth().clickable { addServerExpanded = !addServerExpanded },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(CoreR.string.integrations_jellyfin_add_server_toggle),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    painter =
+                        painterResource(
+                            if (addServerExpanded) CoreR.drawable.ic_chevron_up
+                            else CoreR.drawable.ic_chevron_down
+                        ),
+                    contentDescription =
+                        stringResource(
+                            if (addServerExpanded) CoreR.string.collapse else CoreR.string.expand
+                        ),
+                )
+            }
+        }
+
+        if (showAddServerForm) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AnimatedVisibility(state.jellyfinDiscoveredServers.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(state.jellyfinDiscoveredServers) { discovered ->
+                            DiscoveredServerItem(
+                                name = discovered.name,
+                                onClick = {
+                                    serverAddress = discovered.address
+                                    onAddServer(discovered.address)
+                                },
                             )
                         }
                     }
-                    IconButton(
-                        onClick = { serverToDelete = server },
-                        enabled = !state.jellyfinOperationInProgress,
-                    ) {
-                        Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
-                    }
                 }
+                OutlinedTextField(
+                    value = serverAddress,
+                    onValueChange = { serverAddress = it },
+                    label = { Text(stringResource(SetupR.string.edit_text_server_address_hint)) },
+                    singleLine = true,
+                    keyboardOptions =
+                        KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                    keyboardActions =
+                        KeyboardActions(
+                            onGo = {
+                                if (serverAddress.isNotBlank()) onAddServer(serverAddress)
+                            }
+                        ),
+                    isError = state.addServerError != null,
+                    enabled = !state.jellyfinOperationInProgress,
+                    supportingText = {
+                        state.addServerError?.let {
+                            Text(text = it.asString(), color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                LoadingButton(
+                    text = stringResource(SetupR.string.add_server_btn_connect),
+                    onClick = { onAddServer(serverAddress) },
+                    isLoading = state.jellyfinOperationInProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
-        OutlinedTextField(
-            value = serverAddress,
-            onValueChange = { serverAddress = it },
-            label = { Text(stringResource(SetupR.string.edit_text_server_address_hint)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(
-            onClick = { onAddServer(serverAddress) },
-            enabled = serverAddress.isNotBlank() && !state.jellyfinOperationInProgress,
-        ) {
-            Text(stringResource(SetupR.string.add_server_btn_connect))
-        }
+
         if (state.currentServerId != null) {
-            if (state.jellyfinUsers.isNotEmpty()) {
+            if (state.jellyfinUsers.isNotEmpty() || selectablePublicUsers.isNotEmpty()) {
                 Text(
                     text = stringResource(SettingsR.string.users),
                     style = MaterialTheme.typography.titleSmall,
                 )
-                state.jellyfinUsers.forEach { user ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
-                            onClick = { onUserSelected(user.id) },
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.jellyfinUsers.forEach { user ->
+                        JellyfinUserRow(
+                            name = user.name,
+                            selected = state.currentUserId == user.id.toString(),
                             enabled = !state.jellyfinOperationInProgress,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_user),
-                                contentDescription = null,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(user.name, modifier = Modifier.weight(1f))
-                            if (state.currentUserId == user.id.toString()) {
+                            onClick = { onUserSelected(user.id) },
+                            onDeleteClick = { userToDelete = user },
+                        )
+                    }
+                    // Public/guest users known to the server but never signed into on this
+                    // device - tapping one just prefills the login form below instead of
+                    // switching straight away, since a password is still required.
+                    selectablePublicUsers.forEach { user ->
+                        JellyfinUserRow(
+                            name = user.name,
+                            selected = false,
+                            enabled = !state.jellyfinOperationInProgress,
+                            dimmed = true,
+                            onClick = {
+                                username = user.name
+                                showLoginForm = true
+                            },
+                        )
+                    }
+                }
+            }
+
+            if (hasCurrentUser && !showLoginForm) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text =
+                            stringResource(
+                                CoreR.string.integrations_jellyfin_signed_in_as,
+                                signedInUserName,
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { showLoginForm = true }) {
+                        Text(stringResource(CoreR.string.integrations_jellyfin_add_another_user))
+                    }
+                }
+            }
+
+            if (!hasCurrentUser || showLoginForm) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(SetupR.string.edit_text_username_hint)) },
+                        singleLine = true,
+                        keyboardOptions =
+                            KeyboardOptions(
+                                autoCorrectEnabled = false,
+                                imeAction = ImeAction.Next,
+                            ),
+                        enabled = !state.jellyfinOperationInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(SetupR.string.edit_text_password_hint)) },
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
-                                    painter = painterResource(CoreR.drawable.ic_check),
+                                    painter =
+                                        painterResource(
+                                            if (passwordVisible) CoreR.drawable.ic_eye_off
+                                            else CoreR.drawable.ic_eye
+                                        ),
                                     contentDescription = null,
                                 )
                             }
-                        }
-                        IconButton(
-                            onClick = { userToDelete = user },
-                            enabled = !state.jellyfinOperationInProgress,
-                        ) {
-                            Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
+                        },
+                        visualTransformation =
+                            if (passwordVisible) VisualTransformation.None
+                            else PasswordVisualTransformation(),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                autoCorrectEnabled = false,
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Go,
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onGo = {
+                                    if (username.isNotBlank() && password.isNotBlank()) {
+                                        onLogin(username, password)
+                                    }
+                                }
+                            ),
+                        isError = state.loginError != null,
+                        enabled = !state.jellyfinOperationInProgress,
+                        supportingText = {
+                            state.loginError?.let {
+                                Text(text = it.asString(), color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    LoadingButton(
+                        text = stringResource(SetupR.string.login_btn_login),
+                        onClick = { onLogin(username, password) },
+                        isLoading = state.jellyfinOperationInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    AnimatedVisibility(state.quickConnectEnabled) {
+                        Column {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                                )
+                                Text(
+                                    text = stringResource(SetupR.string.or),
+                                    color = DividerDefaults.color,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box {
+                                if (state.quickConnectCode != null) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier =
+                                            Modifier.size(20.dp)
+                                                .align(Alignment.CenterStart)
+                                                .padding(start = 8.dp),
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = onQuickConnect,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        text =
+                                            state.quickConnectCode
+                                                ?: stringResource(SetupR.string.login_btn_quick_connect)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-            Text(
-                text = stringResource(SetupR.string.login),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text(stringResource(SetupR.string.edit_text_username_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text(stringResource(SetupR.string.edit_text_password_hint)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(
-                onClick = { onLogin(username, password) },
-                enabled = username.isNotBlank() && password.isNotBlank() && !state.jellyfinOperationInProgress,
-            ) {
-                Text(stringResource(SetupR.string.login_btn_login))
-            }
-        }
-        state.jellyfinError?.let { error ->
-            Text(text = error.asString(), color = MaterialTheme.colorScheme.error)
         }
     }
 
@@ -460,6 +652,102 @@ private fun JellyfinConnectionSection(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun JellyfinServerRow(
+    server: ServerWithAddresses,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+) {
+    OutlinedCard(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().clip(CardDefaults.outlinedShape),
+    ) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(painter = painterResource(CoreR.drawable.ic_server), contentDescription = null)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = server.server.name, style = MaterialTheme.typography.titleSmall)
+                server.addresses.firstOrNull()?.let { address ->
+                    Text(
+                        text = address.address,
+                        style = MaterialTheme.typography.bodySmall,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                    )
+                }
+            }
+            if (selected) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_check),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            IconButton(onClick = onDeleteClick, enabled = enabled) {
+                Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
+            }
+        }
+    }
+}
+
+@Composable
+private fun JellyfinUserRow(
+    name: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null,
+    dimmed: Boolean = false,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(CardDefaults.outlinedShape)
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(vertical = 4.dp)
+                .alpha(if (dimmed) 0.7f else 1f),
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceTint,
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.size(40.dp),
+        ) {
+            Box {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_user),
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(text = name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (selected) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(4.dp))
+        }
+        onDeleteClick?.let { deleteClick ->
+            IconButton(onClick = deleteClick, enabled = enabled) {
+                Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
+            }
+        }
     }
 }
 

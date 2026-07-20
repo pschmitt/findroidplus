@@ -1,16 +1,24 @@
 package dev.jdtech.jellyfin.presentation.settings.integrations
 
+import dev.jdtech.jellyfin.models.DiscoveredServer
 import dev.jdtech.jellyfin.models.ServerWithAddresses
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.models.User
 
 data class IntegrationsSettingsState(
     val jellyfinServers: List<ServerWithAddresses> = emptyList(),
+    val jellyfinDiscoveredServers: List<DiscoveredServer> = emptyList(),
     val jellyfinUsers: List<User> = emptyList(),
+    val jellyfinPublicUsers: List<User> = emptyList(),
     val currentServerId: String? = null,
     val currentUserId: String? = null,
     val jellyfinOperationInProgress: Boolean = false,
-    val jellyfinError: UiText? = null,
+    // Errors are split by which part of the Jellyfin section they belong to, so they render
+    // next to the fields that caused them instead of as one ambiguous message at the bottom.
+    val addServerError: UiText? = null,
+    val loginError: UiText? = null,
+    val quickConnectEnabled: Boolean = false,
+    val quickConnectCode: String? = null,
     val sonarrEnabled: Boolean = false,
     val sonarrBaseUrl: String = "",
     val sonarrApiKey: String = "",

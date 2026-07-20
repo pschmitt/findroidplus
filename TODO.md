@@ -816,5 +816,36 @@ Status: **done** (2026-07-20).
 - [ ] Individual settings sub-screens (Downloads, Player, etc.) don't show an
       icon in their header, unlike their entry row on the main Settings list -
       add the same icon to each sub-screen's header for consistency.
+- [ ] User feedback: "the UI for adding Jellyfin servers/users is a bit
+      weird." Settings > Connections' inline Jellyfin section
+      (`app/phone/.../settings/integrations/IntegrationsSettingsScreen.kt`,
+      `JellyfinConnectionSection`) had drifted from the onboarding flow it was
+      folded from in FINDROID-5 (`app/phone/.../presentation/setup/{addserver,
+      login,servers,users}`, backed by `:setup`): plain `Button`s instead of
+      the `ServerItem`/`UserItem`/`LoadingButton` card components used
+      everywhere else in setup; the "add server" text field stayed
+      permanently open even with a server already configured; the
+      username/password login form stayed visible even after already being
+      signed in; no server discovery (mDNS), no Quick Connect, and no
+      public/guest user listing, despite the standalone onboarding
+      Login/AddServer screens supporting all three; and a single shared error
+      message with no indication whether it came from "add server" or
+      "login". Reworked the section to close those gaps: server/user rows are
+      now card-styled like `ServerItem`/`UserItem` with a selected checkmark
+      and trailing delete icon; "add server" collapses behind an "Add another
+      server" toggle once a server exists and auto-collapses again after a
+      successful add; the login form only renders when there's no active user
+      or the user explicitly taps "Add another user" (otherwise a compact
+      "Signed in as X" row shows instead); added Quick Connect, public/guest
+      user listing (tap to prefill username), and mDNS discovery, matching
+      onboarding; split the one `jellyfinError` field into
+      `addServerError`/`loginError` so failures render inline via
+      `supportingText` next to the field that caused them, same as
+      `AddServerScreen`/`LoginScreen` already do. Onboarding itself
+      (`:setup` module, phone + TV screens) was left untouched - already
+      consistent with the rest of the app's polish and not the source of the
+      complaint. TV has no PVR Integrations/Connections screen at all, so this
+      is phone-only. Verified: remote `:app:phone:compileLibreDebugKotlin`,
+      `:app:tv:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13.
 
 Status: not started - queued up next, in the order above.

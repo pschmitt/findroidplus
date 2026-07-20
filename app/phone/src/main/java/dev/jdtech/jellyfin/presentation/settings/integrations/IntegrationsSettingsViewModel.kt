@@ -9,6 +9,7 @@ import dev.jdtech.jellyfin.api.pvr.PvrService
 import dev.jdtech.jellyfin.api.pvr.RadarrApi
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.models.DiscoveredServer
 import dev.jdtech.jellyfin.models.ExceptionUiText
 import dev.jdtech.jellyfin.models.ExceptionUiTexts
 import dev.jdtech.jellyfin.models.UiText
@@ -41,20 +42,55 @@ constructor(
     private val apiKeyPersistJobs = mutableMapOf<String, Job>()
     private val dirtyApiKeys = mutableSetOf<String>()
 
+    private var quickConnectJob: Job? = null
+
     fun load() {
         viewModelScope.launch { loadState() }
+        discoverJellyfinServers()
+    }
+
+    // Mirrors AddServerViewModel.discoverServers() - local-network mDNS discovery so adding a
+    // second/third server from Settings isn't a strictly worse experience than the onboarding
+    // flow, which offers this out of the box.
+    private fun discoverJellyfinServers() {
+        viewModelScope.launch {
+            val discovered = mutableListOf<DiscoveredServer>()
+            setupRepository.discoverServers().collect { info ->
+                discovered.add(DiscoveredServer(info.id, info.name, info.address))
+                _state.value = _state.value.copy(jellyfinDiscoveredServers = discovered)
+            }
+        }
     }
 
     private suspend fun loadState() {
         val servers = setupRepository.getServers()
         val currentServer = setupRepository.getCurrentServer()
         val currentUser = setupRepository.getCurrentUser()
+        val quickConnectEnabled =
+            currentServer?.let {
+                try {
+                    setupRepository.getIsQuickConnectEnabled()
+                } catch (_: Exception) {
+                    false
+                }
+            } ?: false
+        val publicUsers =
+            currentServer?.let {
+                try {
+                    setupRepository.getPublicUsers(it.id)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }.orEmpty()
         _state.value =
-            IntegrationsSettingsState(
+            _state.value.copy(
                 jellyfinServers = servers,
                 jellyfinUsers = currentServer?.let { setupRepository.getUsers(it.id) }.orEmpty(),
+                jellyfinPublicUsers = publicUsers,
                 currentServerId = currentServer?.id,
                 currentUserId = currentUser?.id?.toString(),
+                jellyfinOperationInProgress = false,
+                quickConnectEnabled = quickConnectEnabled,
                 sonarrEnabled = appPreferences.getValue(appPreferences.sonarrEnabled),
                 sonarrBaseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty(),
                 sonarrApiKey = secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY).orEmpty(),
@@ -90,6 +126,7 @@ constructor(
             is IntegrationsSettingsAction.OnDeleteJellyfinServer -> deleteJellyfinServer(action.serverId)
             is IntegrationsSettingsAction.OnLoginJellyfinUser ->
                 loginJellyfinUser(action.username, action.password)
+            is IntegrationsSettingsAction.OnQuickConnectClick -> quickConnect()
             is IntegrationsSettingsAction.OnDeleteJellyfinUser -> deleteJellyfinUser(action.userId)
             is IntegrationsSettingsAction.OnSonarrEnabledChanged -> {
                 appPreferences.setValue(appPreferences.sonarrEnabled, action.enabled)
@@ -192,64 +229,113 @@ constructor(
 
     private fun addJellyfinServer(address: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, jellyfinError = null)
+            _state.value = _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
             try {
                 val server = setupRepository.addServer(address)
                 setupRepository.setCurrentServer(server.id)
                 appPreferences.setValue(appPreferences.currentServer, server.id)
                 loadState()
             } catch (e: Exception) {
-                showJellyfinError(e)
+                showAddServerError(e)
             }
         }
     }
 
     private fun deleteJellyfinServer(serverId: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, jellyfinError = null)
+            _state.value = _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
             try {
                 setupRepository.deleteServer(serverId)
                 loadState()
             } catch (e: Exception) {
-                showJellyfinError(e)
+                showAddServerError(e)
             }
         }
     }
 
     private fun loginJellyfinUser(username: String, password: String) {
+        quickConnectJob?.cancel()
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, jellyfinError = null)
+            _state.value =
+                _state.value.copy(
+                    jellyfinOperationInProgress = true,
+                    loginError = null,
+                    quickConnectCode = null,
+                )
             try {
                 setupRepository.login(username, password)
                 loadState()
             } catch (e: Exception) {
-                showJellyfinError(e)
+                showLoginError(e)
             }
         }
+    }
+
+    private fun quickConnect() {
+        if (quickConnectJob?.isActive == true) {
+            quickConnectJob?.cancel()
+            _state.value = _state.value.copy(quickConnectCode = null)
+            return
+        }
+        quickConnectJob =
+            viewModelScope.launch {
+                _state.value = _state.value.copy(loginError = null)
+                try {
+                    var quickConnectState = setupRepository.initiateQuickConnect()
+                    _state.value = _state.value.copy(quickConnectCode = quickConnectState.code)
+
+                    while (!quickConnectState.authenticated) {
+                        delay(5000L)
+                        quickConnectState =
+                            setupRepository.getQuickConnectState(quickConnectState.secret)
+                    }
+
+                    setupRepository.loginWithSecret(quickConnectState.secret)
+                    _state.value = _state.value.copy(quickConnectCode = null)
+                    loadState()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _state.value = _state.value.copy(quickConnectCode = null)
+                    showLoginError(e)
+                }
+            }
     }
 
     private fun deleteJellyfinUser(userId: java.util.UUID) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, jellyfinError = null)
+            _state.value = _state.value.copy(jellyfinOperationInProgress = true, loginError = null)
             try {
                 setupRepository.deleteUser(userId)
                 loadState()
             } catch (e: Exception) {
-                showJellyfinError(e)
+                showLoginError(e)
             }
         }
     }
 
-    private fun showJellyfinError(exception: Exception) {
-        val error =
-            when (exception) {
-                is ExceptionUiText -> exception.uiText
-                is ExceptionUiTexts -> exception.uiTexts.firstOrNull()
-                else -> UiText.DynamicString(exception.message ?: "")
-            } ?: UiText.StringResource(CoreR.string.unknown_error)
+    private fun showAddServerError(exception: Exception) {
         _state.value =
-            _state.value.copy(jellyfinOperationInProgress = false, jellyfinError = error)
+            _state.value.copy(
+                jellyfinOperationInProgress = false,
+                addServerError = exception.toJellyfinUiText(),
+            )
     }
+
+    private fun showLoginError(exception: Exception) {
+        _state.value =
+            _state.value.copy(
+                jellyfinOperationInProgress = false,
+                loginError = exception.toJellyfinUiText(),
+            )
+    }
+
+    private fun Exception.toJellyfinUiText(): UiText =
+        when (this) {
+            is ExceptionUiText -> uiText
+            is ExceptionUiTexts -> uiTexts.firstOrNull()
+            else -> UiText.DynamicString(message ?: "")
+        } ?: UiText.StringResource(CoreR.string.unknown_error)
 
     private fun updateAdvancedSettings(action: IntegrationsSettingsAction.OnAdvancedSettingsChanged) {
         val (headersKey, usernameKey, passwordKey) =

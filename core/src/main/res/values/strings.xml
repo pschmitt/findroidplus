@@ -198,6 +198,9 @@
     <string name="integrations_no_jellyfin_server">No Jellyfin server is configured.</string>
     <string name="integrations_manage_servers">Manage servers</string>
     <string name="integrations_manage_users">Manage users</string>
+    <string name="integrations_jellyfin_signed_in_as">Signed in as %1$s</string>
+    <string name="integrations_jellyfin_add_another_user">Add another user</string>
+    <string name="integrations_jellyfin_add_server_toggle">Add another server</string>
     <string name="integrations_sonarr">Sonarr</string>
     <string name="integrations_radarr">Radarr</string>
     <string name="integrations_seerr">Seerr</string>
