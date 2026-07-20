@@ -17,14 +17,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import dev.jdtech.jellyfin.presentation.settings.components.SettingsGroupCard
@@ -132,7 +135,19 @@ private fun SettingsSubScreenLayout(
                 )
     ) {
         Column {
-            Text(text = stringResource(id = title), style = MaterialTheme.typography.displayMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                state.titleIconDrawableId?.let {
+                    Icon(
+                        painter = painterResource(id = it),
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = MaterialTheme.spacings.default),
+                    )
+                }
+                Text(
+                    text = stringResource(id = title),
+                    style = MaterialTheme.typography.displayMedium,
+                )
+            }
             Text(
                 text = stringResource(id = SettingsR.string.title_settings),
                 style = MaterialTheme.typography.headlineMedium,

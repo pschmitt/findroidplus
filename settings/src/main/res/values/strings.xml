@@ -107,6 +107,10 @@
     <string name="auto_download_check_interval_summary">How often to check for new episodes to auto-download and watched episodes to clean up. Between 15 and 1440 minutes.</string>
     <string name="max_parallel_downloads">Parallel downloads</string>
     <string name="max_parallel_downloads_summary">Maximum number of downloads to run at the same time. Additional downloads wait in a queue.</string>
+    <string name="download_group_network">Network</string>
+    <string name="download_group_storage">Storage</string>
+    <string name="download_group_auto_delete">Auto-delete</string>
+    <string name="download_group_auto_download">Auto-download</string>
     <string name="app_language">App language</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_summary">Customize subtitles appearance</string>

@@ -810,11 +810,37 @@ Status: **done** (2026-07-20).
       than the Calendar list did. Suspected timezone handling bug (e.g. a
       date-only value parsed as UTC-midnight then rendered in local time,
       landing on the previous local day) - needs investigation.
-- [ ] Settings > Downloads: the preference list is a long flat list - group
+- [x] Settings > Downloads: the preference list is a long flat list - group
       related settings (e.g. the auto-delete-watched toggle + its hours
-      input) under (sub)headings for readability.
-- [ ] Individual settings sub-screens (Downloads, Player, etc.) don't show an
+      input) under (sub)headings for readability. `PreferenceGroup` already
+      supported an optional `nameStringResource` subheading (used by the
+      Player screen's Gestures/Seeking/Trickplay groups) - no new UI
+      primitive needed, just restructured the single flat Downloads
+      `nestedPreferenceGroups` list into four `PreferenceGroup`s in
+      `SettingsViewModel.kt`: Network (mobile data, roaming), Storage
+      (location, parallel downloads, pause-on-battery-saver), Auto-delete
+      (watched toggle + hours input), Auto-download (check interval +
+      Auto-download rules category).
+- [x] Individual settings sub-screens (Downloads, Player, etc.) don't show an
       icon in their header, unlike their entry row on the main Settings list -
-      add the same icon to each sub-screen's header for consistency.
+      add the same icon to each sub-screen's header for consistency. Root
+      cause: the shared phone `SettingsScreenLayout` (`app/phone/.../
+      settings/SettingsScreen.kt`) only ever passed an `iconRes` to
+      `TopBarTitle` for the root Settings screen, hardcoded to
+      `ic_settings`. Threaded the icon of the deepest-matched
+      `PreferenceCategory` through as a new `SettingsState.
+      titleIconDrawableId`, set in `SettingsViewModel.loadPreferences()`
+      during its existing drill-down loop, and consumed by
+      `SettingsScreenLayout` - fixes every sub-screen driven by the generic
+      preference tree (Downloads, Player, mpv options, Interface, Network,
+      Cache, etc.) in one place. The four bespoke phone screens that bypass
+      that tree entirely (Backup, Integrations/Connections, Customize home
+      screen, About) each got a direct `TopBarTitle` + hardcoded icon
+      (reusing the same drawable as their main-list row) since they don't
+      go through `SettingsViewModel` state. Also covered TV: its separate
+      `SettingsSubScreen.kt` scaffold had no icon anywhere (not even the
+      root screen), so added an `Icon` next to the title there too, sourced
+      from the same new `titleIconDrawableId` state field.
 
-Status: not started - queued up next, in the order above.
+Status: settings-grouping/header-icon items done (2026-07-21); battery
+saver verification and the two calendar items are still pending.

@@ -207,7 +207,7 @@ private fun SettingsScreenLayout(
                             if (title == CoreR.string.title_settings) {
                                 CoreR.drawable.ic_settings
                             } else {
-                                null
+                                state.titleIconDrawableId
                             },
                     )
                 },

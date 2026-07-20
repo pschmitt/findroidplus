@@ -39,6 +39,7 @@ import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsAction
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsState
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsViewModel
 import dev.jdtech.jellyfin.models.UiText
+import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.settings.R as SettingsR
@@ -73,7 +74,10 @@ private fun HomeLayoutSettingsScreenLayout(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text = stringResource(SettingsR.string.settings_category_home_layout))
+                    TopBarTitle(
+                        text = stringResource(SettingsR.string.settings_category_home_layout),
+                        iconRes = CoreR.drawable.ic_arrow_down_up,
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {

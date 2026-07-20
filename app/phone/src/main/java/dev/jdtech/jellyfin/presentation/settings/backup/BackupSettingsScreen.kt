@@ -51,6 +51,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.components.BaseDialog
+import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.settings.components.IntervalPickerContent
 import dev.jdtech.jellyfin.presentation.settings.components.formatIntervalMinutes
 import dev.jdtech.jellyfin.setup.presentation.backup.BackupSettingsAction
@@ -198,7 +199,12 @@ private fun BackupSettingsScreenLayout(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(CoreR.string.backup_and_restore)) },
+                title = {
+                    TopBarTitle(
+                        text = stringResource(CoreR.string.backup_and_restore),
+                        iconRes = CoreR.drawable.ic_save,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { onAction(BackupSettingsAction.OnBackClick) }) {
                         Icon(

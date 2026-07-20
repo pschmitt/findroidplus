@@ -739,6 +739,7 @@ constructor(
                             nestedPreferenceGroups =
                                 listOf(
                                     PreferenceGroup(
+                                        nameStringResource = R.string.download_group_network,
                                         preferences =
                                             listOf(
                                                 PreferenceSwitch(
@@ -762,6 +763,12 @@ constructor(
                                                     backendPreference =
                                                         appPreferences.downloadWhenRoaming,
                                                 ),
+                                            ),
+                                    ),
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.download_group_storage,
+                                        preferences =
+                                            listOf(
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.download_location,
                                                     iconDrawableId = R.drawable.ic_hard_drive,
@@ -784,6 +791,23 @@ constructor(
                                                 ),
                                                 PreferenceSwitch(
                                                     nameStringResource =
+                                                        R.string.download_pause_on_battery_saver,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .download_pause_on_battery_saver_summary,
+                                                    iconDrawableId = R.drawable.ic_battery,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.pauseDownloadsOnBatterySaver,
+                                                ),
+                                            ),
+                                    ),
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.download_group_auto_delete,
+                                        preferences =
+                                            listOf(
+                                                PreferenceSwitch(
+                                                    nameStringResource =
                                                         R.string.auto_delete_watched,
                                                     descriptionStringRes =
                                                         R.string.auto_delete_watched_summary,
@@ -803,17 +827,12 @@ constructor(
                                                         appPreferences.autoDeleteWatchedHours,
                                                     suffixRes = R.string.hours_suffix,
                                                 ),
-                                                PreferenceSwitch(
-                                                    nameStringResource =
-                                                        R.string.download_pause_on_battery_saver,
-                                                    descriptionStringRes =
-                                                        R.string
-                                                            .download_pause_on_battery_saver_summary,
-                                                    iconDrawableId = R.drawable.ic_battery,
-                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    backendPreference =
-                                                        appPreferences.pauseDownloadsOnBatterySaver,
-                                                ),
+                                            ),
+                                    ),
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.download_group_auto_download,
+                                        preferences =
+                                            listOf(
                                                 PreferenceIntInput(
                                                     nameStringResource =
                                                         R.string.auto_download_check_interval,
@@ -842,8 +861,8 @@ constructor(
                                                         }
                                                     },
                                                 ),
-                                            )
-                                    )
+                                            ),
+                                    ),
                                 ),
                         )
                     )
@@ -974,6 +993,10 @@ constructor(
         viewModelScope.launch {
             var preferences = topLevelPreferences
 
+            // Tracks the icon of the deepest matched category, so the sub-screen header can show
+            // the same icon as its row on the parent list (null while still at the root).
+            var titleIcon: Int? = null
+
             // Show preferences based on the name of the parent
             for (index in indexes) {
                 // If index is root (Settings) don't search for category - just skip straight to
@@ -988,6 +1011,7 @@ constructor(
                         .find { it.nameStringResource == index }
                 if (preference != null) {
                     preferences = preference.nestedPreferenceGroups
+                    titleIcon = preference.iconDrawableId
                 }
             }
 
@@ -1073,7 +1097,9 @@ constructor(
                     }
                     .filter { it.preferences.isNotEmpty() }
 
-            _state.emit(_state.value.copy(preferenceGroups = preferences))
+            _state.emit(
+                _state.value.copy(preferenceGroups = preferences, titleIconDrawableId = titleIcon)
+            )
         }
     }
 

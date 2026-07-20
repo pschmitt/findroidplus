@@ -48,6 +48,7 @@ import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import dev.jdtech.jellyfin.BuildConfig
 import dev.jdtech.jellyfin.R
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.settings.R as SettingsR
@@ -76,7 +77,12 @@ fun AboutScreen(navigateBack: () -> Unit) {
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(SettingsR.string.about)) },
+                title = {
+                    TopBarTitle(
+                        text = stringResource(SettingsR.string.about),
+                        iconRes = CoreR.drawable.ic_info,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {
                         Icon(

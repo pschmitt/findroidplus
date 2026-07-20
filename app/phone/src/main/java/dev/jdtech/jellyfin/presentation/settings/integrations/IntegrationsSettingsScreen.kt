@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.ServerWithAddresses
 import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.settings.R as SettingsR
 import dev.jdtech.jellyfin.setup.R as SetupR
 
@@ -83,7 +84,12 @@ private fun IntegrationsSettingsScreenLayout(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(SettingsR.string.settings_category_connections)) },
+                title = {
+                    TopBarTitle(
+                        text = stringResource(SettingsR.string.settings_category_connections),
+                        iconRes = SettingsR.drawable.ic_network,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { onAction(IntegrationsSettingsAction.OnBackClick) }) {
                         Icon(
