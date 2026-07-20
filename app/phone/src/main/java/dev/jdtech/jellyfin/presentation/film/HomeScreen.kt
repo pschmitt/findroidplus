@@ -356,13 +356,16 @@ private fun HomeDownloadProgress(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionServiceIcons(serviceIcons)
             Text(
                 text = stringResource(CoreR.string.pvr_queue_section_title),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = titleModifier,
             )
-            SectionServiceIcons(serviceIcons)
         }
         if (entries.isEmpty()) {
             Text(

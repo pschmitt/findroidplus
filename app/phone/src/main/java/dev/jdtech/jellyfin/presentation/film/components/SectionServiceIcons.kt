@@ -2,7 +2,6 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -14,18 +13,17 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
 /**
- * The Sonarr/Radarr/Seerr brand logos a Home section's content actually depends on, shown next to
- * its title - same idea (and same "Customize home screen" pairing) as the service icons there.
- * No-ops when [serviceIcons] is empty, so callers can pass it unconditionally.
+ * The Jellyfin/Sonarr/Radarr/Seerr brand logo(s) a Home section's content actually depends on,
+ * shown before its title - same idea (and same "Customize home screen" pairing) as the service
+ * icons there. No-ops when [serviceIcons] is empty, so callers can pass it unconditionally. No
+ * spacing of its own - the caller's Row (icon before text) supplies that via `spacedBy`, so an
+ * empty icon list doesn't leave a dangling gap in front of the title.
  */
 @Composable
 fun SectionServiceIcons(serviceIcons: List<Int>, modifier: Modifier = Modifier) {
     if (serviceIcons.isEmpty()) return
 
-    Row(
-        modifier = modifier.padding(start = MaterialTheme.spacings.small),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.extraSmall),
-    ) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.extraSmall)) {
         serviceIcons.forEach { iconRes ->
             Icon(
                 painter = painterResource(iconRes),

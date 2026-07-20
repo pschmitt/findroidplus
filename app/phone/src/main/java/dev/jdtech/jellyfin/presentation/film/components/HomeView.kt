@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,11 +39,18 @@ fun HomeView(
 ) {
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
-            Text(
-                text = stringResource(FilmR.string.latest_library, view.view.name),
-                modifier = Modifier.align(Alignment.CenterStart).then(titleModifier),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionServiceIcons(listOf(CoreR.drawable.ic_logo))
+                Text(
+                    text = stringResource(FilmR.string.latest_library, view.view.name),
+                    modifier = titleModifier,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
             IconButton(
                 onClick = {
                     onAction(

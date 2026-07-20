@@ -34,6 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutRow
+import dev.jdtech.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsAction
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsState
 import dev.jdtech.jellyfin.film.presentation.homelayout.HomeLayoutSettingsViewModel
@@ -184,26 +185,12 @@ private fun HomeLayoutRowItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionServiceIcons(row.serviceIcons)
             Text(text = row.label.asString(), style = MaterialTheme.typography.bodyLarge, color = titleColor)
-            if (row.serviceIcons.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.padding(start = MaterialTheme.spacings.small),
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.extraSmall),
-                ) {
-                    row.serviceIcons.forEach { iconRes ->
-                        Icon(
-                            painter = painterResource(iconRes),
-                            contentDescription = null,
-                            // Unspecified, not the default tint - these are full-color brand
-                            // logos (Sonarr/Radarr/Seerr), and the default tint would flatten
-                            // them into a solid silhouette (see the identical PvrQueueRow fix).
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
-            }
         }
         Row {
             if (showMoveButtons) {

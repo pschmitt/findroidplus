@@ -52,14 +52,15 @@ fun HomeDiscoverSection(
         Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
             Row(
                 modifier = Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                SectionServiceIcons(listOf(CoreR.drawable.ic_seerr))
                 Text(
                     text = stringResource(section.titleRes),
                     modifier = titleModifier,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                SectionServiceIcons(listOf(CoreR.drawable.ic_seerr))
             }
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))

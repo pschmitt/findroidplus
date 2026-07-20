@@ -743,3 +743,37 @@ Status: **done** (2026-07-20).
       instead of only ever showing a silently-clipped snippet.
 
 Status: **done** (2026-07-20).
+
+## FINDROID-27: Home layout polish round 2
+
+- [x] Service-icon rows (Sonarr/Radarr/Seerr, added in FINDROID-26) now show
+      the icon *before* the title text everywhere, not after - "Customize
+      home screen" rows, the Home section titles themselves, and the
+      "Pending downloads" header on the Downloads screen (new
+      `SectionHeader.leadingIcons` param there, derived from whichever
+      services actually have a queue group or error right now rather than a
+      static "is it configured" check).
+- [x] Sections backed directly by Jellyfin (Suggestions, Continue Watching,
+      Next Up, every "Latest <library>") now get the Jellyfin logo as their
+      own service icon, for the same "which of your servers/integrations
+      is this section talking to" affordance the PVR/Seerr icons already
+      gave the other rows.
+- [x] Found and fixed why the "NEW" badge (FINDROID-24) never actually
+      appeared: `JellyfinRepositoryImpl.getLatestMedia()` only requested
+      the `ProviderIds` field from the server - `DateCreated` isn't in
+      Jellyfin's default field set, so every item's `dateCreated` came back
+      null and `isRecentlyAdded()` was always false. Added
+      `ItemFields.DATE_CREATED` to the request. Also gated the badge on
+      `!item.played`, so a recently-added item you've already watched
+      doesn't get flagged "NEW".
+- [x] Changed the *default* Home section order (only takes effect for a
+      layout that's never been touched - an existing custom order or hidden
+      set is left alone) to: Pending downloads, Latest Shows, Next Up,
+      Continue Watching, Latest Movies, Suggestions, Trending, Popular
+      Shows, Popular Movies. Views are now split by `CollectionType`
+      (TV/movie) in `HomeViewModel.recomputeSectionOrder()` and
+      `HomeLayoutSettingsViewModel.load()` so each "Latest ..." lands next
+      to its own slot instead of all views being grouped together.
+- [x] Bumped to version 2.1.0 (versionCode 34).
+
+Status: **done** (2026-07-20).

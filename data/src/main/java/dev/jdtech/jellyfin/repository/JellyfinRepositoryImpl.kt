@@ -262,7 +262,10 @@ class JellyfinRepositoryImpl(
                     jellyfinApi.userId!!,
                     parentId = parentId,
                     limit = 16,
-                    fields = listOf(ItemFields.PROVIDER_IDS),
+                    // DateCreated isn't in the server's default field set - without asking for it
+                    // explicitly, every item comes back with a null dateCreated, so
+                    // FindroidItem.isRecentlyAdded() (the Home "NEW" badge) always reads false.
+                    fields = listOf(ItemFields.PROVIDER_IDS, ItemFields.DATE_CREATED),
                 )
                 .content
                 .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }

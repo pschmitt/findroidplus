@@ -110,19 +110,41 @@ constructor(
         recomputeSectionOrder()
     }
 
+    /**
+     * Default order: Pending downloads, Latest Shows, Next Up, Continue Watching, Latest Movies,
+     * Suggestions, Trending, Popular Shows, Popular Movies - views are split by library type
+     * (TV/movie) so each lands next to its own "Latest ..." slot rather than grouped together.
+     * Only used until the user actually reorders anything - from then on
+     * [resolveHomeSectionOrder] keeps whatever they set and just appends genuinely new keys here.
+     */
     private fun recomputeSectionOrder() {
         val current = _state.value
         val hidden =
             homeSectionOrderFromString(appPreferences.getValue(appPreferences.homeHiddenSections))
                 .toSet()
+
+        val showViews = current.views.filter { it.view.type == CollectionType.TvShows }
+        val movieViews = current.views.filter { it.view.type == CollectionType.Movies }
+        val otherViews =
+            current.views.filterNot { it.view.type == CollectionType.TvShows || it.view.type == CollectionType.Movies }
+        val discoverKeyOrder =
+            listOf(
+                FilmR.string.home_discover_trending,
+                FilmR.string.home_discover_popular_shows,
+                FilmR.string.home_discover_popular_movies,
+            )
+        val discoverByKey = current.discoverSections.associateBy { HomeSectionKeys.discover(it.titleRes) }
+
         val natural =
             buildList {
-                    if (current.suggestionsSection != null) add(HomeSectionKeys.SUGGESTIONS)
-                    if (current.resumeSection != null) add(HomeSectionKeys.CONTINUE_WATCHING)
-                    if (current.nextUpSection != null) add(HomeSectionKeys.NEXT_UP)
-                    addAll(current.views.map { HomeSectionKeys.view(it.view.id) })
-                    addAll(current.discoverSections.map { HomeSectionKeys.discover(it.titleRes) })
                     add(HomeSectionKeys.ACTIVE_DOWNLOADS)
+                    addAll(showViews.map { HomeSectionKeys.view(it.view.id) })
+                    if (current.nextUpSection != null) add(HomeSectionKeys.NEXT_UP)
+                    if (current.resumeSection != null) add(HomeSectionKeys.CONTINUE_WATCHING)
+                    addAll(movieViews.map { HomeSectionKeys.view(it.view.id) })
+                    addAll(otherViews.map { HomeSectionKeys.view(it.view.id) })
+                    if (current.suggestionsSection != null) add(HomeSectionKeys.SUGGESTIONS)
+                    addAll(discoverKeyOrder.map { HomeSectionKeys.discover(it) }.filter { it in discoverByKey })
                 }
                 .filterNot { it in hidden }
         val persisted = homeSectionOrderFromString(appPreferences.getValue(appPreferences.homeSectionOrder))

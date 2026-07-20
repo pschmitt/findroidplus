@@ -102,6 +102,7 @@ import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
+import dev.jdtech.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -405,6 +406,17 @@ private fun DownloadsScreenLayout(
         }
     val pvrAllSelected = pvrQueueKeys.isNotEmpty() && state.selectedPvrQueueIds.containsAll(pvrQueueKeys)
     val pvrSelectionMode = state.selectedPvrQueueIds.isNotEmpty()
+    // Which of Sonarr/Radarr's brand icons the "Pending downloads" header shows - whichever
+    // service(s) actually have a group or an error right now, not a static "is it configured"
+    // check (unlike Home's equivalent, this header only renders when there's something to show).
+    val pvrHeaderIcons =
+        remember(state.pvrQueueGroups, state.pvrErrors) {
+            (state.pvrQueueGroups.map { it.source } + state.pvrErrors.map { it.source })
+                .distinct()
+                .map { source ->
+                    if (source == PvrSource.SONARR) CoreR.drawable.ic_sonarr else CoreR.drawable.ic_radarr
+                }
+        }
 
     var moviesCollapsed by remember { mutableStateOf(false) }
     var collapsedGroupIds by remember { mutableStateOf(emptySet<UUID>()) }
@@ -549,6 +561,7 @@ private fun DownloadsScreenLayout(
                                 },
                             collapsed = pvrQueueCollapsed,
                             onToggleCollapsed = { pvrQueueCollapsed = !pvrQueueCollapsed },
+                            leadingIcons = pvrHeaderIcons,
                         )
                     }
                     if (!pvrQueueCollapsed) {
@@ -1094,6 +1107,7 @@ private fun SectionHeader(
     onLongClick: (() -> Unit)? = null,
     collapsed: Boolean = false,
     onToggleCollapsed: () -> Unit = {},
+    leadingIcons: List<Int> = emptyList(),
 ) {
     Card {
         Row(
@@ -1108,17 +1122,23 @@ private fun SectionHeader(
                     },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = text,
+            Row(
                 modifier =
                     Modifier.weight(1f)
                         .padding(
                             horizontal = MaterialTheme.spacings.medium,
                             vertical = MaterialTheme.spacings.medium,
                         ),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionServiceIcons(leadingIcons)
+                Text(
+                    text = text,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
             IconButton(onClick = onToggleCollapsed) {
                 Icon(
                     painter =

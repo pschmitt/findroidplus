@@ -15,6 +15,7 @@ import dev.jdtech.jellyfin.utils.homeSectionOrderFromString
 import dev.jdtech.jellyfin.utils.homeSectionOrderToString
 import dev.jdtech.jellyfin.utils.resolveHomeSectionOrder
 import javax.inject.Inject
+import org.jellyfin.sdk.model.api.BaseItemDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -41,66 +42,20 @@ constructor(
      */
     private var cachedLabels: LinkedHashMap<String, SectionInfo> = LinkedHashMap()
 
+    /**
+     * Builds [cachedLabels] in the same default order as
+     * [dev.jdtech.jellyfin.film.presentation.home.HomeViewModel.recomputeSectionOrder]: Pending
+     * downloads, Latest Shows, Next Up, Continue Watching, Latest Movies, Suggestions, Trending,
+     * Popular Shows, Popular Movies - so a freshly-installed layout matches between this screen
+     * and Home before the user ever touches an order/hide control.
+     */
     fun load() {
         viewModelScope.launch {
             _state.emit(_state.value.copy(isLoading = true))
 
             val labels = LinkedHashMap<String, SectionInfo>()
+            val jellyfinIcons = listOf(CoreR.drawable.ic_logo)
 
-            if (appPreferences.getValue(appPreferences.homeSuggestions)) {
-                labels[HomeSectionKeys.SUGGESTIONS] =
-                    SectionInfo(UiText.StringResource(FilmR.string.home_section_suggestions))
-            }
-            if (appPreferences.getValue(appPreferences.homeContinueWatching)) {
-                labels[HomeSectionKeys.CONTINUE_WATCHING] =
-                    SectionInfo(UiText.StringResource(FilmR.string.continue_watching))
-            }
-            if (appPreferences.getValue(appPreferences.homeNextUp)) {
-                labels[HomeSectionKeys.NEXT_UP] =
-                    SectionInfo(UiText.StringResource(FilmR.string.next_up))
-            }
-            if (appPreferences.getValue(appPreferences.homeLatest)) {
-                try {
-                    repository
-                        .getUserViews()
-                        .filter { view ->
-                            CollectionType.fromString(view.collectionType?.serialName) in
-                                CollectionType.supported
-                        }
-                        .forEach { view ->
-                            val id = view.id
-                            labels[HomeSectionKeys.view(id)] =
-                                SectionInfo(
-                                    UiText.StringResource(
-                                        FilmR.string.latest_library,
-                                        view.name.orEmpty(),
-                                    )
-                                )
-                        }
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to load library views for home layout settings")
-                }
-            }
-            if (
-                appPreferences.getValue(appPreferences.homeDiscover) &&
-                    pvrConfiguration.isSeerrConfigured()
-            ) {
-                // The Discover rows are always Seerr-backed content, regardless of media type -
-                // Radarr/Sonarr only come into it once a specific title is actually requested.
-                val seerrIcons = listOf(CoreR.drawable.ic_seerr)
-                labels[HomeSectionKeys.discover(FilmR.string.home_discover_trending)] =
-                    SectionInfo(UiText.StringResource(FilmR.string.home_discover_trending), seerrIcons)
-                labels[HomeSectionKeys.discover(FilmR.string.home_discover_popular_movies)] =
-                    SectionInfo(
-                        UiText.StringResource(FilmR.string.home_discover_popular_movies),
-                        seerrIcons,
-                    )
-                labels[HomeSectionKeys.discover(FilmR.string.home_discover_popular_shows)] =
-                    SectionInfo(
-                        UiText.StringResource(FilmR.string.home_discover_popular_shows),
-                        seerrIcons,
-                    )
-            }
             // The PVR queue mixes Sonarr and Radarr entries directly (not through Seerr), so it
             // only wears the icon(s) for whichever of those two are actually configured.
             val pvrIcons =
@@ -110,6 +65,82 @@ constructor(
                 }
             labels[HomeSectionKeys.ACTIVE_DOWNLOADS] =
                 SectionInfo(UiText.StringResource(CoreR.string.pvr_queue_section_title), pvrIcons)
+
+            var showViews = emptyList<BaseItemDto>()
+            var movieViews = emptyList<BaseItemDto>()
+            var otherViews = emptyList<BaseItemDto>()
+            if (appPreferences.getValue(appPreferences.homeLatest)) {
+                try {
+                    val views =
+                        repository.getUserViews().filter { view ->
+                            CollectionType.fromString(view.collectionType?.serialName) in
+                                CollectionType.supported
+                        }
+                    showViews =
+                        views.filter {
+                            CollectionType.fromString(it.collectionType?.serialName) ==
+                                CollectionType.TvShows
+                        }
+                    movieViews =
+                        views.filter {
+                            CollectionType.fromString(it.collectionType?.serialName) ==
+                                CollectionType.Movies
+                        }
+                    otherViews = views.filterNot { it in showViews || it in movieViews }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to load library views for home layout settings")
+                }
+            }
+
+            fun addView(view: BaseItemDto) {
+                labels[HomeSectionKeys.view(view.id)] =
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.latest_library, view.name.orEmpty()),
+                        jellyfinIcons,
+                    )
+            }
+            showViews.forEach(::addView)
+
+            if (appPreferences.getValue(appPreferences.homeNextUp)) {
+                labels[HomeSectionKeys.NEXT_UP] =
+                    SectionInfo(UiText.StringResource(FilmR.string.next_up), jellyfinIcons)
+            }
+            if (appPreferences.getValue(appPreferences.homeContinueWatching)) {
+                labels[HomeSectionKeys.CONTINUE_WATCHING] =
+                    SectionInfo(UiText.StringResource(FilmR.string.continue_watching), jellyfinIcons)
+            }
+
+            movieViews.forEach(::addView)
+            otherViews.forEach(::addView)
+
+            if (appPreferences.getValue(appPreferences.homeSuggestions)) {
+                labels[HomeSectionKeys.SUGGESTIONS] =
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.home_section_suggestions),
+                        jellyfinIcons,
+                    )
+            }
+
+            if (
+                appPreferences.getValue(appPreferences.homeDiscover) &&
+                    pvrConfiguration.isSeerrConfigured()
+            ) {
+                // The Discover rows are always Seerr-backed content, regardless of media type -
+                // Radarr/Sonarr only come into it once a specific title is actually requested.
+                val seerrIcons = listOf(CoreR.drawable.ic_seerr)
+                labels[HomeSectionKeys.discover(FilmR.string.home_discover_trending)] =
+                    SectionInfo(UiText.StringResource(FilmR.string.home_discover_trending), seerrIcons)
+                labels[HomeSectionKeys.discover(FilmR.string.home_discover_popular_shows)] =
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.home_discover_popular_shows),
+                        seerrIcons,
+                    )
+                labels[HomeSectionKeys.discover(FilmR.string.home_discover_popular_movies)] =
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.home_discover_popular_movies),
+                        seerrIcons,
+                    )
+            }
 
             cachedLabels = labels
             recomputeRows()
