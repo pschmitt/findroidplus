@@ -775,5 +775,10 @@ Status: **done** (2026-07-20).
       `HomeLayoutSettingsViewModel.load()` so each "Latest ..." lands next
       to its own slot instead of all views being grouped together.
 - [x] Bumped to version 2.1.0 (versionCode 34).
+- [x] Follow-up: refreshing Home showed two loading indicators at once -
+      `HomeHeader`'s own spinner and Material3 `PullToRefreshBox`'s default
+      pull indicator, both driven by the same `state.isLoading`. Suppressed
+      the pull-to-refresh one (`indicator = {}`) and kept the header's,
+      without losing the pull gesture itself.
 
 Status: **done** (2026-07-20).

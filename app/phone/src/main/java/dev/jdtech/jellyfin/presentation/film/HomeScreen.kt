@@ -156,7 +156,14 @@ private fun HomeScreenLayout(
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
-        PullToRefreshBox(isRefreshing = state.isLoading, onRefresh = { onAction(HomeAction.OnRetryClick) }) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { onAction(HomeAction.OnRetryClick) },
+            // The header already shows its own spinner for state.isLoading (see HomeHeader
+            // below) - the default indicator here would double up with it on every refresh, so
+            // suppress it while keeping the pull gesture itself (onRefresh still fires).
+            indicator = {},
+        ) {
             val lazyListState = rememberLazyListState()
             val reorderableState =
                 rememberReorderableLazyListState(lazyListState) { from, to ->
