@@ -10,10 +10,8 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.View
 import java.nio.charset.StandardCharsets
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.time.ZoneOffset
-import java.util.Date
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -69,13 +67,21 @@ fun FindroidItem.displayNameWithContext(): String =
 // [pattern] is the raw "pref_date_format" preference value ("system"/"iso"/"dmy"/"mdy") - see
 // AppPreferences.dateFormat. Falls back to the locale-based system short date format for
 // "system" and for any unrecognized value, so an old/blank preference never breaks formatting.
+//
+// `DateTime` (a `java.time.LocalDateTime` typealias) only ever carries a calendar date here -
+// Jellyfin's metadata providers supply premiere dates with no real time-of-day, and the server
+// always emits that as midnight UTC. This used to convert that midnight-UTC value to an
+// `Instant`/`Date` and re-render it with the device's default (local) time zone, which rolls the
+// *displayed* date back a full day for any zone behind UTC - e.g. a premiere date the Calendar
+// screen correctly shows as "Jul 25" (derived from Sonarr's real `airDateUtc` instant, properly
+// zone-converted) would show as "Jul 24" here. Formatting the date components directly, with no
+// zone conversion at all, keeps the calendar date exactly as Jellyfin sent it.
 fun DateTime.format(pattern: String = "system"): String {
-    val instant = this.toInstant(ZoneOffset.UTC)
-    val date = Date.from(instant)
+    val date = this.toLocalDate()
     return when (pattern) {
-        "iso" -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
-        "dmy" -> SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
-        "mdy" -> SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(date)
-        else -> DateFormat.getDateInstance(DateFormat.SHORT).format(date)
+        "iso" -> date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
+        "dmy" -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.getDefault()))
+        "mdy" -> date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.getDefault()))
+        else -> date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault()))
     }
 }

@@ -30,6 +30,7 @@ import dev.jdtech.jellyfin.models.UpcomingEpisode
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.formatCalendarDate
+import dev.jdtech.jellyfin.utils.formatCalendarTime
 import java.time.LocalDate
 
 /**
@@ -80,8 +81,14 @@ fun UpcomingEpisodeCard(
                 )
                 Text(
                     text =
-                        episode.airDate?.let {
-                            stringResource(CoreR.string.season_upcoming_episode_air_date, formatCalendarDate(it))
+                        episode.airDate?.let { airDate ->
+                            episode.airTime?.let { airTime ->
+                                stringResource(
+                                    CoreR.string.season_upcoming_episode_air_date_time,
+                                    formatCalendarDate(airDate),
+                                    formatCalendarTime(airTime),
+                                )
+                            } ?: stringResource(CoreR.string.season_upcoming_episode_air_date, formatCalendarDate(airDate))
                         } ?: stringResource(CoreR.string.season_upcoming_episode_tba),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -113,6 +120,7 @@ private fun UpcomingEpisodeCardPreview() {
                     episodeNumber = 5,
                     title = "The One Where It Airs",
                     airDate = LocalDate.now().plusDays(7),
+                    airTime = java.time.LocalTime.of(21, 0),
                     hasFile = false,
                     monitored = true,
                     episodeId = 123,

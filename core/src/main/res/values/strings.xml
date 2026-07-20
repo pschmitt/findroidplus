@@ -35,7 +35,9 @@
     <string name="episode_number">Episode %1$d</string>
     <string name="next_up">Next Up</string>
     <string name="next_episode_airs">Next episode: %1$s airs %2$s</string>
+    <string name="next_episode_airs_time">Next episode: %1$s airs %2$s at %3$s</string>
     <string name="season_upcoming_episode_air_date">Airs %1$s</string>
+    <string name="season_upcoming_episode_air_date_time">Airs %1$s at %2$s</string>
     <string name="season_upcoming_episode_tba">Air date TBA</string>
     <string name="season_upcoming_episode_badge">Not yet available</string>
     <string name="libraries">Libraries</string>

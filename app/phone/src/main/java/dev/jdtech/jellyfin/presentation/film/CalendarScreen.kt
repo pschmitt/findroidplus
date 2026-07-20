@@ -56,6 +56,7 @@ import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.utils.formatCalendarTime
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -290,11 +291,7 @@ private fun CalendarEntryRow(
             // airDateUtc is a full instant (Radarr release dates are date-only).
             entry.airTime?.let { airTime ->
                 Text(
-                    text =
-                        stringResource(
-                            CoreR.string.calendar_air_time,
-                            airTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)),
-                        ),
+                    text = stringResource(CoreR.string.calendar_air_time, formatCalendarTime(airTime)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

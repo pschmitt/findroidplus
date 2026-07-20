@@ -20,6 +20,7 @@ fun matchUpcomingEpisodes(
                 episodeNumber = episode.episodeNumber,
                 title = episode.title?.takeIf { it.isNotBlank() },
                 airDate = episode.airDateUtc?.let(::parseFlexibleDate),
+                airTime = episode.airDateUtc?.let(::parseLocalTime),
                 hasFile = episode.hasFile,
                 monitored = episode.monitored,
                 episodeId = episode.id,

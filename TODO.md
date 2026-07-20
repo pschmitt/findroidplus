@@ -801,15 +801,57 @@ Status: **done** (2026-07-20).
       Verified: remote compile succeeded on rofl-13
       (`:app:phone:compileLibreDebugKotlin`); release build + install on both
       devices still pending as of this writing.
-- [ ] Calendar view: re-fetches from scratch every time the screen opens -
+- [x] Calendar view: re-fetches from scratch every time the screen opens -
       cache the result so reopening the tab doesn't always re-hit the
-      Sonarr/Radarr/Jellyfin APIs.
-- [ ] Calendar/episode airtime bugs reported by the user (currently airing
+      Sonarr/Radarr/Jellyfin APIs. Implemented: new `CalendarCache`
+      (`modes/film/.../calendar/CalendarCache.kt`), a `@Singleton` holding the
+      last `CalendarResult` - same "outlive the screen-scoped ViewModel"
+      pattern `LibraryItemsCache` already uses for the Library tabs, just
+      holding a plain snapshot instead of a cached Flow since there's no
+      paging involved. `CalendarViewModel.init` now paints the cached result
+      immediately (no spinner) before kicking off a background refresh;
+      `load()` only shows the loading spinner when there's nothing on screen
+      yet (first load this process, or state is still empty), so the tab
+      reopens instantly and refreshes silently behind it. In-memory only, not
+      persisted - a fresh process still fetches once, same as before.
+- [x] Calendar/episode airtime bugs reported by the user (currently airing
       season): (1) a TBA episode only shows the date, not the exact airtime;
       (2) opening a not-yet-released episode shows an airtime one day earlier
-      than the Calendar list did. Suspected timezone handling bug (e.g. a
-      date-only value parsed as UTC-midnight then rendered in local time,
-      landing on the previous local day) - needs investigation.
+      than the Calendar list did. Root-caused both:
+      (1) was a real rendering gap, not a data gap - Sonarr's calendar entries
+      already carry a full `airDateUtc` instant for currently-airing-season
+      episodes (same field the Calendar tab already renders via
+      `CalendarEntry.airTime`), but the Season screen's placeholder row for
+      episodes Sonarr knows about that aren't in Jellyfin yet
+      (`UpcomingEpisode`, rendered by `UpcomingEpisodeCard`) never carried an
+      `airTime` field at all, only a date. Added `UpcomingEpisode.airTime`
+      (parsed the same way as `CalendarEntry.airTime`, via
+      `SeasonEpisodesMatching.kt`'s existing `parseLocalTime`) and render it
+      alongside the date on both phone and TV.
+      (2) was a genuine timezone bug, but not in the Sonarr/Radarr calendar
+      code path (`CalendarMatching.kt`'s `parseFlexibleDate`/`parseLocalTime`
+      were already correct - both convert the UTC instant to the system
+      default zone before extracting the date/time). It was in
+      `DateTime.format()` (`core/.../utils/CoreExtensions.kt`), the formatter
+      used by the Jellyfin-native episode/movie detail screens for
+      `premiereDate`: Jellyfin's metadata providers only ever supply a
+      calendar date for premiere dates (no real time-of-day), which the
+      server always emits as midnight UTC. `DateTime.format()` was converting
+      that midnight-UTC value to an `Instant`/`Date` and re-rendering it in
+      the device's default (local) time zone - for any zone behind UTC, that
+      rolls the *displayed* date back a full day (e.g. "Jul 25" shows as
+      "Jul 24"), exactly the "-1 day" the user saw. Fixed by formatting the
+      date components directly with no zone conversion at all. Also wired the
+      already-fetched-but-unused `CalendarEntry.airTime` into the ShowScreen
+      "next episode airs" banner, and extracted a shared `formatCalendarTime`
+      (`core/.../utils/DateUtils.kt`) so the Calendar tab, Season screen, and
+      ShowScreen banner all format air times the same way. Note: separately
+      noticed `ShowViewModel.getNextAiring` filters calendar entries by
+      `it.itemId == showId`, but `CalendarEntry.itemId` is a *season* id for
+      Sonarr entries (see `matchSonarrCalendar`), not the show id - so that
+      banner likely never actually resolves an entry today. Left unfixed,
+      out of scope for this pass (would need `CalendarEntry` to carry a
+      separate show/series id).
 - [ ] Settings > Downloads: the preference list is a long flat list - group
       related settings (e.g. the auto-delete-watched toggle + its hours
       input) under (sub)headings for readability.
@@ -817,4 +859,6 @@ Status: **done** (2026-07-20).
       icon in their header, unlike their entry row on the main Settings list -
       add the same icon to each sub-screen's header for consistency.
 
-Status: not started - queued up next, in the order above.
+Status: calendar caching and airtime bugs done; battery saver downloads item's
+release build + install verification still pending; Settings grouping/icons
+items not started.

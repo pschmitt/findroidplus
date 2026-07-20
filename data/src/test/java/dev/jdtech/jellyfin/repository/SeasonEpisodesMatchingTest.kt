@@ -2,6 +2,7 @@ package dev.jdtech.jellyfin.repository
 
 import dev.jdtech.jellyfin.api.pvr.SonarrEpisodeDto
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.TimeZone
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -79,6 +80,42 @@ class SeasonEpisodesMatchingTest {
         val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertEquals(LocalDate.of(2024, 7, 24), result.single().airDate)
+    }
+
+    @Test
+    fun `parses airDateUtc into an exact local airTime`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(
+                    id = 1,
+                    seasonNumber = 1,
+                    episodeNumber = 1,
+                    airDateUtc = "2024-07-24T01:00:00Z",
+                )
+            )
+
+        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+
+        // Default TimeZone is fixed to UTC in setUp(), so the instant's UTC time and its
+        // system-default-zone-converted LocalTime line up exactly.
+        assertEquals(LocalTime.of(1, 0), result.single().airTime)
+    }
+
+    @Test
+    fun `airTime is null for a date-only airDateUtc`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(
+                    id = 1,
+                    seasonNumber = 1,
+                    episodeNumber = 1,
+                    airDateUtc = "2024-07-24",
+                )
+            )
+
+        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+
+        assertEquals(null, result.single().airTime)
     }
 
     @Test
