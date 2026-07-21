@@ -673,6 +673,15 @@ fun NavigationRoot(
                     navigateToPerson = { personId ->
                         navController.safeNavigate(PersonRoute(personId.toString()))
                     },
+                    navigateToSeerr = { tmdbId, seasonNumber ->
+                        navController.safeNavigate(
+                            SeerrMediaRoute(
+                                tmdbId = tmdbId,
+                                mediaType = SeerrMediaType.TV.name,
+                                seasonNumber = seasonNumber,
+                            )
+                        )
+                    },
                     navigateToSettings = { navController.safeNavigate(settingsRootRoute()) },
                 )
             }

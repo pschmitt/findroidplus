@@ -40,6 +40,7 @@
     <string name="season_upcoming_episode_air_date_time">Airs %1$s at %2$s</string>
     <string name="season_upcoming_episode_tba">Air date TBA</string>
     <string name="season_upcoming_episode_badge">Not yet available</string>
+    <string name="upcoming_season_episode_count">%1$d episodes</string>
     <string name="libraries">Libraries</string>
     <string name="series_poster">Series poster</string>
     <string name="collection_no_media">This collection does not contain any media</string>

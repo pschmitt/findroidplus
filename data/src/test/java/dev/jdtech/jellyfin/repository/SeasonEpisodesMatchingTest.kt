@@ -149,4 +149,87 @@ class SeasonEpisodesMatchingTest {
 
         assertTrue(result.isEmpty())
     }
+
+    @Test
+    fun `matchMissingSeasons returns only season numbers missing from the known set`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 1, episodeNumber = 1),
+                SonarrEpisodeDto(id = 2, seasonNumber = 2, episodeNumber = 1),
+                SonarrEpisodeDto(id = 3, seasonNumber = 2, episodeNumber = 2),
+                SonarrEpisodeDto(id = 4, seasonNumber = 3, episodeNumber = 1),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = setOf(1))
+
+        assertEquals(listOf(2, 3), result.map { it.seasonNumber })
+    }
+
+    @Test
+    fun `matchMissingSeasons counts episodes per missing season`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 4, episodeNumber = 1),
+                SonarrEpisodeDto(id = 2, seasonNumber = 4, episodeNumber = 2),
+                SonarrEpisodeDto(id = 3, seasonNumber = 4, episodeNumber = 3),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = emptySet())
+
+        assertEquals(1, result.size)
+        assertEquals(3, result.single().episodeCount)
+    }
+
+    @Test
+    fun `matchMissingSeasons is monitored when any of its episodes are monitored`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 4, episodeNumber = 1, monitored = false),
+                SonarrEpisodeDto(id = 2, seasonNumber = 4, episodeNumber = 2, monitored = true),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = emptySet())
+
+        assertTrue(result.single().monitored)
+    }
+
+    @Test
+    fun `matchMissingSeasons excludes season 0 specials`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 0, episodeNumber = 1),
+                SonarrEpisodeDto(id = 2, seasonNumber = 1, episodeNumber = 1),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = emptySet())
+
+        assertEquals(listOf(1), result.map { it.seasonNumber })
+    }
+
+    @Test
+    fun `matchMissingSeasons is sorted by season number regardless of input order`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 3, episodeNumber = 1),
+                SonarrEpisodeDto(id = 2, seasonNumber = 1, episodeNumber = 1),
+                SonarrEpisodeDto(id = 3, seasonNumber = 2, episodeNumber = 1),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = emptySet())
+
+        assertEquals(listOf(1, 2, 3), result.map { it.seasonNumber })
+    }
+
+    @Test
+    fun `matchMissingSeasons returns empty list when everything is already known`() {
+        val episodes =
+            listOf(
+                SonarrEpisodeDto(id = 1, seasonNumber = 1, episodeNumber = 1),
+                SonarrEpisodeDto(id = 2, seasonNumber = 2, episodeNumber = 1),
+            )
+
+        val result = matchMissingSeasons(episodes, knownSeasonNumbers = setOf(1, 2))
+
+        assertTrue(result.isEmpty())
+    }
 }

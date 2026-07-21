@@ -990,6 +990,58 @@ devices (ASUS phone, Pixel 5, Mi Pad 4).
 Status: **done** (2026-07-21). Verified via remote
 `:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13.
 
+## FINDROID-31: Show missing seasons on the Show screen (request seasons not in Jellyfin yet)
+
+The Season screen already surfaced Sonarr-known episodes missing from a
+season (`UpcomingEpisode`/`UpcomingEpisodeCard`), letting a user open the
+Seerr detail view and request them. Nothing equivalent existed one level
+up: a show with e.g. seasons 1-3 imported but season 4 known to Sonarr and
+not yet downloaded showed only 1-3 on the Show screen, with no way to
+discover or request season 4 short of already knowing to search for the
+show in Seerr directly.
+
+- [x] Added `UpcomingSeason` (`data/.../models/UpcomingSeason.kt`) and
+      `matchMissingSeasons` (`data/.../repository/SeasonEpisodesMatching.kt`)
+      - the show-level sibling of `UpcomingEpisode`/`matchUpcomingEpisodes`.
+      Sonarr's v3 API has no "season" resource of its own, so a missing
+      season is inferred by grouping `GET /api/v3/episode` (already fetched
+      per-series for the Season screen's feature) by `seasonNumber` and
+      diffing against the season numbers already present as real
+      `FindroidSeason`s. Season 0 ("Specials") is excluded - present on
+      nearly every series and usually unmonitored, it would be noise on
+      every show rather than a useful placeholder.
+- [x] `SeasonEpisodesRepository` gained `getMissingSeasons()` alongside the
+      existing `getUpcomingEpisodes()`; both now share a
+      `fetchSeriesEpisodes()` helper in the impl (same tvdbId->seriesId
+      resolution, same Sonarr client) instead of duplicating that lookup.
+- [x] `ShowViewModel.loadShow()` fires `loadMissingSeasons()` *after* the
+      main state emit (real show/season data hits the screen immediately;
+      the Sonarr round trip fills in placeholders afterwards), same
+      sequencing `SeasonViewModel.loadUpcomingEpisodes()` already uses.
+      Gated on `appPreferences.sonarrEnabled` + a resolved show `tvdbId`,
+      same as the Season screen.
+- [x] Phone: new `UpcomingSeasonCard` (mirrors `UpcomingEpisodeCard` -
+      dimmed, calendar-icon placeholder, "Not yet available" badge, no
+      poster) appended after the real `ItemCard` entries in the Show
+      screen's seasons `LazyRow`. Tapping one opens `SeerrMediaRoute` scoped
+      to that `seasonNumber`, via a new `ShowAction.NavigateToSeerr` wired
+      through `NavigationRoot`, mirroring `SeasonAction.NavigateToSeerr`.
+      Needs the show's `tmdbId` (`ShowState.seriesTmdbId`), same source as
+      `SeasonState.seriesTmdbId`.
+- [x] TV: same placeholder card added to the seasons row, but
+      non-interactive (`enabled = false`), matching the existing TV
+      `UpcomingEpisodeCard` - TV has no `SeerrMediaRoute` wired up at all
+      yet, so there's nothing a tap could do there either.
+- [x] Added `matchMissingSeasons` unit tests to
+      `SeasonEpisodesMatchingTest.kt` (missing-season filtering, per-season
+      episode counts, monitored-if-any-episode-monitored, season-0
+      exclusion, sort order, all-known-returns-empty).
+
+Status: **done** (2026-07-21). Verified via remote
+`:app:phone:compileLibreDebugKotlin`/`:app:tv:compileLibreDebugKotlin`,
+`ktfmtCheck`, and `:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest`
+on rofl-13. Not installed/deployed to a device for this change.
+
 ## FINDROID-32: "Marked for deletion" indicator + exclude-from-auto-delete pin
 
 User request: since the app can auto-delete watched downloads, show which

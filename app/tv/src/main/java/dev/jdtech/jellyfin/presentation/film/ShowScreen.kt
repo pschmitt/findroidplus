@@ -72,6 +72,7 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.ui.components.Direction
 import dev.jdtech.jellyfin.ui.components.ItemCard
+import dev.jdtech.jellyfin.ui.components.UpcomingSeasonCard
 import dev.jdtech.jellyfin.utils.getShowDateString
 import java.util.UUID
 
@@ -406,6 +407,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                     onClick = { onAction(ShowAction.NavigateToItem(season)) },
                                 )
                             }
+                            items(state.missingSeasons) { season -> UpcomingSeasonCard(season = season) }
                         }
                     }
                 }

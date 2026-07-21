@@ -64,6 +64,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
+import dev.jdtech.jellyfin.presentation.film.components.UpcomingSeasonCard
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.formatBinaryFileSize
@@ -81,6 +82,7 @@ fun ShowScreen(
     navigateHome: () -> Unit,
     navigateToItem: (item: FindroidItem) -> Unit,
     navigateToPerson: (personId: UUID) -> Unit,
+    navigateToSeerr: (tmdbId: Int, seasonNumber: Int) -> Unit,
     navigateToSettings: () -> Unit,
     viewModel: ShowViewModel = hiltViewModel(),
 ) {
@@ -113,6 +115,7 @@ fun ShowScreen(
                 is ShowAction.OnSettingsClick -> navigateToSettings()
                 is ShowAction.NavigateToItem -> navigateToItem(action.item)
                 is ShowAction.NavigateToPerson -> navigateToPerson(action.personId)
+                is ShowAction.NavigateToSeerr -> navigateToSeerr(action.tmdbId, action.seasonNumber)
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -346,7 +349,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                     }
                 }
 
-                if (state.seasons.isNotEmpty()) {
+                if (state.seasons.isNotEmpty() || state.missingSeasons.isNotEmpty()) {
                     Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                         Text(
                             text = stringResource(CoreR.string.seasons),
@@ -363,6 +366,25 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                 item = season,
                                 direction = Direction.VERTICAL,
                                 onClick = { onAction(ShowAction.NavigateToItem(season)) },
+                            )
+                        }
+                        items(
+                            items = state.missingSeasons,
+                            key = { season -> "missing-${season.seasonNumber}" },
+                        ) { season ->
+                            UpcomingSeasonCard(
+                                season = season,
+                                onClick =
+                                    state.seriesTmdbId?.let { tmdbId ->
+                                        {
+                                            onAction(
+                                                ShowAction.NavigateToSeerr(
+                                                    tmdbId = tmdbId,
+                                                    seasonNumber = season.seasonNumber,
+                                                )
+                                            )
+                                        }
+                                    },
                             )
                         }
                     }
