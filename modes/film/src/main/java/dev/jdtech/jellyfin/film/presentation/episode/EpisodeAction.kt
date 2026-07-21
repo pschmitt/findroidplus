@@ -40,4 +40,6 @@ sealed interface EpisodeAction {
     data class GrabRelease(val release: PvrRelease) : EpisodeAction
 
     data object DismissReleasePicker : EpisodeAction
+
+    data object ToggleExcludeFromAutoDelete : EpisodeAction
 }

@@ -69,6 +69,8 @@ fun ItemButtonsBar(
         },
     downloadIconTint: Color? = null,
     trailingContent: @Composable FlowRowScope.() -> Unit = {},
+    excludeFromAutoDelete: Boolean = false,
+    onToggleExcludeFromAutoDeleteClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -168,6 +170,18 @@ fun ItemButtonsBar(
                 // While isDeleting, neither branch shows - the delete tile disappears rather than
                 // risk a second tap queuing another delete of a file that's already going away.
                 if (item.isDownloaded() && !downloaderState.isDeleting) {
+                    onToggleExcludeFromAutoDeleteClick?.let { toggleClick ->
+                        ItemActionButton(
+                            icon =
+                                painterResource(
+                                    if (excludeFromAutoDelete) CoreR.drawable.ic_lock
+                                    else CoreR.drawable.ic_unlock
+                                ),
+                            label = stringResource(CoreR.string.download_keep_label),
+                            onClick = toggleClick,
+                            checked = excludeFromAutoDelete,
+                        )
+                    }
                     // Size/path details live in the confirmation dialog this opens.
                     ItemActionButton(
                         icon = painterResource(CoreR.drawable.ic_trash),

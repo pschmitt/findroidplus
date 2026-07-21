@@ -8,11 +8,11 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.FindroidSourceType
-import dev.jdtech.jellyfin.models.toFindroidSource
+import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
+import dev.jdtech.jellyfin.models.toFindroidEpisodes
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
-import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -20,6 +20,14 @@ import timber.log.Timber
 /**
  * Deletes downloaded episodes that have been watched for longer than the configured threshold.
  * Scoped to the currently active server/user only, same rationale as [AutoDownloadWorker].
+ *
+ * Eligibility is computed entirely from the local DB (see [isMarkedForAutoDeletion]) rather than
+ * re-fetching each candidate from the server - this used to call [JellyfinRepository.getEpisode]
+ * once per downloaded episode, which was both a needless network round trip per item and a
+ * different eligibility check than the one the "marked for deletion" UI badge uses (the badge
+ * reads local DB state), so the two could disagree. [FindroidUserDataDto.lastPlayedDate][dev.jdtech.jellyfin.models.FindroidUserDataDto]
+ * is kept in sync locally by every `setPlayed` call site (see `JellyfinRepositoryImpl`/
+ * `JellyfinRepositoryOfflineImpl`), so the local copy is authoritative.
  */
 @HiltWorker
 class AutoDeleteWatchedWorker
@@ -41,27 +49,19 @@ constructor(
                 appPreferences.getValue(appPreferences.currentServer)
                     ?: return@withContext Result.success()
             val hours = appPreferences.getValue(appPreferences.autoDeleteWatchedHours)
-            val cutoff = LocalDateTime.now().minusHours(hours.toLong())
+            val userId = jellyfinRepository.getUserId()
 
-            val downloadedEpisodes =
-                database.getEpisodesByServerId(serverId).filter { episode ->
-                    database.getSources(episode.id).any { it.type == FindroidSourceType.LOCAL }
-                }
+            val episodes = database.getEpisodesByServerId(serverId).toFindroidEpisodes(database, userId)
 
-            for (episodeDto in downloadedEpisodes) {
+            for (episode in episodes) {
+                if (!episode.isMarkedForAutoDeletion(hours)) continue
                 try {
-                    val episode = jellyfinRepository.getEpisode(episodeDto.id)
-                    val lastPlayedDate = episode.lastPlayedDate
-                    if (episode.played && lastPlayedDate != null && lastPlayedDate.isBefore(cutoff)) {
-                        val source =
-                            database
-                                .getSources(episode.id)
-                                .firstOrNull { it.type == FindroidSourceType.LOCAL }
-                                ?: continue
-                        downloader.deleteItem(episode, source.toFindroidSource(database))
-                    }
+                    val source =
+                        episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                            ?: continue
+                    downloader.deleteItem(episode, source)
                 } catch (e: Exception) {
-                    Timber.e(e, "Failed to evaluate auto-delete for episode ${episodeDto.id}")
+                    Timber.e(e, "Failed to auto-delete watched episode ${episode.id}")
                 }
             }
 

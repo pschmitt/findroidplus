@@ -21,6 +21,9 @@ data class FindroidSourceDto(
     // it's the one resumed once battery saver turns back off - see
     // DownloaderImpl.pauseAllForBatterySaver/resumeBatterySaverPausedDownloads.
     @ColumnInfo(defaultValue = "0") val pausedByBatterySaver: Boolean = false,
+    // User-set "keep" pin - excludes this download from AutoDeleteWatchedWorker even once it's
+    // watched and past the configured threshold. See FindroidEpisode.isMarkedForAutoDeletion.
+    @ColumnInfo(defaultValue = "0") val excludeFromAutoDelete: Boolean = false,
 )
 
 fun FindroidSource.toFindroidSourceDto(itemId: UUID, path: String): FindroidSourceDto {

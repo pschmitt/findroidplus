@@ -59,6 +59,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
+import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
@@ -222,32 +223,59 @@ private fun EpisodeScreenLayout(
                         maxLines = 2,
                         style = MaterialTheme.typography.headlineMedium,
                     )
-                    Text(
-                        text = episode.seriesName,
-                        modifier =
-                            Modifier.clickable {
-                                onAction(EpisodeAction.NavigateToShow(episode.seriesId))
-                            },
-                        maxLines = 1,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    val seasonName =
-                        episode.seasonName
-                            ?: stringResource(CoreR.string.season_number, episode.parentIndexNumber)
-                    Text(
-                        text =
-                            "$seasonName - " +
-                                stringResource(
-                                    id = CoreR.string.episode_number,
-                                    episode.indexNumber,
-                                ),
-                        modifier =
-                            Modifier.clickable {
-                                onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
-                            },
-                        maxLines = 1,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                    val downloadedSource =
+                        if (episode.isDownloaded()) {
+                            episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                        } else {
+                            null
+                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = episode.seriesName,
+                                modifier =
+                                    Modifier.clickable {
+                                        onAction(EpisodeAction.NavigateToShow(episode.seriesId))
+                                    },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            val seasonName =
+                                episode.seasonName
+                                    ?: stringResource(
+                                        CoreR.string.season_number,
+                                        episode.parentIndexNumber,
+                                    )
+                            Text(
+                                text =
+                                    "$seasonName - " +
+                                        stringResource(
+                                            id = CoreR.string.episode_number,
+                                            episode.indexNumber,
+                                        ),
+                                modifier =
+                                    Modifier.clickable {
+                                        onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
+                                    },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                        downloadedSource?.let { source ->
+                            if (!source.path.endsWith(".download")) {
+                                LocalStorageIndicator(
+                                    path = source.path,
+                                    sizeBytes = source.size,
+                                    isBroken = episode.isDownloadBroken(),
+                                    isMarkedForDeletion =
+                                        state.autoDeleteWatchedEnabled &&
+                                            episode.isMarkedForAutoDeletion(
+                                                state.autoDeleteWatchedHours
+                                            ),
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     ItemMetaRow(
                         dateText = episode.premiereDate?.format(state.dateFormat),
@@ -275,12 +303,6 @@ private fun EpisodeScreenLayout(
                             )
                             .show()
                     }
-                    val downloadedSource =
-                        if (episode.isDownloaded()) {
-                            episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
-                        } else {
-                            null
-                        }
                     ItemButtonsBar(
                         item = episode,
                         downloaderState = downloaderState,
@@ -336,17 +358,14 @@ private fun EpisodeScreenLayout(
                                 )
                             }
                         },
+                        excludeFromAutoDelete = downloadedSource?.excludeFromAutoDelete == true,
+                        onToggleExcludeFromAutoDeleteClick =
+                            if (state.autoDeleteWatchedEnabled) {
+                                { onAction(EpisodeAction.ToggleExcludeFromAutoDelete) }
+                            } else {
+                                null
+                            },
                     )
-                    downloadedSource?.let { source ->
-                        if (!source.path.endsWith(".download")) {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            LocalStorageIndicator(
-                                path = source.path,
-                                sizeBytes = source.size,
-                                isBroken = episode.isDownloadBroken(),
-                            )
-                        }
-                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     if (infoDialogOpen && state.videoMetadata != null) {
                         InfoDialog(

@@ -989,3 +989,49 @@ devices (ASUS phone, Pixel 5, Mi Pad 4).
 
 Status: **done** (2026-07-21). Verified via remote
 `:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13.
+
+## FINDROID-32: "Marked for deletion" indicator + exclude-from-auto-delete pin
+
+User request: since the app can auto-delete watched downloads, show which
+items are about to be deleted (Downloads list + episode/movie detail pages)
+and offer a way to protect specific ones.
+
+- [x] Root problem found while designing this: `AutoDeleteWatchedWorker`
+      computed eligibility by calling `JellyfinRepository.getEpisode()` (a
+      live network round trip) for every downloaded episode, and the local
+      DB never tracked `lastPlayedDate` at all - so there was no way for a
+      UI badge to compute "is this marked for deletion" without duplicating
+      that network call on every screen render. Added
+      `FindroidUserDataDto.lastPlayedDate` (Room, DB bumped to v15), kept in
+      sync locally by every `setPlayed` call site in
+      `JellyfinRepositoryImpl`/`JellyfinRepositoryOfflineImpl` (set to
+      `DateTime.now()` when marking played, cleared to `null` when
+      unplaying). `AutoDeleteWatchedWorker` now computes eligibility
+      entirely from local DB state via the new
+      `FindroidEpisode.isMarkedForAutoDeletion(hours)` extension - no more
+      network round trip, and the worker and the UI badge are now
+      guaranteed to agree since they share the exact same check.
+- [x] Added `FindroidSourceDto.excludeFromAutoDelete` (same v15 migration,
+      `@ColumnInfo(defaultValue = "0")`, mirrors the recent
+      `pausedByBatterySaver` column) - a per-download "keep" pin.
+      `isMarkedForAutoDeletion()` returns false for an excluded source
+      regardless of watched state, so the worker respects it directly.
+      Scoped to episodes only (movies are never auto-deleted by this
+      worker, so a pin for them would protect against nothing).
+- [x] Downloads screen: episode rows show a tertiary-colored "Marked for
+      deletion" caption (trash icon) next to the file size when eligible,
+      and a lock/unlock icon button toggles the exclude pin - both only
+      rendered while the auto-delete-watched preference is actually on.
+- [x] Episode detail page: `LocalStorageIndicator` (below `ItemButtonsBar`)
+      gained the same "Marked for deletion" caption; `ItemButtonsBar`
+      gained a new "Keep" action tile (lock/unlock icon, `checked` state)
+      next to the existing Delete tile, wired the same way.
+- [x] Follow-up from a screenshot: moved the local-file-size indicator on
+      the episode detail page from below the action-button row (where it
+      visually crowded the "Delete" label) to float on the right of the
+      show name / season-episode text block instead, vertically centered
+      across both lines.
+
+Status: **done** (2026-07-21). Verified via remote
+`:app:phone:compileLibreDebugKotlin`, `:data:testDebugUnitTest`, and
+`ktfmtCheck` (forced rerun) on rofl-13.

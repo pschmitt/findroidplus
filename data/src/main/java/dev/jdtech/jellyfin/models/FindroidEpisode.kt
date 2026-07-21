@@ -112,6 +112,7 @@ fun FindroidEpisodeDto.toFindroidEpisode(
         runtimeTicks = runtimeTicks,
         playbackPositionTicks = userData.playbackPositionTicks,
         premiereDate = premiereDate,
+        lastPlayedDate = userData.lastPlayedDate,
         seriesId = seriesId,
         seriesName = seriesName,
         seasonId = seasonId,

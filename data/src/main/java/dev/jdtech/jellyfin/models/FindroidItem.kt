@@ -94,3 +94,18 @@ fun FindroidItem.tmdbIdOrNull(): Int? =
         is FindroidShow -> tmdbId
         else -> null
     }?.toIntOrNull()
+
+/**
+ * Whether this downloaded episode is eligible for [AutoDeleteWatchedWorker][dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker]
+ * to delete right now: watched, watched more than [thresholdHours] ago, and not pinned via the
+ * local source's `excludeFromAutoDelete` flag. Movies are never auto-deleted (the worker only
+ * ever considers episodes), so there's no equivalent on the base [FindroidItem] - only episodes
+ * carry [FindroidEpisode.lastPlayedDate]. Drives both the worker's own deletion pass and the
+ * "marked for deletion" badge on the Downloads screen/episode detail page, so both always agree.
+ */
+fun FindroidEpisode.isMarkedForAutoDeletion(thresholdHours: Int): Boolean {
+    val localSource = sources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: return false
+    if (localSource.excludeFromAutoDelete) return false
+    val watchedAt = lastPlayedDate ?: return false
+    return played && watchedAt.isBefore(LocalDateTime.now().minusHours(thresholdHours.toLong()))
+}

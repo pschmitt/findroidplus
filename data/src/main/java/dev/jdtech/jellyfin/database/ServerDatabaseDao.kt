@@ -24,6 +24,7 @@ import dev.jdtech.jellyfin.models.ServerWithAddressesAndUsers
 import dev.jdtech.jellyfin.models.ServerWithUsers
 import dev.jdtech.jellyfin.models.User
 import java.util.UUID
+import org.jellyfin.sdk.model.DateTime
 
 @Dao
 interface ServerDatabaseDao {
@@ -131,6 +132,9 @@ interface ServerDatabaseDao {
     @Query("UPDATE sources SET pausedByBatterySaver = :paused WHERE id = :id")
     fun setSourcePausedByBatterySaver(id: String, paused: Boolean)
 
+    @Query("UPDATE sources SET excludeFromAutoDelete = :excluded WHERE id = :id")
+    fun setSourceExcludeFromAutoDelete(id: String, excluded: Boolean)
+
     @Query("DELETE FROM sources WHERE id = :id") fun deleteSource(id: String)
 
     @Query("DELETE FROM movies WHERE id = :id") fun deleteMovie(id: UUID)
@@ -166,6 +170,11 @@ interface ServerDatabaseDao {
 
     @Query("UPDATE userdata SET played = :played WHERE userId = :userId AND itemId = :itemId")
     fun setPlayed(userId: UUID, itemId: UUID, played: Boolean)
+
+    @Query(
+        "UPDATE userdata SET lastPlayedDate = :lastPlayedDate WHERE userId = :userId AND itemId = :itemId"
+    )
+    fun setLastPlayedDate(userId: UUID, itemId: UUID, lastPlayedDate: DateTime?)
 
     @Query("UPDATE userdata SET favorite = :favorite WHERE userId = :userId AND itemId = :itemId")
     fun setFavorite(userId: UUID, itemId: UUID, favorite: Boolean)

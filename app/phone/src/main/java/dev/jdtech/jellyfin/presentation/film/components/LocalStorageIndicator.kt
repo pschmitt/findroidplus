@@ -36,6 +36,7 @@ fun LocalStorageIndicator(
     sizeBytes: Long,
     modifier: Modifier = Modifier,
     isBroken: Boolean = false,
+    isMarkedForDeletion: Boolean = false,
 ) {
     val context = LocalContext.current
     val isRemovable = remember(path) { isPathOnRemovableStorage(context, path) }
@@ -66,6 +67,21 @@ fun LocalStorageIndicator(
                 if (isBroken) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (isMarkedForDeletion && !isBroken) {
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_trash),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.extraSmall))
+            Text(
+                text = stringResource(CoreR.string.download_row_marked_for_deletion),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
     }
 }
 

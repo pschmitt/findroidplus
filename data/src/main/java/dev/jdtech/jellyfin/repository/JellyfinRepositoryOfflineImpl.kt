@@ -27,6 +27,7 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
@@ -243,14 +244,17 @@ class JellyfinRepositoryOfflineImpl(
                 playedPercentage < 10 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.setLastPlayedDate(jellyfinApi.userId!!, itemId, null)
                 }
                 playedPercentage > 90 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, true)
+                    database.setLastPlayedDate(jellyfinApi.userId!!, itemId, DateTime.now())
                 }
                 else -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.setLastPlayedDate(jellyfinApi.userId!!, itemId, null)
                 }
             }
             database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
@@ -285,6 +289,7 @@ class JellyfinRepositoryOfflineImpl(
     override suspend fun markAsPlayed(itemId: UUID) {
         withContext(Dispatchers.IO) {
             database.setPlayed(jellyfinApi.userId!!, itemId, true)
+            database.setLastPlayedDate(jellyfinApi.userId!!, itemId, DateTime.now())
             database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
             database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
         }
@@ -293,6 +298,7 @@ class JellyfinRepositoryOfflineImpl(
     override suspend fun markAsUnplayed(itemId: UUID) {
         withContext(Dispatchers.IO) {
             database.setPlayed(jellyfinApi.userId!!, itemId, false)
+            database.setLastPlayedDate(jellyfinApi.userId!!, itemId, null)
             database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
         }
     }

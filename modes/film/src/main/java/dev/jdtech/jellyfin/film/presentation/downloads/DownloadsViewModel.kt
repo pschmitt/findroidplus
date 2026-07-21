@@ -199,6 +199,8 @@ constructor(
                     movies = movies,
                     showGroups = showGroups,
                     selectedIds = it.selectedIds.intersect(allIds),
+                    autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
+                    autoDeleteWatchedHours = appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
                 )
             }
             reconcileDownloadProgress(movies, episodes)
@@ -384,6 +386,18 @@ constructor(
         val sourceId =
             item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.id ?: return
         downloader.downloadItem(item, sourceId, storageIndex)
+    }
+
+    /**
+     * Pins/unpins a downloaded episode against [AutoDeleteWatchedWorker][dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker]
+     * - see [dev.jdtech.jellyfin.models.FindroidEpisode.isMarkedForAutoDeletion].
+     */
+    fun toggleExcludeFromAutoDelete(item: FindroidItem) {
+        val source = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: return
+        viewModelScope.launch {
+            database.setSourceExcludeFromAutoDelete(source.id, !source.excludeFromAutoDelete)
+            refreshDownloads()
+        }
     }
 
     fun onDownloadAction(itemId: UUID, action: DownloadAction) {

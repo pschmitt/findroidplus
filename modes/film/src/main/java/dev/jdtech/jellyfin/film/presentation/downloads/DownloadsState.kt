@@ -41,6 +41,12 @@ data class DownloadsState(
     // download location needs its usage shown there, not folded into (or worse, mistaken for)
     // internal storage.
     val deviceStorages: List<DeviceStorageStats> = emptyList(),
+    // Mirrors AppPreferences.autoDeleteWatched/autoDeleteWatchedHours - read once per refresh so
+    // DownloadRow can compute FindroidEpisode.isMarkedForAutoDeletion() without injecting
+    // AppPreferences into the Compose layer, and so the "keep" pin toggle only renders while the
+    // feature is actually on (nothing to protect against otherwise).
+    val autoDeleteWatchedEnabled: Boolean = false,
+    val autoDeleteWatchedHours: Int = 24,
 ) {
     val isEmpty: Boolean
         get() = movies.isEmpty() && showGroups.isEmpty()

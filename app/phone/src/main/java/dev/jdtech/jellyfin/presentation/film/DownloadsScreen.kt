@@ -88,6 +88,7 @@ import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportSheetState
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueGroup
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsEvent
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueUiItem
+import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSource
 import dev.jdtech.jellyfin.models.FindroidSourceType
@@ -96,6 +97,7 @@ import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
+import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
 import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
@@ -234,6 +236,7 @@ fun DownloadsScreen(
         onRefresh = viewModel::refresh,
         onRedownloadRequest = viewModel::redownloadItem,
         onRedownloadAllBrokenClick = viewModel::redownloadAllBroken,
+        onToggleExcludeFromAutoDelete = viewModel::toggleExcludeFromAutoDelete,
     )
 
     state.manualImport?.let { manualImport ->
@@ -380,6 +383,7 @@ private fun DownloadsScreenLayout(
     onRefresh: () -> Unit = {},
     onRedownloadRequest: (FindroidItem) -> Unit = {},
     onRedownloadAllBrokenClick: () -> Unit = {},
+    onToggleExcludeFromAutoDelete: (FindroidItem) -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val allIds =
@@ -740,6 +744,13 @@ private fun DownloadsScreenLayout(
                             deviceStorages = state.deviceStorages,
                             isMigrating = episode.id in state.migratingIds,
                             onRedownloadRequest = { onRedownloadRequest(episode) },
+                            isMarkedForDeletion =
+                                state.autoDeleteWatchedEnabled &&
+                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours),
+                            autoDeleteEnabled = state.autoDeleteWatchedEnabled,
+                            onToggleExcludeFromAutoDelete = {
+                                onToggleExcludeFromAutoDelete(episode)
+                            },
                         )
                     }
                 }
@@ -1285,6 +1296,9 @@ private fun DownloadRow(
     deviceStorages: List<DeviceStorageStats> = emptyList(),
     isMigrating: Boolean = false,
     onRedownloadRequest: () -> Unit = {},
+    isMarkedForDeletion: Boolean = false,
+    autoDeleteEnabled: Boolean = false,
+    onToggleExcludeFromAutoDelete: () -> Unit = {},
 ) {
     val activeProgress = progress?.takeIf { it.status != DownloadManager.STATUS_SUCCESSFUL }
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
@@ -1296,6 +1310,7 @@ private fun DownloadRow(
     val isBroken = activeProgress == null && !isMigrating && item.isDownloadBroken()
     val localSource = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
     val sizeBytes = localSource?.size ?: 0L
+    val excludedFromAutoDelete = localSource?.excludeFromAutoDelete == true
     val storageIcon = remember(localSource?.path, deviceStorages) {
         storageIconFor(localSource?.path, deviceStorages)
     }
@@ -1412,6 +1427,21 @@ private fun DownloadRow(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            if (isMarkedForDeletion) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_trash),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(CoreR.string.download_row_marked_for_deletion),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                )
+                            }
                         }
                     }
                 }
@@ -1484,6 +1514,28 @@ private fun DownloadRow(
                     }
                 }
                 item.isDownloaded() -> {
+                    if (autoDeleteEnabled && item is FindroidEpisode) {
+                        IconButton(onClick = onToggleExcludeFromAutoDelete) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (excludedFromAutoDelete) CoreR.drawable.ic_lock
+                                        else CoreR.drawable.ic_unlock
+                                    ),
+                                contentDescription =
+                                    stringResource(
+                                        if (excludedFromAutoDelete) {
+                                            CoreR.string.download_action_allow_auto_delete
+                                        } else {
+                                            CoreR.string.download_action_exclude_from_auto_delete
+                                        }
+                                    ),
+                                tint =
+                                    if (excludedFromAutoDelete) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     IconButton(onClick = onClick) {
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_play),

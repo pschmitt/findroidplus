@@ -18,4 +18,10 @@ data class EpisodeState(
     val sonarrConfigured: Boolean = false,
     val releasePicker: ReleasePickerState? = null,
     val error: Exception? = null,
+    // Mirrors AppPreferences.autoDeleteWatched/autoDeleteWatchedHours - see
+    // DownloadsState.autoDeleteWatchedEnabled for the identical rationale (drives the "marked for
+    // deletion" indicator and gates the exclude toggle, which is meaningless while the feature is
+    // off).
+    val autoDeleteWatchedEnabled: Boolean = false,
+    val autoDeleteWatchedHours: Int = 24,
 )

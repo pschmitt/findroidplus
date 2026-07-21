@@ -14,6 +14,7 @@ import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
@@ -78,6 +79,10 @@ constructor(
                         existingScope = existingScope,
                         seriesTvdbId = seriesTvdbId,
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
+                        autoDeleteWatchedEnabled =
+                            appPreferences.getValue(appPreferences.autoDeleteWatched),
+                        autoDeleteWatchedHours =
+                            appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
                     )
                 )
             } catch (e: Exception) {
@@ -231,7 +236,18 @@ constructor(
             is EpisodeAction.GrabRelease -> grabRelease(action.release)
             is EpisodeAction.DismissReleasePicker ->
                 _state.value = _state.value.copy(releasePicker = null)
+            is EpisodeAction.ToggleExcludeFromAutoDelete -> toggleExcludeFromAutoDelete()
             else -> Unit
+        }
+    }
+
+    private fun toggleExcludeFromAutoDelete() {
+        val source =
+            _state.value.episode?.sources?.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                ?: return
+        viewModelScope.launch {
+            database.setSourceExcludeFromAutoDelete(source.id, !source.excludeFromAutoDelete)
+            loadEpisode(episodeId)
         }
     }
 }

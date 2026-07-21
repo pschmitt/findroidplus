@@ -16,6 +16,7 @@ data class FindroidSource(
     val mediaStreams: List<FindroidMediaStream>,
     val downloadId: Long? = null,
     val checksum: String? = null,
+    val excludeFromAutoDelete: Boolean = false,
 )
 
 suspend fun MediaSourceInfo.toFindroidSource(
@@ -65,6 +66,7 @@ fun FindroidSourceDto.toFindroidSource(mediaStreams: List<FindroidMediaStreamDto
         mediaStreams = mediaStreams.map { it.toFindroidMediaStream() },
         downloadId = downloadId,
         checksum = checksum,
+        excludeFromAutoDelete = excludeFromAutoDelete,
     )
 }
 
