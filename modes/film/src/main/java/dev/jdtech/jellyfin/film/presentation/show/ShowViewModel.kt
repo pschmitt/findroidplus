@@ -19,6 +19,7 @@ import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.SeasonEpisodesRepository
+import dev.jdtech.jellyfin.repository.SeerrRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
@@ -47,6 +48,7 @@ constructor(
     private val appPreferences: AppPreferences,
     private val calendarRepository: CalendarRepository,
     private val seasonEpisodesRepository: SeasonEpisodesRepository,
+    private val seerrRepository: SeerrRepository,
     @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShowState())
@@ -90,14 +92,18 @@ constructor(
                 // Fired after the main state emit rather than blocking it - the real show/season
                 // data is already on screen by the time this (possibly slow, Sonarr-dependent)
                 // round trip resolves, same pattern as SeasonViewModel.loadUpcomingEpisodes.
-                loadMissingSeasons(show.tvdbId, seasons)
+                loadMissingSeasons(show.tvdbId, show.tmdbId?.toIntOrNull(), seasons)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
         }
     }
 
-    private suspend fun loadMissingSeasons(seriesTvdbId: String?, knownSeasons: List<FindroidSeason>) {
+    private suspend fun loadMissingSeasons(
+        seriesTvdbId: String?,
+        seriesTmdbId: Int?,
+        knownSeasons: List<FindroidSeason>,
+    ) {
         val missing =
             if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
                 emptyList()
@@ -113,6 +119,17 @@ constructor(
                 }
             }
         _state.emit(_state.value.copy(missingSeasons = missing))
+        if (missing.isEmpty() || seriesTmdbId == null) return
+        if (!appPreferences.getValue(appPreferences.seerrEnabled)) return
+        // Separate round trip after missingSeasons is already on screen - poster art is a nice-
+        // to-have, not something worth delaying the placeholder cards themselves for.
+        seerrRepository
+            .getSeasonPosterUrls(seriesTmdbId, missing.map { it.seasonNumber })
+            .onSuccess { posterUrls ->
+                val withPosters = missing.map { it.copy(posterUrl = posterUrls[it.seasonNumber]) }
+                _state.emit(_state.value.copy(missingSeasons = withPosters))
+            }
+            .onFailure { e -> Timber.w(e, "Failed to load missing-season posters for show $showId") }
     }
 
     private suspend fun isAutoDownloadEnabled(showId: UUID): Boolean {

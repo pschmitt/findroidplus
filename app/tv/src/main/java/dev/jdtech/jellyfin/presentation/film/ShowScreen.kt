@@ -67,6 +67,8 @@ import dev.jdtech.jellyfin.film.presentation.show.ShowAction
 import dev.jdtech.jellyfin.film.presentation.show.ShowState
 import dev.jdtech.jellyfin.film.presentation.show.ShowViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.film.components.DownloadScopeDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -394,20 +396,30 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                         }
                     }
                     item {
+                        val seasonRowItems =
+                            (state.seasons.map { SeasonRowItem.Real(it) } +
+                                    state.missingSeasons.map { SeasonRowItem.Missing(it) })
+                                .sortedBy { it.seasonNumber }
                         LazyRow(
                             horizontalArrangement =
                                 Arrangement.spacedBy(MaterialTheme.spacings.default),
                             contentPadding =
                                 PaddingValues(horizontal = MaterialTheme.spacings.default * 2),
                         ) {
-                            items(state.seasons) { season ->
-                                ItemCard(
-                                    item = season,
-                                    direction = Direction.VERTICAL,
-                                    onClick = { onAction(ShowAction.NavigateToItem(season)) },
-                                )
+                            items(seasonRowItems) { item ->
+                                when (item) {
+                                    is SeasonRowItem.Real ->
+                                        ItemCard(
+                                            item = item.season,
+                                            direction = Direction.VERTICAL,
+                                            onClick = {
+                                                onAction(ShowAction.NavigateToItem(item.season))
+                                            },
+                                        )
+                                    is SeasonRowItem.Missing ->
+                                        UpcomingSeasonCard(season = item.season)
+                                }
                             }
-                            items(state.missingSeasons) { season -> UpcomingSeasonCard(season = season) }
                         }
                     }
                 }
@@ -466,5 +478,24 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
 private fun ShowScreenLayoutPreview() {
     FindroidTheme {
         ShowScreenLayout(state = ShowState(show = dummyShow, nextUp = dummyEpisode), onAction = {})
+    }
+}
+
+/**
+ * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so
+ * the seasons row can be sorted by season number instead of showing all missing seasons appended
+ * after every real one regardless of number.
+ */
+private sealed interface SeasonRowItem {
+    val seasonNumber: Int
+
+    data class Real(val season: FindroidSeason) : SeasonRowItem {
+        override val seasonNumber: Int
+            get() = season.indexNumber
+    }
+
+    data class Missing(val season: UpcomingSeason) : SeasonRowItem {
+        override val seasonNumber: Int
+            get() = season.seasonNumber
     }
 }

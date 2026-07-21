@@ -18,11 +18,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -31,9 +34,10 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 /**
  * A Sonarr-known season not yet in the Jellyfin library - the show-level equivalent of
  * [UpcomingEpisodeCard], shown alongside real [ItemCard] entries in the Show screen's seasons
- * row. Dimmed with no poster (there isn't one yet), same visual language as
- * [UpcomingEpisodeCard]. It can still open the Seerr detail view for the season, matching that
- * card's behavior.
+ * row. Dimmed, same visual language as [UpcomingEpisodeCard]. Shows the real TMDB season poster
+ * (see [UpcomingSeason.posterUrl]) once it's resolved, falling back to a calendar icon
+ * placeholder while it's loading, unavailable, or Seerr isn't configured. It can still open the
+ * Seerr detail view for the season, matching that card's behavior.
  */
 @Composable
 fun UpcomingSeasonCard(
@@ -55,11 +59,21 @@ fun UpcomingSeasonCard(
                         .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_calendar),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (season.posterUrl != null) {
+                    AsyncImage(
+                        model = season.posterUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(0.66f),
+                        placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainer),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_calendar),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))

@@ -1087,3 +1087,33 @@ and offer a way to protect specific ones.
 Status: **done** (2026-07-21). Verified via remote
 `:app:phone:compileLibreDebugKotlin`, `:data:testDebugUnitTest`, and
 `ktfmtCheck` (forced rerun) on rofl-13.
+
+## FINDROID-33: Missing-season ordering + real posters
+
+Two follow-ups on FINDROID-31's missing-season placeholder cards:
+
+- [x] They were appended after every real season regardless of number
+      (two separate `items()` blocks in the seasons `LazyRow`), so e.g.
+      season 4 missing on a show with seasons 1-3 and 5 showed as
+      "1, 2, 3, 5, 4" instead of "1, 2, 3, 4, 5". Fixed by merging real
+      `FindroidSeason`s and `UpcomingSeason` placeholders into one list
+      (new private `SeasonRowItem` sealed type, phone + TV) sorted by
+      season number before rendering a single `items()` block.
+- [x] They showed a bare calendar icon instead of a poster. Sonarr's v3
+      API has no per-season poster art, but TMDB does (via Seerr's
+      `GET /tv/{id}/season/{n}`, the same endpoint the Seerr season
+      detail view already uses for `SeerrSeasonDetail.posterUrl`) - added
+      `SeerrRepository.getSeasonPosterUrls(tmdbId, seasonNumbers)`
+      (parallel fan-out, one call per season, a single bad lookup maps to
+      `null` instead of failing the batch) and a new
+      `UpcomingSeason.posterUrl` field. `ShowViewModel.loadMissingSeasons()`
+      fetches posters in a second round trip *after* the placeholder cards
+      are already on screen (poster art is a nice-to-have, not worth
+      delaying the cards for), gated on Seerr being configured.
+      `UpcomingSeasonCard` (phone + TV) now renders the real poster via
+      Coil `AsyncImage` when present, falling back to the calendar icon
+      otherwise (loading, no Seerr, or TMDB has none for that season).
+
+Status: **done** (2026-07-21). Verified via remote
+`:app:phone:compileLibreDebugKotlin`/`:app:tv:compileLibreDebugKotlin`,
+`:data:testDebugUnitTest`, and `ktfmtCheck` (forced rerun) on rofl-13.

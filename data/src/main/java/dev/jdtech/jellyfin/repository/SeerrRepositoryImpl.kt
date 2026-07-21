@@ -209,6 +209,33 @@ class SeerrRepositoryImpl(
         api.deleteRequest(requestId)
     }
 
+    override suspend fun getSeasonPosterUrls(
+        tmdbId: Int,
+        seasonNumbers: List<Int>,
+    ): Result<Map<Int, String?>> = runAction { api ->
+        coroutineScope {
+            seasonNumbers
+                .map { seasonNumber ->
+                    async {
+                        seasonNumber to
+                            try {
+                                api.getTvSeason(tmdbId, seasonNumber).posterPath?.toPosterUrl()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Timber.w(
+                                    e,
+                                    "Failed to fetch poster for tmdbId=$tmdbId season=$seasonNumber",
+                                )
+                                null
+                            }
+                    }
+                }
+                .awaitAll()
+                .toMap()
+        }
+    }
+
     /**
      * [fallbackMediaType] covers the single-type discover endpoints, whose results are all of a
      * known type even if a payload omits `mediaType`.

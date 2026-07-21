@@ -47,4 +47,14 @@ interface SeerrRepository {
 
     /** Cancels/deletes a request - Seerr also un-monitors it on the Sonarr/Radarr side. */
     suspend fun cancelRequest(requestId: Int): Result<Unit>
+
+    /**
+     * TMDB season poster URLs for [seasonNumbers] of the series [tmdbId] - fetched in parallel,
+     * one `GET /tv/{tmdbId}/season/{n}` call per season (TMDB's show-level detail response
+     * doesn't carry per-season poster paths, only [getDetails]'s season-scoped call does). Used
+     * for the Show screen's missing-season placeholder cards, so they show real artwork instead
+     * of a generic icon. A season whose lookup fails maps to `null` rather than failing the whole
+     * batch - one bad season shouldn't blank out the others.
+     */
+    suspend fun getSeasonPosterUrls(tmdbId: Int, seasonNumbers: List<Int>): Result<Map<Int, String?>>
 }

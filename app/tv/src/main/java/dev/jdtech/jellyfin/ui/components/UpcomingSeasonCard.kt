@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,6 +27,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -57,7 +60,20 @@ fun UpcomingSeasonCard(season: UpcomingSeason) {
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painter = painterResource(CoreR.drawable.ic_calendar), contentDescription = null)
+                if (season.posterUrl != null) {
+                    AsyncImage(
+                        model = season.posterUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(0.66f),
+                        placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_calendar),
+                        contentDescription = null,
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
             Text(
