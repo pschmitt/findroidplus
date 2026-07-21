@@ -1,7 +1,9 @@
 package dev.jdtech.jellyfin.repository
 
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
+import dev.jdtech.jellyfin.api.pvr.SonarrEpisodeDto
 import dev.jdtech.jellyfin.models.UpcomingEpisode
+import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
@@ -23,7 +25,21 @@ class SeasonEpisodesRepositoryImpl(
         seriesTvdbId: String,
         seasonNumber: Int,
         knownEpisodeNumbers: Set<Int>,
-    ): List<UpcomingEpisode> {
+    ): List<UpcomingEpisode> =
+        matchUpcomingEpisodes(fetchSeriesEpisodes(seriesTvdbId), seasonNumber, knownEpisodeNumbers)
+
+    override suspend fun getMissingSeasons(
+        seriesTvdbId: String,
+        knownSeasonNumbers: Set<Int>,
+    ): List<UpcomingSeason> = matchMissingSeasons(fetchSeriesEpisodes(seriesTvdbId), knownSeasonNumbers)
+
+    /**
+     * Every Sonarr-known episode of the series matching [seriesTvdbId], regardless of season -
+     * shared by both [getUpcomingEpisodes] (which filters to one season) and [getMissingSeasons]
+     * (which groups by season). Empty (not an error) when Sonarr isn't configured, the show isn't
+     * tracked by Sonarr, or the request fails.
+     */
+    private suspend fun fetchSeriesEpisodes(seriesTvdbId: String): List<SonarrEpisodeDto> {
         if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return emptyList()
         val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
         val apiKey = sonarrApiKeyProvider()
@@ -34,12 +50,11 @@ class SeasonEpisodesRepositoryImpl(
             val seriesId =
                 api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id
                     ?: return emptyList()
-            val episodes = api.getEpisodes(seriesId)
-            matchUpcomingEpisodes(episodes, seasonNumber, knownEpisodeNumbers)
+            api.getEpisodes(seriesId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.w(e, "Failed to fetch upcoming Sonarr episodes for season $seasonNumber")
+            Timber.w(e, "Failed to fetch Sonarr episodes for series tvdbId=$seriesTvdbId")
             emptyList()
         }
     }

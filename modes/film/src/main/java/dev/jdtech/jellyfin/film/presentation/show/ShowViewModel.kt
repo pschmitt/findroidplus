@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
+import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.toFindroidEpisode
@@ -17,6 +18,7 @@ import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.SeasonEpisodesRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.PersonKind
+import timber.log.Timber
 
 @HiltViewModel
 class ShowViewModel
@@ -43,6 +46,7 @@ constructor(
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val appPreferences: AppPreferences,
     private val calendarRepository: CalendarRepository,
+    private val seasonEpisodesRepository: SeasonEpisodesRepository,
     @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShowState())
@@ -79,12 +83,36 @@ constructor(
                         existingScope = existingScope,
                         hasDownloads = downloadsSizeBytes > 0,
                         downloadsSizeBytes = downloadsSizeBytes,
+                        seriesTvdbId = show.tvdbId,
+                        seriesTmdbId = show.tmdbId?.toIntOrNull(),
                     )
                 )
+                // Fired after the main state emit rather than blocking it - the real show/season
+                // data is already on screen by the time this (possibly slow, Sonarr-dependent)
+                // round trip resolves, same pattern as SeasonViewModel.loadUpcomingEpisodes.
+                loadMissingSeasons(show.tvdbId, seasons)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
         }
+    }
+
+    private suspend fun loadMissingSeasons(seriesTvdbId: String?, knownSeasons: List<FindroidSeason>) {
+        val missing =
+            if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
+                emptyList()
+            } else {
+                try {
+                    seasonEpisodesRepository.getMissingSeasons(
+                        seriesTvdbId = seriesTvdbId,
+                        knownSeasonNumbers = knownSeasons.map { it.indexNumber }.toSet(),
+                    )
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to load missing seasons for show $showId")
+                    emptyList()
+                }
+            }
+        _state.emit(_state.value.copy(missingSeasons = missing))
     }
 
     private suspend fun isAutoDownloadEnabled(showId: UUID): Boolean {

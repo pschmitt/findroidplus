@@ -34,4 +34,8 @@ sealed interface ShowAction {
     data class NavigateToItem(val item: FindroidItem) : ShowAction
 
     data class NavigateToPerson(val personId: UUID) : ShowAction
+
+    /** Opens the Seerr detail view, scoped to [seasonNumber], for a missing-season placeholder
+     * card - mirrors SeasonAction.NavigateToSeerr's role for missing-episode rows. */
+    data class NavigateToSeerr(val tmdbId: Int, val seasonNumber: Int) : ShowAction
 }
