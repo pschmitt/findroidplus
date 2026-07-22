@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
@@ -292,10 +293,15 @@ constructor(
         return repository.getSeasons(seriesId)
     }
 
-    /** Sum of primary-source sizes for [targetSeasonId]'s episodes that aren't already
-     * downloaded locally - "how much more space will downloading this season need". */
-    suspend fun getUndownloadedEpisodeSize(targetSeasonId: UUID): Long {
-        val seriesId = seriesId ?: return 0
+    /** Count and total primary-source size of [targetSeasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if
+     * [onlyUnwatched]) already-watched ones, matching the scope the "only unwatched" toggle
+     * would apply to the real download. */
+    suspend fun getUndownloadedEpisodeSize(
+        targetSeasonId: UUID,
+        onlyUnwatched: Boolean,
+    ): DownloadSizeEstimate {
+        val seriesId = seriesId ?: return DownloadSizeEstimate()
         val episodes =
             try {
                 repository.getEpisodes(
@@ -305,12 +311,17 @@ constructor(
                 )
             } catch (e: Exception) {
                 Timber.w(e, "Failed to fetch episode sizes for season $targetSeasonId")
-                return 0
+                return DownloadSizeEstimate()
             }
         return withContext(Dispatchers.IO) {
-            episodes
-                .filter { database.getSources(it.id).isEmpty() }
-                .sumOf { it.sources.firstOrNull()?.size ?: 0 }
+            val pending =
+                episodes
+                    .filter { !onlyUnwatched || !it.played }
+                    .filter { database.getSources(it.id).isEmpty() }
+            DownloadSizeEstimate(
+                sizeBytes = pending.sumOf { it.sources.firstOrNull()?.size ?: 0 },
+                itemCount = pending.size,
+            )
         }
     }
 

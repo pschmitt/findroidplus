@@ -304,7 +304,11 @@
     <string name="download_scope_remove">Remove</string>
     <string name="download_scope_existing_rule_note">This show already has an auto-download rule. It stays unchanged unless you edit the selection below.</string>
     <string name="download_scope_seasons_header">Seasons (%d)</string>
-    <string name="download_scope_estimated_size">Estimated size: %s</string>
+    <string name="download_scope_estimated_size">%1$s, %2$s</string>
+    <plurals name="download_scope_estimated_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
     <string name="download_scope_low_space_warning">Not enough free space (needs %1$s, %2$s available)</string>
     <string name="download">Download</string>
     <string name="clear_season_downloads">Delete downloads</string>

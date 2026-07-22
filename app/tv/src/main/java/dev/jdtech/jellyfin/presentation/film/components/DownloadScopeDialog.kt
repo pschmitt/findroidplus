@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -64,7 +66,8 @@ fun DownloadScopeDialog(
     onDelete: (() -> Unit)? = null,
     onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
     onDismiss: () -> Unit,
-    getSeasonSize: (suspend (seasonId: UUID) -> Long)? = null,
+    getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
+        null,
     downloadLocationPreference: String = "ask",
 ) {
     var selectedSeasonIds by remember { mutableStateOf(initialSelection.seasonIds) }
@@ -79,21 +82,30 @@ fun DownloadScopeDialog(
     val bulkModeSelected = selectedSeasonIds.isNotEmpty() || alsoFollowNew
     val allSeasonIds = seasons?.map { it.id }?.toSet().orEmpty()
 
-    // Cached per season id so toggling a season off and back on doesn't re-hit the network - only
-    // ever grows for the lifetime of this dialog.
-    val seasonSizeCache = remember { mutableStateMapOf<UUID, Long>() }
-    LaunchedEffect(selectedSeasonIds) {
+    // Cached per (season id, onlyUnwatched) so toggling a season off and back on - or flipping
+    // "only unwatched" back to what it was - doesn't re-hit the network; only ever grows for the
+    // lifetime of this dialog.
+    val seasonSizeCache = remember { mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>() }
+    LaunchedEffect(selectedSeasonIds, onlyUnwatched) {
         if (getSeasonSize == null) return@LaunchedEffect
-        val missing = selectedSeasonIds.filter { it !in seasonSizeCache }
+        val missing = selectedSeasonIds.filter { (it to onlyUnwatched) !in seasonSizeCache }
         if (missing.isEmpty()) return@LaunchedEffect
         coroutineScope {
-            val sizes = missing.map { seasonId -> seasonId to async { getSeasonSize(seasonId) } }
-            sizes.forEach { (seasonId, deferred) -> seasonSizeCache[seasonId] = deferred.await() }
+            val sizes =
+                missing.map { seasonId ->
+                    seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
+                }
+            sizes.forEach { (seasonId, deferred) ->
+                seasonSizeCache[seasonId to onlyUnwatched] = deferred.await()
+            }
         }
     }
     val showSizeEstimate = getSeasonSize != null && selectedSeasonIds.isNotEmpty()
-    val sizeLoading = selectedSeasonIds.any { it !in seasonSizeCache }
-    val totalSizeBytes = selectedSeasonIds.sumOf { seasonSizeCache[it] ?: 0L }
+    val sizeLoading = selectedSeasonIds.any { (it to onlyUnwatched) !in seasonSizeCache }
+    val totalEstimate =
+        selectedSeasonIds.fold(DownloadSizeEstimate()) { acc, id ->
+            acc + (seasonSizeCache[id to onlyUnwatched] ?: DownloadSizeEstimate())
+        }
 
     val context = LocalContext.current
     val availableBytes: Long? = remember {
@@ -110,7 +122,7 @@ fun DownloadScopeDialog(
         showSizeEstimate &&
             !sizeLoading &&
             availableBytes != null &&
-            totalSizeBytes > availableBytes
+            totalEstimate.sizeBytes > availableBytes
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -215,7 +227,12 @@ fun DownloadScopeDialog(
                                     text =
                                         stringResource(
                                             CoreR.string.download_scope_estimated_size,
-                                            formatBinaryFileSize(totalSizeBytes),
+                                            pluralStringResource(
+                                                CoreR.plurals.download_scope_estimated_items,
+                                                totalEstimate.itemCount,
+                                                totalEstimate.itemCount,
+                                            ),
+                                            formatBinaryFileSize(totalEstimate.sizeBytes),
                                         )
                                 )
                                 if (sizeLoading) {
@@ -248,7 +265,7 @@ fun DownloadScopeDialog(
                                         text =
                                             stringResource(
                                                 CoreR.string.download_scope_low_space_warning,
-                                                formatBinaryFileSize(totalSizeBytes),
+                                                formatBinaryFileSize(totalEstimate.sizeBytes),
                                                 formatBinaryFileSize(availableBytes),
                                             ),
                                         color = MaterialTheme.colorScheme.error,

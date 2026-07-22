@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyShow
 import dev.jdtech.jellyfin.film.presentation.show.ShowAction
@@ -130,7 +131,9 @@ fun ShowScreen(
 private fun ShowScreenLayout(
     state: ShowState,
     onAction: (ShowAction) -> Unit,
-    getSeasonSize: suspend (seasonId: UUID) -> Long = { 0L },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
+        DownloadSizeEstimate()
+    },
 ) {
     val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()

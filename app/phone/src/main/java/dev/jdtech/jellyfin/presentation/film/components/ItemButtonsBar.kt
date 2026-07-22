@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
@@ -62,7 +63,8 @@ fun ItemButtonsBar(
     initialAlsoFollowNew: Boolean = false,
     initialOnlyUnwatched: Boolean = false,
     getSeasons: (suspend () -> List<FindroidSeason>)? = null,
-    getSeasonSize: (suspend (seasonId: UUID) -> Long)? = null,
+    getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
+        null,
     hasActiveDownloadOrRule: Boolean = false,
     onDeleteDownloads: (() -> Unit)? = null,
     onBulkDownload:

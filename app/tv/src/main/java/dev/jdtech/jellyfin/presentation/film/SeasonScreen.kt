@@ -35,6 +35,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisodes
 import dev.jdtech.jellyfin.core.presentation.dummy.dummySeason
 import dev.jdtech.jellyfin.film.presentation.season.SeasonAction
@@ -77,7 +78,9 @@ private fun SeasonScreenLayout(
     state: SeasonState,
     onAction: (SeasonAction) -> Unit,
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
-    getSeasonSize: suspend (seasonId: UUID) -> Long = { 0L },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
+        DownloadSizeEstimate()
+    },
 ) {
     var downloadScopeDialogOpen by remember { mutableStateOf(false) }
     var clearDownloadsDialogOpen by remember { mutableStateOf(false) }

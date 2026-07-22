@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
@@ -233,9 +234,14 @@ constructor(
         }
     }
 
-    /** Sum of primary-source sizes for [seasonId]'s episodes that aren't already downloaded
-     * locally - "how much more space will downloading this season need". */
-    suspend fun getUndownloadedEpisodeSize(seasonId: UUID): Long {
+    /** Count and total primary-source size of [seasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if
+     * [onlyUnwatched]) already-watched ones, matching the scope the "only unwatched" toggle
+     * would apply to the real download. */
+    suspend fun getUndownloadedEpisodeSize(
+        seasonId: UUID,
+        onlyUnwatched: Boolean,
+    ): DownloadSizeEstimate {
         val episodes =
             try {
                 repository.getEpisodes(
@@ -245,12 +251,17 @@ constructor(
                 )
             } catch (e: Exception) {
                 Timber.w(e, "Failed to fetch episode sizes for season $seasonId")
-                return 0
+                return DownloadSizeEstimate()
             }
         return withContext(Dispatchers.IO) {
-            episodes
-                .filter { database.getSources(it.id).isEmpty() }
-                .sumOf { it.sources.firstOrNull()?.size ?: 0 }
+            val pending =
+                episodes
+                    .filter { !onlyUnwatched || !it.played }
+                    .filter { database.getSources(it.id).isEmpty() }
+            DownloadSizeEstimate(
+                sizeBytes = pending.sumOf { it.sources.firstOrNull()?.size ?: 0 },
+                itemCount = pending.size,
+            )
         }
     }
 

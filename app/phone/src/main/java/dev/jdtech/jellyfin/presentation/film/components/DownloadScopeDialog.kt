@@ -15,6 +15,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -31,11 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -68,7 +71,8 @@ fun DownloadScopeDialog(
     onDelete: (() -> Unit)? = null,
     onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
     onDismiss: () -> Unit,
-    getSeasonSize: (suspend (seasonId: UUID) -> Long)? = null,
+    getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
+        null,
     downloadLocationPreference: String = "ask",
 ) {
     val hasExistingRule =
@@ -91,21 +95,30 @@ fun DownloadScopeDialog(
     val canConfirm = thisEpisodeOnly || bulkModeSelected
     val allSeasonIds = seasons?.map { it.id }?.toSet().orEmpty()
 
-    // Cached per season id so toggling a season off and back on doesn't re-hit the network - only
-    // ever grows for the lifetime of this dialog.
-    val seasonSizeCache = remember { mutableStateMapOf<UUID, Long>() }
-    LaunchedEffect(selectedSeasonIds, thisEpisodeOnly) {
+    // Cached per (season id, onlyUnwatched) so toggling a season off and back on - or flipping
+    // "only unwatched" back to what it was - doesn't re-hit the network; only ever grows for the
+    // lifetime of this dialog.
+    val seasonSizeCache = remember { mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>() }
+    LaunchedEffect(selectedSeasonIds, thisEpisodeOnly, onlyUnwatched) {
         if (thisEpisodeOnly || getSeasonSize == null) return@LaunchedEffect
-        val missing = selectedSeasonIds.filter { it !in seasonSizeCache }
+        val missing = selectedSeasonIds.filter { (it to onlyUnwatched) !in seasonSizeCache }
         if (missing.isEmpty()) return@LaunchedEffect
         coroutineScope {
-            val sizes = missing.map { seasonId -> seasonId to async { getSeasonSize(seasonId) } }
-            sizes.forEach { (seasonId, deferred) -> seasonSizeCache[seasonId] = deferred.await() }
+            val sizes =
+                missing.map { seasonId ->
+                    seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
+                }
+            sizes.forEach { (seasonId, deferred) ->
+                seasonSizeCache[seasonId to onlyUnwatched] = deferred.await()
+            }
         }
     }
     val showSizeEstimate = !thisEpisodeOnly && getSeasonSize != null && selectedSeasonIds.isNotEmpty()
-    val sizeLoading = selectedSeasonIds.any { it !in seasonSizeCache }
-    val totalSizeBytes = selectedSeasonIds.sumOf { seasonSizeCache[it] ?: 0L }
+    val sizeLoading = selectedSeasonIds.any { (it to onlyUnwatched) !in seasonSizeCache }
+    val totalEstimate =
+        selectedSeasonIds.fold(DownloadSizeEstimate()) { acc, id ->
+            acc + (seasonSizeCache[id to onlyUnwatched] ?: DownloadSizeEstimate())
+        }
 
     val context = LocalContext.current
     val availableBytes: Long? = remember {
@@ -122,7 +135,7 @@ fun DownloadScopeDialog(
         showSizeEstimate &&
             !sizeLoading &&
             availableBytes != null &&
-            totalSizeBytes > availableBytes
+            totalEstimate.sizeBytes > availableBytes
 
     AlertDialog(
         title = { Text(text = stringResource(CoreR.string.download_scope_title)) },
@@ -217,7 +230,12 @@ fun DownloadScopeDialog(
                             text =
                                 stringResource(
                                     CoreR.string.download_scope_estimated_size,
-                                    formatBinaryFileSize(totalSizeBytes),
+                                    pluralStringResource(
+                                        CoreR.plurals.download_scope_estimated_items,
+                                        totalEstimate.itemCount,
+                                        totalEstimate.itemCount,
+                                    ),
+                                    formatBinaryFileSize(totalEstimate.sizeBytes),
                                 ),
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -242,7 +260,7 @@ fun DownloadScopeDialog(
                                 text =
                                     stringResource(
                                         CoreR.string.download_scope_low_space_warning,
-                                        formatBinaryFileSize(totalSizeBytes),
+                                        formatBinaryFileSize(totalEstimate.sizeBytes),
                                         formatBinaryFileSize(availableBytes),
                                     ),
                                 style = MaterialTheme.typography.bodySmall,
@@ -272,57 +290,65 @@ fun DownloadScopeDialog(
             }
         },
         onDismissRequest = onDismiss,
+        // A separate confirmButton + dismissButton (the "normal" AlertDialog API) renders as two
+        // slots inside Material3's internal button FlowRow, which stacks them onto their own rows
+        // as soon as the three buttons' combined width doesn't fit - on a phone that's every time,
+        // since Remove/Cancel/Download all carry an icon and a label. Rendering all three as one
+        // slot sidesteps that: a single child can't be split across rows, so it's a plain
+        // full-width Row instead - Remove (icon-only, so it stays small) on one side, Cancel and
+        // Download on the other, matching the FlowRow's fallback grouping.
         confirmButton = {
-            TextButton(
-                enabled = canConfirm,
-                onClick = {
-                    onConfirm(
-                        DownloadSelection(
-                            thisEpisodeOnly = thisEpisodeOnly,
-                            seasonIds = selectedSeasonIds,
-                            // Only one toggle now - "keep this show up to date" covers both new
-                            // episodes in the seasons picked above and brand new seasons alike.
-                            alsoFutureSeasons = alsoFollowNew,
-                        ),
-                        alsoFollowNew,
-                        onlyUnwatched,
-                    )
-                },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_download),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                Text(text = stringResource(CoreR.string.download))
-            }
-        },
-        dismissButton = {
-            Row {
                 if (canDelete && onDelete != null) {
-                    TextButton(onClick = onDelete) {
+                    IconButton(onClick = onDelete) {
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_trash),
-                            contentDescription = null,
+                            contentDescription = stringResource(CoreR.string.download_scope_remove),
                             tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(1.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onDismiss) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_x),
+                            contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                        Text(
-                            text = stringResource(CoreR.string.download_scope_remove),
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                        Text(text = stringResource(CoreR.string.cancel))
                     }
-                }
-                TextButton(onClick = onDismiss) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_x),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                    Text(text = stringResource(CoreR.string.cancel))
+                    TextButton(
+                        enabled = canConfirm,
+                        onClick = {
+                            onConfirm(
+                                DownloadSelection(
+                                    thisEpisodeOnly = thisEpisodeOnly,
+                                    seasonIds = selectedSeasonIds,
+                                    // Only one toggle now - "keep this show up to date" covers
+                                    // both new episodes in the seasons picked above and brand new
+                                    // seasons alike.
+                                    alsoFutureSeasons = alsoFollowNew,
+                                ),
+                                alsoFollowNew,
+                                onlyUnwatched,
+                            )
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_download),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                        Text(text = stringResource(CoreR.string.download))
+                    }
                 }
             }
         },
