@@ -95,6 +95,7 @@ constructor(
                     UiText.StringResource(CoreR.string.auto_download_rule_season, season.indexNumber)
                 }
             }
+        val (downloadedSizeBytes, downloadedSamplePath) = downloadedSize(seriesId, scope.seasonIds)
         return AutoDownloadShowRuleUiModel(
             seriesId = seriesId,
             ruleIds = rules.map { it.id },
@@ -105,24 +106,26 @@ constructor(
             scopeLabel = scopeLabel,
             onlyNewEpisodes = primary.onlyNewEpisodes,
             onlyUnwatched = primary.onlyUnwatched,
-            downloadedSizeBytes = downloadedSizeBytes(seriesId, scope.seasonIds),
+            downloadedSizeBytes = downloadedSizeBytes,
+            downloadedSamplePath = downloadedSamplePath,
         )
     }
 
     // Empty seasonIds means a future-seasons-only rule, which by definition tracks the whole show
     // rather than a fixed set of seasons - so that's the only case where we fall back to the
-    // show's full download footprint instead of scoping to specific seasons.
-    private suspend fun downloadedSizeBytes(seriesId: UUID, seasonIds: Set<UUID>): Long =
+    // show's full download footprint instead of scoping to specific seasons. The sample path is
+    // just one of the local sources contributing to the total, so LocalStorageIndicator can show
+    // the right internal/removable icon - which volume any individual file happens to sit on.
+    private suspend fun downloadedSize(seriesId: UUID, seasonIds: Set<UUID>): Pair<Long, String?> =
         withContext(Dispatchers.IO) {
             val episodes = database.getEpisodesByShowId(seriesId)
             val scoped =
                 if (seasonIds.isEmpty()) episodes else episodes.filter { it.seasonId in seasonIds }
-            scoped.sumOf { episode ->
-                database
-                    .getSources(episode.id)
-                    .filter { it.type == FindroidSourceType.LOCAL }
-                    .sumOf { File(it.path).length() }
-            }
+            val localSources =
+                scoped.flatMap { episode ->
+                    database.getSources(episode.id).filter { it.type == FindroidSourceType.LOCAL }
+                }
+            localSources.sumOf { File(it.path).length() } to localSources.firstOrNull()?.path
         }
 
     private fun toggleShowRule(seriesId: UUID, enabled: Boolean) {

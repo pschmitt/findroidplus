@@ -178,7 +178,6 @@
     <string name="auto_download_rule_season">Season %1$d</string>
     <string name="auto_download_rule_multiple_seasons">%1$d seasons</string>
     <string name="auto_download_rule_future_seasons">Future seasons only</string>
-    <string name="auto_download_rule_storage_used">%s used on this device</string>
     <string name="backup_and_restore">Backup &amp; Restore</string>
     <string name="backup_section_title">Backup</string>
     <string name="restore_section_title">Restore</string>

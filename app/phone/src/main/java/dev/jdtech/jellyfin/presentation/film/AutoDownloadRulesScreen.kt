@@ -57,10 +57,10 @@ import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadShowRuleUi
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
+import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
-import dev.jdtech.jellyfin.utils.formatBinaryFileSize
 import java.util.UUID
 
 @Composable
@@ -167,14 +167,11 @@ private fun AutoDownloadShowRuleRow(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    if (show.downloadedSizeBytes > 0) {
-                        Text(
-                            text =
-                                stringResource(
-                                    CoreR.string.auto_download_rule_storage_used,
-                                    formatBinaryFileSize(show.downloadedSizeBytes),
-                                ),
-                            style = MaterialTheme.typography.bodySmall,
+                    val samplePath = show.downloadedSamplePath
+                    if (show.downloadedSizeBytes > 0 && samplePath != null) {
+                        LocalStorageIndicator(
+                            path = samplePath,
+                            sizeBytes = show.downloadedSizeBytes,
                         )
                     }
                 }
