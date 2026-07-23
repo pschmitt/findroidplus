@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderAction
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
@@ -139,6 +140,7 @@ fun EpisodeScreen(
         downloaderState = downloaderState,
         downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
         getSeasons = viewModel::getSeasons,
+        getSeasonSize = viewModel::getUndownloadedEpisodeSize,
         onAction = { action ->
             when (action) {
                 is EpisodeAction.Play -> {
@@ -169,6 +171,9 @@ private fun EpisodeScreenLayout(
     downloaderState: DownloaderState,
     downloadLocationPreference: String = "ask",
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
+        DownloadSizeEstimate()
+    },
     onAction: (EpisodeAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
 ) {
@@ -339,6 +344,7 @@ private fun EpisodeScreenLayout(
                         initialAlsoFollowNew = state.existingScope.alsoFollowNew,
                         initialOnlyUnwatched = state.existingScope.onlyUnwatched,
                         getSeasons = getSeasons,
+                        getSeasonSize = getSeasonSize,
                         onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
                             onAction(
                                 EpisodeAction.DownloadWithScope(

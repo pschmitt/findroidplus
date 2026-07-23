@@ -73,6 +73,9 @@ fun DownloadScopeDialog(
     onDismiss: () -> Unit,
     getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
         null,
+    // Already known synchronously from the loaded item - no fetch needed the way season sizes
+    // require one, so this covers the "this episode" scope instead of going through the cache.
+    episodeSize: DownloadSizeEstimate? = null,
     downloadLocationPreference: String = "ask",
 ) {
     val hasExistingRule =
@@ -113,11 +116,18 @@ fun DownloadScopeDialog(
             }
         }
     }
-    val showSizeEstimate = !thisEpisodeOnly && getSeasonSize != null && selectedSeasonIds.isNotEmpty()
-    val sizeLoading = selectedSeasonIds.any { (it to onlyUnwatched) !in seasonSizeCache }
+    val showSizeEstimate =
+        if (thisEpisodeOnly) episodeSize != null
+        else getSeasonSize != null && selectedSeasonIds.isNotEmpty()
+    val sizeLoading =
+        !thisEpisodeOnly && selectedSeasonIds.any { (it to onlyUnwatched) !in seasonSizeCache }
     val totalEstimate =
-        selectedSeasonIds.fold(DownloadSizeEstimate()) { acc, id ->
-            acc + (seasonSizeCache[id to onlyUnwatched] ?: DownloadSizeEstimate())
+        if (thisEpisodeOnly) {
+            episodeSize ?: DownloadSizeEstimate()
+        } else {
+            selectedSeasonIds.fold(DownloadSizeEstimate()) { acc, id ->
+                acc + (seasonSizeCache[id to onlyUnwatched] ?: DownloadSizeEstimate())
+            }
         }
 
     val context = LocalContext.current

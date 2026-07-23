@@ -96,6 +96,13 @@ fun ItemButtonsBar(
             null
         }
 
+    // Already known synchronously from the loaded item - the "this episode" scope in
+    // DownloadScopeDialog doesn't need a network fetch the way bulk season sizes do.
+    val singleItemSize =
+        remember(item) {
+            DownloadSizeEstimate(sizeBytes = item.sources.firstOrNull()?.size ?: 0, itemCount = 1)
+        }
+
     var storageSelectionDialogOpen by remember { mutableStateOf(false) }
     var cancelDownloadDialogOpen by remember { mutableStateOf(false) }
     var deleteDownloadDialogOpen by remember { mutableStateOf(false) }
@@ -283,6 +290,7 @@ fun ItemButtonsBar(
             initialOnlyUnwatched = initialOnlyUnwatched,
             canDelete = hasActiveDownloadOrRule,
             getSeasonSize = getSeasonSize,
+            episodeSize = singleItemSize,
             downloadLocationPreference = downloadLocationPreference,
             onDelete =
                 onDeleteDownloads?.let {

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
+import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
@@ -34,7 +35,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.PersonKind
+import timber.log.Timber
 
 @HiltViewModel
 class EpisodeViewModel
@@ -153,6 +156,38 @@ constructor(
     suspend fun getSeasons(): List<FindroidSeason> {
         val seriesId = _state.value.episode?.seriesId ?: return emptyList()
         return repository.getSeasons(seriesId)
+    }
+
+    /** Count and total primary-source size of [seasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if
+     * [onlyUnwatched]) already-watched ones. Mirrors ShowViewModel/SeasonViewModel's method of
+     * the same name for the bulk-selection part of this screen's download-scope dialog. */
+    suspend fun getUndownloadedEpisodeSize(
+        seasonId: UUID,
+        onlyUnwatched: Boolean,
+    ): DownloadSizeEstimate {
+        val seriesId = _state.value.episode?.seriesId ?: return DownloadSizeEstimate()
+        val episodes =
+            try {
+                repository.getEpisodes(
+                    seriesId = seriesId,
+                    seasonId = seasonId,
+                    fields = listOf(ItemFields.MEDIA_SOURCES),
+                )
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to fetch episode sizes for season $seasonId")
+                return DownloadSizeEstimate()
+            }
+        return withContext(Dispatchers.IO) {
+            val pending =
+                episodes
+                    .filter { !onlyUnwatched || !it.played }
+                    .filter { database.getSources(it.id).isEmpty() }
+            DownloadSizeEstimate(
+                sizeBytes = pending.sumOf { it.sources.firstOrNull()?.size ?: 0 },
+                itemCount = pending.size,
+            )
+        }
     }
 
     private suspend fun getExistingScope(seriesId: UUID): ExistingAutoDownloadScope {
