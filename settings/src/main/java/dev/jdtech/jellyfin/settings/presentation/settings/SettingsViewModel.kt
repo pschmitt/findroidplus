@@ -87,6 +87,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_language,
+                            descriptionStringRes = R.string.settings_category_language_summary,
                             iconDrawableId = R.drawable.ic_languages,
                             onClick = {
                                 viewModelScope.launch {
@@ -104,6 +105,8 @@ constructor(
                                             listOf(
                                                 PreferenceAppLanguage(
                                                     nameStringResource = R.string.app_language,
+                                                    descriptionStringRes =
+                                                        R.string.app_language_summary,
                                                     iconDrawableId = R.drawable.ic_languages,
                                                     enabled =
                                                         Build.VERSION.SDK_INT >=
@@ -117,6 +120,9 @@ constructor(
                                                 PreferenceSelect(
                                                     nameStringResource =
                                                         R.string.settings_preferred_audio_language,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .settings_preferred_audio_language_summary,
                                                     iconDrawableId = R.drawable.ic_speaker,
                                                     backendPreference =
                                                         appPreferences.preferredAudioLanguage,
@@ -128,6 +134,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .settings_preferred_subtitle_language,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .settings_preferred_subtitle_language_summary,
                                                     iconDrawableId = R.drawable.ic_closed_caption,
                                                     backendPreference =
                                                         appPreferences.preferredSubtitleLanguage,
@@ -146,6 +155,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_interface,
+                            descriptionStringRes = R.string.settings_category_interface_summary,
                             iconDrawableId = R.drawable.ic_layout_dashboard,
                             onClick = {
                                 viewModelScope.launch {
@@ -164,6 +174,7 @@ constructor(
                                             listOf(
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.theme,
+                                                    descriptionStringRes = R.string.theme_summary,
                                                     iconDrawableId = R.drawable.ic_palette,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference = appPreferences.theme,
@@ -192,6 +203,8 @@ constructor(
                                                 ),
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.date_format,
+                                                    descriptionStringRes =
+                                                        R.string.date_format_summary,
                                                     iconDrawableId = R.drawable.ic_calendar,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference = appPreferences.dateFormat,
@@ -206,6 +219,8 @@ constructor(
                                             listOf(
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.home_suggestions,
+                                                    descriptionStringRes =
+                                                        R.string.home_suggestions_summary,
                                                     iconDrawableId = R.drawable.ic_sparkles,
                                                     backendPreference =
                                                         appPreferences.homeSuggestions,
@@ -213,17 +228,23 @@ constructor(
                                                 PreferenceSwitch(
                                                     nameStringResource =
                                                         R.string.home_continue_watching,
+                                                    descriptionStringRes =
+                                                        R.string.home_continue_watching_summary,
                                                     iconDrawableId = R.drawable.ic_play,
                                                     backendPreference =
                                                         appPreferences.homeContinueWatching,
                                                 ),
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.home_next_up,
+                                                    descriptionStringRes =
+                                                        R.string.home_next_up_summary,
                                                     iconDrawableId = R.drawable.ic_skip_forward,
                                                     backendPreference = appPreferences.homeNextUp,
                                                 ),
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.home_latest,
+                                                    descriptionStringRes =
+                                                        R.string.home_latest_summary,
                                                     iconDrawableId = R.drawable.ic_clock,
                                                     backendPreference = appPreferences.homeLatest,
                                                 ),
@@ -262,6 +283,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_player,
+                            descriptionStringRes = R.string.settings_category_player_summary,
                             iconDrawableId = R.drawable.ic_play,
                             onClick = {
                                 viewModelScope.launch {
@@ -302,6 +324,8 @@ constructor(
                                             listOf(
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.pref_player_backend,
+                                                    descriptionStringRes =
+                                                        R.string.pref_player_backend_summary,
                                                     iconDrawableId = R.drawable.ic_settings,
                                                     backendPreference = appPreferences.playerBackend,
                                                     options = R.array.player_backends,
@@ -315,6 +339,8 @@ constructor(
                                             listOf(
                                                 PreferenceCategory(
                                                     nameStringResource = R.string.mpv_options,
+                                                    descriptionStringRes =
+                                                        R.string.mpv_options_summary,
                                                     iconDrawableId =
                                                         R.drawable.ic_sliders_horizontal,
                                                     onClick = {
@@ -334,6 +360,8 @@ constructor(
                                                                         PreferenceSelect(
                                                                             nameStringResource =
                                                                                 R.string.pref_player_mpv_hwdec,
+                                                                            descriptionStringRes =
+                                                                                R.string.pref_player_mpv_hwdec_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable.ic_cpu,
                                                                             backendPreference =
@@ -344,6 +372,8 @@ constructor(
                                                                         PreferenceSelect(
                                                                             nameStringResource =
                                                                                 R.string.pref_player_mpv_vo,
+                                                                            descriptionStringRes =
+                                                                                R.string.pref_player_mpv_vo_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_monitor,
@@ -354,6 +384,8 @@ constructor(
                                                                         PreferenceSelect(
                                                                             nameStringResource =
                                                                                 R.string.pref_player_mpv_ao,
+                                                                            descriptionStringRes =
+                                                                                R.string.pref_player_mpv_ao_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_speaker,
@@ -369,6 +401,7 @@ constructor(
                                                                     listOf(
                                                                         PreferenceFileEdit(
                                                                             nameStringResource = R.string.edit_file_title,
+                                                                            descriptionStringRes = R.string.mpv_conf_edit_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_file_text,
@@ -383,6 +416,7 @@ constructor(
                                                                         ),
                                                                         PreferenceFileEdit(
                                                                             nameStringResource = R.string.edit_file_title,
+                                                                            descriptionStringRes = R.string.mpv_input_conf_edit_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_keyboard,
@@ -407,6 +441,8 @@ constructor(
                                             listOf(
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.player_gestures,
+                                                    descriptionStringRes =
+                                                        R.string.player_gestures_summary,
                                                     iconDrawableId = R.drawable.ic_hand,
                                                     backendPreference =
                                                         appPreferences.playerGestures,
@@ -466,6 +502,8 @@ constructor(
                                                 PreferenceSwitch(
                                                     nameStringResource =
                                                         R.string.player_brightness_remember,
+                                                    descriptionStringRes =
+                                                        R.string.player_brightness_remember_summary,
                                                     iconDrawableId = R.drawable.ic_save,
                                                     dependencies =
                                                         listOf(
@@ -498,6 +536,8 @@ constructor(
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.seek_back_increment,
+                                                    descriptionStringRes =
+                                                        R.string.seek_back_increment_summary,
                                                     iconDrawableId = R.drawable.ic_rewind,
                                                     backendPreference =
                                                         appPreferences.playerSeekBackInc,
@@ -506,6 +546,8 @@ constructor(
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.seek_forward_increment,
+                                                    descriptionStringRes =
+                                                        R.string.seek_forward_increment_summary,
                                                     iconDrawableId = R.drawable.ic_fast_forward,
                                                     backendPreference =
                                                         appPreferences.playerSeekForwardInc,
@@ -532,6 +574,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .pref_player_media_segments_skip_button_type,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .pref_player_media_segments_skip_button_type_summary,
                                                     iconDrawableId = R.drawable.ic_list,
                                                     dependencies =
                                                         listOf(
@@ -549,6 +594,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .pref_player_media_segments_skip_button_duration,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .pref_player_media_segments_skip_button_duration_summary,
                                                     iconDrawableId = R.drawable.ic_timer,
                                                     dependencies =
                                                         listOf(
@@ -575,6 +623,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .pref_player_media_segments_auto_skip_mode,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .pref_player_media_segments_auto_skip_mode_summary,
                                                     iconDrawableId = R.drawable.ic_settings_2,
                                                     dependencies =
                                                         listOf(
@@ -593,6 +644,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .pref_player_media_segments_auto_skip_type,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .pref_player_media_segments_auto_skip_type_summary,
                                                     iconDrawableId = R.drawable.ic_list,
                                                     dependencies =
                                                         listOf(
@@ -610,6 +664,9 @@ constructor(
                                                     nameStringResource =
                                                         R.string
                                                             .pref_player_media_segments_next_episode_threshold,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .pref_player_media_segments_next_episode_threshold_summary,
                                                     iconDrawableId = R.drawable.ic_timer,
                                                     backendPreference =
                                                         appPreferences
@@ -685,6 +742,7 @@ constructor(
                         ),
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_servers,
+                            descriptionStringRes = R.string.settings_category_servers_summary,
                             iconDrawableId = R.drawable.ic_server,
                             supportedDeviceTypes = listOf(DeviceType.TV),
                             onClick = {
@@ -695,6 +753,7 @@ constructor(
                         ),
                         PreferenceCategory(
                             nameStringResource = R.string.users,
+                            descriptionStringRes = R.string.users_summary,
                             iconDrawableId = R.drawable.ic_user,
                             supportedDeviceTypes = listOf(DeviceType.TV),
                             onClick = {
@@ -710,6 +769,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_backup,
+                            descriptionStringRes = R.string.settings_category_backup_summary,
                             iconDrawableId = R.drawable.ic_save,
                             supportedDeviceTypes = listOf(DeviceType.PHONE),
                             onClick = {
@@ -725,6 +785,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.title_download,
+                            descriptionStringRes = R.string.title_download_summary,
                             iconDrawableId = R.drawable.ic_download,
                             supportedDeviceTypes = listOf(DeviceType.PHONE),
                             onClick = {
@@ -745,6 +806,8 @@ constructor(
                                                 PreferenceSwitch(
                                                     nameStringResource =
                                                         R.string.download_mobile_data,
+                                                    descriptionStringRes =
+                                                        R.string.download_mobile_data_summary,
                                                     iconDrawableId = R.drawable.ic_network,
                                                     enabled = hasCellularConnectivity(),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -753,6 +816,8 @@ constructor(
                                                 ),
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.download_roaming,
+                                                    descriptionStringRes =
+                                                        R.string.download_roaming_summary,
                                                     iconDrawableId = R.drawable.ic_globe,
                                                     enabled = hasCellularConnectivity(),
                                                     dependencies =
@@ -771,6 +836,8 @@ constructor(
                                             listOf(
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.download_location,
+                                                    descriptionStringRes =
+                                                        R.string.download_location_summary,
                                                     iconDrawableId = R.drawable.ic_hard_drive,
                                                     enabled = hasRemovableStorage(),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -819,6 +886,8 @@ constructor(
                                                 PreferenceIntInput(
                                                     nameStringResource =
                                                         R.string.auto_delete_watched_hours,
+                                                    descriptionStringRes =
+                                                        R.string.auto_delete_watched_hours_summary,
                                                     iconDrawableId = R.drawable.ic_timer,
                                                     dependencies =
                                                         listOf(appPreferences.autoDeleteWatched),
@@ -850,6 +919,8 @@ constructor(
                                                 PreferenceCategory(
                                                     nameStringResource =
                                                         R.string.auto_download_rules,
+                                                    descriptionStringRes =
+                                                        R.string.auto_download_rules_summary,
                                                     iconDrawableId = R.drawable.ic_download,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     onClick = {
@@ -912,6 +983,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_network,
+                            descriptionStringRes = R.string.settings_category_network_summary,
                             iconDrawableId = R.drawable.ic_network,
                             onClick = {
                                 viewModelScope.launch {
@@ -930,6 +1002,8 @@ constructor(
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.settings_request_timeout,
+                                                    descriptionStringRes =
+                                                        R.string.settings_request_timeout_summary,
                                                     iconDrawableId = R.drawable.ic_arrow_down_up,
                                                     backendPreference =
                                                         appPreferences.requestTimeout,
@@ -938,6 +1012,8 @@ constructor(
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.settings_connect_timeout,
+                                                    descriptionStringRes =
+                                                        R.string.settings_connect_timeout_summary,
                                                     iconDrawableId = R.drawable.ic_plug,
                                                     backendPreference =
                                                         appPreferences.connectTimeout,
@@ -946,6 +1022,8 @@ constructor(
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.settings_socket_timeout,
+                                                    descriptionStringRes =
+                                                        R.string.settings_socket_timeout_summary,
                                                     iconDrawableId = R.drawable.ic_timer,
                                                     backendPreference =
                                                         appPreferences.socketTimeout,
@@ -972,6 +1050,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.settings_category_cache,
+                            descriptionStringRes = R.string.settings_category_cache_summary,
                             iconDrawableId = R.drawable.ic_hard_drive,
                             onClick = {
                                 viewModelScope.launch {
@@ -1018,6 +1097,7 @@ constructor(
                     listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.about,
+                            descriptionStringRes = R.string.about_summary,
                             iconDrawableId = R.drawable.ic_info,
                             onClick = {
                                 viewModelScope.launch {
