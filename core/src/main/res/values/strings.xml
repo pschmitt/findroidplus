@@ -261,6 +261,7 @@
     <string name="also_remove_auto_download_rules">Also remove auto-download rules</string>
     <string name="also_remove_auto_download_rules_summary">Otherwise these episodes will be queued again the next time rules are evaluated.</string>
     <string name="download_notification_channel_name">Downloads</string>
+    <string name="download_notification_channel_description">Progress and completion for downloading, deleting and moving downloaded items</string>
     <string name="downloading_item">Downloading %1$s</string>
     <string name="download_complete">Download complete</string>
     <string name="download_queued">Queued</string>
@@ -323,11 +324,14 @@
     <string name="storage_summary_server">Server storage</string>
     <string name="storage_downloads_caption">%1$s used by downloads</string>
     <string name="pvr_download_channel_name">PVR downloads</string>
+    <string name="pvr_download_channel_description">Sonarr/Radarr queue entries that finished importing into your library</string>
     <string name="pvr_download_finished_notification">Download finished</string>
     <string name="new_items_channel_name">New items</string>
+    <string name="new_items_channel_description">New movies and episodes added to your Jellyfin library</string>
     <string name="new_item_notification_text">Added to your library</string>
     <string name="new_items_notification_title">%1$d new items</string>
     <string name="pending_download_channel_name">Pre-ordered downloads</string>
+    <string name="pending_download_channel_description">Pre-ordered items that became available and started downloading</string>
     <string name="pending_download_fulfilled_notification">Now available - download started</string>
     <string name="pvr_queue_status_importing">Importing…</string>
     <string name="pvr_queue_status_warning">Warning</string>
@@ -400,6 +404,7 @@
     <string name="sonarr_search_failed_toast">Sonarr search failed: %1$s</string>
     <string name="radarr_search_failed_toast">Radarr search failed: %1$s</string>
     <string name="automatic_search_channel_name">Automatic search</string>
+    <string name="automatic_search_channel_description">Results of manually-triggered Sonarr/Radarr searches</string>
     <string name="automatic_search_notification_found">Release found and grabbed</string>
     <string name="automatic_search_notification_not_found">No releases found</string>
     <string name="release_grabbed_toast">Download started</string>

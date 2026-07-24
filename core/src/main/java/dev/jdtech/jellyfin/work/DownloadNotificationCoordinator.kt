@@ -231,5 +231,5 @@ internal object DownloadNotificationCoordinator {
         )
     }
 
-    const val CHANNEL_ID = "downloads"
+    const val CHANNEL_ID = NotificationChannels.DOWNLOADS
 }

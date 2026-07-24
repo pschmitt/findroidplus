@@ -1,7 +1,5 @@
 package dev.jdtech.jellyfin.work
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -42,7 +40,7 @@ class NewItemNotifier @Inject constructor(@ApplicationContext private val contex
 
     fun notifyNewItems(items: List<NewItem>) {
         if (items.isEmpty()) return
-        createNotificationChannel()
+        NotificationChannels.ensureNewItems(context)
 
         when {
             items.size == 1 -> postSingle(items.first())
@@ -172,18 +170,8 @@ class NewItemNotifier @Inject constructor(@ApplicationContext private val contex
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                context.getString(CoreR.string.new_items_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
     private companion object {
-        const val CHANNEL_ID = "new_items"
+        const val CHANNEL_ID = NotificationChannels.NEW_ITEMS
         const val GROUP_KEY = "dev.jdtech.jellyfin.NEW_ITEMS_GROUP"
 
         // Above this many new items in one cycle, per-item child notifications stop being a

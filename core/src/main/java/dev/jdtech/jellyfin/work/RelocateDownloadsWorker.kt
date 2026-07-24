@@ -1,8 +1,6 @@
 package dev.jdtech.jellyfin.work
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -45,7 +43,7 @@ constructor(
             val fromIndex = resolveDownloadStorageIndex(applicationContext, fromLocation)
             if (fromIndex < 0) return@withContext Result.failure()
 
-            createNotificationChannel()
+            NotificationChannels.ensureDownloads(applicationContext)
 
             try {
                 setForeground(foregroundInfo(progressNotification(mode, 0, 0)))
@@ -131,18 +129,6 @@ constructor(
         NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID, notification)
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                applicationContext.getString(CoreR.string.download_notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
-            )
-        applicationContext
-            .getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(channel)
-    }
-
     private fun foregroundInfo(notification: Notification): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
@@ -164,7 +150,7 @@ constructor(
         const val MODE_MOVE = "MOVE"
         const val MODE_CLEAR = "CLEAR"
 
-        private const val CHANNEL_ID = "downloads"
+        private const val CHANNEL_ID = NotificationChannels.DOWNLOADS
         private const val NOTIFICATION_ID = 279_412_002
     }
 }

@@ -1,7 +1,5 @@
 package dev.jdtech.jellyfin.work
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import androidx.core.app.NotificationCompat
@@ -57,7 +55,7 @@ constructor(
         }
 
     private fun notify(outcome: AutomaticSearchOutcome, commandId: Int) {
-        createNotificationChannel()
+        NotificationChannels.ensureAutomaticSearch(applicationContext)
 
         val title = outcome.title
         val text =
@@ -96,18 +94,6 @@ constructor(
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                applicationContext.getString(CoreR.string.automatic_search_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
-        applicationContext
-            .getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(channel)
-    }
-
     companion object {
         const val KEY_SOURCE = "KEY_SOURCE"
         const val KEY_TARGET_ID = "KEY_TARGET_ID"
@@ -116,7 +102,7 @@ constructor(
         const val SOURCE_SONARR = "sonarr"
         const val SOURCE_RADARR = "radarr"
 
-        private const val CHANNEL_ID = "automatic_search"
+        private const val CHANNEL_ID = NotificationChannels.AUTOMATIC_SEARCH
         private const val NOTIFICATION_ID_BASE = 279_413_000
     }
 }

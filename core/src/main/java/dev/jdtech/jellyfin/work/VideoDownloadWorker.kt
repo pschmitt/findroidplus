@@ -1,8 +1,6 @@
 package dev.jdtech.jellyfin.work
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -62,7 +60,7 @@ constructor(
             val downloadId = inputData.getLong(KEY_DOWNLOAD_ID, -1L)
             val completionNotificationId = sourceId.hashCode()
 
-            createNotificationChannel()
+            NotificationChannels.ensureDownloads(applicationContext)
 
             try {
                 reportQueued(sourceId, downloadId, itemName)
@@ -312,18 +310,6 @@ constructor(
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                applicationContext.getString(CoreR.string.download_notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
-            )
-        applicationContext
-            .getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(channel)
-    }
-
     private fun foregroundInfo(notificationId: Int, notification: Notification): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
@@ -373,7 +359,7 @@ constructor(
         const val KEY_QUEUED = "KEY_QUEUED"
         const val KEY_VERIFYING = "KEY_VERIFYING"
 
-        private const val CHANNEL_ID = "downloads"
+        private const val CHANNEL_ID = NotificationChannels.DOWNLOADS
         private const val BUFFER_SIZE = 64 * 1024
         private const val PROGRESS_INTERVAL_MS = 1000L
     }

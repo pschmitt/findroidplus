@@ -1,7 +1,5 @@
 package dev.jdtech.jellyfin.work
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import androidx.core.app.NotificationCompat
@@ -25,7 +23,7 @@ class PendingDownloadFulfilledNotifier
 constructor(@ApplicationContext private val context: Context) {
 
     fun notifyFulfilled(title: String) {
-        createNotificationChannel()
+        NotificationChannels.ensurePendingDownloads(context)
 
         val notification =
             NotificationCompat.Builder(context, CHANNEL_ID)
@@ -54,18 +52,8 @@ constructor(@ApplicationContext private val context: Context) {
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                context.getString(CoreR.string.pending_download_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
     private companion object {
-        const val CHANNEL_ID = "pending_downloads"
+        const val CHANNEL_ID = NotificationChannels.PENDING_DOWNLOADS
         private const val NOTIFICATION_ID_BASE = 279_415_000
     }
 }

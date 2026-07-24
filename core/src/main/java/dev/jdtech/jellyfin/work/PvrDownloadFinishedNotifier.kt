@@ -1,7 +1,5 @@
 package dev.jdtech.jellyfin.work
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import androidx.core.app.NotificationCompat
@@ -23,7 +21,7 @@ class PvrDownloadFinishedNotifier
 constructor(@ApplicationContext private val context: Context) {
 
     fun notifyFinished(title: String) {
-        createNotificationChannel()
+        NotificationChannels.ensurePvrDownloads(context)
 
         val notification =
             NotificationCompat.Builder(context, CHANNEL_ID)
@@ -51,18 +49,8 @@ constructor(@ApplicationContext private val context: Context) {
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                context.getString(CoreR.string.pvr_download_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
     private companion object {
-        const val CHANNEL_ID = "pvr_downloads"
+        const val CHANNEL_ID = NotificationChannels.PVR_DOWNLOADS
         private const val NOTIFICATION_ID_BASE = 279_414_000
     }
 }
