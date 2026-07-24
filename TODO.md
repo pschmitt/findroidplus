@@ -200,7 +200,12 @@ Status: **done** (2026-07-18). All four items shipped and merged.
       (https://github.com/apps/renovate) on `pschmitt/findroidplus` specifically
       — this is the one step that can't be done from a commit, and is exactly
       why the old inherited `renovate.json` was never actually active despite
-      looking configured.
+      looking configured. Done (2026-07-24, set to "All repositories"). Even
+      with the app installed, Renovate still produced nothing at first - this
+      repo is a real GitHub fork (`fork: true`, parent
+      `jarnedemeulemeester/findroid`), and Renovate disables itself on forks by
+      default to avoid spamming them with irrelevant PRs. Added
+      `"forkProcessing": "enabled"` to `renovate.json` to override that.
 
 Status: in progress (2026-07-18) - automation enabled; the manual "review and
 selectively pull in upstream dependency updates" item is still open and requires
