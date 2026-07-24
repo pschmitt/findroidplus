@@ -188,17 +188,19 @@ Status: **done** (2026-07-18). All four items shipped and merged.
       selectively pull in the ones that still make sense (don't blindly merge -
       this fork has diverged substantially from upstream in places)
 - [x] Enable Renovate or Dependabot on this repo so dependency versions stay
-      current going forward without manual tracking. Went with Dependabot
-      (`.github/dependabot.yml`, `gradle` + `github-actions` ecosystems, weekly,
-      kotlin/ksp grouped) — zero extra setup, activates as soon as this is merged
-      to `main`. Removed the stale `renovate.json` (inherited from upstream via
-      `sync-upstream` merges; the Renovate GitHub App was never actually installed
-      on this fork, confirmed via `gh pr list` finding no Renovate PRs against
-      `pschmitt/findroidplus`) to avoid confusion/duplicate automation later.
-      **Manual follow-up**: none needed for Dependabot itself. Optionally, enable
-      "Dependabot alerts" under Settings > Code security (currently disabled on
-      this fork per the GitHub API) if security-vulnerability alerts are wanted
-      too — that's a separate toggle from version updates.
+      current going forward without manual tracking. First tried Dependabot
+      (2026-07-18) since it needs no GitHub App install, but it produced zero
+      PRs in 6 days despite `.github/dependabot.yml` being live and a scheduled
+      Monday run passing — switched to Renovate instead (`renovate.json`
+      restored to its pre-2026-07-18 content: `config:recommended` +
+      `schedule:weekly` + `:semanticCommits`, kotlin/ksp grouped, `dependencies`
+      label; validated with `renovate-config-validator`). Removed
+      `.github/dependabot.yml` to avoid duplicate/conflicting automation.
+      **Manual follow-up required**: install the Renovate GitHub App
+      (https://github.com/apps/renovate) on `pschmitt/findroidplus` specifically
+      — this is the one step that can't be done from a commit, and is exactly
+      why the old inherited `renovate.json` was never actually active despite
+      looking configured.
 
 Status: in progress (2026-07-18) - automation enabled; the manual "review and
 selectively pull in upstream dependency updates" item is still open and requires
