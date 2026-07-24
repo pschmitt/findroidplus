@@ -30,3 +30,10 @@
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 
 -keep class dev.jdtech.**
+
+# TV has no About screen (unlike phone) reading this, so it's otherwise an unreferenced field R8
+# strips during minification - keep it anyway, it's embedded purely as build-provenance metadata
+# for reproducible-builds verification (see REPRODUCIBLE_BUILDS.md), not for display.
+-keepclassmembers class dev.jdtech.jellyfin.BuildConfig {
+    public static final java.lang.String GIT_REVISION;
+}
