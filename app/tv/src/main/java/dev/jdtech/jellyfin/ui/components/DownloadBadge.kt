@@ -72,6 +72,20 @@ fun DownloadingBadge(progress: DownloadProgress, modifier: Modifier = Modifier) 
     }
 }
 
+/** Static overlay shown on ItemCard/EpisodeCard posters for episodes the auto-delete-watched
+ * worker will remove soon - see FindroidEpisode.isMarkedForAutoDeletion. */
+@Composable
+fun MarkedForDeletionBadge(modifier: Modifier = Modifier) {
+    BaseBadge(modifier = modifier) {
+        Icon(
+            painter = painterResource(CoreR.drawable.ic_trash),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(16.dp).padding(4.dp),
+        )
+    }
+}
+
 @Composable
 private fun BaseBadge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(modifier = modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))) {
@@ -91,4 +105,10 @@ private fun DownloadingBadgePreview() {
     FindroidTheme {
         DownloadingBadge(progress = DownloadProgress(status = DownloadManager.STATUS_RUNNING, percent = 42))
     }
+}
+
+@Composable
+@Preview
+private fun MarkedForDeletionBadgePreview() {
+    FindroidTheme { MarkedForDeletionBadge() }
 }

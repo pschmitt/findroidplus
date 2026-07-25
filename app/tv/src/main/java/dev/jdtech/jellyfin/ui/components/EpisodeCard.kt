@@ -38,6 +38,7 @@ fun EpisodeCard(
     episode: FindroidEpisode,
     onClick: (FindroidEpisode) -> Unit,
     downloadProgress: DownloadProgress? = null,
+    isMarkedForDeletion: Boolean = false,
 ) {
     Surface(
         onClick = { onClick(episode) },
@@ -79,6 +80,13 @@ fun EpisodeCard(
                     DownloadedBadge(
                         modifier =
                             Modifier.align(Alignment.TopStart)
+                                .padding(PaddingValues(MaterialTheme.spacings.small)),
+                    )
+                }
+                if (isMarkedForDeletion) {
+                    MarkedForDeletionBadge(
+                        modifier =
+                            Modifier.align(Alignment.BottomEnd)
                                 .padding(PaddingValues(MaterialTheme.spacings.small)),
                     )
                 }

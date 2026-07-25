@@ -42,6 +42,7 @@ import dev.jdtech.jellyfin.film.presentation.season.SeasonAction
 import dev.jdtech.jellyfin.film.presentation.season.SeasonState
 import dev.jdtech.jellyfin.film.presentation.season.SeasonViewModel
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
 import dev.jdtech.jellyfin.presentation.film.components.DownloadScopeDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -136,6 +137,9 @@ private fun SeasonScreenLayout(
                             episode = episode,
                             onClick = { onAction(SeasonAction.NavigateToItem(episode)) },
                             downloadProgress = state.downloadProgress[episode.id],
+                            isMarkedForDeletion =
+                                state.autoDeleteWatchedEnabled &&
+                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours),
                         )
                     }
                     items(

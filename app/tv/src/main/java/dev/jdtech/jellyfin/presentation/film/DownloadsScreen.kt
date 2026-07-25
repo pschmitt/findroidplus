@@ -36,6 +36,7 @@ import androidx.tv.material3.Text
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsState
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
+import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.ui.components.Direction
@@ -150,6 +151,11 @@ private fun DownloadsScreenLayout(
                                     direction = Direction.HORIZONTAL,
                                     onClick = { onEpisodeClick(episode.id) },
                                     downloadProgress = state.downloadProgress[episode.id],
+                                    isMarkedForDeletion =
+                                        state.autoDeleteWatchedEnabled &&
+                                            episode.isMarkedForAutoDeletion(
+                                                state.autoDeleteWatchedHours
+                                            ),
                                 )
                             }
                         }

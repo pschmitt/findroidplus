@@ -34,5 +34,10 @@ data class SeasonState(
     // fail with a toast when Sonarr isn't (fully) configured.
     val sonarrConfigured: Boolean = false,
     val releasePicker: ReleasePickerState? = null,
+    // Mirrors AppPreferences.autoDeleteWatched/autoDeleteWatchedHours - see
+    // DownloadsState.autoDeleteWatchedEnabled for the identical rationale (drives the "marked for
+    // deletion" badge on downloaded episode rows).
+    val autoDeleteWatchedEnabled: Boolean = false,
+    val autoDeleteWatchedHours: Int = 24,
     val error: Exception? = null,
 )

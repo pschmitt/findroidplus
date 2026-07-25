@@ -41,6 +41,7 @@ fun ItemCard(
     onClick: (FindroidItem) -> Unit,
     modifier: Modifier = Modifier,
     downloadProgress: DownloadProgress? = null,
+    isMarkedForDeletion: Boolean = false,
 ) {
     val width =
         when (direction) {
@@ -75,6 +76,12 @@ fun ItemCard(
                     DownloadedBadge(
                         modifier =
                             Modifier.align(Alignment.TopStart).padding(MaterialTheme.spacings.small)
+                    )
+                }
+                if (isMarkedForDeletion) {
+                    MarkedForDeletionBadge(
+                        modifier =
+                            Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacings.small)
                     )
                 }
                 if (direction == Direction.HORIZONTAL) {

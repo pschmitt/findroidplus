@@ -104,6 +104,9 @@ constructor(
                         seriesTvdbId = seriesTvdbId,
                         seriesTmdbId = series.tmdbId?.toIntOrNull(),
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
+                        autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
+                        autoDeleteWatchedHours =
+                            appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
                     )
                 )
                 reconcileDownloadProgress(episodes)
