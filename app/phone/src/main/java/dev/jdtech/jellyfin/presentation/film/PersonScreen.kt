@@ -2,13 +2,11 @@ package dev.jdtech.jellyfin.presentation.film
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -44,7 +42,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidPerson
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
-import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
+import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -83,16 +81,21 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingTop = safePadding.top + MaterialTheme.spacings.default
     val paddingEnd = safePadding.end + MaterialTheme.spacings.default
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
 
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    ItemDetailScaffold(
+        hasBackButton = true,
+        hasHomeButton = true,
+        onBackClick = { onAction(PersonAction.NavigateBack) },
+        onHomeClick = { onAction(PersonAction.NavigateHome) },
+        onSettingsClick = { onAction(PersonAction.NavigateToSettings) },
+    ) {
         state.person?.let { person ->
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Spacer(Modifier.height(paddingTop))
+                Spacer(Modifier.height(MaterialTheme.spacings.default))
                 when {
                     windowSizeClass.isWidthAtLeastBreakpoint(
                         WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
@@ -191,14 +194,6 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
-
-        ItemTopBar(
-            hasBackButton = true,
-            hasHomeButton = true,
-            onBackClick = { onAction(PersonAction.NavigateBack) },
-            onHomeClick = { onAction(PersonAction.NavigateHome) },
-            onSettingsClick = { onAction(PersonAction.NavigateToSettings) },
-        )
     }
 }
 

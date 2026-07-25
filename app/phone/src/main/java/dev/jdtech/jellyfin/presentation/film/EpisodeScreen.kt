@@ -3,11 +3,9 @@ package dev.jdtech.jellyfin.presentation.film
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -65,9 +63,9 @@ import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
+import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
-import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -186,14 +184,13 @@ private fun EpisodeScreenLayout(
     val scrollState = rememberScrollState()
     var infoDialogOpen by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        ItemTopBar(
-            hasBackButton = true,
-            hasHomeButton = true,
-            onBackClick = { onAction(EpisodeAction.OnBackClick) },
-            onHomeClick = { onAction(EpisodeAction.OnHomeClick) },
-            onSettingsClick = { onAction(EpisodeAction.OnSettingsClick) },
-        ) {
+    ItemDetailScaffold(
+        hasBackButton = true,
+        hasHomeButton = true,
+        onBackClick = { onAction(EpisodeAction.OnBackClick) },
+        onHomeClick = { onAction(EpisodeAction.OnHomeClick) },
+        onSettingsClick = { onAction(EpisodeAction.OnSettingsClick) },
+        topBarContent = {
             Spacer(modifier = Modifier.width(4.dp))
             state.episode?.let { episode ->
                 Button(
@@ -216,221 +213,220 @@ private fun EpisodeScreenLayout(
                         }
                 }
             }
-        }
-        Box(modifier = Modifier.fillMaxSize()) {
-            state.episode?.let { episode ->
-                Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                    ItemHeader(
-                        item = episode,
-                        scrollState = scrollState,
-                        content = {
-                            PlayOverlayButton(
-                                item = episode,
-                                onClick = { onAction(EpisodeAction.Play(startFromBeginning = false)) },
-                                enabled = episode.canPlay,
-                                isDeleting = downloaderState.isDeleting,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                            if (state.videoMetadata != null) {
-                                IconButton(
-                                    onClick = { infoDialogOpen = true },
-                                    modifier =
-                                        Modifier.align(Alignment.BottomEnd)
-                                            .padding(end = paddingEnd),
-                                    colors =
-                                        IconButtonDefaults.iconButtonColors(
-                                            containerColor = Color.Black.copy(alpha = 0.7f),
-                                            contentColor = Color.White,
-                                        ),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_info),
-                                        contentDescription = stringResource(CoreR.string.info),
-                                    )
-                                }
+        },
+    ) {
+        state.episode?.let { episode ->
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+                ItemHeader(
+                    item = episode,
+                    scrollState = scrollState,
+                    content = {
+                        PlayOverlayButton(
+                            item = episode,
+                            onClick = { onAction(EpisodeAction.Play(startFromBeginning = false)) },
+                            enabled = episode.canPlay,
+                            isDeleting = downloaderState.isDeleting,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                        if (state.videoMetadata != null) {
+                            IconButton(
+                                onClick = { infoDialogOpen = true },
+                                modifier =
+                                    Modifier.align(Alignment.BottomEnd)
+                                        .padding(end = paddingEnd),
+                                colors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = Color.Black.copy(alpha = 0.7f),
+                                        contentColor = Color.White,
+                                    ),
+                            ) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_info),
+                                    contentDescription = stringResource(CoreR.string.info),
+                                )
                             }
+                        }
+                    },
+                )
+                Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    Text(
+                        text = episode.name,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    val downloadedSource =
+                        if (episode.isDownloaded()) {
+                            episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                        } else {
+                            null
+                        }
+                    Text(
+                        text = episode.seriesName,
+                        modifier =
+                            Modifier.clickable {
+                                onAction(EpisodeAction.NavigateToShow(episode.seriesId))
+                            },
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    val seasonName =
+                        episode.seasonName
+                            ?: stringResource(
+                                CoreR.string.season_number,
+                                episode.parentIndexNumber,
+                            )
+                    Text(
+                        text =
+                            "$seasonName - " +
+                                stringResource(
+                                    id = CoreR.string.episode_number,
+                                    episode.indexNumber,
+                                ),
+                        modifier =
+                            Modifier.clickable {
+                                onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
+                            },
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    ItemMetaRow(
+                        dateText = episode.premiereDate?.format(state.dateFormat),
+                        runtimeTicks = episode.runtimeTicks,
+                        communityRating = episode.communityRating,
+                        modifier = Modifier.fillMaxWidth(),
+                        played = episode.played,
+                        favorite = episode.favorite,
+                        onPlayedClick = {
+                            if (episode.played) onAction(EpisodeAction.UnmarkAsPlayed)
+                            else onAction(EpisodeAction.MarkAsPlayed)
+                        },
+                        onFavoriteClick = {
+                            if (episode.favorite) onAction(EpisodeAction.UnmarkAsFavorite)
+                            else onAction(EpisodeAction.MarkAsFavorite)
                         },
                     )
-                    Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Text(
-                            text = episode.name,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 2,
-                            style = MaterialTheme.typography.headlineMedium,
-                        )
-                        val downloadedSource =
-                            if (episode.isDownloaded()) {
-                                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    val deleteDownload: () -> Unit = {
+                        onDownloaderAction(DownloaderAction.DeleteDownload(episode))
+                        Toast.makeText(
+                                androidContext,
+                                CoreR.string.download_deleted_toast,
+                                Toast.LENGTH_SHORT,
+                            )
+                            .show()
+                    }
+                    ItemButtonsBar(
+                        item = episode,
+                        downloaderState = downloaderState,
+                        downloadLocationPreference = downloadLocationPreference,
+                        onPlayClick = { startFromBeginning ->
+                            onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning))
+                        },
+                        onTrailerClick = {},
+                        onDownloadClick = { storageIndex ->
+                            onDownloaderAction(DownloaderAction.Download(episode, storageIndex))
+                        },
+                        onDownloadCancelClick = {
+                            onDownloaderAction(DownloaderAction.CancelDownload(episode))
+                        },
+                        onDownloadForceClick = {
+                            onDownloaderAction(DownloaderAction.ForceDownload)
+                        },
+                        onDownloadPauseClick = {
+                            onDownloaderAction(DownloaderAction.PauseDownload)
+                        },
+                        onDownloadResumeClick = {
+                            onDownloaderAction(DownloaderAction.ResumeDownload)
+                        },
+                        onDownloadDeleteClick = deleteDownload,
+                        modifier = Modifier.fillMaxWidth(),
+                        enableDownloadDialog = true,
+                        showEpisodeDownloadOption = true,
+                        initialSelection =
+                            DownloadSelection(
+                                seasonIds = state.existingScope.seasonIds,
+                                alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
+                            ),
+                        initialAlsoFollowNew = state.existingScope.alsoFollowNew,
+                        initialOnlyUnwatched = state.existingScope.onlyUnwatched,
+                        getSeasons = getSeasons,
+                        getSeasonSize = getSeasonSize,
+                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
+                            onAction(
+                                EpisodeAction.DownloadWithScope(
+                                    selection,
+                                    alsoFollowNew,
+                                    onlyUnwatched,
+                                )
+                            )
+                        },
+                        trailingContent = {
+                            if (state.seriesTvdbId != null && state.sonarrConfigured) {
+                                PvrSearchButton(
+                                    service = PvrSource.SONARR,
+                                    onAutomaticSearch = {
+                                        onAction(EpisodeAction.SearchEpisodeAutomatic)
+                                    },
+                                    onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
+                                    label = stringResource(CoreR.string.search_episode),
+                                )
+                            }
+                        },
+                        excludeFromAutoDelete = downloadedSource?.excludeFromAutoDelete == true,
+                        onToggleExcludeFromAutoDeleteClick =
+                            if (state.autoDeleteWatchedEnabled) {
+                                { onAction(EpisodeAction.ToggleExcludeFromAutoDelete) }
                             } else {
                                 null
-                            }
-                        Text(
-                            text = episode.seriesName,
-                            modifier =
-                                Modifier.clickable {
-                                    onAction(EpisodeAction.NavigateToShow(episode.seriesId))
-                                },
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        val seasonName =
-                            episode.seasonName
-                                ?: stringResource(
-                                    CoreR.string.season_number,
-                                    episode.parentIndexNumber,
-                                )
-                        Text(
-                            text =
-                                "$seasonName - " +
-                                    stringResource(
-                                        id = CoreR.string.episode_number,
-                                        episode.indexNumber,
-                                    ),
-                            modifier =
-                                Modifier.clickable {
-                                    onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
-                                },
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                        ItemMetaRow(
-                            dateText = episode.premiereDate?.format(state.dateFormat),
-                            runtimeTicks = episode.runtimeTicks,
-                            communityRating = episode.communityRating,
-                            modifier = Modifier.fillMaxWidth(),
-                            played = episode.played,
-                            favorite = episode.favorite,
-                            onPlayedClick = {
-                                if (episode.played) onAction(EpisodeAction.UnmarkAsPlayed)
-                                else onAction(EpisodeAction.MarkAsPlayed)
                             },
-                            onFavoriteClick = {
-                                if (episode.favorite) onAction(EpisodeAction.UnmarkAsFavorite)
-                                else onAction(EpisodeAction.MarkAsFavorite)
-                            },
-                        )
-                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                        val deleteDownload: () -> Unit = {
-                            onDownloaderAction(DownloaderAction.DeleteDownload(episode))
-                            Toast.makeText(
-                                    androidContext,
-                                    CoreR.string.download_deleted_toast,
-                                    Toast.LENGTH_SHORT,
-                                )
-                                .show()
-                        }
-                        ItemButtonsBar(
-                            item = episode,
-                            downloaderState = downloaderState,
-                            downloadLocationPreference = downloadLocationPreference,
-                            onPlayClick = { startFromBeginning ->
-                                onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning))
-                            },
-                            onTrailerClick = {},
-                            onDownloadClick = { storageIndex ->
-                                onDownloaderAction(DownloaderAction.Download(episode, storageIndex))
-                            },
-                            onDownloadCancelClick = {
-                                onDownloaderAction(DownloaderAction.CancelDownload(episode))
-                            },
-                            onDownloadForceClick = {
-                                onDownloaderAction(DownloaderAction.ForceDownload)
-                            },
-                            onDownloadPauseClick = {
-                                onDownloaderAction(DownloaderAction.PauseDownload)
-                            },
-                            onDownloadResumeClick = {
-                                onDownloaderAction(DownloaderAction.ResumeDownload)
-                            },
-                            onDownloadDeleteClick = deleteDownload,
-                            modifier = Modifier.fillMaxWidth(),
-                            enableDownloadDialog = true,
-                            showEpisodeDownloadOption = true,
-                            initialSelection =
-                                DownloadSelection(
-                                    seasonIds = state.existingScope.seasonIds,
-                                    alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
-                                ),
-                            initialAlsoFollowNew = state.existingScope.alsoFollowNew,
-                            initialOnlyUnwatched = state.existingScope.onlyUnwatched,
-                            getSeasons = getSeasons,
-                            getSeasonSize = getSeasonSize,
-                            onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
-                                onAction(
-                                    EpisodeAction.DownloadWithScope(
-                                        selection,
-                                        alsoFollowNew,
-                                        onlyUnwatched,
-                                    )
-                                )
-                            },
-                            trailingContent = {
-                                if (state.seriesTvdbId != null && state.sonarrConfigured) {
-                                    PvrSearchButton(
-                                        service = PvrSource.SONARR,
-                                        onAutomaticSearch = {
-                                            onAction(EpisodeAction.SearchEpisodeAutomatic)
-                                        },
-                                        onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
-                                        label = stringResource(CoreR.string.search_episode),
-                                    )
-                                }
-                            },
-                            excludeFromAutoDelete = downloadedSource?.excludeFromAutoDelete == true,
-                            onToggleExcludeFromAutoDeleteClick =
-                                if (state.autoDeleteWatchedEnabled) {
-                                    { onAction(EpisodeAction.ToggleExcludeFromAutoDelete) }
-                                } else {
-                                    null
-                                },
-                        )
-                        downloadedSource?.let { source ->
-                            val isBroken = episode.isDownloadBroken()
-                            val isMarkedForDeletion =
-                                state.autoDeleteWatchedEnabled &&
-                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours)
-                            // Size lives on the "Delete download" tile above - only surface this
-                            // caption for states that tile can't show.
-                            if (!source.path.endsWith(".download") &&
-                                (isBroken || isMarkedForDeletion)
-                            ) {
-                                Spacer(Modifier.height(MaterialTheme.spacings.small))
-                                LocalStorageIndicator(
-                                    path = source.path,
-                                    sizeBytes = source.size,
-                                    isBroken = isBroken,
-                                    isMarkedForDeletion = isMarkedForDeletion,
-                                    showSize = false,
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                        if (infoDialogOpen && state.videoMetadata != null) {
-                            InfoDialog(
-                                videoMetadata = state.videoMetadata!!,
-                                downloadedFilePath =
-                                    downloadedSource?.path?.takeUnless { it.endsWith(".download") },
-                                onDismiss = { infoDialogOpen = false },
+                    )
+                    downloadedSource?.let { source ->
+                        val isBroken = episode.isDownloadBroken()
+                        val isMarkedForDeletion =
+                            state.autoDeleteWatchedEnabled &&
+                                episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours)
+                        // Size lives on the "Delete download" tile above - only surface this
+                        // caption for states that tile can't show.
+                        if (!source.path.endsWith(".download") &&
+                            (isBroken || isMarkedForDeletion)
+                        ) {
+                            Spacer(Modifier.height(MaterialTheme.spacings.small))
+                            LocalStorageIndicator(
+                                path = source.path,
+                                sizeBytes = source.size,
+                                isBroken = isBroken,
+                                isMarkedForDeletion = isMarkedForDeletion,
+                                showSize = false,
                             )
                         }
-                        OverviewText(text = episode.overview)
-                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     }
-                    if (state.actors.isNotEmpty()) {
-                        ActorsRow(
-                            actors = state.actors,
-                            onActorClick = { personId ->
-                                onAction(EpisodeAction.NavigateToPerson(personId))
-                            },
-                            contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    if (infoDialogOpen && state.videoMetadata != null) {
+                        InfoDialog(
+                            videoMetadata = state.videoMetadata!!,
+                            downloadedFilePath =
+                                downloadedSource?.path?.takeUnless { it.endsWith(".download") },
+                            onDismiss = { infoDialogOpen = false },
                         )
                     }
-                    Spacer(Modifier.height(paddingBottom))
+                    OverviewText(text = episode.overview)
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
                 }
-            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
-        }
+                if (state.actors.isNotEmpty()) {
+                    ActorsRow(
+                        actors = state.actors,
+                        onActorClick = { personId ->
+                            onAction(EpisodeAction.NavigateToPerson(personId))
+                        },
+                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
+                    )
+                }
+                Spacer(Modifier.height(paddingBottom))
+            }
+        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
     }
 
     state.releasePicker?.let { releasePicker ->

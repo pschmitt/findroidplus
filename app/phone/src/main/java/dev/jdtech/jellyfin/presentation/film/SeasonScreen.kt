@@ -3,12 +3,10 @@ package dev.jdtech.jellyfin.presentation.film
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,8 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,11 +55,12 @@ import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.EpisodeCard
+import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
+import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
-import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.film.components.UpcomingEpisodeCard
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -166,7 +163,29 @@ private fun SeasonScreenLayout(
 
     val lazyListState = rememberLazyListState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    ItemDetailScaffold(
+        hasBackButton = true,
+        hasHomeButton = true,
+        onBackClick = { onAction(SeasonAction.OnBackClick) },
+        onHomeClick = { onAction(SeasonAction.OnHomeClick) },
+        onSettingsClick = { onAction(SeasonAction.OnSettingsClick) },
+        topBarContent = {
+            Spacer(modifier = Modifier.width(4.dp))
+            state.season?.let { season ->
+                Button(
+                    onClick = { onAction(SeasonAction.NavigateToSeries(season.seriesId)) },
+                    modifier = Modifier.alpha(0.7f),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = Color.White,
+                        ),
+                ) {
+                    Text(text = season.seriesName, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                }
+            }
+        },
+    ) {
         state.season?.let { season ->
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
@@ -275,32 +294,24 @@ private fun SeasonScreenLayout(
                                 )
                                 .show()
                         },
+                        // Same "size as the label" tile the single-episode Delete download tile
+                        // uses (see ItemButtonsBar) - one reusable shape for both scopes instead
+                        // of a bespoke button + separate disk-usage caption.
                         trailingContent = {
                             if (state.hasDownloads || state.autoDownloadEnabled) {
-                                FilledTonalButton(onClick = { clearSeasonDownloadsDialogOpen = true }) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_trash),
-                                        contentDescription = null,
-                                    )
-                                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                                    Text(text = stringResource(CoreR.string.clear_season_downloads))
-                                }
+                                ItemActionButton(
+                                    icon = painterResource(CoreR.drawable.ic_trash),
+                                    label =
+                                        state.downloadsSizeBytes
+                                            .takeIf { it > 0L }
+                                            ?.let { formatBinaryFileSize(it) }
+                                            ?: stringResource(CoreR.string.clear_season_downloads),
+                                    onClick = { clearSeasonDownloadsDialogOpen = true },
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                )
                             }
                         },
                     )
-                    if (state.downloadsSizeBytes > 0) {
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Text(
-                            text =
-                                stringResource(
-                                    CoreR.string.downloads_disk_usage,
-                                    formatBinaryFileSize(state.downloadsSizeBytes),
-                                ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier =
-                                Modifier.padding(start = paddingStart, end = paddingEnd),
-                        )
-                    }
                 }
                 items(items = state.episodes, key = { episode -> episode.id }) { episode ->
                     EpisodeCard(
@@ -388,29 +399,6 @@ private fun SeasonScreenLayout(
                 }
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
-
-        ItemTopBar(
-            hasBackButton = true,
-            hasHomeButton = true,
-            onBackClick = { onAction(SeasonAction.OnBackClick) },
-            onHomeClick = { onAction(SeasonAction.OnHomeClick) },
-            onSettingsClick = { onAction(SeasonAction.OnSettingsClick) },
-        ) {
-            Spacer(modifier = Modifier.width(4.dp))
-            state.season?.let { season ->
-                Button(
-                    onClick = { onAction(SeasonAction.NavigateToSeries(season.seriesId)) },
-                    modifier = Modifier.alpha(0.7f),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = Color.Black,
-                            contentColor = Color.White,
-                        ),
-                ) {
-                    Text(text = season.seriesName, overflow = TextOverflow.Ellipsis, maxLines = 1)
-                }
-            }
-        }
     }
 
     if (clearSeasonDownloadsDialogOpen) {

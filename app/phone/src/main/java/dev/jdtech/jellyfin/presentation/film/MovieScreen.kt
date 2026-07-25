@@ -2,11 +2,9 @@ package dev.jdtech.jellyfin.presentation.film
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,9 +54,9 @@ import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.InfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
+import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
-import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -175,7 +173,13 @@ private fun MovieScreenLayout(
     val scrollState = rememberScrollState()
     var infoDialogOpen by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    ItemDetailScaffold(
+        hasBackButton = true,
+        hasHomeButton = true,
+        onBackClick = { onAction(MovieAction.OnBackClick) },
+        onHomeClick = { onAction(MovieAction.OnHomeClick) },
+        onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
+    ) {
         state.movie?.let { movie ->
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 ItemHeader(
@@ -351,14 +355,6 @@ private fun MovieScreenLayout(
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
-
-        ItemTopBar(
-            hasBackButton = true,
-            hasHomeButton = true,
-            onBackClick = { onAction(MovieAction.OnBackClick) },
-            onHomeClick = { onAction(MovieAction.OnHomeClick) },
-            onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
-        )
     }
 
     state.releasePicker?.let { releasePicker ->

@@ -4,12 +4,10 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,11 +57,12 @@ import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.InfoText
+import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
+import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
-import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.jdtech.jellyfin.presentation.film.components.UpcomingSeasonCard
@@ -145,7 +143,13 @@ private fun ShowScreenLayout(
     val scrollState = rememberScrollState()
     var clearShowDownloadsDialogOpen by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    ItemDetailScaffold(
+        hasBackButton = true,
+        hasHomeButton = true,
+        onBackClick = { onAction(ShowAction.OnBackClick) },
+        onHomeClick = { onAction(ShowAction.OnHomeClick) },
+        onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
+    ) {
         state.show?.let { show ->
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 ItemHeader(
@@ -272,31 +276,25 @@ private fun ShowScreenLayout(
                                 )
                                 .show()
                         },
+                        // Same "size as the label" tile the single-episode/movie Delete download
+                        // tile uses (see ItemButtonsBar) - one reusable shape for both scopes
+                        // instead of a bespoke button + separate disk-usage caption.
                         trailingContent = {
                             if (state.hasDownloads || state.autoDownloadEnabled) {
-                                FilledTonalButton(onClick = { clearShowDownloadsDialogOpen = true }) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_trash),
-                                        contentDescription = null,
-                                    )
-                                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                                    Text(text = stringResource(CoreR.string.clear_show_downloads))
-                                }
+                                ItemActionButton(
+                                    icon = painterResource(CoreR.drawable.ic_trash),
+                                    label =
+                                        state.downloadsSizeBytes
+                                            .takeIf { it > 0L }
+                                            ?.let { formatBinaryFileSize(it) }
+                                            ?: stringResource(CoreR.string.clear_show_downloads),
+                                    onClick = { clearShowDownloadsDialogOpen = true },
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                )
                             }
                         },
                     )
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    if (state.downloadsSizeBytes > 0) {
-                        Text(
-                            text =
-                                stringResource(
-                                    CoreR.string.downloads_disk_usage,
-                                    formatBinaryFileSize(state.downloadsSizeBytes),
-                                ),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    }
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     OverviewText(text = show.overview, maxCollapsedLines = 3)
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     InfoText(
@@ -436,14 +434,6 @@ private fun ShowScreenLayout(
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
-
-        ItemTopBar(
-            hasBackButton = true,
-            hasHomeButton = true,
-            onBackClick = { onAction(ShowAction.OnBackClick) },
-            onHomeClick = { onAction(ShowAction.OnHomeClick) },
-            onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
-        )
     }
 
     if (clearShowDownloadsDialogOpen) {

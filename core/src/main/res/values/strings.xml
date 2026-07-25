@@ -255,7 +255,6 @@
     <string name="auto_download_only_new_episodes">Only new episodes (no backfill)</string>
     <string name="clear_all_downloads">Clear all downloads</string>
     <string name="clear_all_downloads_message">This will delete every downloaded movie and episode on this device.</string>
-    <string name="downloads_disk_usage">%1$s downloaded</string>
     <string name="clear_show_downloads">Delete show downloads</string>
     <string name="clear_show_downloads_message">This will delete every downloaded episode of this show on this device.</string>
     <string name="also_remove_auto_download_rules">Also remove auto-download rules</string>
