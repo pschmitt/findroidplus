@@ -447,7 +447,12 @@ fun NavigationRoot(
                         )
                     },
                     onSettingsClick = { navController.safeNavigate(settingsRootRoute()) },
-                    onManageServers = { navController.safeNavigate(ServersRoute) },
+                    // "Manage servers" from within an already-set-up app goes straight to
+                    // Settings > Connections - it already has the same add/switch server and
+                    // add/switch user UI as the dedicated ServersRoute/AddServerRoute/UsersRoute
+                    // flow (which stays reserved for first-run setup, before any server exists to
+                    // have a Settings screen for).
+                    onManageServers = { navController.safeNavigate(ConnectionsRoute) },
                     onItemClick = { item ->
                         navigateToItem(navController = navController, item = item)
                     },
