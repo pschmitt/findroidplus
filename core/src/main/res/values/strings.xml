@@ -280,7 +280,7 @@
     <string name="download_row_marked_for_deletion">Marked for deletion</string>
     <string name="download_action_exclude_from_auto_delete">Keep - exclude from auto-delete</string>
     <string name="download_action_allow_auto_delete">Allow auto-delete</string>
-    <string name="download_keep_label">Keep</string>
+    <string name="download_keep_label">Keep download</string>
     <string name="broken_downloads_banner_message">%1$d download(s) have a missing or empty file - e.g. after removing or reformatting a storage volume</string>
     <string name="broken_downloads_banner_action">Re-download all</string>
     <string name="pause_all_downloads">Pause all downloads</string>
