@@ -48,7 +48,6 @@
     <string name="libraries">Libraries</string>
     <string name="series_poster">Series poster</string>
     <string name="collection_no_media">This collection does not contain any media</string>
-    <string name="no_favorites">You have no favorites</string>
     <string name="no_downloads">You have nothing downloaded</string>
     <string name="downloads_empty_title">No downloads yet</string>
     <string name="downloads_empty_message">To download media, open an episode or movie and press the download button.</string>

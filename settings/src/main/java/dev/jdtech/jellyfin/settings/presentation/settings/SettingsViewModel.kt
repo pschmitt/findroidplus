@@ -242,6 +242,13 @@ constructor(
                                                     backendPreference = appPreferences.homeNextUp,
                                                 ),
                                                 PreferenceSwitch(
+                                                    nameStringResource = R.string.home_favorites,
+                                                    descriptionStringRes =
+                                                        R.string.home_favorites_summary,
+                                                    iconDrawableId = R.drawable.ic_heart,
+                                                    backendPreference = appPreferences.homeFavorites,
+                                                ),
+                                                PreferenceSwitch(
                                                     nameStringResource = R.string.home_latest,
                                                     descriptionStringRes =
                                                         R.string.home_latest_summary,

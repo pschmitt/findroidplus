@@ -56,9 +56,12 @@ constructor(
         UUID(4937169328197226115, -4704919157662094443) // 44845958-8326-4e83-beb4-c4f42e9eeb95
     private val uuidNextUp =
         UUID(1783371395749072194, -6164625418200444295) // 18bfced5-f237-4d42-aa72-d9d7fed19279
+    private val uuidFavorites =
+        UUID(1642943667459343867, -6302638076081220062) // 16cce88f-94e4-45fb-a888-88100753d622
 
     private val uiTextContinueWatching = UiText.StringResource(FilmR.string.continue_watching)
     private val uiTextNextUp = UiText.StringResource(FilmR.string.next_up)
+    private val uiTextFavorites = UiText.StringResource(CoreR.string.title_favorite)
 
     init {
         viewModelScope.launch {
@@ -87,6 +90,7 @@ constructor(
                 loadSuggestions()
                 loadResumeItems()
                 loadNextUpItems()
+                loadFavoritesItems()
                 loadViews()
                 loadDiscover()
                 loadPvrServiceIcons()
@@ -111,10 +115,10 @@ constructor(
     }
 
     /**
-     * Default order: Pending downloads, Latest Shows, Next Up, Continue Watching, Latest Movies,
-     * Suggestions, Trending, Popular Shows, Popular Movies - views are split by library type
-     * (TV/movie) so each lands next to its own "Latest ..." slot rather than grouped together.
-     * Only used until the user actually reorders anything - from then on
+     * Default order: Pending downloads, Latest Shows, Next Up, Continue Watching, Favorites,
+     * Latest Movies, Suggestions, Trending, Popular Shows, Popular Movies - views are split by
+     * library type (TV/movie) so each lands next to its own "Latest ..." slot rather than grouped
+     * together. Only used until the user actually reorders anything - from then on
      * [resolveHomeSectionOrder] keeps whatever they set and just appends genuinely new keys here.
      */
     private fun recomputeSectionOrder() {
@@ -141,6 +145,7 @@ constructor(
                     addAll(showViews.map { HomeSectionKeys.view(it.view.id) })
                     if (current.nextUpSection != null) add(HomeSectionKeys.NEXT_UP)
                     if (current.resumeSection != null) add(HomeSectionKeys.CONTINUE_WATCHING)
+                    if (current.favoritesSection != null) add(HomeSectionKeys.FAVORITES)
                     addAll(movieViews.map { HomeSectionKeys.view(it.view.id) })
                     addAll(otherViews.map { HomeSectionKeys.view(it.view.id) })
                     if (current.suggestionsSection != null) add(HomeSectionKeys.SUGGESTIONS)
@@ -253,6 +258,25 @@ constructor(
             }
 
         _state.emit(_state.value.copy(nextUpSection = section))
+    }
+
+    private suspend fun loadFavoritesItems() {
+        Timber.i("Loading favorites")
+        if (!appPreferences.getValue(appPreferences.homeFavorites)) {
+            _state.emit(_state.value.copy(favoritesSection = null))
+            return
+        }
+
+        val favoriteItems = repository.getFavoriteItems()
+
+        val section =
+            if (favoriteItems.isEmpty()) {
+                null
+            } else {
+                HomeItem.Section(HomeSection(uuidFavorites, uiTextFavorites, favoriteItems))
+            }
+
+        _state.emit(_state.value.copy(favoritesSection = section))
     }
 
     private suspend fun loadViews() {

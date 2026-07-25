@@ -33,11 +33,13 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
 
 /**
- * Home's own header - server switcher pill + error/retry/search/favorites/settings buttons. Every
- * icon button here is a [HeaderIconButton], the same black-70%-alpha circle [ItemTopBar] uses on
- * every detail screen, so this reads as the same header language rather than a bespoke
- * solid-color one. The server-switcher pill is the one thing with no detail-screen equivalent
- * (variable-width, shows the server name) - kept as its own [Surface] but recolored to match.
+ * Home's own header - server switcher pill + error/retry/search/settings buttons. Every icon
+ * button here is a [HeaderIconButton], the same black-70%-alpha circle [ItemTopBar] uses on every
+ * detail screen, so this reads as the same header language rather than a bespoke solid-color one.
+ * The server-switcher pill is the one thing with no detail-screen equivalent (variable-width,
+ * shows the server name) - kept as its own [Surface] but recolored to match. (Favorites used to
+ * live here as an icon button - it's now its own Home section instead, next to Continue Watching/
+ * Next Up, so it can actually be browsed rather than being a single tap-through.)
  */
 @Composable
 fun HomeHeader(
@@ -48,7 +50,6 @@ fun HomeHeader(
     onErrorClick: () -> Unit,
     onRetryClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onFavoritesClick: () -> Unit,
     onUserClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,10 +131,6 @@ fun HomeHeader(
                 }
             }
 
-            HeaderIconButton(onClick = onFavoritesClick) {
-                Icon(painter = painterResource(CoreR.drawable.ic_heart), contentDescription = null)
-            }
-
             HeaderIconButton(onClick = onUserClick) {
                 Icon(painter = painterResource(CoreR.drawable.ic_settings), contentDescription = null)
             }
@@ -153,7 +150,6 @@ private fun HomeHeaderLoadingPreview() {
             onErrorClick = {},
             onRetryClick = {},
             onSearchClick = {},
-            onFavoritesClick = {},
             onUserClick = {},
         )
     }
@@ -171,7 +167,6 @@ private fun HomeHeaderErrorPreview() {
             onErrorClick = {},
             onRetryClick = {},
             onSearchClick = {},
-            onFavoritesClick = {},
             onUserClick = {},
         )
     }

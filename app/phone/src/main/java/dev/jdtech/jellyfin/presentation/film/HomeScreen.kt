@@ -82,7 +82,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun HomeScreen(
     onLibraryClick: (library: FindroidCollection) -> Unit,
-    onFavoritesClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onManageServers: () -> Unit,
     onItemClick: (item: FindroidItem) -> Unit,
@@ -111,7 +110,6 @@ fun HomeScreen(
                 is HomeAction.OnItemClick -> onItemClick(action.item)
                 is HomeAction.OnSeerrItemClick -> onSeerrItemClick(action.item)
                 is HomeAction.OnLibraryClick -> onLibraryClick(action.library)
-                is HomeAction.OnFavoritesClick -> onFavoritesClick()
                 is HomeAction.OnSettingsClick -> onSettingsClick()
                 is HomeAction.OnManageServers -> onManageServers()
                 is HomeAction.OnEnableOfflineMode -> (context as? Activity)?.recreate()
@@ -176,7 +174,6 @@ private fun HomeScreenLayout(
             onErrorClick = { showErrorDialog = true },
             onRetryClick = { onAction(HomeAction.OnRetryClick) },
             onSearchClick = { searchExpanded = true },
-            onFavoritesClick = { onAction(HomeAction.OnFavoritesClick) },
             onUserClick = { onAction(HomeAction.OnSettingsClick) },
             modifier = Modifier.padding(start = paddingStart, top = paddingTop, end = paddingEnd),
         )
@@ -263,6 +260,15 @@ private fun HomeScreenLayout(
                                 }
                             key == HomeSectionKeys.NEXT_UP ->
                                 state.nextUpSection?.let { section ->
+                                    HomeSection(
+                                        section = section.homeSection,
+                                        itemsPadding = itemsPadding,
+                                        onAction = onAction,
+                                        titleModifier = titleModifier,
+                                    )
+                                }
+                            key == HomeSectionKeys.FAVORITES ->
+                                state.favoritesSection?.let { section ->
                                     HomeSection(
                                         section = section.homeSection,
                                         itemsPadding = itemsPadding,

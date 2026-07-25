@@ -48,7 +48,6 @@ import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
 import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.film.EpisodeScreen
-import dev.jdtech.jellyfin.presentation.film.FavoritesScreen
 import dev.jdtech.jellyfin.presentation.film.HomeScreen
 import dev.jdtech.jellyfin.presentation.film.LibraryScreen
 import dev.jdtech.jellyfin.presentation.film.MovieScreen
@@ -124,8 +123,6 @@ data class SeerrMediaRoute(
     val airDate: String? = null,
     val airTime: String? = null,
 )
-
-@Serializable data object FavoritesRoute
 
 @Serializable data class MovieRoute(val movieId: String)
 
@@ -449,7 +446,6 @@ fun NavigationRoot(
                             )
                         )
                     },
-                    onFavoritesClick = { navController.safeNavigate(FavoritesRoute) },
                     onSettingsClick = { navController.safeNavigate(settingsRootRoute()) },
                     onManageServers = { navController.safeNavigate(ServersRoute) },
                     onItemClick = { item ->
@@ -635,14 +631,6 @@ fun NavigationRoot(
                 CollectionScreen(
                     collectionId = UUID.fromString(route.collectionId),
                     collectionName = route.collectionName,
-                    onItemClick = { item ->
-                        navigateToItem(navController = navController, item = item)
-                    },
-                    navigateBack = { navController.safePopBackStack() },
-                )
-            }
-            composable<FavoritesRoute> {
-                FavoritesScreen(
                     onItemClick = { item ->
                         navigateToItem(navController = navController, item = item)
                     },

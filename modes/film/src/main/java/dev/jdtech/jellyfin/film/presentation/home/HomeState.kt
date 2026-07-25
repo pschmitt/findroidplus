@@ -17,6 +17,7 @@ data class HomeState(
     val suggestionsSection: HomeItem.Suggestions? = null,
     val resumeSection: HomeItem.Section? = null,
     val nextUpSection: HomeItem.Section? = null,
+    val favoritesSection: HomeItem.Section? = null,
     val views: List<HomeItem.ViewItem> = emptyList(),
     val discoverSections: List<HomeDiscoverSection> = emptyList(),
     val activeDownloads: List<PvrQueueEntry> = emptyList(),

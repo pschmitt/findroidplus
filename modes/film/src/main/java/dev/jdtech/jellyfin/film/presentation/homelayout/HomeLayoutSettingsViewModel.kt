@@ -45,9 +45,9 @@ constructor(
     /**
      * Builds [cachedLabels] in the same default order as
      * [dev.jdtech.jellyfin.film.presentation.home.HomeViewModel.recomputeSectionOrder]: Pending
-     * downloads, Latest Shows, Next Up, Continue Watching, Latest Movies, Suggestions, Trending,
-     * Popular Shows, Popular Movies - so a freshly-installed layout matches between this screen
-     * and Home before the user ever touches an order/hide control.
+     * downloads, Latest Shows, Next Up, Continue Watching, Favorites, Latest Movies, Suggestions,
+     * Trending, Popular Shows, Popular Movies - so a freshly-installed layout matches between this
+     * screen and Home before the user ever touches an order/hide control.
      */
     fun load() {
         viewModelScope.launch {
@@ -108,6 +108,10 @@ constructor(
             if (appPreferences.getValue(appPreferences.homeContinueWatching)) {
                 labels[HomeSectionKeys.CONTINUE_WATCHING] =
                     SectionInfo(UiText.StringResource(FilmR.string.continue_watching), jellyfinIcons)
+            }
+            if (appPreferences.getValue(appPreferences.homeFavorites)) {
+                labels[HomeSectionKeys.FAVORITES] =
+                    SectionInfo(UiText.StringResource(CoreR.string.title_favorite), jellyfinIcons)
             }
 
             movieViews.forEach(::addView)

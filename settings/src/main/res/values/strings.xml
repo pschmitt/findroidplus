@@ -102,6 +102,8 @@
     <string name="home_continue_watching_summary">Show a row of items you\'ve started watching</string>
     <string name="home_next_up">Display next up</string>
     <string name="home_next_up_summary">Show a row of the next episodes to watch</string>
+    <string name="home_favorites">Display favorites</string>
+    <string name="home_favorites_summary">Show a row of your favorited movies and shows</string>
     <string name="home_latest">Display latest items</string>
     <string name="home_latest_summary">Show rows of recently added items for each library</string>
     <string name="home_discover">Display Seerr discovery</string>

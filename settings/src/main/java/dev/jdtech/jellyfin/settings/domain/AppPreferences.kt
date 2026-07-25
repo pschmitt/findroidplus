@@ -19,6 +19,7 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val homeSuggestions = Preference<Boolean>("home_suggestions", true)
     val homeContinueWatching = Preference<Boolean>("home_continue_watching", true)
     val homeNextUp = Preference<Boolean>("home_next_up", true)
+    val homeFavorites = Preference<Boolean>("home_favorites", true)
     val homeLatest = Preference<Boolean>("home_latest", true)
     val homeDiscover = Preference<Boolean>("home_discover", true)
     val homeSectionOrder = Preference<String?>("pref_home_section_order", null)

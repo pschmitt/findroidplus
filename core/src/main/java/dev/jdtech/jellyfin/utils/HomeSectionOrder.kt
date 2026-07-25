@@ -11,6 +11,7 @@ object HomeSectionKeys {
     const val SUGGESTIONS = "suggestions"
     const val CONTINUE_WATCHING = "continue_watching"
     const val NEXT_UP = "next_up"
+    const val FAVORITES = "favorites"
     const val ACTIVE_DOWNLOADS = "active_downloads"
     private const val VIEW_PREFIX = "view:"
     private const val DISCOVER_PREFIX = "discover:"
