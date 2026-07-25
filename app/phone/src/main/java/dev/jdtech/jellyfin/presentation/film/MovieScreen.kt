@@ -309,12 +309,15 @@ private fun MovieScreenLayout(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     downloadedSource?.let { source ->
-                        if (!source.path.endsWith(".download")) {
+                        // Size lives on the "Delete download" tile above - only surface this
+                        // caption for a broken (0-byte/missing) download.
+                        if (!source.path.endsWith(".download") && movie.isDownloadBroken()) {
                             Spacer(Modifier.height(MaterialTheme.spacings.small))
                             LocalStorageIndicator(
                                 path = source.path,
                                 sizeBytes = source.size,
-                                isBroken = movie.isDownloadBroken(),
+                                isBroken = true,
+                                showSize = false,
                             )
                         }
                     }

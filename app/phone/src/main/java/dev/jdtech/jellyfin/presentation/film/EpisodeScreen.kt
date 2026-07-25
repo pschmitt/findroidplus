@@ -387,17 +387,22 @@ private fun EpisodeScreenLayout(
                                 },
                         )
                         downloadedSource?.let { source ->
-                            if (!source.path.endsWith(".download")) {
+                            val isBroken = episode.isDownloadBroken()
+                            val isMarkedForDeletion =
+                                state.autoDeleteWatchedEnabled &&
+                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours)
+                            // Size lives on the "Delete download" tile above - only surface this
+                            // caption for states that tile can't show.
+                            if (!source.path.endsWith(".download") &&
+                                (isBroken || isMarkedForDeletion)
+                            ) {
                                 Spacer(Modifier.height(MaterialTheme.spacings.small))
                                 LocalStorageIndicator(
                                     path = source.path,
                                     sizeBytes = source.size,
-                                    isBroken = episode.isDownloadBroken(),
-                                    isMarkedForDeletion =
-                                        state.autoDeleteWatchedEnabled &&
-                                            episode.isMarkedForAutoDeletion(
-                                                state.autoDeleteWatchedHours
-                                            ),
+                                    isBroken = isBroken,
+                                    isMarkedForDeletion = isMarkedForDeletion,
+                                    showSize = false,
                                 )
                             }
                         }

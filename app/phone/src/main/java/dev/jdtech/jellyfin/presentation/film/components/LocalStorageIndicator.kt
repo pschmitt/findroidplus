@@ -28,7 +28,10 @@ import dev.jdtech.jellyfin.utils.isPathOnRemovableStorage
  * downloaded item's on-disk footprint and location are visible without a trip to that screen.
  * [isBroken] mirrors `FindroidItem.isDownloadBroken()` - an error-tinted warning icon instead of
  * the storage icon, since a 0 B reading here means the same "file's actually missing" thing it
- * does there.
+ * does there. [showSize] is false on the movie/episode detail page - the size lives on the
+ * "Delete download" tile there instead (see ItemButtonsBar), so this only needs to surface the
+ * broken/marked-for-deletion states; the size line is still shown when neither of those apply
+ * everywhere else that doesn't merge size into a button.
  */
 @Composable
 fun LocalStorageIndicator(
@@ -37,38 +40,44 @@ fun LocalStorageIndicator(
     modifier: Modifier = Modifier,
     isBroken: Boolean = false,
     isMarkedForDeletion: Boolean = false,
+    showSize: Boolean = true,
 ) {
     val context = LocalContext.current
     val isRemovable = remember(path) { isPathOnRemovableStorage(context, path) }
+    val showLeadingSegment = isBroken || showSize
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter =
-                painterResource(
-                    when {
-                        isBroken -> CoreR.drawable.ic_alert_circle
-                        isRemovable == true -> CoreR.drawable.ic_sd_card
-                        else -> CoreR.drawable.ic_smartphone
-                    }
-                ),
-            contentDescription = null,
-            tint =
-                if (isBroken) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(modifier = Modifier.width(MaterialTheme.spacings.extraSmall))
-        Text(
-            text =
-                if (isBroken) stringResource(CoreR.string.download_row_broken)
-                else formatBinaryFileSize(sizeBytes),
-            style = MaterialTheme.typography.bodySmall,
-            color =
-                if (isBroken) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (showLeadingSegment) {
+            Icon(
+                painter =
+                    painterResource(
+                        when {
+                            isBroken -> CoreR.drawable.ic_alert_circle
+                            isRemovable == true -> CoreR.drawable.ic_sd_card
+                            else -> CoreR.drawable.ic_smartphone
+                        }
+                    ),
+                contentDescription = null,
+                tint =
+                    if (isBroken) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.extraSmall))
+            Text(
+                text =
+                    if (isBroken) stringResource(CoreR.string.download_row_broken)
+                    else formatBinaryFileSize(sizeBytes),
+                style = MaterialTheme.typography.bodySmall,
+                color =
+                    if (isBroken) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (isMarkedForDeletion && !isBroken) {
-            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            if (showLeadingSegment) {
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            }
             Icon(
                 painter = painterResource(CoreR.drawable.ic_trash),
                 contentDescription = null,

@@ -38,6 +38,7 @@ import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.displayNameWithContext
+import dev.jdtech.jellyfin.utils.formatBinaryFileSize
 import dev.jdtech.jellyfin.utils.resolveDownloadStorageIndex
 import java.util.UUID
 
@@ -193,10 +194,17 @@ fun ItemButtonsBar(
                             checked = excludeFromAutoDelete,
                         )
                     }
-                    // Size/path details live in the confirmation dialog this opens.
+                    // The label doubles as the on-disk size so it doesn't need its own separate
+                    // caption elsewhere on the screen - falls back to the generic label for a
+                    // broken (0-byte/missing) download, where a size reading would be misleading.
+                    // Path details still live in the confirmation dialog this opens.
                     ItemActionButton(
                         icon = painterResource(CoreR.drawable.ic_trash),
-                        label = stringResource(CoreR.string.delete_download),
+                        label =
+                            downloadedSource
+                                ?.takeIf { it.size > 0L }
+                                ?.let { formatBinaryFileSize(it.size) }
+                                ?: stringResource(CoreR.string.delete_download),
                         onClick = { deleteDownloadDialogOpen = true },
                         contentColor = MaterialTheme.colorScheme.error,
                     )
