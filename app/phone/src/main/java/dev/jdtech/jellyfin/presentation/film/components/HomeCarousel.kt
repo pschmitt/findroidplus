@@ -91,9 +91,10 @@ fun HomeCarousel(
             }
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+        // No contentPadding - the hero banner is full-bleed edge-to-edge, same as every detail
+        // screen's ItemHeader, not an inset/margined card.
         HorizontalPager(
             state = pagerState,
-            contentPadding = itemsPadding,
             pageSize = dynamicPageSize,
             pageSpacing = MaterialTheme.spacings.medium,
         ) { page ->

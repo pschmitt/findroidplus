@@ -70,6 +70,53 @@ fun ItemHeader(
     )
 }
 
+/**
+ * Static (non-scrolling) variant of the same hero banner shape - same 16:9/full-width box as the
+ * scrolling overloads above, minus the parallax effect that needs a host scroll position to react
+ * to. For hero banners that aren't the top of their own scrollable detail page, e.g. the Home
+ * screen's suggestions carousel (HomeCarouselItem) - so the two read as one consistent banner
+ * shape instead of a bespoke one-off per screen.
+ */
+@Composable
+fun ItemHeader(
+    item: FindroidItem,
+    modifier: Modifier = Modifier,
+    showLogo: Boolean = false,
+    content: @Composable (BoxScope.() -> Unit) = {},
+) {
+    val context = LocalContext.current
+    var backdropUri =
+        when (item) {
+            is FindroidEpisode -> item.images.primary
+            else -> item.images.backdrop
+        }
+
+    // Ugly workaround to append the files directory when loading local images
+    if (backdropUri?.scheme == null) {
+        backdropUri =
+            Uri.Builder()
+                .appendEncodedPath("${context.filesDir}")
+                .appendEncodedPath(backdropUri?.path)
+                .build()
+    }
+
+    ItemHeaderBase(
+        item = item,
+        modifier = modifier,
+        showLogo = showLogo,
+        backdropImage = {
+            AsyncImage(
+                model = backdropUri,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainer),
+                contentScale = ContentScale.Crop,
+            )
+        },
+        content = content,
+    )
+}
+
 @Composable
 fun ItemHeader(
     item: FindroidItem,
@@ -115,6 +162,7 @@ fun ItemHeader(
 @Composable
 private fun ItemHeaderBase(
     item: FindroidItem,
+    modifier: Modifier = Modifier,
     showLogo: Boolean = false,
     backdropImage: @Composable (() -> Unit),
     content: @Composable (BoxScope.() -> Unit) = {},
@@ -127,10 +175,10 @@ private fun ItemHeaderBase(
             else -> item.images.logo
         }
 
-    // Same 16:9 ratio as the Home screen's hero carousel item (HomeCarouselItem) -
-    // scales with device width instead of a flat height, so the two read as one
-    // consistent "hero banner" language across the app rather than two different sizes.
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1.77f).clipToBounds()) {
+    // Same 16:9 ratio, full width, no clip/rounding on any caller - the one hero-banner shape
+    // shared by every detail screen and the Home carousel (HomeCarouselItem), rather than each
+    // screen defining its own size/shape for what should read as the same component.
+    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1.77f).clipToBounds().then(modifier)) {
         backdropImage()
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(Color.Black.copy(alpha = 0.1f))
