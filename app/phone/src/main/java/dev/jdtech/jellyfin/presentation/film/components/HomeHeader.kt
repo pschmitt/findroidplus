@@ -5,10 +5,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +33,13 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
 
+/**
+ * Home's own header - server switcher pill + error/retry/search/favorites/settings buttons. Every
+ * icon button here is a [HeaderIconButton], the same black-70%-alpha circle [ItemTopBar] uses on
+ * every detail screen, so this reads as the same header language rather than a bespoke
+ * solid-color one. The server-switcher pill is the one thing with no detail-screen equivalent
+ * (variable-width, shows the server name) - kept as its own [Surface] but recolored to match.
+ */
 @Composable
 fun HomeHeader(
     serverName: String,
@@ -52,12 +58,14 @@ fun HomeHeader(
     Row(
         modifier = modifier.fillMaxWidth().height(56.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             onClick = onServerClick,
-            modifier = Modifier.fillMaxHeight().weight(1f, fill = false),
+            modifier = Modifier.fillMaxHeight().weight(1f, fill = false).alpha(0.7f),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = Color.Black,
+            contentColor = Color.White,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacings.medium),
@@ -82,106 +90,50 @@ fun HomeHeader(
 
         Spacer(Modifier.width(MaterialTheme.spacings.medium))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             AnimatedVisibility(visible = isError, enter = fadeIn(), exit = fadeOut()) {
-                Surface(
-                    onClick = onErrorClick,
-                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                ) {
-                    Box {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_alert_circle),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
+                HeaderIconButton(onClick = onErrorClick) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_alert_circle),
+                        contentDescription = null,
+                    )
                 }
             }
 
             AnimatedVisibility(visible = isLoading || isError, enter = fadeIn(), exit = fadeOut()) {
-                Surface(
-                    onClick = onRetryClick,
-                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    enabled = !isLoading,
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Box {
-                        when {
-                            isError -> {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_rotate_ccw),
-                                    contentDescription = null,
-                                    modifier = Modifier.align(Alignment.Center),
-                                )
-                            }
-                            isLoading -> {
-                                Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
-                                    CircularProgressIndicator()
-                                }
-                            }
+                HeaderIconButton(onClick = onRetryClick, enabled = !isLoading) {
+                    when {
+                        isError -> {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                                contentDescription = null,
+                            )
+                        }
+                        isLoading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                            )
                         }
                     }
                 }
             }
 
             if (!isOfflineMode) {
-                Surface(
-                    onClick = onSearchClick,
-                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_search),
-                            contentDescription = null,
-                        )
-                    }
+                HeaderIconButton(onClick = onSearchClick) {
+                    Icon(painter = painterResource(CoreR.drawable.ic_search), contentDescription = null)
                 }
             }
 
-            Surface(
-                onClick = onFavoritesClick,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_heart),
-                        contentDescription = null,
-                    )
-                }
+            HeaderIconButton(onClick = onFavoritesClick) {
+                Icon(painter = painterResource(CoreR.drawable.ic_heart), contentDescription = null)
             }
 
-            Surface(
-                onClick = onUserClick,
-                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_settings),
-                        contentDescription = null,
-                    )
-                }
+            HeaderIconButton(onClick = onUserClick) {
+                Icon(painter = painterResource(CoreR.drawable.ic_settings), contentDescription = null)
             }
         }
     }

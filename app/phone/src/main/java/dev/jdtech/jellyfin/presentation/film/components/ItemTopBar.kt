@@ -6,14 +6,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,15 +53,7 @@ fun ItemTopBar(
                 )
     ) {
         if (hasBackButton) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.alpha(0.7f),
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.Black,
-                        contentColor = Color.White,
-                    ),
-            ) {
+            HeaderIconButton(onClick = onBackClick) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_arrow_left),
                     contentDescription = null,
@@ -73,29 +61,13 @@ fun ItemTopBar(
             }
         }
         if (hasHomeButton && !isTablet) {
-            IconButton(
-                onClick = onHomeClick,
-                modifier = Modifier.alpha(0.7f),
-                colors =
-                    IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.Black,
-                        contentColor = Color.White,
-                    ),
-            ) {
+            HeaderIconButton(onClick = onHomeClick) {
                 Icon(painter = painterResource(CoreR.drawable.ic_home), contentDescription = null)
             }
         }
         content()
         Spacer(modifier = Modifier.weight(1f))
-        IconButton(
-            onClick = onSettingsClick,
-            modifier = Modifier.alpha(0.7f),
-            colors =
-                IconButtonDefaults.iconButtonColors(
-                    containerColor = Color.Black,
-                    contentColor = Color.White,
-                ),
-        ) {
+        HeaderIconButton(onClick = onSettingsClick) {
             Icon(
                 painter = painterResource(CoreR.drawable.ic_settings),
                 contentDescription = stringResource(CoreR.string.title_settings),
