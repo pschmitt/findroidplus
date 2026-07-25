@@ -148,14 +148,16 @@ private fun HomeScreenLayout(
 
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
 
-    val contentPaddingTop = safePadding.top + 88.dp
-
     var showErrorDialog by rememberSaveable { mutableStateOf(false) }
     val showServerSelectionSheetState = rememberModalBottomSheetState()
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
+    // HomeHeader gets its own row here instead of floating as an overlay on top of the scrolling
+    // content below it - same "top bar isn't a transparent overlay" fix as ItemDetailScaffold on
+    // every detail screen, so Home's header has a solid backdrop instead of showing whatever
+    // section is currently scrolled behind it.
+    Column(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
         if (searchExpanded) {
             // A plain in-place screen, not a floating overlay - it fully replaces Home's content
             // rather than sitting on top of it, so there's no popup/dialog to reconcile with the
@@ -166,11 +168,24 @@ private fun HomeScreenLayout(
                 onBackClick = { searchExpanded = false },
             )
         } else {
+        HomeHeader(
+            serverName = state.server?.name ?: "",
+            isLoading = state.isLoading,
+            isError = state.error != null,
+            onServerClick = { showServerSelectionBottomSheet = true },
+            onErrorClick = { showErrorDialog = true },
+            onRetryClick = { onAction(HomeAction.OnRetryClick) },
+            onSearchClick = { searchExpanded = true },
+            onFavoritesClick = { onAction(HomeAction.OnFavoritesClick) },
+            onUserClick = { onAction(HomeAction.OnSettingsClick) },
+            modifier = Modifier.padding(start = paddingStart, top = paddingTop, end = paddingEnd),
+        )
+        Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = { onAction(HomeAction.OnRetryClick) },
             // The header already shows its own spinner for state.isLoading (see HomeHeader
-            // below) - the default indicator here would double up with it on every refresh, so
+            // above) - the default indicator here would double up with it on every refresh, so
             // suppress it while keeping the pull gesture itself (onRefresh still fires).
             indicator = {},
         ) {
@@ -183,7 +198,8 @@ private fun HomeScreenLayout(
             LazyColumn(
                 modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
                 state = lazyListState,
-                contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
+                contentPadding =
+                    PaddingValues(top = MaterialTheme.spacings.small, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
             ) {
                 items(state.sectionOrder, key = { it }) { key ->
@@ -312,19 +328,7 @@ private fun HomeScreenLayout(
                 },
             )
         }
-
-        HomeHeader(
-            serverName = state.server?.name ?: "",
-            isLoading = state.isLoading,
-            isError = state.error != null,
-            onServerClick = { showServerSelectionBottomSheet = true },
-            onErrorClick = { showErrorDialog = true },
-            onRetryClick = { onAction(HomeAction.OnRetryClick) },
-            onSearchClick = { searchExpanded = true },
-            onFavoritesClick = { onAction(HomeAction.OnFavoritesClick) },
-            onUserClick = { onAction(HomeAction.OnSettingsClick) },
-            modifier = Modifier.padding(start = paddingStart, top = paddingTop, end = paddingEnd),
-        )
+        }
         }
     }
 
