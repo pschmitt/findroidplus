@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,14 +54,17 @@ fun HomeHeader(
 ) {
     val isOfflineMode = LocalOfflineMode.current
 
+    // No fixed row height - sizes to its tallest child, same as ItemTopBar's Row, so the two
+    // headers are the same height (48dp, the buttons' own natural size) instead of this one
+    // being pinned to a taller 56dp.
     Row(
-        modifier = modifier.fillMaxWidth().height(56.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             onClick = onServerClick,
-            modifier = Modifier.fillMaxHeight().weight(1f, fill = false).alpha(0.7f),
+            modifier = Modifier.height(48.dp).weight(1f, fill = false).alpha(0.7f),
             shape = CircleShape,
             color = Color.Black,
             contentColor = Color.White,
@@ -75,7 +77,7 @@ fun HomeHeader(
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_logo),
                     contentDescription = null,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(24.dp),
                     tint = Color.Unspecified,
                 )
                 Text(
