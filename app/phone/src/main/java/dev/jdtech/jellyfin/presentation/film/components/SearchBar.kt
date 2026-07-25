@@ -1,24 +1,24 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,68 +26,43 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.film.R as FilmR
 import dev.jdtech.jellyfin.film.presentation.search.SearchAction
 import dev.jdtech.jellyfin.film.presentation.search.SearchState
+import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import kotlinx.coroutines.delay
 
+/**
+ * Search as a plain in-place screen - a back button + text field row, same page background as
+ * everywhere else, directly followed by the results grid - rather than Material3's `SearchBar`
+ * component, whose "expanded" state is a floating, shadowed, near-fullscreen surface with its own
+ * scrim. That read as a dialog/popup rather than just another screen state.
+ */
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
-fun FilmSearchBar(
+fun FilmSearchScreen(
     state: SearchState,
-    expanded: Boolean,
-    onExpand: (Boolean) -> Unit,
     onAction: (SearchAction) -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    paddingStart: Dp = 0.dp,
-    paddingEnd: Dp = 0.dp,
 ) {
     val focusRequester = remember { FocusRequester() }
     val safePadding = rememberSafePadding()
 
     var query by rememberSaveable { mutableStateOf("") }
 
-    val searchBarPaddingStart by
-        animateDpAsState(
-            targetValue = if (expanded) 0.dp else paddingStart,
-            label = "search_bar_padding_start",
-        )
-
-    val searchBarPaddingEnd by
-        animateDpAsState(
-            targetValue = if (expanded) 0.dp else paddingEnd,
-            label = "search_bar_padding_end",
-        )
-
-    val searchBarInputPaddingStart by
-        animateDpAsState(
-            targetValue = if (expanded) safePadding.start else 0.dp,
-            label = "search_bar_padding_start",
-        )
-
-    val searchBarInputPaddingEnd by
-        animateDpAsState(
-            targetValue = if (expanded) safePadding.end else 0.dp,
-            label = "search_bar_padding_end",
-        )
-
-    LaunchedEffect(expanded) {
-        if (expanded) {
-            focusRequester.requestFocus()
-        }
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     LaunchedEffect(query) {
         if (query.isNotBlank()) {
@@ -97,48 +72,32 @@ fun FilmSearchBar(
         onAction(SearchAction.Search(query))
     }
 
-    SearchBar(
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = query,
-                onQueryChange = { query = it },
-                onSearch = { onExpand(true) },
-                expanded = expanded,
-                onExpandedChange = { onExpand(it) },
-                modifier =
-                    Modifier.padding(
-                            start = searchBarInputPaddingStart,
-                            end = searchBarInputPaddingEnd,
-                        )
-                        .focusRequester(focusRequester),
-                placeholder = {
-                    Text(
-                        text = stringResource(FilmR.string.search_placeholder),
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                    )
-                },
-                leadingIcon = {
-                    AnimatedContent(targetState = expanded, label = "search_to_back") {
-                        targetExpanded ->
-                        if (targetExpanded) {
-                            IconButton(onClick = { onExpand(false) }) {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_arrow_left),
-                                    contentDescription = null,
-                                )
-                            }
-                        } else {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_search),
-                                contentDescription = null,
-                            )
-                        }
-                    }
-                },
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        start = safePadding.start + MaterialTheme.spacings.small,
+                        top = safePadding.top + MaterialTheme.spacings.small,
+                        end = safePadding.end + MaterialTheme.spacings.small,
+                    ),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(painter = painterResource(CoreR.drawable.ic_arrow_left), contentDescription = null)
+            }
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                placeholder = { Text(text = stringResource(FilmR.string.search_placeholder)) },
+                singleLine = true,
                 trailingIcon = {
                     if (state.loading) {
-                        Box(modifier = Modifier.size(32.dp)) { CircularProgressIndicator() }
+                        Box(modifier = Modifier.size(32.dp)) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        }
                     } else if (query.isNotEmpty()) {
                         IconButton(onClick = { query = "" }) {
                             Icon(
@@ -148,19 +107,22 @@ fun FilmSearchBar(
                         }
                     }
                 },
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
             )
-        },
-        expanded = expanded,
-        onExpandedChange = { onExpand(it) },
-        modifier = modifier.padding(start = searchBarPaddingStart, end = searchBarPaddingEnd),
-    ) {
+        }
         LazyVerticalGrid(
             columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
                     start = safePadding.start + MaterialTheme.spacings.default,
-                    top = MaterialTheme.spacings.default,
+                    top = MaterialTheme.spacings.small,
                     end = safePadding.end + MaterialTheme.spacings.default,
                     bottom = safePadding.bottom + MaterialTheme.spacings.default,
                 ),
@@ -191,7 +153,7 @@ fun FilmSearchBar(
                         item = item,
                         requestedThisSession = false,
                         queueStatus =
-                            if (item.mediaType == dev.jdtech.jellyfin.models.SeerrMediaType.MOVIE) {
+                            if (item.mediaType == SeerrMediaType.MOVIE) {
                                 state.radarrQueueStatus[item.tmdbId]
                             } else {
                                 null

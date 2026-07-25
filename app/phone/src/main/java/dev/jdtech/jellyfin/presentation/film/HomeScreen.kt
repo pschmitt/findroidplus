@@ -62,7 +62,7 @@ import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.SeerrSearchItem
 import dev.jdtech.jellyfin.models.PvrQueueEntry
-import dev.jdtech.jellyfin.presentation.film.components.FilmSearchBar
+import dev.jdtech.jellyfin.presentation.film.components.FilmSearchScreen
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeDiscoverSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
@@ -156,6 +156,16 @@ private fun HomeScreenLayout(
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
+        if (searchExpanded) {
+            // A plain in-place screen, not a floating overlay - it fully replaces Home's content
+            // rather than sitting on top of it, so there's no popup/dialog to reconcile with the
+            // rest of the app's screens.
+            FilmSearchScreen(
+                state = searchState,
+                onAction = onSearchAction,
+                onBackClick = { searchExpanded = false },
+            )
+        } else {
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = { onAction(HomeAction.OnRetryClick) },
@@ -302,19 +312,7 @@ private fun HomeScreenLayout(
                 },
             )
         }
-    }
 
-    if (searchExpanded) {
-        FilmSearchBar(
-            state = searchState,
-            expanded = true,
-            onExpand = { searchExpanded = it },
-            onAction = onSearchAction,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(start = paddingStart, top = paddingTop, end = paddingEnd),
-        )
-    } else {
         HomeHeader(
             serverName = state.server?.name ?: "",
             isLoading = state.isLoading,
@@ -327,6 +325,7 @@ private fun HomeScreenLayout(
             onUserClick = { onAction(HomeAction.OnSettingsClick) },
             modifier = Modifier.padding(start = paddingStart, top = paddingTop, end = paddingEnd),
         )
+        }
     }
 
     if (showServerSelectionBottomSheet) {
