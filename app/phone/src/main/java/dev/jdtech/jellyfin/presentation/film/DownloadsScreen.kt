@@ -468,6 +468,7 @@ private fun DownloadsScreenLayout(
                     TopBarTitle(
                         text = stringResource(CoreR.string.title_download),
                         iconRes = CoreR.drawable.ic_download,
+                        iconTint = MaterialTheme.colorScheme.secondary,
                     )
                 },
                 navigationIcon = {

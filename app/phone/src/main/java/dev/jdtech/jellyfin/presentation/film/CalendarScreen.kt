@@ -123,6 +123,7 @@ private fun CalendarScreenLayout(
                     TopBarTitle(
                         text = stringResource(CoreR.string.title_calendar),
                         iconRes = CoreR.drawable.ic_calendar,
+                        iconTint = MaterialTheme.colorScheme.tertiary,
                     )
                 },
                 actions = {
