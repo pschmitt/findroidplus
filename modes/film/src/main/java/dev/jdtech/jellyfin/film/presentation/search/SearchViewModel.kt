@@ -3,11 +3,14 @@ package dev.jdtech.jellyfin.film.presentation.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.jdtech.jellyfin.film.presentation.home.HomeCache
+import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.tmdbIdOrNull
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.repository.SeerrRepository
-import dev.jdtech.jellyfin.models.tmdbIdOrNull
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -24,6 +27,7 @@ constructor(
     private val seerrRepository: SeerrRepository,
     private val pvrConfiguration: PvrConfiguration,
     private val queueStatusRepository: QueueStatusRepository,
+    private val homeCache: HomeCache,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SearchState())
     val state = _state.asStateFlow()
@@ -44,7 +48,12 @@ constructor(
             viewModelScope.launch {
                 try {
                     if (query.isBlank()) {
-                        _state.emit(SearchState(radarrQueueStatus = _state.value.radarrQueueStatus))
+                        _state.emit(
+                            SearchState(
+                                items = suggestedItems(),
+                                radarrQueueStatus = _state.value.radarrQueueStatus,
+                            )
+                        )
                         return@launch
                     }
 
@@ -83,6 +92,23 @@ constructor(
                     _state.emit(_state.value.copy(loading = false))
                 }
             }
+    }
+
+    // Populates the otherwise-blank pre-search screen with Home's already-loaded Continue
+    // Watching/Favorites/latest-library rows, reusing HomeCache's snapshot instead of issuing
+    // fresh repository calls - this is just a "less empty" placeholder, not search results, so
+    // slightly-stale content is fine.
+    private fun suggestedItems(): List<FindroidItem> {
+        val snapshot = homeCache.snapshot ?: return emptyList()
+        val seenIds = mutableSetOf<UUID>()
+        val suggestions = mutableListOf<FindroidItem>()
+        fun addAll(items: List<FindroidItem>) {
+            items.forEach { if (seenIds.add(it.id)) suggestions.add(it) }
+        }
+        addAll(snapshot.resumeSection?.homeSection?.items.orEmpty())
+        addAll(snapshot.favoritesSection?.homeSection?.items.orEmpty())
+        snapshot.views.forEach { addAll(it.view.items) }
+        return suggestions
     }
 
     fun onAction(action: SearchAction) {
