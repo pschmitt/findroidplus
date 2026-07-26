@@ -39,5 +39,8 @@ data class SeasonState(
     // deletion" badge on downloaded episode rows).
     val autoDeleteWatchedEnabled: Boolean = false,
     val autoDeleteWatchedHours: Int = 24,
+    // Drives the pull-to-refresh spinner - separate from `season == null` (first load, full-
+    // screen spinner instead) since a refresh keeps showing the existing content underneath.
+    val isRefreshing: Boolean = false,
     val error: Exception? = null,
 )

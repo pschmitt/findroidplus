@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -97,6 +98,7 @@ fun ShowScreen(
     ShowScreenLayout(
         state = state,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        onRefresh = { viewModel.loadShow(showId = showId) },
         onAction = { action ->
             when (action) {
                 is ShowAction.Play -> {
@@ -129,6 +131,7 @@ fun ShowScreen(
 private fun ShowScreenLayout(
     state: ShowState,
     onAction: (ShowAction) -> Unit,
+    onRefresh: () -> Unit = {},
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
         DownloadSizeEstimate()
     },
@@ -150,6 +153,7 @@ private fun ShowScreenLayout(
         onHomeClick = { onAction(ShowAction.OnHomeClick) },
         onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
     ) {
+        PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.show?.let { show ->
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 ItemHeader(
@@ -434,6 +438,7 @@ private fun ShowScreenLayout(
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+        }
     }
 
     if (clearShowDownloadsDialogOpen) {

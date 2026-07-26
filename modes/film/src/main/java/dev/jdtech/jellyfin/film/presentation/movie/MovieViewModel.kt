@@ -51,6 +51,7 @@ constructor(
         this.movieId = movieId
         observeQueueStatus(movieId)
         viewModelScope.launch {
+            _state.emit(_state.value.copy(isRefreshing = true))
             try {
                 val movie = repository.getMovie(movieId)
                 val videoMetadata = videoMetadataParser.parse(movie.sources.first())
@@ -67,10 +68,11 @@ constructor(
                         writers = writers,
                         dateFormat = dateFormat,
                         radarrConfigured = pvrConfiguration.isRadarrConfigured(),
+                        isRefreshing = false,
                     )
                 )
             } catch (e: Exception) {
-                _state.emit(_state.value.copy(error = e))
+                _state.emit(_state.value.copy(error = e, isRefreshing = false))
             }
         }
     }

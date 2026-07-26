@@ -18,5 +18,8 @@ data class MovieState(
     // Gates the search button - no point offering a Radarr search that can only fail with a
     // toast when Radarr isn't (fully) configured.
     val radarrConfigured: Boolean = false,
+    // Drives the pull-to-refresh spinner - separate from `movie == null` (first load, full-screen
+    // spinner instead) since a refresh keeps showing the existing content underneath.
+    val isRefreshing: Boolean = false,
     val error: Exception? = null,
 )

@@ -66,6 +66,7 @@ constructor(
     fun loadEpisode(episodeId: UUID) {
         this.episodeId = episodeId
         viewModelScope.launch {
+            _state.emit(_state.value.copy(isRefreshing = true))
             try {
                 val episode = repository.getEpisode(episodeId)
                 val videoMetadata = videoMetadataParser.parse(episode.sources.first())
@@ -86,10 +87,11 @@ constructor(
                             appPreferences.getValue(appPreferences.autoDeleteWatched),
                         autoDeleteWatchedHours =
                             appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
+                        isRefreshing = false,
                     )
                 )
             } catch (e: Exception) {
-                _state.emit(_state.value.copy(error = e))
+                _state.emit(_state.value.copy(error = e, isRefreshing = false))
             }
         }
     }

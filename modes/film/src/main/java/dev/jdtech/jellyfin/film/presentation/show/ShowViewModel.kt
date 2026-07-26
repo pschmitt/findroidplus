@@ -65,6 +65,7 @@ constructor(
     fun loadShow(showId: UUID) {
         this.showId = showId
         viewModelScope.launch {
+            _state.emit(_state.value.copy(isRefreshing = true))
             try {
                 val show = repository.getShow(showId)
                 val nextUp = getNextUp(showId)
@@ -91,6 +92,7 @@ constructor(
                         downloadsSizeBytes = downloadsSizeBytes,
                         seriesTvdbId = show.tvdbId,
                         seriesTmdbId = show.tmdbId?.toIntOrNull(),
+                        isRefreshing = false,
                     )
                 )
                 // Fired after the main state emit rather than blocking it - the real show/season
@@ -99,7 +101,7 @@ constructor(
                 loadMissingSeasons(show.tvdbId, show.tmdbId?.toIntOrNull(), seasons)
                 loadQueuedSeasons(showId)
             } catch (e: Exception) {
-                _state.emit(_state.value.copy(error = e))
+                _state.emit(_state.value.copy(error = e, isRefreshing = false))
             }
         }
     }

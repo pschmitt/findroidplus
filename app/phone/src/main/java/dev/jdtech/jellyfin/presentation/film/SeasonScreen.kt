@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -114,6 +115,7 @@ fun SeasonScreen(
         state = state,
         getSeasons = viewModel::getSeasons,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        onRefresh = { viewModel.loadSeason(seasonId = seasonId) },
         onAction = { action ->
             when (action) {
                 is SeasonAction.Play -> {
@@ -148,6 +150,7 @@ fun SeasonScreen(
 private fun SeasonScreenLayout(
     state: SeasonState,
     onAction: (SeasonAction) -> Unit,
+    onRefresh: () -> Unit = {},
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
         DownloadSizeEstimate()
@@ -186,6 +189,7 @@ private fun SeasonScreenLayout(
             }
         },
     ) {
+        PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.season?.let { season ->
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
@@ -399,6 +403,7 @@ private fun SeasonScreenLayout(
                 }
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+        }
     }
 
     if (clearSeasonDownloadsDialogOpen) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -64,6 +65,7 @@ fun PersonScreen(
 
     PersonScreenLayout(
         state = state,
+        onRefresh = { viewModel.loadPerson(personId) },
         onAction = { action ->
             when (action) {
                 is PersonAction.NavigateBack -> navigateBack()
@@ -76,7 +78,11 @@ fun PersonScreen(
 }
 
 @Composable
-private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> Unit) {
+private fun PersonScreenLayout(
+    state: PersonState,
+    onAction: (PersonAction) -> Unit,
+    onRefresh: () -> Unit = {},
+) {
     val safePadding = rememberSafePadding()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
@@ -93,6 +99,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
         onHomeClick = { onAction(PersonAction.NavigateHome) },
         onSettingsClick = { onAction(PersonAction.NavigateToSettings) },
     ) {
+        PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.person?.let { person ->
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(MaterialTheme.spacings.default))
@@ -194,6 +201,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+        }
     }
 }
 

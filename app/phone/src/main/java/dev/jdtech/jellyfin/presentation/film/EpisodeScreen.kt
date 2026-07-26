@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -138,6 +139,7 @@ fun EpisodeScreen(
         downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
         getSeasons = viewModel::getSeasons,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        onRefresh = { viewModel.loadEpisode(episodeId = episodeId) },
         onAction = { action ->
             when (action) {
                 is EpisodeAction.Play -> {
@@ -167,6 +169,7 @@ private fun EpisodeScreenLayout(
     state: EpisodeState,
     downloaderState: DownloaderState,
     downloadLocationPreference: String = "ask",
+    onRefresh: () -> Unit = {},
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
         DownloadSizeEstimate()
@@ -215,6 +218,7 @@ private fun EpisodeScreenLayout(
             }
         },
     ) {
+        PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.episode?.let { episode ->
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 ItemHeader(
@@ -427,6 +431,7 @@ private fun EpisodeScreenLayout(
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+        }
     }
 
     state.releasePicker?.let { releasePicker ->

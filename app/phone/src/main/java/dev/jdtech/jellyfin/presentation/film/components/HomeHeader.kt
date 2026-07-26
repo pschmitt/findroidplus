@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -120,22 +119,15 @@ fun HomeHeader(
                 }
             }
 
-            AnimatedVisibility(visible = isLoading || isError, enter = fadeIn(), exit = fadeOut()) {
+            // Loading feedback lives entirely in the pull-to-refresh gesture now (see
+            // HomeScreen's PullToRefreshBox) - same as Downloads/Library, instead of a second,
+            // separate spinner living here too. This button is just the error-state retry action.
+            AnimatedVisibility(visible = isError, enter = fadeIn(), exit = fadeOut()) {
                 HeaderIconButton(onClick = onRetryClick, enabled = !isLoading) {
-                    when {
-                        isError -> {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_rotate_ccw),
-                                contentDescription = null,
-                            )
-                        }
-                        isLoading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.White,
-                            )
-                        }
-                    }
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                        contentDescription = null,
+                    )
                 }
             }
 

@@ -32,5 +32,8 @@ data class ShowState(
     // tmdbId to open the Seerr detail view when the user taps a missing-season placeholder.
     val seriesTvdbId: String? = null,
     val seriesTmdbId: Int? = null,
+    // Drives the pull-to-refresh spinner - separate from `show == null` (first load, full-screen
+    // spinner instead) since a refresh keeps showing the existing content underneath.
+    val isRefreshing: Boolean = false,
     val error: Exception? = null,
 )

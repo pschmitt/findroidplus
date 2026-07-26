@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -126,6 +127,7 @@ fun MovieScreen(
         state = state,
         downloaderState = downloaderState,
         downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
+        onRefresh = { viewModel.loadMovie(movieId = movieId) },
         onAction = { action ->
             when (action) {
                 is MovieAction.Play -> {
@@ -160,6 +162,7 @@ private fun MovieScreenLayout(
     state: MovieState,
     downloaderState: DownloaderState,
     downloadLocationPreference: String = "ask",
+    onRefresh: () -> Unit = {},
     onAction: (MovieAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
 ) {
@@ -180,6 +183,9 @@ private fun MovieScreenLayout(
         onHomeClick = { onAction(MovieAction.OnHomeClick) },
         onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
     ) {
+        // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
+        // language across the whole app instead of a screen-specific spinner.
+        PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.movie?.let { movie ->
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 ItemHeader(
@@ -355,6 +361,7 @@ private fun MovieScreenLayout(
                 Spacer(Modifier.height(paddingBottom))
             }
         } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+        }
     }
 
     state.releasePicker?.let { releasePicker ->

@@ -79,6 +79,7 @@ constructor(
     fun loadSeason(seasonId: UUID) {
         this.seasonId = seasonId
         viewModelScope.launch {
+            _state.emit(_state.value.copy(isRefreshing = true))
             try {
                 val season = repository.getSeason(seasonId)
                 seriesId = season.seriesId
@@ -107,6 +108,7 @@ constructor(
                         autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
                         autoDeleteWatchedHours =
                             appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
+                        isRefreshing = false,
                     )
                 )
                 reconcileDownloadProgress(episodes)
@@ -114,7 +116,7 @@ constructor(
                 loadUpcomingEpisodes(seriesTvdbId, season.indexNumber, episodes)
                 loadQueuedEpisodes(season.seriesId, season.indexNumber)
             } catch (e: Exception) {
-                _state.emit(_state.value.copy(error = e))
+                _state.emit(_state.value.copy(error = e, isRefreshing = false))
             }
         }
     }
