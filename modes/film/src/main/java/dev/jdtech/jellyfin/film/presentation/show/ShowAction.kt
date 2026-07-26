@@ -27,6 +27,11 @@ sealed interface ShowAction {
 
     data class DeleteItem(val cascadeToPvr: Boolean) : ShowAction
 
+    /** Triggers Sonarr's automatic search for every missing episode in the series - there's no
+     * manual/interactive counterpart at the series level the way Movie/Episode have, since
+     * Sonarr's release picker is per-episode, not per-series. */
+    data object SearchSeriesAutomatic : ShowAction
+
     data object OnBackClick : ShowAction
 
     data object OnHomeClick : ShowAction

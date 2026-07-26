@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
+import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
@@ -70,6 +71,9 @@ constructor(
     private val deleteEventsChannel = Channel<DeleteItemEvent>()
     val deleteEvents = deleteEventsChannel.receiveAsFlow()
 
+    private val searchEventsChannel = Channel<SearchEvent>()
+    val searchEvents = searchEventsChannel.receiveAsFlow()
+
     private val evaluator = AutoDownloadRuleEvaluator()
 
     lateinit var showId: UUID
@@ -88,7 +92,8 @@ constructor(
                 val writers = getWriters(show)
                 val autoDownloadEnabled = isAutoDownloadEnabled(showId)
                 val existingScope = getExistingScope(showId)
-                val (episodeCount, downloadsSizeBytes) = episodeCountAndDownloadsSizeBytes(showId)
+                val downloadsSizeBytes = downloadsSizeBytes(showId)
+                val episodeCount = totalEpisodeCount(showId, seasons)
                 val canDelete = repository.canDeleteMedia()
                 _state.emit(
                     _state.value.copy(
@@ -284,18 +289,24 @@ constructor(
         }
     }
 
-    /** Total episode count and downloaded size, in one pass over the show's episodes. */
-    private suspend fun episodeCountAndDownloadsSizeBytes(showId: UUID): Pair<Int, Long> =
+    /** Downloaded size only - the local Room cache only ever knows about episodes that were
+     * downloaded (or otherwise separately cached), so it's the right source for "how much of
+     * this show is on disk" but not for [totalEpisodeCount]. */
+    private suspend fun downloadsSizeBytes(showId: UUID): Long =
         withContext(Dispatchers.IO) {
-            val episodes = database.getEpisodesByShowId(showId)
-            val sizeBytes =
-                episodes.sumOf { episode ->
-                    database
-                        .getSources(episode.id)
-                        .filter { it.type == FindroidSourceType.LOCAL }
-                        .sumOf { File(it.path).length() }
-                }
-            episodes.size to sizeBytes
+            database.getEpisodesByShowId(showId).sumOf { episode ->
+                database
+                    .getSources(episode.id)
+                    .filter { it.type == FindroidSourceType.LOCAL }
+                    .sumOf { File(it.path).length() }
+            }
+        }
+
+    /** Real per-season episode counts from the server - the local Room cache only has episodes
+     * that were downloaded or individually visited, not the show's true total. */
+    private suspend fun totalEpisodeCount(showId: UUID, seasons: List<FindroidSeason>): Int =
+        withContext(Dispatchers.IO) {
+            seasons.sumOf { season -> repository.getEpisodes(showId, season.id).size }
         }
 
     private fun deleteShowDownloads(alsoRemoveRules: Boolean) {
@@ -365,6 +376,21 @@ constructor(
         }
     }
 
+    private fun searchSeriesAutomatic() {
+        viewModelScope.launch {
+            val tmdbId = _state.value.seriesTmdbId
+            val event =
+                if (tmdbId == null) {
+                    SearchEvent.Failed("Could not find this show in Sonarr")
+                } else {
+                    sonarrSearchRepository
+                        .searchSeriesByTmdbId(tmdbId)
+                        .fold({ SearchEvent.SearchTriggered }, { SearchEvent.Failed(it.message) })
+                }
+            searchEventsChannel.send(event)
+        }
+    }
+
     private suspend fun getNextUp(showId: UUID): FindroidEpisode? {
         val nextUpItems = repository.getNextUp(showId)
         return nextUpItems.getOrNull(0)
@@ -430,6 +456,7 @@ constructor(
                 downloadWithScope(action.selection, action.alsoFollowNew, action.onlyUnwatched)
             is ShowAction.DeleteShowDownloads -> deleteShowDownloads(action.alsoRemoveRules)
             is ShowAction.DeleteItem -> deleteItem(action.cascadeToPvr)
+            is ShowAction.SearchSeriesAutomatic -> searchSeriesAutomatic()
             is ShowAction.ToggleSeasonQueued -> toggleSeasonQueued(action.seasonNumber)
             else -> Unit
         }

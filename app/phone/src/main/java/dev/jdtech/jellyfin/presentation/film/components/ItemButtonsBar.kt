@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -54,8 +56,6 @@ fun ItemButtonsBar(
     onDownloadResumeClick: () -> Unit = {},
     onTrailerClick: (uri: String) -> Unit,
     modifier: Modifier = Modifier,
-    onMarkAsPlayedClick: (() -> Unit)? = null,
-    onMarkAsFavoriteClick: (() -> Unit)? = null,
     downloaderState: DownloaderState? = null,
     downloadLocationPreference: String = "ask",
     enableDownloadDialog: Boolean = false,
@@ -74,6 +74,10 @@ fun ItemButtonsBar(
         },
     downloadIconTint: Color? = null,
     trailingContent: @Composable FlowRowScope.() -> Unit = {},
+    // Rendered outside the wrapping tile row entirely, pinned to the row's right edge (e.g.
+    // ItemOverflowMenu) - unlike [trailingContent], which is just the last tile(s) in the same
+    // wrapping FlowRow as everything else.
+    overflowContent: @Composable () -> Unit = {},
     excludeFromAutoDelete: Boolean = false,
     onToggleExcludeFromAutoDeleteClick: (() -> Unit)? = null,
 ) {
@@ -135,97 +139,86 @@ fun ItemButtonsBar(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
     ) {
         // One row of uniform labeled action tiles ([ItemActionButton]): every action - including
-        // anything injected via [trailingContent], like the PVR search tile - shares the same
-        // icon-above-label silhouette. Played/favorite toggles only appear here when the caller
-        // wires them up (Show/Season); Episode/Movie surface those on their meta line instead.
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-        ) {
-            onMarkAsPlayedClick?.let { markAsPlayedClick ->
-                ItemActionButton(
-                    icon = painterResource(CoreR.drawable.ic_check),
-                    label = stringResource(CoreR.string.watched),
-                    onClick = markAsPlayedClick,
-                    checked = item.played,
-                )
-            }
-            onMarkAsFavoriteClick?.let { markAsFavoriteClick ->
-                ItemActionButton(
-                    icon =
-                        painterResource(
-                            if (item.favorite) CoreR.drawable.ic_heart_filled
-                            else CoreR.drawable.ic_heart
-                        ),
-                    label = stringResource(CoreR.string.add_to_favorites),
-                    onClick = markAsFavoriteClick,
-                    checked = item.favorite,
-                )
-            }
-            val canRestart = item.playbackPositionTicks.div(600000000) > 0
-            if (canRestart) {
-                ItemActionButton(
-                    icon = painterResource(CoreR.drawable.ic_rotate_ccw),
-                    label = stringResource(CoreR.string.restart_from_beginning),
-                    onClick = { onPlayClick(true) },
-                )
-            }
-            trailerUri?.let { uri ->
-                ItemActionButton(
-                    icon = painterResource(CoreR.drawable.ic_film),
-                    label = stringResource(CoreR.string.trailer),
-                    onClick = { onTrailerClick(uri) },
-                )
-            }
-            trailingContent()
-            if (downloaderState != null && !downloaderState.isDownloading) {
-                // While isDeleting, neither branch shows - the delete tile disappears rather than
-                // risk a second tap queuing another delete of a file that's already going away.
-                if (item.isDownloaded() && !downloaderState.isDeleting) {
-                    onToggleExcludeFromAutoDeleteClick?.let { toggleClick ->
-                        ItemActionButton(
-                            icon =
-                                painterResource(
-                                    if (excludeFromAutoDelete) CoreR.drawable.ic_lock
-                                    else CoreR.drawable.ic_unlock
-                                ),
-                            label = stringResource(CoreR.string.download_keep_label),
-                            onClick = toggleClick,
-                            checked = excludeFromAutoDelete,
-                        )
-                    }
-                    // The label doubles as the on-disk size so it doesn't need its own separate
-                    // caption elsewhere on the screen - falls back to the generic label for a
-                    // broken (0-byte/missing) download, where a size reading would be misleading.
-                    // Path details still live in the confirmation dialog this opens.
+        // anything injected via [trailingContent], like the "delete downloads" tile - shares the
+        // same icon-above-label silhouette. Played/favorite toggles only appear here when the
+        // caller wires them up (Show/Season); Episode/Movie surface those on their meta line
+        // instead. [overflowContent] (e.g. ItemOverflowMenu) sits outside this FlowRow entirely,
+        // pinned to the row's right edge via the outer Row's weight - it's a persistent icon-only
+        // control, not another wrapping tile.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            ) {
+                val canRestart = item.playbackPositionTicks.div(600000000) > 0
+                if (canRestart) {
                     ItemActionButton(
-                        icon = painterResource(CoreR.drawable.ic_trash),
-                        label =
-                            downloadedSource
-                                ?.takeIf { it.size > 0L }
-                                ?.let { formatBinaryFileSize(it.size) }
-                                ?: stringResource(CoreR.string.delete_download),
-                        onClick = { deleteDownloadDialogOpen = true },
-                        contentColor = MaterialTheme.colorScheme.error,
-                    )
-                } else if (
-                    !downloaderState.isDeleting &&
-                        (item.canDownload || item is FindroidShow || item is FindroidSeason)
-                ) {
-                    ItemActionButton(
-                        icon = painterResource(CoreR.drawable.ic_download),
-                        label = stringResource(CoreR.string.download),
-                        onClick = {
-                            if (enableDownloadDialog) {
-                                downloadScopeDialogOpen = true
-                            } else {
-                                startDownload()
-                            }
-                        },
-                        contentColor = downloadIconTint,
+                        icon = painterResource(CoreR.drawable.ic_rotate_ccw),
+                        label = stringResource(CoreR.string.restart_from_beginning),
+                        onClick = { onPlayClick(true) },
                     )
                 }
+                trailerUri?.let { uri ->
+                    ItemActionButton(
+                        icon = painterResource(CoreR.drawable.ic_film),
+                        label = stringResource(CoreR.string.trailer),
+                        onClick = { onTrailerClick(uri) },
+                    )
+                }
+                if (downloaderState != null && !downloaderState.isDownloading) {
+                    // While isDeleting, neither branch shows - the delete tile disappears rather
+                    // than risk a second tap queuing another delete of a file that's already
+                    // going away.
+                    if (item.isDownloaded() && !downloaderState.isDeleting) {
+                        onToggleExcludeFromAutoDeleteClick?.let { toggleClick ->
+                            ItemActionButton(
+                                icon =
+                                    painterResource(
+                                        if (excludeFromAutoDelete) CoreR.drawable.ic_lock
+                                        else CoreR.drawable.ic_unlock
+                                    ),
+                                label = stringResource(CoreR.string.download_keep_label),
+                                onClick = toggleClick,
+                                checked = excludeFromAutoDelete,
+                            )
+                        }
+                        // The label doubles as the on-disk size so it doesn't need its own
+                        // separate caption elsewhere on the screen - falls back to the generic
+                        // label for a broken (0-byte/missing) download, where a size reading
+                        // would be misleading. Path details still live in the confirmation
+                        // dialog this opens.
+                        ItemActionButton(
+                            icon = painterResource(CoreR.drawable.ic_trash),
+                            label =
+                                downloadedSource
+                                    ?.takeIf { it.size > 0L }
+                                    ?.let { formatBinaryFileSize(it.size) }
+                                    ?: stringResource(CoreR.string.delete_download),
+                            onClick = { deleteDownloadDialogOpen = true },
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
+                    } else if (
+                        !downloaderState.isDeleting &&
+                            (item.canDownload || item is FindroidShow || item is FindroidSeason)
+                    ) {
+                        ItemActionButton(
+                            icon = painterResource(CoreR.drawable.ic_download),
+                            label = stringResource(CoreR.string.download),
+                            onClick = {
+                                if (enableDownloadDialog) {
+                                    downloadScopeDialogOpen = true
+                                } else {
+                                    startDownload()
+                                }
+                            },
+                            contentColor = downloadIconTint,
+                        )
+                    }
+                }
+                trailingContent()
             }
+            overflowContent()
         }
         if (downloaderState != null) {
             AnimatedVisibility(downloaderState.isDownloading) {
@@ -334,8 +327,6 @@ private fun ItemButtonsBarPreview() {
         ItemButtonsBar(
             item = dummyEpisode,
             onPlayClick = {},
-            onMarkAsPlayedClick = {},
-            onMarkAsFavoriteClick = {},
             onDownloadClick = {},
             onDownloadCancelClick = {},
             onDownloadDeleteClick = {},
@@ -353,8 +344,6 @@ private fun ItemButtonsBarDownloadingPreview() {
             downloaderState =
                 DownloaderState(status = DownloadManager.STATUS_RUNNING, progress = 0.3f),
             onPlayClick = {},
-            onMarkAsPlayedClick = {},
-            onMarkAsFavoriteClick = {},
             onDownloadClick = {},
             onDownloadCancelClick = {},
             onDownloadDeleteClick = {},

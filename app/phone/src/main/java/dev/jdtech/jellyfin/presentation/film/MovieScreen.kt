@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -264,14 +265,9 @@ private fun MovieScreenLayout(
                         communityRating = movie.communityRating,
                         modifier = Modifier.fillMaxWidth(),
                         played = movie.played,
-                        favorite = movie.favorite,
                         onPlayedClick = {
                             if (movie.played) onAction(MovieAction.UnmarkAsPlayed)
                             else onAction(MovieAction.MarkAsPlayed)
-                        },
-                        onFavoriteClick = {
-                            if (movie.favorite) onAction(MovieAction.UnmarkAsFavorite)
-                            else onAction(MovieAction.MarkAsFavorite)
                         },
                     ) {
                         state.queueStatus?.let { queueStatus -> QueueBadge(status = queueStatus) }
@@ -316,14 +312,48 @@ private fun MovieScreenLayout(
                             onDownloaderAction(DownloaderAction.ResumeDownload)
                         },
                         onDownloadDeleteClick = deleteDownload,
-                        trailingContent = {
+                        overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (movie.favorite) CoreR.string.remove_from_favorites
+                                                else CoreR.string.add_to_favorites
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (movie.favorite) CoreR.drawable.ic_heart_filled
+                                                    else CoreR.drawable.ic_heart
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (movie.favorite) MovieAction.UnmarkAsFavorite
+                                            else MovieAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
                                 // Always offered, regardless of Radarr configuration/tmdbId
                                 // presence - a search that can't resolve a target fails with a
                                 // clear toast instead of the entry silently vanishing.
                                 DropdownMenuItem(
                                     text = {
                                         Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_radarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
                                     },
                                     onClick = {
                                         closeMenu()
@@ -333,6 +363,13 @@ private fun MovieScreenLayout(
                                 DropdownMenuItem(
                                     text = {
                                         Text(stringResource(CoreR.string.search_episode_manual))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_radarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
                                     },
                                     onClick = {
                                         closeMenu()

@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -311,14 +312,9 @@ private fun EpisodeScreenLayout(
                         communityRating = episode.communityRating,
                         modifier = Modifier.fillMaxWidth(),
                         played = episode.played,
-                        favorite = episode.favorite,
                         onPlayedClick = {
                             if (episode.played) onAction(EpisodeAction.UnmarkAsPlayed)
                             else onAction(EpisodeAction.MarkAsPlayed)
-                        },
-                        onFavoriteClick = {
-                            if (episode.favorite) onAction(EpisodeAction.UnmarkAsFavorite)
-                            else onAction(EpisodeAction.MarkAsFavorite)
                         },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
@@ -355,14 +351,54 @@ private fun EpisodeScreenLayout(
                             onDownloaderAction(DownloaderAction.ResumeDownload)
                         },
                         onDownloadDeleteClick = deleteDownload,
-                        trailingContent = {
+                        overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (episode.favorite) {
+                                                    CoreR.string.remove_from_favorites
+                                                } else {
+                                                    CoreR.string.add_to_favorites
+                                                }
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (episode.favorite) {
+                                                        CoreR.drawable.ic_heart_filled
+                                                    } else {
+                                                        CoreR.drawable.ic_heart
+                                                    }
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (episode.favorite) EpisodeAction.UnmarkAsFavorite
+                                            else EpisodeAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
                                 // Always offered, regardless of Sonarr configuration/tvdbId
                                 // presence - a search that can't resolve a target fails with a
                                 // clear toast instead of the entry silently vanishing.
                                 DropdownMenuItem(
                                     text = {
                                         Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_sonarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
                                     },
                                     onClick = {
                                         closeMenu()
@@ -372,6 +408,13 @@ private fun EpisodeScreenLayout(
                                 DropdownMenuItem(
                                     text = {
                                         Text(stringResource(CoreR.string.search_episode_manual))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_sonarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
                                     },
                                     onClick = {
                                         closeMenu()

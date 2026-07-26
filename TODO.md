@@ -28,3 +28,42 @@
 Status: in progress (2026-07-18) - automation enabled; the manual "review and
 selectively pull in upstream dependency updates" item is still open and requires
 human judgment.
+
+## FINDROID-41: Overflow menu polish round 2 - right-alignment, favorite move, Show search
+
+Fast-follow on FINDROID-38/40's `ItemOverflowMenu` work, all from live testing
+feedback right after it shipped.
+
+- [x] The overflow icon was sitting wherever it fell in `ItemButtonsBar`'s
+      wrapping `FlowRow` (visually wedged between Trailer and Download tiles).
+      Added a new `overflowContent` param, rendered outside the FlowRow
+      entirely via an outer `Row(verticalAlignment = CenterVertically)` with
+      the FlowRow on `Modifier.weight(1f)` - the overflow icon now always
+      sits pinned to the row's right edge regardless of how many tiles wrap.
+      `trailingContent` (the Show/Season "delete downloads" size tile) still
+      wraps normally inside the FlowRow - only the overflow icon itself moved.
+- [x] Favorite/unfavorite moved from `ItemMetaRow`'s inline toggle into the
+      overflow menu (as a heart-icon `DropdownMenuItem`) on all four detail
+      screens - watched/unwatched stays on the meta line, favorite didn't.
+- [x] Search (auto)/(manual) `DropdownMenuItem`s now carry the Sonarr/Radarr
+      brand icon (`Color.Unspecified` tint, same as the old `PvrSearchButton`
+      tile) instead of no icon at all.
+- [x] Show's overflow was missing a search entry entirely (FINDROID-40 only
+      added Info+Delete there, reasoning Show had no pre-existing PVR search
+      feature to move). Added "Search (auto)" - `ShowAction
+      .SearchSeriesAutomatic` → `SonarrSearchRepository
+      .searchSeriesByTmdbId` (`ShowViewModel` already had the repository
+      injected for the delete cascade). No manual/interactive counterpart -
+      Sonarr's release picker is per-episode, not per-series, so there's no
+      clean single "pick a release for the whole series" flow to build.
+  - [x] Along the way, found and fixed: the new Show aggregate Info dialog
+        was showing "0 episodes" - `ShowState.episodeCount` was computed from
+        `database.getEpisodesByShowId`, which only knows about episodes
+        that were downloaded or individually visited, not the show's true
+        total. Replaced with a real per-season `repository.getEpisodes(showId,
+        season.id)` count sum (downloads-size itself correctly stays
+        Room-based - that one's genuinely about local disk usage).
+
+Status: **done** (2026-07-27). Verified via remote
+`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
+CI-signed installs on all three test devices.

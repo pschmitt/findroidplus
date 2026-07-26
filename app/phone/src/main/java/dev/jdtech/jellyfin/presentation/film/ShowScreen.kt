@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
+import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
@@ -122,6 +123,22 @@ fun ShowScreen(
                     .show()
             }
         }
+    }
+
+    ObserveAsEvents(viewModel.searchEvents) { event ->
+        val message =
+            when (event) {
+                is SearchEvent.SearchTriggered ->
+                    androidContext.getString(CoreR.string.search_triggered_toast)
+                is SearchEvent.ReleaseGrabbed ->
+                    androidContext.getString(CoreR.string.release_grabbed_toast)
+                is SearchEvent.Failed ->
+                    androidContext.getString(
+                        CoreR.string.search_failed_toast,
+                        event.message ?: androidContext.getString(CoreR.string.unknown_error),
+                    )
+            }
+        Toast.makeText(androidContext, message, Toast.LENGTH_SHORT).show()
     }
 
     ShowScreenLayout(
@@ -253,14 +270,9 @@ private fun ShowScreenLayout(
                         communityRating = show.communityRating,
                         modifier = Modifier.fillMaxWidth(),
                         played = show.played,
-                        favorite = show.favorite,
                         onPlayedClick = {
                             if (show.played) onAction(ShowAction.UnmarkAsPlayed)
                             else onAction(ShowAction.MarkAsPlayed)
-                        },
-                        onFavoriteClick = {
-                            if (show.favorite) onAction(ShowAction.UnmarkAsFavorite)
-                            else onAction(ShowAction.MarkAsFavorite)
                         },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
@@ -320,7 +332,63 @@ private fun ShowScreenLayout(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 )
                             }
+                        },
+                        overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (show.favorite) {
+                                                    CoreR.string.remove_from_favorites
+                                                } else {
+                                                    CoreR.string.add_to_favorites
+                                                }
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (show.favorite) {
+                                                        CoreR.drawable.ic_heart_filled
+                                                    } else {
+                                                        CoreR.drawable.ic_heart
+                                                    }
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (show.favorite) ShowAction.UnmarkAsFavorite
+                                            else ShowAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
+                                // Always offered, regardless of Sonarr configuration/tmdbId
+                                // presence - a search that can't resolve a target fails with a
+                                // clear toast instead of the entry silently vanishing. No manual/
+                                // interactive counterpart at the series level - Sonarr's release
+                                // picker is per-episode, not per-series.
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_sonarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(ShowAction.SearchSeriesAutomatic)
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(CoreR.string.info)) },
                                     leadingIcon = {

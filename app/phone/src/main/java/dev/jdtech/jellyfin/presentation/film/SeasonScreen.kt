@@ -273,14 +273,9 @@ private fun SeasonScreenLayout(
                         modifier =
                             Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
                         played = season.played,
-                        favorite = season.favorite,
                         onPlayedClick = {
                             if (season.played) onAction(SeasonAction.UnmarkAsPlayed)
                             else onAction(SeasonAction.MarkAsPlayed)
-                        },
-                        onFavoriteClick = {
-                            if (season.favorite) onAction(SeasonAction.UnmarkAsFavorite)
-                            else onAction(SeasonAction.MarkAsFavorite)
                         },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
@@ -345,7 +340,42 @@ private fun SeasonScreenLayout(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 )
                             }
+                        },
+                        overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (season.favorite) {
+                                                    CoreR.string.remove_from_favorites
+                                                } else {
+                                                    CoreR.string.add_to_favorites
+                                                }
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (season.favorite) {
+                                                        CoreR.drawable.ic_heart_filled
+                                                    } else {
+                                                        CoreR.drawable.ic_heart
+                                                    }
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (season.favorite) SeasonAction.UnmarkAsFavorite
+                                            else SeasonAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(CoreR.string.info)) },
                                     leadingIcon = {
