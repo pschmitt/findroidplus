@@ -31,6 +31,7 @@ import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
+import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 
 /**
  * Home's own header - server switcher pill + error/retry/search/settings buttons. Every icon
@@ -40,6 +41,11 @@ import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
  * shows the server name) - kept as its own [Surface] but recolored to match. (Favorites used to
  * live here as an icon button - it's now its own Home section instead, next to Continue Watching/
  * Next Up, so it can actually be browsed rather than being a single tap-through.)
+ *
+ * Computes its own edge padding here (safePadding + spacings.small), same formula [ItemTopBar]
+ * uses internally, rather than taking it from the caller - Home used to hand it the body-content
+ * padding (spacings.default) instead, which is wider and made the settings button land in a
+ * visibly different spot than on every other screen's top bar.
  */
 @Composable
 fun HomeHeader(
@@ -54,12 +60,20 @@ fun HomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val isOfflineMode = LocalOfflineMode.current
+    val safePadding = rememberSafePadding()
 
     // No fixed row height - sizes to its tallest child, same as ItemTopBar's Row, so the two
     // headers are the same height (48dp, the buttons' own natural size) instead of this one
     // being pinned to a taller 56dp.
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    start = safePadding.start + MaterialTheme.spacings.small,
+                    top = safePadding.top + MaterialTheme.spacings.small,
+                    end = safePadding.end + MaterialTheme.spacings.small,
+                ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -140,7 +140,6 @@ private fun HomeScreenLayout(
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingTop = safePadding.top + MaterialTheme.spacings.small
     val paddingEnd = safePadding.end + MaterialTheme.spacings.default
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
 
@@ -175,7 +174,6 @@ private fun HomeScreenLayout(
             onRetryClick = { onAction(HomeAction.OnRetryClick) },
             onSearchClick = { searchExpanded = true },
             onUserClick = { onAction(HomeAction.OnSettingsClick) },
-            modifier = Modifier.padding(start = paddingStart, top = paddingTop, end = paddingEnd),
         )
         Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(
