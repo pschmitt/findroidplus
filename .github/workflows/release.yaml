@@ -179,8 +179,8 @@ jobs:
             Automated build of the latest main (${{ github.sha }}), built ${{ steps.date.outputs.date }}. Not a stable release.
 
             Two variants are provided, both signed with the same CI key so upgrades between them work:
-            - `*-debug.apk` — debuggable, uses the `dev.pschmitt.findroidplus.debug` applicationId, installs side by side with a Play Store install.
-            - `*-release.apk` — minified/optimized like a real release build, but uses the same `dev.pschmitt.findroidplus` applicationId as the Play Store app. Installing it over an existing Play Store install will fail with a signature mismatch — uninstall that first.
+            - `*-debug.apk` — debuggable, uses the `dev.pschmitt.findroidplus.debug` applicationId so it installs side by side with a release install for testing.
+            - `*-release.apk` — minified/optimized like a real release build, uses the same `dev.pschmitt.findroidplus` applicationId as every tagged release, so it upgrades cleanly over (or is upgraded by) any of them.
 
             `SHA256SUMS` covers every APK above. Each APK also embeds this exact commit
             (`${{ github.sha }}`) as `BuildConfig.GIT_REVISION`, checkable via `About` in the app
