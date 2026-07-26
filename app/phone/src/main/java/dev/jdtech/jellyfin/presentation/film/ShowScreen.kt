@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,6 +62,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
+import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -187,58 +187,28 @@ private fun ShowScreenLayout(
                         }
                     }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    Row(
+                    ItemMetaRow(
+                        dateText = getShowDateString(show),
+                        runtimeTicks = show.runtimeTicks,
+                        officialRating = show.officialRating,
+                        communityRating = show.communityRating,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                        verticalAlignment = Alignment.Bottom,
-                    ) {
-                        Text(
-                            text = getShowDateString(show),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    CoreR.string.runtime_minutes,
-                                    show.runtimeTicks.div(600000000),
-                                ),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        show.officialRating?.let { officialRating ->
-                            Text(text = officialRating, style = MaterialTheme.typography.bodyMedium)
-                        }
-                        show.communityRating?.let { communityRating ->
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_star),
-                                    contentDescription = null,
-                                    tint = Color("#F2C94C".toColorInt()),
-                                )
-                                Spacer(Modifier.width(MaterialTheme.spacings.extraSmall))
-                                Text(
-                                    text = "%.1f".format(communityRating),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                        }
-                    }
+                        played = show.played,
+                        favorite = show.favorite,
+                        onPlayedClick = {
+                            if (show.played) onAction(ShowAction.UnmarkAsPlayed)
+                            else onAction(ShowAction.MarkAsPlayed)
+                        },
+                        onFavoriteClick = {
+                            if (show.favorite) onAction(ShowAction.UnmarkAsFavorite)
+                            else onAction(ShowAction.MarkAsFavorite)
+                        },
+                    )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemButtonsBar(
                         item = show,
                         onPlayClick = { startFromBeginning ->
                             onAction(ShowAction.Play(startFromBeginning = startFromBeginning))
-                        },
-                        onMarkAsPlayedClick = {
-                            when (show.played) {
-                                true -> onAction(ShowAction.UnmarkAsPlayed)
-                                false -> onAction(ShowAction.MarkAsPlayed)
-                            }
-                        },
-                        onMarkAsFavoriteClick = {
-                            when (show.favorite) {
-                                true -> onAction(ShowAction.UnmarkAsFavorite)
-                                false -> onAction(ShowAction.MarkAsFavorite)
-                            }
                         },
                         onTrailerClick = { uri -> onAction(ShowAction.PlayTrailer(uri)) },
                         onDownloadClick = {},
