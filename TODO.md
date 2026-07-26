@@ -67,3 +67,20 @@ feedback right after it shipped.
 Status: **done** (2026-07-27). Verified via remote
 `:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
 CI-signed installs on all three test devices.
+
+## FINDROID-42: DropdownMenu mispositioned + Mark watched moved to overflow
+
+- [x] `ItemOverflowMenu`'s `DropdownMenu` was landing in a visibly wrong spot
+      relative to its ⋮ icon - our bug, not a platform quirk: Material3's
+      `DropdownMenu` anchors to its nearest positioned parent, not whatever
+      composable happens to precede it, and the icon + menu weren't wrapped
+      in a shared `Box`. Added one.
+- [x] Mark watched/unwatched moved from `ItemMetaRow`'s inline toggle into
+      the overflow menu too (joining favorite, moved there in FINDROID-41) -
+      `ItemMetaRow` no longer has any toggle machinery at all now (removed
+      `played`/`favorite`/`onPlayedClick`/`onFavoriteClick` params and the
+      `MetaToggle` composable entirely - dead code once nothing called them).
+
+Status: **done** (2026-07-27). Verified via remote
+`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
+CI-signed installs on all three test devices.

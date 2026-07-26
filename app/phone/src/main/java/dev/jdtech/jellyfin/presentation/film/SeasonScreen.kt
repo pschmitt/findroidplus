@@ -271,12 +271,7 @@ private fun SeasonScreenLayout(
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemMetaRow(
                         modifier =
-                            Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
-                        played = season.played,
-                        onPlayedClick = {
-                            if (season.played) onAction(SeasonAction.UnmarkAsPlayed)
-                            else onAction(SeasonAction.MarkAsPlayed)
-                        },
+                            Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth()
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemButtonsBar(
@@ -343,6 +338,29 @@ private fun SeasonScreenLayout(
                         },
                         overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (season.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (season.played) SeasonAction.UnmarkAsPlayed
+                                            else SeasonAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         Text(

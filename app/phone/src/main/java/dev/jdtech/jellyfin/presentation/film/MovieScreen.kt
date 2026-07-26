@@ -264,11 +264,6 @@ private fun MovieScreenLayout(
                         officialRating = movie.officialRating,
                         communityRating = movie.communityRating,
                         modifier = Modifier.fillMaxWidth(),
-                        played = movie.played,
-                        onPlayedClick = {
-                            if (movie.played) onAction(MovieAction.UnmarkAsPlayed)
-                            else onAction(MovieAction.MarkAsPlayed)
-                        },
                     ) {
                         state.queueStatus?.let { queueStatus -> QueueBadge(status = queueStatus) }
                     }
@@ -314,6 +309,29 @@ private fun MovieScreenLayout(
                         onDownloadDeleteClick = deleteDownload,
                         overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (movie.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (movie.played) MovieAction.UnmarkAsPlayed
+                                            else MovieAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         Text(

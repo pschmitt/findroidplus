@@ -311,11 +311,6 @@ private fun EpisodeScreenLayout(
                         runtimeTicks = episode.runtimeTicks,
                         communityRating = episode.communityRating,
                         modifier = Modifier.fillMaxWidth(),
-                        played = episode.played,
-                        onPlayedClick = {
-                            if (episode.played) onAction(EpisodeAction.UnmarkAsPlayed)
-                            else onAction(EpisodeAction.MarkAsPlayed)
-                        },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     val deleteDownload: () -> Unit = {
@@ -353,6 +348,29 @@ private fun EpisodeScreenLayout(
                         onDownloadDeleteClick = deleteDownload,
                         overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (episode.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (episode.played) EpisodeAction.UnmarkAsPlayed
+                                            else EpisodeAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         Text(

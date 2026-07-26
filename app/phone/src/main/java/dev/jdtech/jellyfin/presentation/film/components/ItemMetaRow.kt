@@ -3,11 +3,8 @@ package dev.jdtech.jellyfin.presentation.film.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,10 +21,8 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 /**
  * The quiet one-line metadata strip under a detail page's header: date, runtime, age rating and
  * community rating joined by middle dots, e.g. "Jul 3, 2026 · 2h 8m · PG-13 · ★ 7.8".
- * [trailingContent] hosts non-text status companions (queue badge and the like). When
- * [onPlayedClick]/[onFavoriteClick] are wired up, compact watched/favorite icon toggles sit
- * right-aligned on the same line - state-flavored metadata lives with the metadata, keeping the
- * action row below for "heavier" actions.
+ * [trailingContent] hosts non-text status companions (queue badge and the like). Watched/favorite
+ * toggles live in the overflow menu instead of here - see [ItemOverflowMenu].
  */
 @Composable
 fun ItemMetaRow(
@@ -36,10 +31,6 @@ fun ItemMetaRow(
     officialRating: String? = null,
     communityRating: Float? = null,
     modifier: Modifier = Modifier,
-    played: Boolean = false,
-    favorite: Boolean = false,
-    onPlayedClick: (() -> Unit)? = null,
-    onFavoriteClick: (() -> Unit)? = null,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
     val segments =
@@ -82,62 +73,6 @@ fun ItemMetaRow(
             )
         }
         trailingContent()
-        if (onPlayedClick != null || onFavoriteClick != null) {
-            Spacer(Modifier.weight(1f))
-            onPlayedClick?.let { playedClick ->
-                MetaToggle(
-                    iconRes = CoreR.drawable.ic_check,
-                    checked = played,
-                    onClick = playedClick,
-                    contentDescription =
-                        stringResource(
-                            if (played) CoreR.string.unmark_as_played
-                            else CoreR.string.mark_as_played
-                        ),
-                )
-            }
-            onFavoriteClick?.let { favoriteClick ->
-                MetaToggle(
-                    iconRes =
-                        if (favorite) CoreR.drawable.ic_heart_filled else CoreR.drawable.ic_heart,
-                    checked = favorite,
-                    onClick = favoriteClick,
-                    contentDescription =
-                        stringResource(
-                            if (favorite) CoreR.string.remove_from_favorites
-                            else CoreR.string.add_to_favorites
-                        ),
-                )
-            }
-        }
-    }
-}
-
-/**
- * A quiet, borderless icon toggle sized to sit on the meta line without shouting: subdued when
- * off, primary-tinted when on, with the standard 48dp touch target.
- */
-@Composable
-private fun MetaToggle(
-    iconRes: Int,
-    checked: Boolean,
-    onClick: () -> Unit,
-    contentDescription: String,
-) {
-    IconToggleButton(
-        checked = checked,
-        onCheckedChange = { onClick() },
-        colors =
-            IconButtonDefaults.iconToggleButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                checkedContentColor = MaterialTheme.colorScheme.primary,
-            ),
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
-        )
     }
 }
 

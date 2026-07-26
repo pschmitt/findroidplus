@@ -269,11 +269,6 @@ private fun ShowScreenLayout(
                         officialRating = show.officialRating,
                         communityRating = show.communityRating,
                         modifier = Modifier.fillMaxWidth(),
-                        played = show.played,
-                        onPlayedClick = {
-                            if (show.played) onAction(ShowAction.UnmarkAsPlayed)
-                            else onAction(ShowAction.MarkAsPlayed)
-                        },
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemButtonsBar(
@@ -335,6 +330,29 @@ private fun ShowScreenLayout(
                         },
                         overflowContent = {
                             ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (show.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (show.played) ShowAction.UnmarkAsPlayed
+                                            else ShowAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         Text(
