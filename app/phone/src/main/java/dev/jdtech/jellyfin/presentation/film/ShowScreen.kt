@@ -166,31 +166,26 @@ private fun ShowScreenLayout(
                             enabled = show.canPlay && state.seasons.isNotEmpty(),
                             modifier = Modifier.align(Alignment.Center),
                         )
-                        Column(
-                            modifier =
-                                Modifier.align(Alignment.BottomStart)
-                                    .padding(start = paddingStart, end = paddingEnd)
-                        ) {
-                            Text(
-                                text = show.name,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 3,
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                            show.originalTitle?.let { originalTitle ->
-                                if (originalTitle != show.name) {
-                                    Text(
-                                        text = originalTitle,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 1,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-                            }
-                        }
                     },
                 )
                 Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    Text(
+                        text = show.name,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 3,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    show.originalTitle?.let { originalTitle ->
+                        if (originalTitle != show.name) {
+                            Text(
+                                text = originalTitle,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     Row(
                         modifier = Modifier.fillMaxWidth(),

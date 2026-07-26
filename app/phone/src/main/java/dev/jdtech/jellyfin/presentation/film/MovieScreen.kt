@@ -199,28 +199,6 @@ private fun MovieScreenLayout(
                             isDeleting = downloaderState.isDeleting,
                             modifier = Modifier.align(Alignment.Center),
                         )
-                        Column(
-                            modifier =
-                                Modifier.align(Alignment.BottomStart)
-                                    .padding(start = paddingStart, end = paddingEnd)
-                        ) {
-                            Text(
-                                text = movie.name,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 3,
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                            movie.originalTitle?.let { originalTitle ->
-                                if (originalTitle != movie.name) {
-                                    Text(
-                                        text = originalTitle,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 1,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-                            }
-                        }
                         if (state.videoMetadata != null) {
                             IconButton(
                                 onClick = { infoDialogOpen = true },
@@ -242,6 +220,23 @@ private fun MovieScreenLayout(
                     },
                 )
                 Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    Text(
+                        text = movie.name,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 3,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    movie.originalTitle?.let { originalTitle ->
+                        if (originalTitle != movie.name) {
+                            Text(
+                                text = originalTitle,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemMetaRow(
                         dateText = movie.premiereDate?.format(state.dateFormat),
