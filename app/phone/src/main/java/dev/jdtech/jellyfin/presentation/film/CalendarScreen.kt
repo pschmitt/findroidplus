@@ -55,6 +55,7 @@ import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.HeaderIconColors
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.formatCalendarTime
 import java.time.LocalDate
@@ -123,7 +124,7 @@ private fun CalendarScreenLayout(
                     TopBarTitle(
                         text = stringResource(CoreR.string.title_calendar),
                         iconRes = CoreR.drawable.ic_calendar,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
+                        iconTint = HeaderIconColors.Calendar,
                     )
                 },
                 actions = {

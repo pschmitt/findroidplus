@@ -107,6 +107,7 @@ import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
 import dev.jdtech.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.HeaderIconColors
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.DeleteProgress
 import dev.jdtech.jellyfin.utils.MigrateProgress
@@ -468,7 +469,7 @@ private fun DownloadsScreenLayout(
                     TopBarTitle(
                         text = stringResource(CoreR.string.title_download),
                         iconRes = CoreR.drawable.ic_download,
-                        iconTint = MaterialTheme.colorScheme.secondary,
+                        iconTint = HeaderIconColors.Downloads,
                     )
                 },
                 navigationIcon = {

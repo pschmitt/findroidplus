@@ -83,6 +83,7 @@ import dev.jdtech.jellyfin.presentation.film.components.SeerrRequestRow
 import dev.jdtech.jellyfin.presentation.film.components.SeerrResultRow
 import dev.jdtech.jellyfin.presentation.film.components.SortByDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.HeaderIconColors
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.jdtech.jellyfin.presentation.utils.plus
@@ -218,8 +219,13 @@ private fun LibraryScreenLayout(
                         TopBarTitle(
                             text = libraryName,
                             iconRes = if (isMergedMedia) CoreR.drawable.ic_film else null,
+                            // Fixed rather than theme-derived - the M3 scheme's tonal
+                            // primary/secondary/tertiary are close cousins of the same seed hue
+                            // and read as near-identical at a glance, defeating the point of a
+                            // per-screen color. See DownloadsScreen/CalendarScreen for the other
+                            // two of this trio.
                             iconTint =
-                                if (isMergedMedia) MaterialTheme.colorScheme.primary
+                                if (isMergedMedia) HeaderIconColors.Media
                                 else LocalContentColor.current,
                         )
                     }
