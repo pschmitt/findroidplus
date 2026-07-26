@@ -42,11 +42,11 @@ because these test builds intentionally didn't use the shared private key.
   unzip -p findroid-plus-latest-arm64-v8a-release.apk 'classes*.dex' | strings | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+'
   ```
 
-  CI ([`.github/workflows/release-latest.yaml`](.github/workflows/release-latest.yaml)) verifies
-  this landed correctly in the built APK before publishing, the same check `just build --release`
-  runs for local builds (see [`justfile`](justfile)).
-- **Checksums**: the `latest` GitHub release includes a `SHA256SUMS` file covering every published
-  APK.
+  CI ([`.github/workflows/release.yaml`](.github/workflows/release.yaml)) verifies this landed
+  correctly in the built APK before publishing, the same check `just build --release` runs for
+  local builds (see [`justfile`](justfile)).
+- **Checksums**: every GitHub release - `latest` and each tagged `vX.Y.Z` - includes a
+  `SHA256SUMS` file covering every published APK.
 
 ## Rebuilding a release yourself
 
@@ -81,5 +81,3 @@ APKs' signatures and diff the remaining content, e.g. with `apksigner` and a too
   guaranteed.
 - **No Gradle dependency-verification metadata.** Dependency versions are pinned, but nothing
   checksums the actual resolved artifacts (`gradle/verification-metadata.xml` doesn't exist yet).
-- **`publish.yaml`** (the Play Store / tagged-release workflow) doesn't yet embed `GIT_REVISION`
-  or publish a `SHA256SUMS` file the way `release-latest.yaml` does.
