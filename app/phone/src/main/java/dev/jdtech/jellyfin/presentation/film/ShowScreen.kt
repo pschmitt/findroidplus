@@ -114,6 +114,34 @@ fun ShowScreen(
                         Toast.makeText(androidContext, e.localizedMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
+                is ShowAction.MarkAsPlayed ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.marked_as_played_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is ShowAction.UnmarkAsPlayed ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.marked_as_unplayed_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is ShowAction.MarkAsFavorite ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.added_to_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is ShowAction.UnmarkAsFavorite ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.removed_from_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
                 is ShowAction.OnBackClick -> navigateBack()
                 is ShowAction.OnHomeClick -> navigateHome()
                 is ShowAction.OnSettingsClick -> navigateToSettings()

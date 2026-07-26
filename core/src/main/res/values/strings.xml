@@ -150,6 +150,10 @@
     <string name="unmark_as_played">Mark unplayed</string>
     <string name="add_to_favorites">Favorite</string>
     <string name="remove_from_favorites">Unfavorite</string>
+    <string name="marked_as_played_toast">Marked as watched</string>
+    <string name="marked_as_unplayed_toast">Marked as unwatched</string>
+    <string name="added_to_favorites_toast">Added to favorites</string>
+    <string name="removed_from_favorites_toast">Removed from favorites</string>
     <string name="not_set">Not set</string>
     <string name="none">None</string>
     <string name="manage_servers">Manage servers</string>

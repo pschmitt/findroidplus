@@ -147,6 +147,22 @@ fun EpisodeScreen(
                     intent.putExtra("startFromBeginning", action.startFromBeginning)
                     context.startActivity(intent)
                 }
+                is EpisodeAction.MarkAsPlayed ->
+                    Toast.makeText(context, CoreR.string.marked_as_played_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is EpisodeAction.UnmarkAsPlayed ->
+                    Toast.makeText(context, CoreR.string.marked_as_unplayed_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is EpisodeAction.MarkAsFavorite ->
+                    Toast.makeText(context, CoreR.string.added_to_favorites_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is EpisodeAction.UnmarkAsFavorite ->
+                    Toast.makeText(
+                            context,
+                            CoreR.string.removed_from_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
                 is EpisodeAction.OnBackClick -> navigateBack()
                 is EpisodeAction.OnHomeClick -> navigateHome()
                 is EpisodeAction.OnSettingsClick -> navigateToSettings()

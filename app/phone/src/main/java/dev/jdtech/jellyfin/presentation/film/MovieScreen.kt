@@ -144,6 +144,22 @@ fun MovieScreen(
                         Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
+                is MovieAction.MarkAsPlayed ->
+                    Toast.makeText(context, CoreR.string.marked_as_played_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is MovieAction.UnmarkAsPlayed ->
+                    Toast.makeText(context, CoreR.string.marked_as_unplayed_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is MovieAction.MarkAsFavorite ->
+                    Toast.makeText(context, CoreR.string.added_to_favorites_toast, Toast.LENGTH_SHORT)
+                        .show()
+                is MovieAction.UnmarkAsFavorite ->
+                    Toast.makeText(
+                            context,
+                            CoreR.string.removed_from_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
                 is MovieAction.OnBackClick -> navigateBack()
                 is MovieAction.OnHomeClick -> navigateHome()
                 is MovieAction.OnSettingsClick -> navigateToSettings()
