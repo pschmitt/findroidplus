@@ -69,6 +69,7 @@
     <string name="collapse">Collapse</string>
     <string name="expand">Expand</string>
     <string name="sort_by">Sort by</string>
+    <string name="sort_and_filter">Sort &amp; Filter</string>
     <string name="sort_order">Sort order</string>
     <string name="close">Close</string>
     <string name="copy">Copy</string>
@@ -335,7 +336,6 @@
     <string name="pvr_queue_status_warning">Warning</string>
     <string name="pvr_queue_status_failed">Failed</string>
     <string name="title_calendar">Calendar</string>
-    <string name="discover_filter_label">Filter</string>
     <string name="discover_filter_all">All</string>
     <string name="discover_filter_movies">Movies</string>
     <string name="discover_filter_shows">Shows</string>

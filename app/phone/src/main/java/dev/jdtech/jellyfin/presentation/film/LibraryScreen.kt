@@ -1,9 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,8 +21,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -178,7 +174,6 @@ private fun LibraryScreenLayout(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     var showSortByDialog by remember { mutableStateOf(false) }
-    var filterMenuExpanded by remember { mutableStateOf(false) }
     var pendingSeerrCancel by remember { mutableStateOf<SeerrRequestItem?>(null) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
@@ -263,59 +258,14 @@ private fun LibraryScreenLayout(
                                 contentDescription = null,
                             )
                         }
-                        if (isMergedMedia) {
-                            Box {
-                                IconButton(onClick = { filterMenuExpanded = true }) {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                CoreR.drawable.ic_sliders_horizontal
-                                            ),
-                                        contentDescription =
-                                            stringResource(CoreR.string.discover_filter_label),
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = filterMenuExpanded,
-                                    onDismissRequest = { filterMenuExpanded = false },
-                                ) {
-                                    MediaFilterMenuItem(
-                                        filter = MediaFilter.ALL,
-                                        labelRes = CoreR.string.discover_filter_all,
-                                        state = state,
-                                        onAction = onAction,
-                                        onDismissRequest = { filterMenuExpanded = false },
-                                    )
-                                    MediaFilterMenuItem(
-                                        filter = MediaFilter.MOVIES,
-                                        labelRes = CoreR.string.discover_filter_movies,
-                                        state = state,
-                                        onAction = onAction,
-                                        onDismissRequest = { filterMenuExpanded = false },
-                                    )
-                                    MediaFilterMenuItem(
-                                        filter = MediaFilter.SHOWS,
-                                        labelRes = CoreR.string.discover_filter_shows,
-                                        state = state,
-                                        onAction = onAction,
-                                        onDismissRequest = { filterMenuExpanded = false },
-                                    )
-                                    if (state.seerrConfigured) {
-                                        MediaFilterMenuItem(
-                                            filter = MediaFilter.REQUESTED,
-                                            labelRes = CoreR.string.discover_filter_requested,
-                                            state = state,
-                                            onAction = onAction,
-                                            onDismissRequest = { filterMenuExpanded = false },
-                                        )
-                                    }
-                                }
-                            }
-                        }
                         IconButton(onClick = { showSortByDialog = true }) {
                             Icon(
-                                painter = painterResource(CoreR.drawable.ic_arrow_down_up),
-                                contentDescription = null,
+                                painter = painterResource(CoreR.drawable.ic_sliders_horizontal),
+                                contentDescription =
+                                    stringResource(
+                                        if (isMergedMedia) CoreR.string.sort_and_filter
+                                        else CoreR.string.sort_by
+                                    ),
                             )
                         }
                         IconButton(onClick = onSettingsClick) {
@@ -532,57 +482,11 @@ private fun LibraryScreenLayout(
                 onAction(LibraryAction.ChangeSorting(sortBy, sortOrder))
             },
             onDismissRequest = { showSortByDialog = false },
+            filter = if (isMergedMedia) state.filter else null,
+            seerrConfigured = state.seerrConfigured,
+            onFilterChange = { onAction(LibraryAction.ChangeFilter(it)) },
         )
     }
-}
-
-@Composable
-private fun MediaFilterMenuItem(
-    filter: MediaFilter,
-    labelRes: Int,
-    state: LibraryState,
-    onAction: (LibraryAction) -> Unit,
-    onDismissRequest: () -> Unit,
-) {
-    val selected = state.filter == filter
-    DropdownMenuItem(
-        text = { Text(stringResource(labelRes)) },
-        onClick = {
-            onDismissRequest()
-            onAction(LibraryAction.ChangeFilter(filter))
-        },
-        leadingIcon = {
-            when (filter) {
-                // The Seerr mark is a brand-colored asset (same one as on the Integrations
-                // settings screen), so it is drawn as-is instead of tinted like the
-                // monochrome icons.
-                MediaFilter.REQUESTED ->
-                    Image(
-                        painter = painterResource(CoreR.drawable.ic_seerr),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                    )
-                else ->
-                    Icon(
-                        painter =
-                            painterResource(
-                                when (filter) {
-                                    MediaFilter.ALL -> CoreR.drawable.ic_layout_grid
-                                    MediaFilter.MOVIES -> CoreR.drawable.ic_film
-                                    else -> CoreR.drawable.ic_tv
-                                }
-                            ),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                    )
-            }
-        },
-        trailingIcon = {
-            if (selected) {
-                Icon(painter = painterResource(CoreR.drawable.ic_check), contentDescription = null)
-            }
-        },
-    )
 }
 
 @Composable
