@@ -59,6 +59,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
+import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
@@ -123,6 +124,34 @@ fun SeasonScreen(
                     intent.putExtra("itemKind", BaseItemKind.SEASON.serialName)
                     androidContext.startActivity(intent)
                 }
+                is SeasonAction.MarkAsPlayed ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.marked_as_played_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is SeasonAction.UnmarkAsPlayed ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.marked_as_unplayed_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is SeasonAction.MarkAsFavorite ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.added_to_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is SeasonAction.UnmarkAsFavorite ->
+                    Toast.makeText(
+                            androidContext,
+                            CoreR.string.removed_from_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
                 is SeasonAction.OnBackClick -> navigateBack()
                 is SeasonAction.OnHomeClick -> navigateHome()
                 is SeasonAction.OnSettingsClick -> navigateToSettings()
@@ -234,23 +263,26 @@ private fun SeasonScreenLayout(
                             }
                         },
                     )
-                    Spacer(Modifier.height(MaterialTheme.spacings.default.div(2)))
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                    ItemMetaRow(
+                        modifier =
+                            Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
+                        played = season.played,
+                        favorite = season.favorite,
+                        onPlayedClick = {
+                            if (season.played) onAction(SeasonAction.UnmarkAsPlayed)
+                            else onAction(SeasonAction.MarkAsPlayed)
+                        },
+                        onFavoriteClick = {
+                            if (season.favorite) onAction(SeasonAction.UnmarkAsFavorite)
+                            else onAction(SeasonAction.MarkAsFavorite)
+                        },
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemButtonsBar(
                         item = season,
                         onPlayClick = { startFromBeginning ->
                             onAction(SeasonAction.Play(startFromBeginning = startFromBeginning))
-                        },
-                        onMarkAsPlayedClick = {
-                            when (season.played) {
-                                true -> onAction(SeasonAction.UnmarkAsPlayed)
-                                false -> onAction(SeasonAction.MarkAsPlayed)
-                            }
-                        },
-                        onMarkAsFavoriteClick = {
-                            when (season.favorite) {
-                                true -> onAction(SeasonAction.UnmarkAsFavorite)
-                                false -> onAction(SeasonAction.MarkAsFavorite)
-                            }
                         },
                         onTrailerClick = {},
                         onDownloadClick = {},
