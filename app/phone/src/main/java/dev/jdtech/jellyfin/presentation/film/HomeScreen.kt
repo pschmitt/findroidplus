@@ -372,7 +372,7 @@ private fun HomeDownloadProgress(
             SectionServiceIcons(serviceIcons)
             Text(
                 text = stringResource(CoreR.string.pvr_queue_section_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = titleModifier,
             )
         }
