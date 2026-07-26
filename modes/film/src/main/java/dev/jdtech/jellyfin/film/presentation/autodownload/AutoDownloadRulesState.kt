@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.film.presentation.autodownload
 
+import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.UiText
 import java.util.UUID
 
@@ -9,6 +10,7 @@ data class AutoDownloadShowRuleUiModel(
     // optional show-level (seasonId == null) row when alsoFutureSeasons is on. These coexist by
     // design; they're not alternatives to each other.
     val ruleIds: List<Long>,
+    val show: FindroidShow,
     val showName: String,
     val enabled: Boolean,
     val seasonIds: Set<UUID>,

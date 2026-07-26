@@ -99,6 +99,7 @@ constructor(
         return AutoDownloadShowRuleUiModel(
             seriesId = seriesId,
             ruleIds = rules.map { it.id },
+            show = show,
             showName = show.name,
             enabled = rules.any { it.enabled },
             seasonIds = scope.seasonIds,

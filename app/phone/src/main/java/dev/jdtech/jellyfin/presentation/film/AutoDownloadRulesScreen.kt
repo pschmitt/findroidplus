@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.dummy.dummyShow
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesAction
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesState
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesViewModel
@@ -57,6 +60,8 @@ import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadShowRuleUi
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
+import dev.jdtech.jellyfin.presentation.film.components.Direction
+import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -155,7 +160,12 @@ private fun AutoDownloadShowRuleRow(
         ListItem(
             modifier = Modifier.clickable { editDialogOpen = true },
             leadingContent = {
-                Icon(painter = painterResource(CoreR.drawable.ic_tv), contentDescription = null)
+                ItemPoster(
+                    item = show.show,
+                    direction = Direction.VERTICAL,
+                    modifier =
+                        Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
+                )
             },
             headlineContent = { Text(text = show.showName) },
             supportingContent = {
@@ -415,6 +425,7 @@ private fun AutoDownloadRulesScreenLayoutPreview() {
                             AutoDownloadShowRuleUiModel(
                                 seriesId = UUID.randomUUID(),
                                 ruleIds = listOf(1L),
+                                show = dummyShow,
                                 showName = "Example Show",
                                 enabled = true,
                                 seasonIds = emptySet(),
