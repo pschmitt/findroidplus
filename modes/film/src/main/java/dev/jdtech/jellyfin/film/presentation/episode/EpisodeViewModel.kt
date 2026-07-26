@@ -25,6 +25,7 @@ import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
+import dev.jdtech.jellyfin.utils.clearDownloads
 import dev.jdtech.jellyfin.utils.Downloader
 import java.util.UUID
 import javax.inject.Inject
@@ -79,6 +80,7 @@ constructor(
                 val dateFormat = appPreferences.getValue(appPreferences.dateFormat)
                 val existingScope = getExistingScope(episode.seriesId)
                 val seriesTvdbId = repository.getShow(episode.seriesId).tvdbId
+                val canDelete = repository.canDeleteMedia()
                 _state.emit(
                     _state.value.copy(
                         episode = episode,
@@ -88,6 +90,7 @@ constructor(
                         existingScope = existingScope,
                         seriesTvdbId = seriesTvdbId,
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
+                        canDelete = canDelete,
                         autoDeleteWatchedEnabled =
                             appPreferences.getValue(appPreferences.autoDeleteWatched),
                         autoDeleteWatchedHours =
@@ -176,6 +179,9 @@ constructor(
                         .onFailure { Timber.w(it, "Failed to cascade episode delete to Sonarr") }
                 }
             }
+            // The episode no longer exists on the server - no point leaving an orphaned local
+            // download (file + DB rows) pointing at it behind.
+            _state.value.episode?.let { clearDownloads(listOf(it), database, downloader) }
             deleteEventsChannel.send(DeleteItemEvent.Deleted)
         }
     }

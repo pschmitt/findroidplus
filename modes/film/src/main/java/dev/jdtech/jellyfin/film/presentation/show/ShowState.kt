@@ -35,9 +35,14 @@ data class ShowState(
     // tmdbId to open the Seerr detail view when the user taps a missing-season placeholder.
     val seriesTvdbId: String? = null,
     val seriesTmdbId: Int? = null,
-    // Gates the "also remove from Sonarr" cascade option on the delete-from-Jellyfin dialog - no
-    // point offering it when Sonarr isn't (fully) configured.
+    // Gates the "also remove from Sonarr/Seerr" cascade option on the delete-from-Jellyfin
+    // dialog - shown when either service is configured, independently of the other.
     val sonarrConfigured: Boolean = false,
+    val seerrConfigured: Boolean = false,
+    // Whether the current Jellyfin user's policy allows deleting media at all - gates whether
+    // "Delete from Jellyfin" is shown in the overflow menu, rather than showing it and having the
+    // delete fail with a permissions error.
+    val canDelete: Boolean = false,
     // Drives the pull-to-refresh spinner - separate from `show == null` (first load, full-screen
     // spinner instead) since a refresh keeps showing the existing content underneath.
     val isRefreshing: Boolean = false,

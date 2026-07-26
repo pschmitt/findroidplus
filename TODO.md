@@ -1393,24 +1393,33 @@ item from the Jellyfin library itself from within the app.
       `JellyfinRepository.deleteItem(itemId)` (real impl calls
       `libraryApi.deleteItem`; offline repo throws - deleting has no
       "queue for later sync" equivalent the way favorite/played do).
-- [ ] **Not yet done**: local cleanup of any downloaded copy + DB rows for
-      an item after it's deleted server-side - a since-deleted item that
-      was also downloaded locally is left as an orphaned entry today
-      (`clearDownloads()` in `core/.../utils/DownloadCleanup.kt` is the
-      obvious existing tool for this, just not wired into the new delete
-      flow yet). Low-severity - it doesn't crash anything, and the existing
-      per-item "Delete download" action already cleans this up manually.
-- [ ] **Not yet done**: gating the action on the current Jellyfin user's
-      delete permission ("Allow this user to delete media" policy) -
-      right now a user without permission sees the action, and it fails
-      with a toast (via the existing error path) rather than being hidden
-      up front.
+- [x] Local cleanup of any downloaded copy + DB rows for an item after it's
+      deleted server-side - `clearDownloads()` (`core/.../utils/
+      DownloadCleanup.kt`) is now called from all three `deleteItem()`s
+      after a successful server delete: Movie/Episode pass their single
+      `FindroidItem` (`MovieViewModel` gained `ServerDatabaseDao`/
+      `Downloader` deps for this - Show/Episode already had them), Show
+      passes every episode via `database.getEpisodesByShowId`, mirroring
+      `deleteShowDownloads`'s existing pattern.
+- [x] Gating the action on the current Jellyfin user's delete permission
+      ("Allow this user to delete media" policy) -
+      `JellyfinRepository.canDeleteMedia()` (real impl checks
+      `userApi.getCurrentUser().content.policy?.enableContentDeletion`;
+      offline repo returns `false`) feeds a `canDelete` field on
+      Movie/Show/EpisodeState, and the "Delete from Jellyfin" menu item is
+      only shown when it's true - hidden up front instead of shown-then-
+      rejected.
+- [x] Cascade to Seerr added alongside Sonarr/Radarr for Movie/Show (Seerr
+      has no per-episode request concept, so Episode's cascade stays
+      Sonarr-only): resolves `SeerrRepository.getDetails(tmdbId,
+      mediaType).cancellableRequestIds` and cancels each one. The cascade
+      checkbox now defaults to **checked** (was unchecked) and its
+      label/summary mention both services - shown when either Radarr/
+      Sonarr or Seerr is configured, independently of the other.
 
-Status: **mostly done** (2026-07-26) - the core feature (delete + confirm +
-PVR cascade) is implemented and verified via remote
-`:app:phone:compileLibreDebugKotlin`/`ktfmtCheck` on rofl-13, and installed
-for manual testing. The two unchecked items above are known, scoped
-follow-ups, not blockers to using the feature.
+Status: **done** (2026-07-27). Verified via remote
+`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
+CI-signed installs on all three test devices.
 
 ## FINDROID-39: UI consistency pass round 2 + calendar preload
 

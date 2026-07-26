@@ -14,6 +14,7 @@ import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
@@ -88,6 +89,7 @@ constructor(
                 val autoDownloadEnabled = isAutoDownloadEnabled(showId)
                 val existingScope = getExistingScope(showId)
                 val (episodeCount, downloadsSizeBytes) = episodeCountAndDownloadsSizeBytes(showId)
+                val canDelete = repository.canDeleteMedia()
                 _state.emit(
                     _state.value.copy(
                         show = show,
@@ -105,6 +107,8 @@ constructor(
                         seriesTvdbId = show.tvdbId,
                         seriesTmdbId = show.tmdbId?.toIntOrNull(),
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
+                        seerrConfigured = pvrConfiguration.isSeerrConfigured(),
+                        canDelete = canDelete,
                         isRefreshing = false,
                     )
                 )
@@ -323,7 +327,7 @@ constructor(
                 deleteEventsChannel.send(DeleteItemEvent.Failed(e.message))
                 return@launch
             }
-            // The Jellyfin delete already succeeded at this point - a failed PVR cascade is
+            // The Jellyfin delete already succeeded at this point - a failed PVR/Seerr cascade is
             // logged, not surfaced as a failure, so the user isn't told the whole action failed
             // when only this best-effort cleanup step didn't.
             if (cascadeToPvr) {
@@ -332,7 +336,31 @@ constructor(
                         .deleteSeriesByTvdbId(tvdbId)
                         .onFailure { Timber.w(it, "Failed to cascade show delete to Sonarr") }
                 }
+                _state.value.seriesTmdbId?.let { tmdbId ->
+                    seerrRepository
+                        .getDetails(tmdbId, SeerrMediaType.TV)
+                        .onSuccess { detail ->
+                            detail.cancellableRequestIds.forEach { requestId ->
+                                seerrRepository
+                                    .cancelRequest(requestId)
+                                    .onFailure {
+                                        Timber.w(it, "Failed to cancel Seerr request $requestId")
+                                    }
+                            }
+                        }
+                        .onFailure {
+                            Timber.w(it, "Failed to look up Seerr request for show delete cascade")
+                        }
+                }
             }
+            // The show no longer exists on the server - no point leaving orphaned local
+            // downloads (files + DB rows) pointing at its episodes behind.
+            val userId = repository.getUserId()
+            val episodes =
+                withContext(Dispatchers.IO) {
+                    database.getEpisodesByShowId(showId).map { it.toFindroidEpisode(database, userId) }
+                }
+            clearDownloads(episodes, database, downloader)
             deleteEventsChannel.send(DeleteItemEvent.Deleted)
         }
     }

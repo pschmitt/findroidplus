@@ -7,14 +7,19 @@ import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
+import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.repository.RadarrSearchRepository
+import dev.jdtech.jellyfin.repository.SeerrRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.utils.Downloader
+import dev.jdtech.jellyfin.utils.clearDownloads
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -39,6 +44,9 @@ constructor(
     private val radarrSearchRepository: RadarrSearchRepository,
     private val queueStatusRepository: QueueStatusRepository,
     private val pvrConfiguration: PvrConfiguration,
+    private val seerrRepository: SeerrRepository,
+    private val database: ServerDatabaseDao,
+    private val downloader: Downloader,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MovieState())
     val state = _state.asStateFlow()
@@ -65,6 +73,7 @@ constructor(
                 val director = getDirector(movie)
                 val writers = getWriters(movie)
                 val dateFormat = appPreferences.getValue(appPreferences.dateFormat)
+                val canDelete = repository.canDeleteMedia()
                 _state.emit(
                     _state.value.copy(
                         movie = movie,
@@ -74,6 +83,8 @@ constructor(
                         writers = writers,
                         dateFormat = dateFormat,
                         radarrConfigured = pvrConfiguration.isRadarrConfigured(),
+                        seerrConfigured = pvrConfiguration.isSeerrConfigured(),
+                        canDelete = canDelete,
                         isRefreshing = false,
                     )
                 )
@@ -141,16 +152,36 @@ constructor(
                 deleteEventsChannel.send(DeleteItemEvent.Failed(e.message))
                 return@launch
             }
-            // The Jellyfin delete already succeeded at this point - a failed PVR cascade is
+            // The Jellyfin delete already succeeded at this point - a failed PVR/Seerr cascade is
             // logged, not surfaced as a failure, so the user isn't told the whole action failed
             // when only this best-effort cleanup step didn't.
             if (cascadeToPvr) {
-                _state.value.movie?.tmdbId?.let { tmdbId ->
+                val tmdbId = _state.value.movie?.tmdbId
+                tmdbId?.let { id ->
                     radarrSearchRepository
-                        .deleteMovieByTmdbId(tmdbId)
+                        .deleteMovieByTmdbId(id)
                         .onFailure { Timber.w(it, "Failed to cascade movie delete to Radarr") }
                 }
+                tmdbId?.toIntOrNull()?.let { tmdbIdInt ->
+                    seerrRepository
+                        .getDetails(tmdbIdInt, SeerrMediaType.MOVIE)
+                        .onSuccess { detail ->
+                            detail.cancellableRequestIds.forEach { requestId ->
+                                seerrRepository
+                                    .cancelRequest(requestId)
+                                    .onFailure {
+                                        Timber.w(it, "Failed to cancel Seerr request $requestId")
+                                    }
+                            }
+                        }
+                        .onFailure {
+                            Timber.w(it, "Failed to look up Seerr request for movie delete cascade")
+                        }
+                }
             }
+            // The item no longer exists on the server - no point leaving an orphaned local
+            // download (file + DB rows) pointing at it behind.
+            _state.value.movie?.let { clearDownloads(listOf(it), database, downloader) }
             deleteEventsChannel.send(DeleteItemEvent.Deleted)
         }
     }

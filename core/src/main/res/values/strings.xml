@@ -182,10 +182,10 @@
     <string name="delete_show_message">This permanently deletes this show - all its seasons and episodes - from your Jellyfin library, including their files. This cannot be undone.</string>
     <string name="delete_episode_message">This permanently deletes this episode from your Jellyfin library, including its file. This cannot be undone.</string>
     <string name="delete_item_confirm_label">Type YES to confirm</string>
-    <string name="also_remove_from_radarr">Also remove from Radarr</string>
-    <string name="also_remove_from_radarr_summary">Deletes the movie and its file from Radarr, and excludes it from future automatic re-adds.</string>
-    <string name="also_remove_from_sonarr">Also remove from Sonarr</string>
-    <string name="also_remove_from_sonarr_summary">Deletes the series and its files from Sonarr, and excludes it from future automatic re-adds.</string>
+    <string name="also_remove_from_radarr">Also remove from Radarr/Seerr</string>
+    <string name="also_remove_from_radarr_summary">Deletes the movie and its file from Radarr (if configured) and excludes it from future automatic re-adds, and cancels any related Seerr request (if configured), so it isn\'t quietly re-added.</string>
+    <string name="also_remove_from_sonarr">Also remove from Sonarr/Seerr</string>
+    <string name="also_remove_from_sonarr_summary">Deletes the series and its files from Sonarr (if configured) and excludes it from future automatic re-adds, and cancels any related Seerr request (if configured), so it isn\'t quietly re-added.</string>
     <string name="also_unmonitor_in_sonarr">Also unmonitor in Sonarr</string>
     <string name="also_unmonitor_in_sonarr_summary">Stops Sonarr from grabbing this episode again. The rest of the series keeps being monitored normally.</string>
     <string name="item_deleted_toast">Deleted from Jellyfin</string>

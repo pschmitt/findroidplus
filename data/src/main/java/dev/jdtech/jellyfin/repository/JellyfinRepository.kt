@@ -117,6 +117,14 @@ interface JellyfinRepository {
     // swallowed into a background sync flag.
     suspend fun deleteItem(itemId: UUID)
 
+    /**
+     * Whether the current Jellyfin user's server-side policy allows deleting media at all
+     * ("Allow this user to delete media" in Jellyfin's admin UI) - gates whether the "Delete from
+     * Jellyfin" action is even shown, rather than offering it and having [deleteItem] fail with a
+     * permissions error.
+     */
+    suspend fun canDeleteMedia(): Boolean
+
     fun getBaseUrl(): String
 
     suspend fun updateDeviceName(name: String)

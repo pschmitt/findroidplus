@@ -334,26 +334,28 @@ private fun ShowScreenLayout(
                                         infoDialogOpen = true
                                     },
                                 )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(CoreR.string.delete_from_jellyfin),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_trash),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        deleteDialogOpen = true
-                                    },
-                                )
+                                if (state.canDelete) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(CoreR.string.delete_from_jellyfin),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            deleteDialogOpen = true
+                                        },
+                                    )
+                                }
                             }
                         },
                     )
@@ -521,13 +523,15 @@ private fun ShowScreenLayout(
     }
 
     if (deleteDialogOpen) {
-        val pvrCascadable = state.seriesTvdbId != null && state.sonarrConfigured
+        val cascadable =
+            (state.seriesTvdbId != null && state.sonarrConfigured) ||
+                (state.seriesTmdbId != null && state.seerrConfigured)
         DeleteItemDialog(
             message = stringResource(CoreR.string.delete_show_message),
             pvrCascadeLabel =
-                if (pvrCascadable) stringResource(CoreR.string.also_remove_from_sonarr) else null,
+                if (cascadable) stringResource(CoreR.string.also_remove_from_sonarr) else null,
             pvrCascadeSummary =
-                if (pvrCascadable) {
+                if (cascadable) {
                     stringResource(CoreR.string.also_remove_from_sonarr_summary)
                 } else {
                     null

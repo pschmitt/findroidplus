@@ -309,6 +309,8 @@ class JellyfinRepositoryOfflineImpl(
         throw Exception("Deleting an item is not available in offline mode")
     }
 
+    override suspend fun canDeleteMedia(): Boolean = false
+
     override fun getBaseUrl(): String {
         return ""
     }

@@ -586,6 +586,11 @@ class JellyfinRepositoryImpl(
     override suspend fun getUserConfiguration(): UserConfiguration =
         withContext(Dispatchers.IO) { jellyfinApi.userApi.getCurrentUser().content.configuration!! }
 
+    override suspend fun canDeleteMedia(): Boolean =
+        withContext(Dispatchers.IO) {
+            jellyfinApi.userApi.getCurrentUser().content.policy?.enableContentDeletion == true
+        }
+
     override suspend fun getDownloads(): List<FindroidItem> =
         withContext(Dispatchers.IO) {
             val items = mutableListOf<FindroidItem>()

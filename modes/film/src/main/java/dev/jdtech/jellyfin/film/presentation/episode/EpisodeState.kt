@@ -16,6 +16,10 @@ data class EpisodeState(
     // Gates the search button - no point offering a Sonarr search that can only fail with a
     // toast when Sonarr isn't (fully) configured.
     val sonarrConfigured: Boolean = false,
+    // Whether the current Jellyfin user's policy allows deleting media at all - gates whether
+    // "Delete from Jellyfin" is shown in the overflow menu, rather than showing it and having the
+    // delete fail with a permissions error.
+    val canDelete: Boolean = false,
     val releasePicker: ReleasePickerState? = null,
     val error: Exception? = null,
     // Mirrors AppPreferences.autoDeleteWatched/autoDeleteWatchedHours - see

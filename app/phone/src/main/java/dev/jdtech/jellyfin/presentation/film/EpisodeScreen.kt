@@ -393,26 +393,28 @@ private fun EpisodeScreenLayout(
                                         },
                                     )
                                 }
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(CoreR.string.delete_from_jellyfin),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_trash),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        deleteDialogOpen = true
-                                    },
-                                )
+                                if (state.canDelete) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(CoreR.string.delete_from_jellyfin),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            deleteDialogOpen = true
+                                        },
+                                    )
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),

@@ -354,26 +354,28 @@ private fun MovieScreenLayout(
                                         },
                                     )
                                 }
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(CoreR.string.delete_from_jellyfin),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_trash),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        deleteDialogOpen = true
-                                    },
-                                )
+                                if (state.canDelete) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(CoreR.string.delete_from_jellyfin),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            deleteDialogOpen = true
+                                        },
+                                    )
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -401,17 +403,19 @@ private fun MovieScreenLayout(
                         )
                     }
                     if (deleteDialogOpen) {
-                        val pvrSearchable = movie.tmdbId != null && state.radarrConfigured
+                        val cascadable =
+                            movie.tmdbId != null &&
+                                (state.radarrConfigured || state.seerrConfigured)
                         DeleteItemDialog(
                             message = stringResource(CoreR.string.delete_movie_message),
                             pvrCascadeLabel =
-                                if (pvrSearchable) {
+                                if (cascadable) {
                                     stringResource(CoreR.string.also_remove_from_radarr)
                                 } else {
                                     null
                                 },
                             pvrCascadeSummary =
-                                if (pvrSearchable) {
+                                if (cascadable) {
                                     stringResource(CoreR.string.also_remove_from_radarr_summary)
                                 } else {
                                     null
