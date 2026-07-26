@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.CalendarEntry
 import dev.jdtech.jellyfin.models.CalendarResult
+import dev.jdtech.jellyfin.repository.CalendarCache
 import dev.jdtech.jellyfin.repository.CalendarRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -26,11 +27,11 @@ constructor(
         // Show the last-known result instantly (no spinner) when reopening the tab - see
         // CalendarCache's kdoc for why this is process-scoped rather than ViewModel-scoped.
         calendarCache.result?.let(::applyResult)
-        load()
+        load(force = false)
     }
 
     fun refresh() {
-        load()
+        load(force = true)
     }
 
     /**
@@ -38,15 +39,20 @@ constructor(
      * process, or a previous load never succeeded) - otherwise this is a silent background
      * refresh on top of whatever [CalendarCache]/[init] already put on screen, so reopening the
      * tab never re-blocks on a fresh Sonarr/Radarr/Jellyfin fetch the way it used to.
+     *
+     * [force] skips the cache's 12h TTL check - an explicit pull-to-refresh should always hit the
+     * network, but the tab-reopen path in [init] shouldn't, since `PreloadCalendarWorker` (or a
+     * previous tab visit) may well have fetched within the last few minutes already.
      */
-    private fun load() {
+    private fun load(force: Boolean) {
+        if (!force && calendarCache.isFresh()) return
         viewModelScope.launch {
             if (_state.value.isEmpty) {
                 _state.value = _state.value.copy(isLoading = true, error = null)
             }
             try {
                 val result = calendarRepository.getUpcoming()
-                calendarCache.result = result
+                calendarCache.update(result)
                 applyResult(result)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e)

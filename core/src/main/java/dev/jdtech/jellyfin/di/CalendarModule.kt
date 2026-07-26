@@ -5,6 +5,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
+import dev.jdtech.jellyfin.repository.CalendarCache
 import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.CalendarRepositoryImpl
 import dev.jdtech.jellyfin.repository.JellyfinRepository
@@ -32,4 +33,6 @@ object CalendarModule {
             radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
         )
     }
+
+    @Singleton @Provides fun provideCalendarCache(): CalendarCache = CalendarCache()
 }

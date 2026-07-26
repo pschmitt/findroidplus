@@ -38,6 +38,7 @@ import dev.jdtech.jellyfin.work.AutoDownloadWorker
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
 import dev.jdtech.jellyfin.work.NewItemNotificationWorker
 import dev.jdtech.jellyfin.work.PendingDownloadWorker
+import dev.jdtech.jellyfin.work.PreloadCalendarWorker
 import dev.jdtech.jellyfin.work.QueueStatusScheduler
 import dev.jdtech.jellyfin.work.SyncWorker
 import java.util.concurrent.TimeUnit
@@ -119,6 +120,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         schedulePendingDownloads(workManager)
         scheduleAutoDeleteWatched(workManager)
         scheduleNewItemNotifications(workManager)
+        schedulePreloadCalendar(workManager)
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
         QueueStatusScheduler.schedule(applicationContext, appPreferences)
         pauseDownloadsIfBatterySaverAlreadyOn()
@@ -204,6 +206,40 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
 
         workManager.enqueueUniqueWork(
             uniqueWorkName = "autoDownloadRulesStartup",
+            existingWorkPolicy = ExistingWorkPolicy.REPLACE,
+            request = startupRequest,
+        )
+    }
+
+    // Fixed 12h TTL, not user-configurable like the download-check interval - see
+    // CalendarCache.DEFAULT_TTL_MILLIS, which PreloadCalendarWorker itself checks against.
+    private fun schedulePreloadCalendar(workManager: WorkManager) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val periodicRequest =
+            PeriodicWorkRequestBuilder<PreloadCalendarWorker>(12, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build()
+
+        // KEEP rather than UPDATE - the interval is fixed, so there's no reason to reset the
+        // periodic timer on every app start the way autoDownloadRules does for its
+        // user-configurable interval.
+        workManager.enqueueUniquePeriodicWork(
+            uniqueWorkName = "preloadCalendar",
+            existingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.KEEP,
+            request = periodicRequest,
+        )
+
+        // Also fetch once at startup so a cold app open already has warm data by the time the
+        // user opens the Calendar tab or a show's "next airing" - the worker itself skips the
+        // actual fetch if the cache is still within its 12h TTL (e.g. a quick app restart).
+        val startupRequest =
+            OneTimeWorkRequestBuilder<PreloadCalendarWorker>().setConstraints(constraints).build()
+
+        workManager.enqueueUniqueWork(
+            uniqueWorkName = "preloadCalendarStartup",
             existingWorkPolicy = ExistingWorkPolicy.REPLACE,
             request = startupRequest,
         )
