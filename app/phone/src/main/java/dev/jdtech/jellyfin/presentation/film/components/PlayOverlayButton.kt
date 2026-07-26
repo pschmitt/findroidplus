@@ -1,7 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
@@ -25,7 +25,6 @@ import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
-import dev.jdtech.jellyfin.presentation.theme.spacings
 
 /**
  * A Netflix-style play affordance overlaid on the item's header image, replacing the old
@@ -48,11 +47,10 @@ fun PlayOverlayButton(
             mutableLongStateOf((item.runtimeTicks - item.playbackPositionTicks) / 600000000)
         }
 
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-    ) {
+    // The "X min left" caption is positioned with a fixed offset from the button rather than
+    // stacked in a centered Column with it - a Column would center the button+caption pair as a
+    // group, pushing the button itself off the true center whenever the caption is shown.
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
         FilledIconButton(
             onClick = onClick,
             enabled = enabled && !isDeleting,
@@ -82,6 +80,7 @@ fun PlayOverlayButton(
                 text = stringResource(CoreR.string.runtime_minutes_left, runtimeMinutesLeft),
                 color = Color.White,
                 style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.align(Alignment.Center).offset(y = 40.dp),
             )
         }
     }
