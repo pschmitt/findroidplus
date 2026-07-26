@@ -2,6 +2,21 @@
 
 Repository instructions for AI coding agents working on Findroid.
 
+## Task tracking
+
+- `TODO.md` is the running backlog/changelog for this fork, one `## FINDROID-N:`
+  entry per feature or fix, numbered sequentially (never reuse or renumber an id).
+  Each entry has a checklist of sub-items (`- [ ]`/`- [x]`) and ends with a
+  `Status:` line (`not started` / `in progress` / `mostly done` / `**done**`,
+  plus a date and how it was verified).
+- Before starting any non-trivial new feature or fix, add (or update) a
+  `FINDROID-N` entry describing it — even if the same conversation immediately
+  goes on to implement it. Update the checklist/status as work actually lands,
+  rather than writing the whole entry retroactively once everything's finished.
+  This keeps `TODO.md` an accurate record of what's done vs. still open, not
+  just a summary written after the fact.
+- Trivial one-off asks (a typo, a single-line tweak) don't need their own entry.
+
 ## Dev environment
 
 - `nix develop` provides the full toolchain (JDK 21, Android SDK, `just`, `ktfmt`) and
