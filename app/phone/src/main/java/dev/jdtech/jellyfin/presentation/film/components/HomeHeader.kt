@@ -1,51 +1,37 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
-import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
-import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 
 /**
- * Home's own header - server switcher pill + error/retry/search/settings buttons. Every icon
- * button here is a [HeaderIconButton], the same black-70%-alpha circle [ItemTopBar] uses on every
- * detail screen, so this reads as the same header language rather than a bespoke solid-color one.
- * The server-switcher pill is the one thing with no detail-screen equivalent (variable-width,
- * shows the server name) - kept as its own [Surface] but recolored to match. (Favorites used to
- * live here as an icon button - it's now its own Home section instead, next to Continue Watching/
- * Next Up, so it can actually be browsed rather than being a single tap-through.)
- *
- * Computes its own edge padding here (safePadding + spacings.small), same formula [ItemTopBar]
- * uses internally, rather than taking it from the caller - Home used to hand it the body-content
- * padding (spacings.default) instead, which is wider and made the settings button land in a
- * visibly different spot than on every other screen's top bar.
+ * Home's own header - server switcher title + error/retry/search/settings actions. A real
+ * Material3 [TopAppBar] - solid background, standard [IconButton]s, standard height - same look
+ * as [ItemTopBar] (Movie/Show/Season/Episode/Person) and the Media/Library screen's own
+ * `TopAppBar`, rather than a bespoke transparent bar with its own color/height. The server name
+ * reuses [TopBarTitle] (the same title composable Library uses), made clickable to open the
+ * server-switch sheet. (Favorites used to live here as an icon button - it's now its own Home
+ * section instead, next to Continue Watching/Next Up, so it can actually be browsed rather than
+ * being a single tap-through.)
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeHeader(
     serverName: String,
@@ -59,59 +45,19 @@ fun HomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val isOfflineMode = LocalOfflineMode.current
-    val safePadding = rememberSafePadding()
 
-    // No fixed row height - sizes to its tallest child, same as ItemTopBar's Row, so the two
-    // headers are the same height (48dp, the buttons' own natural size) instead of this one
-    // being pinned to a taller 56dp.
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(
-                    start = safePadding.start + MaterialTheme.spacings.small,
-                    top = safePadding.top + MaterialTheme.spacings.small,
-                    end = safePadding.end + MaterialTheme.spacings.small,
-                ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            onClick = onServerClick,
-            modifier = Modifier.height(48.dp).weight(1f, fill = false).alpha(0.7f),
-            shape = CircleShape,
-            color = Color.Black,
-            contentColor = Color.White,
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = MaterialTheme.spacings.medium),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.Unspecified,
-                )
-                Text(
-                    text = serverName,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.animateContentSize(),
-                )
-            }
-        }
-
-        Spacer(Modifier.width(MaterialTheme.spacings.medium))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    TopAppBar(
+        modifier = modifier,
+        title = {
+            TopBarTitle(
+                text = serverName,
+                iconRes = CoreR.drawable.ic_logo,
+                modifier = Modifier.clickable(onClick = onServerClick),
+            )
+        },
+        actions = {
             AnimatedVisibility(visible = isError, enter = fadeIn(), exit = fadeOut()) {
-                HeaderIconButton(onClick = onErrorClick) {
+                IconButton(onClick = onErrorClick) {
                     Icon(
                         painter = painterResource(CoreR.drawable.ic_alert_circle),
                         contentDescription = null,
@@ -123,7 +69,7 @@ fun HomeHeader(
             // HomeScreen's PullToRefreshBox) - same as Downloads/Library, instead of a second,
             // separate spinner living here too. This button is just the error-state retry action.
             AnimatedVisibility(visible = isError, enter = fadeIn(), exit = fadeOut()) {
-                HeaderIconButton(onClick = onRetryClick, enabled = !isLoading) {
+                IconButton(onClick = onRetryClick, enabled = !isLoading) {
                     Icon(
                         painter = painterResource(CoreR.drawable.ic_rotate_ccw),
                         contentDescription = null,
@@ -132,16 +78,17 @@ fun HomeHeader(
             }
 
             if (!isOfflineMode) {
-                HeaderIconButton(onClick = onSearchClick) {
+                IconButton(onClick = onSearchClick) {
                     Icon(painter = painterResource(CoreR.drawable.ic_search), contentDescription = null)
                 }
             }
 
-            HeaderIconButton(onClick = onUserClick) {
+            IconButton(onClick = onUserClick) {
                 Icon(painter = painterResource(CoreR.drawable.ic_settings), contentDescription = null)
             }
-        }
-    }
+        },
+        windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
+    )
 }
 
 @Composable
