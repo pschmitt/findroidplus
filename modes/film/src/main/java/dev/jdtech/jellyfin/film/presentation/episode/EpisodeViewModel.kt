@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.pvr.PvrRelease
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
@@ -27,6 +28,7 @@ import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
 import dev.jdtech.jellyfin.utils.Downloader
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -58,6 +60,9 @@ constructor(
 
     private val searchEventsChannel = Channel<SearchEvent>()
     val searchEvents = searchEventsChannel.receiveAsFlow()
+
+    private val deleteEventsChannel = Channel<DeleteItemEvent>()
+    val deleteEvents = deleteEventsChannel.receiveAsFlow()
 
     private val evaluator = AutoDownloadRuleEvaluator()
 
@@ -146,6 +151,32 @@ constructor(
             searchEventsChannel.send(
                 result.fold({ SearchEvent.ReleaseGrabbed }, { SearchEvent.Failed(it.message) })
             )
+        }
+    }
+
+    private fun deleteItem(cascadeToPvr: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.deleteItem(episodeId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                deleteEventsChannel.send(DeleteItemEvent.Failed(e.message))
+                return@launch
+            }
+            // The Jellyfin delete already succeeded at this point - a failed PVR cascade is
+            // logged, not surfaced as a failure, so the user isn't told the whole action failed
+            // when only this best-effort cleanup step didn't.
+            if (cascadeToPvr) {
+                val episode = _state.value.episode
+                val seriesTvdbId = _state.value.seriesTvdbId
+                if (episode != null && seriesTvdbId != null) {
+                    sonarrSearchRepository
+                        .unmonitorEpisode(seriesTvdbId, episode.parentIndexNumber, episode.indexNumber)
+                        .onFailure { Timber.w(it, "Failed to cascade episode delete to Sonarr") }
+                }
+            }
+            deleteEventsChannel.send(DeleteItemEvent.Deleted)
         }
     }
 
@@ -268,6 +299,7 @@ constructor(
             }
             is EpisodeAction.DownloadWithScope ->
                 downloadWithScope(action.selection, action.alsoFollowNew, action.onlyUnwatched)
+            is EpisodeAction.DeleteItem -> deleteItem(action.cascadeToPvr)
             is EpisodeAction.SearchEpisodeAutomatic -> searchEpisodeAutomatic()
             is EpisodeAction.OpenReleasePicker -> openReleasePicker()
             is EpisodeAction.GrabRelease -> grabRelease(action.release)

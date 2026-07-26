@@ -46,4 +46,11 @@ interface RadarrSearchRepository {
 
     /** Grabs a specific release returned by [getReleases]. */
     suspend fun grabRelease(release: PvrRelease): Result<Unit>
+
+    /**
+     * Deletes the movie matched by TMDB id from Radarr, including its file, and excludes it from
+     * future import-list re-adds - the "also remove from Radarr" cascade for a movie delete from
+     * Jellyfin.
+     */
+    suspend fun deleteMovieByTmdbId(tmdbId: String): Result<Unit>
 }

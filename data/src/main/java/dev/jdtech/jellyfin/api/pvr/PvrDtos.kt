@@ -172,6 +172,14 @@ data class SonarrEpisodeDto(
 
 // endregion
 
+// region Sonarr - PUT /api/v3/episode/monitor
+// Bulk monitored on/off toggle - the closest Sonarr equivalent to "don't grab this one again" for
+// a single episode (there is no per-episode delete/exclude the way there is for a whole series).
+
+@Serializable data class SonarrEpisodeMonitorRequest(val episodeIds: List<Int>, val monitored: Boolean)
+
+// endregion
+
 // region Sonarr/Radarr - POST /api/v3/command, GET /api/v3/command/{id}
 // POST triggers an automatic search: the PVR service picks and grabs the best matching release
 // itself, with no release list surfaced to the caller (compare GET/POST /api/v3/release below,

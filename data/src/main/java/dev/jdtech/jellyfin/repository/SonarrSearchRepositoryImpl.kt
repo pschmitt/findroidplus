@@ -114,6 +114,33 @@ class SonarrSearchRepositoryImpl(
                 releaseCache.clear()
             }
 
+    override suspend fun deleteSeriesByTvdbId(tvdbId: String): Result<Unit> =
+        runAction { api ->
+            val seriesId =
+                api.getSeries().firstOrNull { it.tvdbId.toString() == tvdbId }?.id
+                    ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+            api.deleteSeries(seriesId, deleteFiles = true, addImportListExclusion = true)
+        }
+
+    override suspend fun unmonitorEpisode(
+        seriesTvdbId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+    ): Result<Unit> =
+        runAction { api ->
+            val seriesId =
+                api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id
+                    ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+            val episodeId =
+                api
+                    .getEpisodes(seriesId)
+                    .firstOrNull {
+                        it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber
+                    }
+                    ?.id ?: throw IllegalArgumentException("Could not find this episode in Sonarr")
+            api.setEpisodesMonitored(listOf(episodeId), monitored = false)
+        }
+
     private suspend fun <T> runAction(block: suspend (SonarrApi) -> T): Result<T> {
         val api = api() ?: return Result.failure(IllegalStateException("Sonarr is not configured"))
         return try {

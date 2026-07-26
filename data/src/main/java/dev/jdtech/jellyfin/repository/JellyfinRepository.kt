@@ -112,6 +112,11 @@ interface JellyfinRepository {
 
     suspend fun markAsUnplayed(itemId: UUID)
 
+    // Unlike markAsFavorite/markAsPlayed, this is not offline-tolerant: a delete has no sensible
+    // "retry later" semantics, so a failure here must propagate to the caller rather than being
+    // swallowed into a background sync flag.
+    suspend fun deleteItem(itemId: UUID)
+
     fun getBaseUrl(): String
 
     suspend fun updateDeviceName(name: String)

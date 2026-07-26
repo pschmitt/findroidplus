@@ -303,6 +303,12 @@ class JellyfinRepositoryOfflineImpl(
         }
     }
 
+    // Unlike markAsFavorite/markAsPlayed above, there's no "set a local flag and sync later"
+    // equivalent for a delete - it must actually reach the server.
+    override suspend fun deleteItem(itemId: UUID) {
+        throw Exception("Deleting an item is not available in offline mode")
+    }
+
     override fun getBaseUrl(): String {
         return ""
     }

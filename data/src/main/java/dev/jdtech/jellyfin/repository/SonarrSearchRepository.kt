@@ -53,4 +53,18 @@ interface SonarrSearchRepository {
 
     /** Grabs a specific release returned by [getReleases]. */
     suspend fun grabRelease(release: PvrRelease): Result<Unit>
+
+    /**
+     * Deletes the series matched by TVDB id from Sonarr, including its files, and excludes it
+     * from future import-list re-adds - the "also remove from Sonarr" cascade for a whole-show
+     * delete from Jellyfin.
+     */
+    suspend fun deleteSeriesByTvdbId(tvdbId: String): Result<Unit>
+
+    /**
+     * Unmonitors a single episode in Sonarr - the closest real equivalent to "don't grab this one
+     * again" when there's no whole-series delete to reach for, i.e. the "also remove from Sonarr"
+     * cascade for a single-episode delete from Jellyfin.
+     */
+    suspend fun unmonitorEpisode(seriesTvdbId: String, seasonNumber: Int, episodeNumber: Int): Result<Unit>
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.pvr.PvrRelease
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
@@ -16,6 +17,7 @@ import dev.jdtech.jellyfin.repository.RadarrSearchRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.PersonKind
+import timber.log.Timber
 
 @HiltViewModel
 class MovieViewModel
@@ -42,6 +45,9 @@ constructor(
 
     private val searchEventsChannel = Channel<SearchEvent>()
     val searchEvents = searchEventsChannel.receiveAsFlow()
+
+    private val deleteEventsChannel = Channel<DeleteItemEvent>()
+    val deleteEvents = deleteEventsChannel.receiveAsFlow()
 
     private var queueStatusJob: Job? = null
 
@@ -125,6 +131,30 @@ constructor(
         }
     }
 
+    private fun deleteItem(cascadeToPvr: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.deleteItem(movieId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                deleteEventsChannel.send(DeleteItemEvent.Failed(e.message))
+                return@launch
+            }
+            // The Jellyfin delete already succeeded at this point - a failed PVR cascade is
+            // logged, not surfaced as a failure, so the user isn't told the whole action failed
+            // when only this best-effort cleanup step didn't.
+            if (cascadeToPvr) {
+                _state.value.movie?.tmdbId?.let { tmdbId ->
+                    radarrSearchRepository
+                        .deleteMovieByTmdbId(tmdbId)
+                        .onFailure { Timber.w(it, "Failed to cascade movie delete to Radarr") }
+                }
+            }
+            deleteEventsChannel.send(DeleteItemEvent.Deleted)
+        }
+    }
+
     private fun grabRelease(release: PvrRelease) {
         viewModelScope.launch {
             val result = radarrSearchRepository.grabRelease(release)
@@ -179,6 +209,7 @@ constructor(
                     loadMovie(movieId)
                 }
             }
+            is MovieAction.DeleteItem -> deleteItem(action.cascadeToPvr)
             is MovieAction.SearchMovieAutomatic -> searchMovieAutomatic()
             is MovieAction.OpenReleasePicker -> openReleasePicker()
             is MovieAction.GrabRelease -> grabRelease(action.release)

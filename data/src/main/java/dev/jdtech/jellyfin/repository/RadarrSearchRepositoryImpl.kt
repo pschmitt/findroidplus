@@ -93,6 +93,14 @@ class RadarrSearchRepositoryImpl(
                 releaseCache.clear()
             }
 
+    override suspend fun deleteMovieByTmdbId(tmdbId: String): Result<Unit> =
+        runAction { api ->
+            val movieId =
+                api.getMovie().firstOrNull { it.tmdbId.toString() == tmdbId }?.id
+                    ?: throw IllegalArgumentException("Could not find this movie in Radarr")
+            api.deleteMovie(movieId, deleteFiles = true, addImportExclusion = true)
+        }
+
     private suspend fun <T> runAction(block: suspend (RadarrApi) -> T): Result<T> {
         val api = api() ?: return Result.failure(IllegalStateException("Radarr is not configured"))
         return try {

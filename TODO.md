@@ -1359,57 +1359,58 @@ Status: **done** (2026-07-22). Verified via remote
 `:modes:film:compileDebugKotlin`, `:core:compileLibreDebugKotlin`, and
 `ktfmtCheck` on rofl-13. No Room schema changes in this feature.
 
-## FINDROID-38: Delete show/movie from the Jellyfin server (with cascade options)
+## FINDROID-38: Delete show/movie/episode from the Jellyfin server (with cascade options)
 
-Only local downloads can be deleted today - there's no way to remove a
-movie/show from the Jellyfin library itself from within the app.
+Only local downloads could be deleted before this - no way to remove an
+item from the Jellyfin library itself from within the app.
 
-- [ ] Add a "Delete from server" action on Movie/Show screens (Season/
-      Episode probably shouldn't get this - deleting a single episode from
-      the library is a much rarer/riskier operation than an entire show or
-      movie; scope to Movie + Show only unless later feedback says
-      otherwise).
-- [ ] Big, unambiguous warning dialog before it fires - modeled on the
-      existing `DeleteDownloadDialog`/`ClearDownloadsDialog`
-      (`app/phone/.../presentation/film/components/`), but should read
-      distinctly more severe than "delete download" (this removes the item
-      from Jellyfin's library entirely, not just the on-device copy) -
-      consider requiring the user to type the item's name or similar
-      friction, given how destructive and irreversible this is.
-- [ ] Cascade options presented alongside the warning, not applied silently:
-      - Also delete/unmonitor the series or movie in Sonarr/Radarr, so it
-        doesn't just get re-grabbed on the next scan. **Not yet
-        implemented** - `SonarrApi.kt`/`RadarrApi.kt` only have
-        `deleteQueueItem` today (cancels an in-progress download, not the
-        library entry itself); a `deleteSeries`/`deleteMovie` client method
-        would need adding, following the same `execute(url, delete = true)`
-        pattern, with Sonarr/Radarr's real `deleteFiles`/
-        `addImportExclusion`-style params.
-      - Alternative/additional option: just mark unwatched instead of a full
-        delete (already implemented - `JellyfinRepository.markAsUnplayed`,
-        wired as `UnmarkAsPlayed` actions across Movie/Show/Season/Episode) -
-        offer this as a lighter-weight sibling action in the same flow
-        rather than making delete-from-server the only way to "reset" an
-        item.
-- [ ] Server-side delete itself needs new plumbing: `LibraryApi.deleteItem`/
-      `deleteItems` already exist in the underlying `jellyfin-sdk-kotlin` but
-      aren't exposed anywhere in this app - `JellyfinApi.kt` only binds
-      `itemsApi`/`playStateApi`/`userLibraryApi` today. Needs a `libraryApi`
-      binding, a `JellyfinRepository.deleteItem(itemId)` method (real impl
-      in `JellyfinRepositoryImpl`, stub/error in the offline repo), and
-      local cleanup of any downloaded copy + DB rows for the deleted item
-      (don't leave orphaned `sources`/`userdata` rows referencing a server
-      item that no longer exists).
-- [ ] Requires the current Jellyfin user to actually have delete permission
-      ("Allow this user to delete media" policy) - the action should
-      probably be hidden entirely rather than shown-then-rejected if the
-      user's permissions don't allow it, if the SDK/API exposes that check.
+- [x] "Delete from Jellyfin" action added to Movie, Show, *and* Episode
+      (scope widened from the original movie/show-only proposal below, per
+      explicit user request - a single-episode delete is real and wanted,
+      not just a rarer edge case). Lives in a new `ItemOverflowMenu` (⋮,
+      `ItemTopBar`'s actions row, next to Settings) rather than the main
+      `ItemButtonsBar` tile row - deliberately less prominent than the other
+      actions. The existing Sonarr/Radarr manual-search entry points (were
+      `PvrSearchButton` tiles in `ItemButtonsBar`) moved into the same menu
+      on Movie/Episode, on the reasoning that both are "rare, one-off
+      actions" that belong together.
+- [x] Confirmation dialog (`DeleteItemDialog`) - a clear warning message
+      plus a text field that must contain exactly "YES" before the Delete
+      button enables, and (when applicable) an opt-in "also remove from
+      Sonarr/Radarr" checkbox with type-specific wording. Two independent
+      friction points rather than one, given how destructive this is -
+      chosen over two sequential dialogs as the simpler shape.
+- [x] Cascade to Sonarr/Radarr implemented: `SonarrApi.deleteSeries`/
+      `RadarrApi.deleteMovie` (delete + files + import-list exclusion,
+      following the existing `execute(url, delete = true)` pattern) for
+      Show/Movie. Episode is different - Sonarr has no per-episode
+      delete/exclude, so its cascade is `SonarrApi.setEpisodesMonitored`
+      (unmonitor) instead, via a new `PUT /api/v3/episode/monitor` request
+      (added `put` support to the shared `execute()` helper). A cascade
+      failure is logged, not surfaced as an overall failure - the Jellyfin
+      delete already succeeded by that point.
+- [x] Server-side delete plumbing: `JellyfinApi.libraryApi` binding added,
+      `JellyfinRepository.deleteItem(itemId)` (real impl calls
+      `libraryApi.deleteItem`; offline repo throws - deleting has no
+      "queue for later sync" equivalent the way favorite/played do).
+- [ ] **Not yet done**: local cleanup of any downloaded copy + DB rows for
+      an item after it's deleted server-side - a since-deleted item that
+      was also downloaded locally is left as an orphaned entry today
+      (`clearDownloads()` in `core/.../utils/DownloadCleanup.kt` is the
+      obvious existing tool for this, just not wired into the new delete
+      flow yet). Low-severity - it doesn't crash anything, and the existing
+      per-item "Delete download" action already cleans this up manually.
+- [ ] **Not yet done**: gating the action on the current Jellyfin user's
+      delete permission ("Allow this user to delete media" policy) -
+      right now a user without permission sees the action, and it fails
+      with a toast (via the existing error path) rather than being hidden
+      up front.
 
-Status: not started (flagged 2026-07-25) - surfaced during a UI-consistency
-pass, not yet designed in detail. Open questions: exact scope (movie/show
-only vs. season/episode too), cascade UX (single dialog with checkboxes vs.
-sequential prompts), and whether to gate on server-reported delete
-permission before showing the action at all.
+Status: **mostly done** (2026-07-26) - the core feature (delete + confirm +
+PVR cascade) is implemented and verified via remote
+`:app:phone:compileLibreDebugKotlin`/`ktfmtCheck` on rofl-13, and installed
+for manual testing. The two unchecked items above are known, scoped
+follow-ups, not blockers to using the feature.
 
 ## FINDROID-39: UI consistency pass round 2 + calendar preload
 

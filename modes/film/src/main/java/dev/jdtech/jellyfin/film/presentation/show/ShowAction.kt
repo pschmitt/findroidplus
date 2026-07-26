@@ -25,6 +25,8 @@ sealed interface ShowAction {
 
     data class DeleteShowDownloads(val alsoRemoveRules: Boolean) : ShowAction
 
+    data class DeleteItem(val cascadeToPvr: Boolean) : ShowAction
+
     data object OnBackClick : ShowAction
 
     data object OnHomeClick : ShowAction

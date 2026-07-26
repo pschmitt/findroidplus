@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
@@ -55,6 +58,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
+import dev.jdtech.jellyfin.presentation.film.components.DeleteItemDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.InfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
@@ -63,6 +67,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
+import dev.jdtech.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -74,6 +79,7 @@ import dev.jdtech.jellyfin.utils.formatCalendarDate
 import dev.jdtech.jellyfin.utils.formatCalendarTime
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import dev.jdtech.jellyfin.utils.getShowDateString
+import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
 
@@ -94,6 +100,27 @@ fun ShowScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.loadShow(showId = showId) }
+
+    ObserveAsEvents(viewModel.deleteEvents) { event ->
+        when (event) {
+            is DeleteItemEvent.Deleted -> {
+                Toast.makeText(androidContext, CoreR.string.item_deleted_toast, Toast.LENGTH_SHORT)
+                    .show()
+                navigateBack()
+            }
+            is DeleteItemEvent.Failed -> {
+                Toast.makeText(
+                        androidContext,
+                        androidContext.getString(
+                            CoreR.string.item_delete_failed_toast,
+                            event.message ?: androidContext.getString(CoreR.string.unknown_error),
+                        ),
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
+            }
+        }
+    }
 
     ShowScreenLayout(
         state = state,
@@ -173,6 +200,7 @@ private fun ShowScreenLayout(
 
     val scrollState = rememberScrollState()
     var clearShowDownloadsDialogOpen by remember { mutableStateOf(false) }
+    var deleteDialogOpen by remember { mutableStateOf(false) }
 
     ItemDetailScaffold(
         hasBackButton = true,
@@ -180,6 +208,29 @@ private fun ShowScreenLayout(
         onBackClick = { onAction(ShowAction.OnBackClick) },
         onHomeClick = { onAction(ShowAction.OnHomeClick) },
         onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
+        topBarExtraActions = {
+            ItemOverflowMenu { closeMenu ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(CoreR.string.delete_from_jellyfin),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    onClick = {
+                        closeMenu()
+                        deleteDialogOpen = true
+                    },
+                )
+            }
+        },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.show?.let { show ->
@@ -451,6 +502,26 @@ private fun ShowScreenLayout(
                 clearShowDownloadsDialogOpen = false
             },
             onDismiss = { clearShowDownloadsDialogOpen = false },
+        )
+    }
+
+    if (deleteDialogOpen) {
+        val pvrCascadable = state.seriesTvdbId != null && state.sonarrConfigured
+        DeleteItemDialog(
+            message = stringResource(CoreR.string.delete_show_message),
+            pvrCascadeLabel =
+                if (pvrCascadable) stringResource(CoreR.string.also_remove_from_sonarr) else null,
+            pvrCascadeSummary =
+                if (pvrCascadable) {
+                    stringResource(CoreR.string.also_remove_from_sonarr_summary)
+                } else {
+                    null
+                },
+            onConfirm = { cascadeToPvr ->
+                onAction(ShowAction.DeleteItem(cascadeToPvr))
+                deleteDialogOpen = false
+            },
+            onDismiss = { deleteDialogOpen = false },
         )
     }
 }

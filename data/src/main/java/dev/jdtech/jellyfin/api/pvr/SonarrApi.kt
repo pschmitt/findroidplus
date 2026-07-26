@@ -141,6 +141,42 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
         }
 
     /**
+     * Deletes a series from Sonarr. [deleteFiles] also removes the episode files from disk (the
+     * caller is responsible for making sure Jellyfin's own copy is gone first, otherwise this
+     * would delete files Jellyfin still thinks it owns); [addImportListExclusion] stops Sonarr's
+     * import lists from re-adding the series on their next sync (the same protection a plain
+     * delete already gets against a *manual* re-add, extended to automated ones).
+     */
+    suspend fun deleteSeries(seriesId: Int, deleteFiles: Boolean, addImportListExclusion: Boolean): Unit =
+        withContext(Dispatchers.IO) {
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "series",
+                    seriesId.toString(),
+                    queryParams =
+                        mapOf(
+                            "deleteFiles" to deleteFiles.toString(),
+                            "addImportListExclusion" to addImportListExclusion.toString(),
+                        ),
+                )
+            execute(url, delete = true)
+        }
+
+    /**
+     * Sets monitored on/off for the given episodes. There is no per-episode delete/exclude in
+     * Sonarr's API the way there is for a whole series - unmonitoring is the closest real
+     * equivalent to "don't grab this one again" for a single episode.
+     */
+    suspend fun setEpisodesMonitored(episodeIds: List<Int>, monitored: Boolean): Unit =
+        withContext(Dispatchers.IO) {
+            val url = buildUrl("api", "v3", "episode", "monitor")
+            val body = json.encodeToString(SonarrEpisodeMonitorRequest(episodeIds = episodeIds, monitored = monitored))
+            execute(url, body, put = true)
+        }
+
+    /**
      * Removes a queue item. [removeFromClient] also deletes the download (and its data) in the
      * download client; [blocklist] prevents Sonarr from grabbing the same release again. There is
      * deliberately no "pause": the v3 API exposes none - pausing lives in the download client.
@@ -198,15 +234,16 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     }
 
     /**
-     * [jsonBody] `null` issues a GET; otherwise a POST with that body as the JSON payload.
-     * [delete] issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s default read
-     * timeout for this call only.
+     * [jsonBody] `null` issues a GET; otherwise a POST (or [put], a PUT) with that body as the
+     * JSON payload. [delete] issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s
+     * default read timeout for this call only.
      */
     private fun execute(
         url: String,
         jsonBody: String? = null,
         readTimeoutMs: Long? = null,
         delete: Boolean = false,
+        put: Boolean = false,
     ): String {
         val request =
             Request.Builder()
@@ -214,6 +251,8 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
                 .apply {
                     when {
                         delete -> delete()
+                        put ->
+                            put(jsonBody.orEmpty().toRequestBody("application/json".toMediaType()))
                         jsonBody != null ->
                             post(jsonBody.toRequestBody("application/json".toMediaType()))
                         else -> get()

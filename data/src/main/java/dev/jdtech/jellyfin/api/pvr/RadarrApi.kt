@@ -116,6 +116,30 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
         }
 
     /**
+     * Deletes a movie from Radarr. [deleteFiles] also removes the movie file from disk (the
+     * caller is responsible for making sure Jellyfin's own copy is gone first, otherwise this
+     * would delete a file Jellyfin still thinks it owns); [addImportExclusion] stops Radarr's
+     * import lists from re-adding the movie on their next sync (the same protection a plain
+     * delete already gets against a *manual* re-add, extended to automated ones).
+     */
+    suspend fun deleteMovie(movieId: Int, deleteFiles: Boolean, addImportExclusion: Boolean): Unit =
+        withContext(Dispatchers.IO) {
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "movie",
+                    movieId.toString(),
+                    queryParams =
+                        mapOf(
+                            "deleteFiles" to deleteFiles.toString(),
+                            "addImportExclusion" to addImportExclusion.toString(),
+                        ),
+                )
+            execute(url, delete = true)
+        }
+
+    /**
      * Removes a queue item. [removeFromClient] also deletes the download (and its data) in the
      * download client; [blocklist] prevents Radarr from grabbing the same release again. There is
      * deliberately no "pause": the v3 API exposes none - pausing lives in the download client.

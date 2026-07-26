@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -37,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderAction
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
@@ -48,20 +51,20 @@ import dev.jdtech.jellyfin.film.presentation.movie.MovieAction
 import dev.jdtech.jellyfin.film.presentation.movie.MovieState
 import dev.jdtech.jellyfin.film.presentation.movie.MovieViewModel
 import dev.jdtech.jellyfin.models.FindroidSourceType
-import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
+import dev.jdtech.jellyfin.presentation.film.components.DeleteItemDialog
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.InfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
+import dev.jdtech.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
-import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.QueueBadge
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -105,6 +108,26 @@ fun MovieScreen(
                 } else {
                     viewModel.loadMovie(movieId = movieId)
                 }
+            }
+        }
+    }
+
+    ObserveAsEvents(viewModel.deleteEvents) { event ->
+        when (event) {
+            is DeleteItemEvent.Deleted -> {
+                Toast.makeText(context, CoreR.string.item_deleted_toast, Toast.LENGTH_SHORT).show()
+                navigateBack()
+            }
+            is DeleteItemEvent.Failed -> {
+                Toast.makeText(
+                        context,
+                        context.getString(
+                            CoreR.string.item_delete_failed_toast,
+                            event.message ?: context.getString(CoreR.string.unknown_error),
+                        ),
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
             }
         }
     }
@@ -191,6 +214,7 @@ private fun MovieScreenLayout(
 
     val scrollState = rememberScrollState()
     var infoDialogOpen by remember { mutableStateOf(false) }
+    var deleteDialogOpen by remember { mutableStateOf(false) }
 
     ItemDetailScaffold(
         hasBackButton = true,
@@ -198,6 +222,48 @@ private fun MovieScreenLayout(
         onBackClick = { onAction(MovieAction.OnBackClick) },
         onHomeClick = { onAction(MovieAction.OnHomeClick) },
         onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
+        topBarExtraActions = {
+            val movie = state.movie
+            val pvrSearchable = movie?.tmdbId != null && state.radarrConfigured
+            ItemOverflowMenu { closeMenu ->
+                if (pvrSearchable) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CoreR.string.search_episode_automatic)) },
+                        onClick = {
+                            closeMenu()
+                            onAction(MovieAction.SearchMovieAutomatic)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CoreR.string.search_episode_manual)) },
+                        onClick = {
+                            closeMenu()
+                            onAction(MovieAction.OpenReleasePicker)
+                        },
+                    )
+                    HorizontalDivider()
+                }
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(CoreR.string.delete_from_jellyfin),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    onClick = {
+                        closeMenu()
+                        deleteDialogOpen = true
+                    },
+                )
+            }
+        },
     ) {
         // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
         // language across the whole app instead of a screen-specific spinner.
@@ -313,20 +379,6 @@ private fun MovieScreenLayout(
                             onDownloaderAction(DownloaderAction.ResumeDownload)
                         },
                         onDownloadDeleteClick = deleteDownload,
-                        trailingContent = {
-                            if (movie.tmdbId != null && state.radarrConfigured) {
-                                PvrSearchButton(
-                                    service = PvrSource.RADARR,
-                                    onAutomaticSearch = {
-                                        onAction(MovieAction.SearchMovieAutomatic)
-                                    },
-                                    onManualSearch = { onAction(MovieAction.OpenReleasePicker) },
-                                    contentDescription =
-                                        stringResource(CoreR.string.search_movie),
-                                    label = stringResource(CoreR.string.search_movie),
-                                )
-                            }
-                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     downloadedSource?.let { source ->
@@ -349,6 +401,29 @@ private fun MovieScreenLayout(
                             downloadedFilePath =
                                 downloadedSource?.path?.takeUnless { it.endsWith(".download") },
                             onDismiss = { infoDialogOpen = false },
+                        )
+                    }
+                    if (deleteDialogOpen) {
+                        val pvrSearchable = movie.tmdbId != null && state.radarrConfigured
+                        DeleteItemDialog(
+                            message = stringResource(CoreR.string.delete_movie_message),
+                            pvrCascadeLabel =
+                                if (pvrSearchable) {
+                                    stringResource(CoreR.string.also_remove_from_radarr)
+                                } else {
+                                    null
+                                },
+                            pvrCascadeSummary =
+                                if (pvrSearchable) {
+                                    stringResource(CoreR.string.also_remove_from_radarr_summary)
+                                } else {
+                                    null
+                                },
+                            onConfirm = { cascadeToPvr ->
+                                onAction(MovieAction.DeleteItem(cascadeToPvr))
+                                deleteDialogOpen = false
+                            },
+                            onDismiss = { deleteDialogOpen = false },
                         )
                     }
                     OverviewText(text = movie.overview, maxCollapsedLines = 3)

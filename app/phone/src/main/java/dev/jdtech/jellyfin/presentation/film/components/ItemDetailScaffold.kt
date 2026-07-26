@@ -23,6 +23,7 @@ fun ItemDetailScaffold(
     onHomeClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     topBarContent: @Composable (RowScope.() -> Unit) = {},
+    topBarExtraActions: @Composable (RowScope.() -> Unit) = {},
     content: @Composable (BoxScope.() -> Unit),
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -33,6 +34,7 @@ fun ItemDetailScaffold(
             onHomeClick = onHomeClick,
             onSettingsClick = onSettingsClick,
             content = topBarContent,
+            extraActions = topBarExtraActions,
         )
         Box(modifier = Modifier.fillMaxSize(), content = content)
     }

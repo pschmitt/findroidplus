@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.film.presentation.show
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
@@ -15,6 +16,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.toFindroidEpisode
+import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
@@ -22,6 +24,7 @@ import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.PendingDownloadRequestRepository
 import dev.jdtech.jellyfin.repository.SeasonEpisodesRepository
 import dev.jdtech.jellyfin.repository.SeerrRepository
+import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
@@ -30,10 +33,13 @@ import dev.jdtech.jellyfin.utils.clearDownloads
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.ItemFields
@@ -53,10 +59,15 @@ constructor(
     private val seasonEpisodesRepository: SeasonEpisodesRepository,
     private val seerrRepository: SeerrRepository,
     private val pendingDownloadRequestRepository: PendingDownloadRequestRepository,
+    private val sonarrSearchRepository: SonarrSearchRepository,
+    private val pvrConfiguration: PvrConfiguration,
     @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShowState())
     val state = _state.asStateFlow()
+
+    private val deleteEventsChannel = Channel<DeleteItemEvent>()
+    val deleteEvents = deleteEventsChannel.receiveAsFlow()
 
     private val evaluator = AutoDownloadRuleEvaluator()
 
@@ -92,6 +103,7 @@ constructor(
                         downloadsSizeBytes = downloadsSizeBytes,
                         seriesTvdbId = show.tvdbId,
                         seriesTmdbId = show.tmdbId?.toIntOrNull(),
+                        sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
                         isRefreshing = false,
                     )
                 )
@@ -296,6 +308,30 @@ constructor(
         }
     }
 
+    private fun deleteItem(cascadeToPvr: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.deleteItem(showId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                deleteEventsChannel.send(DeleteItemEvent.Failed(e.message))
+                return@launch
+            }
+            // The Jellyfin delete already succeeded at this point - a failed PVR cascade is
+            // logged, not surfaced as a failure, so the user isn't told the whole action failed
+            // when only this best-effort cleanup step didn't.
+            if (cascadeToPvr) {
+                _state.value.seriesTvdbId?.let { tvdbId ->
+                    sonarrSearchRepository
+                        .deleteSeriesByTvdbId(tvdbId)
+                        .onFailure { Timber.w(it, "Failed to cascade show delete to Sonarr") }
+                }
+            }
+            deleteEventsChannel.send(DeleteItemEvent.Deleted)
+        }
+    }
+
     private suspend fun getNextUp(showId: UUID): FindroidEpisode? {
         val nextUpItems = repository.getNextUp(showId)
         return nextUpItems.getOrNull(0)
@@ -360,6 +396,7 @@ constructor(
             is ShowAction.DownloadWithScope ->
                 downloadWithScope(action.selection, action.alsoFollowNew, action.onlyUnwatched)
             is ShowAction.DeleteShowDownloads -> deleteShowDownloads(action.alsoRemoveRules)
+            is ShowAction.DeleteItem -> deleteItem(action.cascadeToPvr)
             is ShowAction.ToggleSeasonQueued -> toggleSeasonQueued(action.seasonNumber)
             else -> Unit
         }

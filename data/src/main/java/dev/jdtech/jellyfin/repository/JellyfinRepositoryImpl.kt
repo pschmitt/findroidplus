@@ -566,6 +566,10 @@ class JellyfinRepositoryImpl(
         }
     }
 
+    override suspend fun deleteItem(itemId: UUID) {
+        withContext(Dispatchers.IO) { jellyfinApi.libraryApi.deleteItem(itemId) }
+    }
+
     override fun getBaseUrl() = jellyfinApi.api.baseUrl.orEmpty()
 
     override suspend fun updateDeviceName(name: String) {

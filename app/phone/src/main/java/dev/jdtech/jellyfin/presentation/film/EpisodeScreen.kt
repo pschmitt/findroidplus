@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -39,6 +41,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.delete.DeleteItemEvent
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderAction
@@ -55,16 +58,16 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
-import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
 import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
-import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
+import dev.jdtech.jellyfin.presentation.film.components.DeleteItemDialog
 import dev.jdtech.jellyfin.presentation.film.components.InfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
+import dev.jdtech.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
@@ -129,6 +132,26 @@ fun EpisodeScreen(
                     )
             }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    ObserveAsEvents(viewModel.deleteEvents) { event ->
+        when (event) {
+            is DeleteItemEvent.Deleted -> {
+                Toast.makeText(context, CoreR.string.item_deleted_toast, Toast.LENGTH_SHORT).show()
+                navigateBack()
+            }
+            is DeleteItemEvent.Failed -> {
+                Toast.makeText(
+                        context,
+                        context.getString(
+                            CoreR.string.item_delete_failed_toast,
+                            event.message ?: context.getString(CoreR.string.unknown_error),
+                        ),
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
+            }
+        }
     }
 
     EpisodeScreenLayout(
@@ -200,6 +223,7 @@ private fun EpisodeScreenLayout(
 
     val scrollState = rememberScrollState()
     var infoDialogOpen by remember { mutableStateOf(false) }
+    var deleteDialogOpen by remember { mutableStateOf(false) }
 
     ItemDetailScaffold(
         hasBackButton = true,
@@ -220,6 +244,47 @@ private fun EpisodeScreenLayout(
                         Modifier.clickable {
                             onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
                         },
+                )
+            }
+        },
+        topBarExtraActions = {
+            val pvrSearchable = state.seriesTvdbId != null && state.sonarrConfigured
+            ItemOverflowMenu { closeMenu ->
+                if (pvrSearchable) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CoreR.string.search_episode_automatic)) },
+                        onClick = {
+                            closeMenu()
+                            onAction(EpisodeAction.SearchEpisodeAutomatic)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CoreR.string.search_episode_manual)) },
+                        onClick = {
+                            closeMenu()
+                            onAction(EpisodeAction.OpenReleasePicker)
+                        },
+                    )
+                    HorizontalDivider()
+                }
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(CoreR.string.delete_from_jellyfin),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    onClick = {
+                        closeMenu()
+                        deleteDialogOpen = true
+                    },
                 )
             }
         },
@@ -373,18 +438,6 @@ private fun EpisodeScreenLayout(
                                 )
                             )
                         },
-                        trailingContent = {
-                            if (state.seriesTvdbId != null && state.sonarrConfigured) {
-                                PvrSearchButton(
-                                    service = PvrSource.SONARR,
-                                    onAutomaticSearch = {
-                                        onAction(EpisodeAction.SearchEpisodeAutomatic)
-                                    },
-                                    onManualSearch = { onAction(EpisodeAction.OpenReleasePicker) },
-                                    label = stringResource(CoreR.string.search_episode),
-                                )
-                            }
-                        },
                         excludeFromAutoDelete = downloadedSource?.excludeFromAutoDelete == true,
                         onToggleExcludeFromAutoDeleteClick =
                             if (state.autoDeleteWatchedEnabled) {
@@ -420,6 +473,29 @@ private fun EpisodeScreenLayout(
                             downloadedFilePath =
                                 downloadedSource?.path?.takeUnless { it.endsWith(".download") },
                             onDismiss = { infoDialogOpen = false },
+                        )
+                    }
+                    if (deleteDialogOpen) {
+                        val pvrCascadable = state.seriesTvdbId != null && state.sonarrConfigured
+                        DeleteItemDialog(
+                            message = stringResource(CoreR.string.delete_episode_message),
+                            pvrCascadeLabel =
+                                if (pvrCascadable) {
+                                    stringResource(CoreR.string.also_unmonitor_in_sonarr)
+                                } else {
+                                    null
+                                },
+                            pvrCascadeSummary =
+                                if (pvrCascadable) {
+                                    stringResource(CoreR.string.also_unmonitor_in_sonarr_summary)
+                                } else {
+                                    null
+                                },
+                            onConfirm = { cascadeToPvr ->
+                                onAction(EpisodeAction.DeleteItem(cascadeToPvr))
+                                deleteDialogOpen = false
+                            },
+                            onDismiss = { deleteDialogOpen = false },
                         )
                     }
                     OverviewText(text = episode.overview)

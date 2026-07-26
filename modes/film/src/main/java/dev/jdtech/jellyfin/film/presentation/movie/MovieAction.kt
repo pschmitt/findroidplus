@@ -24,6 +24,8 @@ sealed interface MovieAction {
 
     data object UnmarkAsFavorite : MovieAction
 
+    data class DeleteItem(val cascadeToPvr: Boolean) : MovieAction
+
     data object OnBackClick : MovieAction
 
     data object OnHomeClick : MovieAction

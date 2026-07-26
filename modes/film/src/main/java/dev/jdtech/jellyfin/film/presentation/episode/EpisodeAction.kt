@@ -15,6 +15,8 @@ sealed interface EpisodeAction {
 
     data object UnmarkAsFavorite : EpisodeAction
 
+    data class DeleteItem(val cascadeToPvr: Boolean) : EpisodeAction
+
     data class DownloadWithScope(
         val selection: DownloadSelection,
         val alsoFollowNew: Boolean,
