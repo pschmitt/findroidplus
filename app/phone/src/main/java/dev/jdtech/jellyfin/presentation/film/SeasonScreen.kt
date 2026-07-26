@@ -16,7 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
@@ -55,7 +57,9 @@ import dev.jdtech.jellyfin.presentation.components.TopBarTitle
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.EpisodeCard
+import dev.jdtech.jellyfin.presentation.film.components.AggregateInfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
+import dev.jdtech.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
@@ -187,6 +191,7 @@ private fun SeasonScreenLayout(
     val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
     var clearSeasonDownloadsDialogOpen by remember { mutableStateOf(false) }
+    var infoDialogOpen by remember { mutableStateOf(false) }
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
     val paddingEnd = safePadding.end + MaterialTheme.spacings.default
@@ -340,6 +345,21 @@ private fun SeasonScreenLayout(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 )
                             }
+                            ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(CoreR.string.info)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_info),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        infoDialogOpen = true
+                                    },
+                                )
+                            }
                         },
                     )
                 }
@@ -449,6 +469,14 @@ private fun SeasonScreenLayout(
                 clearSeasonDownloadsDialogOpen = false
             },
             onDismiss = { clearSeasonDownloadsDialogOpen = false },
+        )
+    }
+
+    if (infoDialogOpen) {
+        AggregateInfoDialog(
+            episodeCount = state.episodes.size,
+            downloadedSizeBytes = state.downloadsSizeBytes,
+            onDismiss = { infoDialogOpen = false },
         )
     }
 

@@ -33,9 +33,10 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
  * Confirmation for permanently deleting an item from the Jellyfin server - a much heavier action
  * than [ClearDownloadsDialog] (which only ever touches this device's local copy), so it asks for
  * two independent points of friction rather than one: an explicit opt-in cascade checkbox (default
- * off) and a text field that must contain exactly "YES" before the Delete button enables. Not
- * localized ("YES" stays literal) - it's a deliberate low-level confirmation gesture, not user-
- * facing copy.
+ * on by default, so a plain delete doesn't quietly leave the item to be re-grabbed on the next
+ * Sonarr/Radarr scan) and a text field that must contain exactly "YES" before the Delete button
+ * enables. Not localized ("YES" stays literal) - it's a deliberate low-level confirmation gesture,
+ * not user-facing copy.
  */
 @Composable
 fun DeleteItemDialog(
@@ -48,7 +49,7 @@ fun DeleteItemDialog(
     pvrCascadeSummary: String? = null,
 ) {
     var confirmText by remember { mutableStateOf("") }
-    var cascadeChecked by remember { mutableStateOf(false) }
+    var cascadeChecked by remember { mutableStateOf(true) }
     val confirmEnabled = confirmText == "YES"
 
     AlertDialog(

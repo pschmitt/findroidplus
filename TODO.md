@@ -1474,3 +1474,46 @@ Status: **done** (2026-07-26). Verified via remote
 `:core:compileLibreDebugKotlin`, and `ktfmtCheck` on rofl-13, plus CI-signed
 installs on all three test devices (Mi Pad 4, Pixel 5, ASUS Zenfone) after
 each change. No Room schema changes in this batch.
+
+## FINDROID-40: Overflow menu placement/scope follow-ups + Watch/Favorite consistency
+
+Fast-follow adjustments to FINDROID-38's new `ItemOverflowMenu`, plus a
+couple of unrelated small consistency fixes that landed in the same
+session.
+
+- [x] Show/Season watch-toggle (mark played/favorite) switched from
+      separate `ItemButtonsBar` tiles to the shared `ItemMetaRow` toggles,
+      matching Movie/Episode - was the last inconsistency after FINDROID-38
+      touched the other two screens' `ItemButtonsBar` usage.
+- [x] Toast on mark watched/unwatched and favorite/unfavorite, across all
+      four detail screens - these toggles previously gave no feedback
+      beyond the icon itself changing.
+- [x] `ItemOverflowMenu` moved from `ItemTopBar` (next to Settings) into
+      `ItemButtonsBar`'s `trailingContent` (right side of the action-tile
+      row) - the header placement read as out-of-place once tried. Applies
+      to Movie/Show/Episode; the now-unused `ItemTopBar`/`ItemDetailScaffold`
+      `extraActions`/`topBarExtraActions` plumbing was reverted rather than
+      left as dead code.
+- [x] The movie/episode "Info" (video metadata) action - previously its own
+      circular icon overlaid on the poster - also moved into the same
+      overflow menu, dropped from the header entirely.
+- [x] Manual/automatic Sonarr/Radarr search entries in the overflow menu
+      are now always offered on Movie/Episode, not hidden when Sonarr/
+      Radarr isn't configured or the item has no resolvable tvdbId/tmdbId -
+      a search that can't resolve a target fails with a clear toast instead
+      of the entry silently vanishing. Renamed the two entries to the
+      shorter "Search (auto)"/"Search (manual)" (was "Search automatically"/
+      "Search manually…").
+- [x] Show and Season previously had no "Info" action at all (they never
+      had per-file video metadata to show, unlike Movie/Episode). Added one
+      with different content: episode count + total downloaded size for
+      that show/season, via a new `AggregateInfoDialog` (not `InfoDialog`/
+      `VideoMetadataParser`, which are per-source). `ShowState` gained an
+      `episodeCount` field (computed alongside `downloadsSizeBytes` in one
+      DB pass); Season already had `episodes`/`downloadsSizeBytes` in state.
+
+Status: **done** (2026-07-27). Verified via remote
+`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
+CI-signed installs on all three test devices. FINDROID-38's two remaining
+follow-ups (Seerr cascade, local download cleanup, permission gating) are
+tracked in that entry, not here.

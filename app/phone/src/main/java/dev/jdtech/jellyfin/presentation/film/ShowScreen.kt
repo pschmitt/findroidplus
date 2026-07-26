@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +58,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
+import dev.jdtech.jellyfin.presentation.film.components.AggregateInfoDialog
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.DeleteItemDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
@@ -201,6 +203,7 @@ private fun ShowScreenLayout(
     val scrollState = rememberScrollState()
     var clearShowDownloadsDialogOpen by remember { mutableStateOf(false) }
     var deleteDialogOpen by remember { mutableStateOf(false) }
+    var infoDialogOpen by remember { mutableStateOf(false) }
 
     ItemDetailScaffold(
         hasBackButton = true,
@@ -208,29 +211,6 @@ private fun ShowScreenLayout(
         onBackClick = { onAction(ShowAction.OnBackClick) },
         onHomeClick = { onAction(ShowAction.OnHomeClick) },
         onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
-        topBarExtraActions = {
-            ItemOverflowMenu { closeMenu ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(CoreR.string.delete_from_jellyfin),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_trash),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    onClick = {
-                        closeMenu()
-                        deleteDialogOpen = true
-                    },
-                )
-            }
-        },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
         state.show?.let { show ->
@@ -338,6 +318,41 @@ private fun ShowScreenLayout(
                                             ?: stringResource(CoreR.string.clear_show_downloads),
                                     onClick = { clearShowDownloadsDialogOpen = true },
                                     contentColor = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                            ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(CoreR.string.info)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_info),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        infoDialogOpen = true
+                                    },
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(CoreR.string.delete_from_jellyfin),
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_trash),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        deleteDialogOpen = true
+                                    },
                                 )
                             }
                         },
@@ -522,6 +537,14 @@ private fun ShowScreenLayout(
                 deleteDialogOpen = false
             },
             onDismiss = { deleteDialogOpen = false },
+        )
+    }
+
+    if (infoDialogOpen) {
+        AggregateInfoDialog(
+            episodeCount = state.episodeCount,
+            downloadedSizeBytes = state.downloadsSizeBytes,
+            onDismiss = { infoDialogOpen = false },
         )
     }
 }

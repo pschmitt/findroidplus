@@ -37,8 +37,6 @@ fun ItemTopBar(
     onHomeClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     content: @Composable (RowScope.() -> Unit) = {},
-    // Rendered before the Settings button - e.g. ItemOverflowMenu on Movie/Show/Episode.
-    extraActions: @Composable (RowScope.() -> Unit) = {},
 ) {
     // Same breakpoint NavigationRoot uses to decide the nav rail is always visible.
     val isTablet =
@@ -66,7 +64,6 @@ fun ItemTopBar(
             }
         },
         actions = {
-            extraActions()
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_settings),

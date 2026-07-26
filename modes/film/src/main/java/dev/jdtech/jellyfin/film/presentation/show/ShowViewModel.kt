@@ -87,7 +87,7 @@ constructor(
                 val writers = getWriters(show)
                 val autoDownloadEnabled = isAutoDownloadEnabled(showId)
                 val existingScope = getExistingScope(showId)
-                val downloadsSizeBytes = downloadsSizeBytes(showId)
+                val (episodeCount, downloadsSizeBytes) = episodeCountAndDownloadsSizeBytes(showId)
                 _state.emit(
                     _state.value.copy(
                         show = show,
@@ -101,6 +101,7 @@ constructor(
                         existingScope = existingScope,
                         hasDownloads = downloadsSizeBytes > 0,
                         downloadsSizeBytes = downloadsSizeBytes,
+                        episodeCount = episodeCount,
                         seriesTvdbId = show.tvdbId,
                         seriesTmdbId = show.tmdbId?.toIntOrNull(),
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
@@ -279,14 +280,18 @@ constructor(
         }
     }
 
-    private suspend fun downloadsSizeBytes(showId: UUID): Long =
+    /** Total episode count and downloaded size, in one pass over the show's episodes. */
+    private suspend fun episodeCountAndDownloadsSizeBytes(showId: UUID): Pair<Int, Long> =
         withContext(Dispatchers.IO) {
-            database.getEpisodesByShowId(showId).sumOf { episode ->
-                database
-                    .getSources(episode.id)
-                    .filter { it.type == FindroidSourceType.LOCAL }
-                    .sumOf { File(it.path).length() }
-            }
+            val episodes = database.getEpisodesByShowId(showId)
+            val sizeBytes =
+                episodes.sumOf { episode ->
+                    database
+                        .getSources(episode.id)
+                        .filter { it.type == FindroidSourceType.LOCAL }
+                        .sumOf { File(it.path).length() }
+                }
+            episodes.size to sizeBytes
         }
 
     private fun deleteShowDownloads(alsoRemoveRules: Boolean) {

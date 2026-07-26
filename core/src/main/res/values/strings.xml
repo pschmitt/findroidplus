@@ -326,6 +326,11 @@
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
+    <plurals name="aggregate_info_episode_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <string name="aggregate_info_downloaded_size">%1$s downloaded to this device</string>
     <string name="download_scope_low_space_warning">Not enough free space (needs %1$s, %2$s available)</string>
     <string name="download">Download</string>
     <string name="clear_season_downloads">Delete downloads</string>
@@ -410,8 +415,8 @@
     <string name="search_movie">Search movie</string>
     <string name="search_movie_in_radarr_automatic">Search (auto)</string>
     <string name="search_movie_in_radarr_manual">Search (manual)</string>
-    <string name="search_episode_automatic">Search automatically</string>
-    <string name="search_episode_manual">Search manually…</string>
+    <string name="search_episode_automatic">Search (auto)</string>
+    <string name="search_episode_manual">Search (manual)</string>
     <string name="search_triggered_toast">Search started</string>
     <string name="sonarr_search_started_toast">Sonarr automatic search started</string>
     <string name="radarr_search_started_toast">Radarr automatic search started</string>

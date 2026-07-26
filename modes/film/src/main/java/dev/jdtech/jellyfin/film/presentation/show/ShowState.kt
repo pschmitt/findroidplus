@@ -28,6 +28,9 @@ data class ShowState(
     val existingScope: ExistingAutoDownloadScope = ExistingAutoDownloadScope(),
     val hasDownloads: Boolean = false,
     val downloadsSizeBytes: Long = 0L,
+    // Total episode count across every season - drives the aggregate Info dialog (there's no
+    // single video file's metadata to show at the show level, unlike Movie/Episode).
+    val episodeCount: Int = 0,
     // The show's tvdb/tmdb ids, fetched once per loadShow() - tvdbId to resolve missingSeasons,
     // tmdbId to open the Seerr detail view when the user taps a missing-season placeholder.
     val seriesTvdbId: String? = null,

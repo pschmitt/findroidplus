@@ -15,8 +15,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -222,48 +219,6 @@ private fun MovieScreenLayout(
         onBackClick = { onAction(MovieAction.OnBackClick) },
         onHomeClick = { onAction(MovieAction.OnHomeClick) },
         onSettingsClick = { onAction(MovieAction.OnSettingsClick) },
-        topBarExtraActions = {
-            val movie = state.movie
-            val pvrSearchable = movie?.tmdbId != null && state.radarrConfigured
-            ItemOverflowMenu { closeMenu ->
-                if (pvrSearchable) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(CoreR.string.search_episode_automatic)) },
-                        onClick = {
-                            closeMenu()
-                            onAction(MovieAction.SearchMovieAutomatic)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(CoreR.string.search_episode_manual)) },
-                        onClick = {
-                            closeMenu()
-                            onAction(MovieAction.OpenReleasePicker)
-                        },
-                    )
-                    HorizontalDivider()
-                }
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(CoreR.string.delete_from_jellyfin),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_trash),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    onClick = {
-                        closeMenu()
-                        deleteDialogOpen = true
-                    },
-                )
-            }
-        },
     ) {
         // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
         // language across the whole app instead of a screen-specific spinner.
@@ -281,24 +236,6 @@ private fun MovieScreenLayout(
                             isDeleting = downloaderState.isDeleting,
                             modifier = Modifier.align(Alignment.Center),
                         )
-                        if (state.videoMetadata != null) {
-                            IconButton(
-                                onClick = { infoDialogOpen = true },
-                                modifier =
-                                    Modifier.align(Alignment.BottomEnd)
-                                        .padding(end = paddingEnd),
-                                colors =
-                                    IconButtonDefaults.iconButtonColors(
-                                        containerColor = Color.Black.copy(alpha = 0.7f),
-                                        contentColor = Color.White,
-                                    ),
-                            ) {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_info),
-                                    contentDescription = stringResource(CoreR.string.info),
-                                )
-                            }
-                        }
                     },
                 )
                 Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
@@ -379,6 +316,66 @@ private fun MovieScreenLayout(
                             onDownloaderAction(DownloaderAction.ResumeDownload)
                         },
                         onDownloadDeleteClick = deleteDownload,
+                        trailingContent = {
+                            ItemOverflowMenu { closeMenu ->
+                                // Always offered, regardless of Radarr configuration/tmdbId
+                                // presence - a search that can't resolve a target fails with a
+                                // clear toast instead of the entry silently vanishing.
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(MovieAction.SearchMovieAutomatic)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_manual))
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(MovieAction.OpenReleasePicker)
+                                    },
+                                )
+                                if (state.videoMetadata != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(CoreR.string.info)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_info),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            infoDialogOpen = true
+                                        },
+                                    )
+                                }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(CoreR.string.delete_from_jellyfin),
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_trash),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        deleteDialogOpen = true
+                                    },
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     downloadedSource?.let { source ->
