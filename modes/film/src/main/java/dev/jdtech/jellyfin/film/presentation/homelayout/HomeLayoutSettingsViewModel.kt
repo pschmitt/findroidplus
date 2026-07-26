@@ -56,13 +56,13 @@ constructor(
             val labels = LinkedHashMap<String, SectionInfo>()
             val jellyfinIcons = listOf(CoreR.drawable.ic_logo)
 
-            // The PVR queue mixes Sonarr and Radarr entries directly (not through Seerr), so it
-            // only wears the icon(s) for whichever of those two are actually configured.
-            val pvrIcons =
-                buildList {
-                    if (appPreferences.getValue(appPreferences.sonarrEnabled)) add(CoreR.drawable.ic_sonarr)
-                    if (appPreferences.getValue(appPreferences.radarrEnabled)) add(CoreR.drawable.ic_radarr)
-                }
+            // This row shows Sonarr/Radarr's own download-queue data - i.e. the download client
+            // they actually hand grabbed releases off to - so it wears a download-client icon
+            // rather than the Sonarr/Radarr brand icons, same as HomeViewModel.loadPvrServiceIcons.
+            val hasQueueSource =
+                appPreferences.getValue(appPreferences.sonarrEnabled) ||
+                    appPreferences.getValue(appPreferences.radarrEnabled)
+            val pvrIcons = if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
             labels[HomeSectionKeys.ACTIVE_DOWNLOADS] =
                 SectionInfo(UiText.StringResource(CoreR.string.pvr_queue_section_title), pvrIcons)
 

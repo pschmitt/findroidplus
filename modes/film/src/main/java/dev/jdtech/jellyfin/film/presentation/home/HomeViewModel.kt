@@ -47,6 +47,7 @@ constructor(
     private val seerrRepository: SeerrRepository,
     private val pvrConfiguration: PvrConfiguration,
     private val queueStatusRepository: QueueStatusRepository,
+    private val homeCache: HomeCache,
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state = _state.asStateFlow()
@@ -64,6 +65,10 @@ constructor(
     private val uiTextFavorites = UiText.StringResource(CoreR.string.title_favorite)
 
     init {
+        // Instant first frame on a cold start - see HomeCache's kdoc. loadData() (called right
+        // after by HomeScreen's LaunchedEffect) always still runs and overwrites this.
+        homeCache.snapshot?.let(::applySnapshot)
+
         viewModelScope.launch {
             queueStatusRepository.getQueueSnapshotFlow().collectLatest { snapshot ->
                 _state.value =
@@ -75,6 +80,20 @@ constructor(
                     )
             }
         }
+    }
+
+    private fun applySnapshot(snapshot: HomeSnapshot) {
+        _state.value =
+            _state.value.copy(
+                suggestionsSection = snapshot.suggestionsSection,
+                resumeSection = snapshot.resumeSection,
+                nextUpSection = snapshot.nextUpSection,
+                favoritesSection = snapshot.favoritesSection,
+                views = snapshot.views,
+                discoverSections = snapshot.discoverSections,
+                pvrServiceIcons = snapshot.pvrServiceIcons,
+            )
+        recomputeSectionOrder()
     }
 
     fun loadData() {
@@ -95,11 +114,26 @@ constructor(
                 loadDiscover()
                 loadPvrServiceIcons()
                 recomputeSectionOrder()
+                cacheSnapshot()
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
             _state.emit(_state.value.copy(isLoading = false))
         }
+    }
+
+    private fun cacheSnapshot() {
+        val current = _state.value
+        homeCache.snapshot =
+            HomeSnapshot(
+                suggestionsSection = current.suggestionsSection,
+                resumeSection = current.resumeSection,
+                nextUpSection = current.nextUpSection,
+                favoritesSection = current.favoritesSection,
+                views = current.views,
+                discoverSections = current.discoverSections,
+                pvrServiceIcons = current.pvrServiceIcons,
+            )
     }
 
     fun refresh() = loadData()
@@ -338,12 +372,15 @@ constructor(
         _state.emit(_state.value.copy(discoverSections = sections))
     }
 
+    // This row shows Sonarr/Radarr's own download-queue data - i.e. whatever download client
+    // they actually hand grabbed releases off to, not Sonarr/Radarr themselves - so it wears a
+    // download-client icon rather than the PVR brand icons the rest of the app uses for actual
+    // Sonarr/Radarr actions (search, grab, etc.).
     private suspend fun loadPvrServiceIcons() {
-        val icons =
-            buildList {
-                if (appPreferences.getValue(appPreferences.sonarrEnabled)) add(CoreR.drawable.ic_sonarr)
-                if (appPreferences.getValue(appPreferences.radarrEnabled)) add(CoreR.drawable.ic_radarr)
-            }
+        val hasQueueSource =
+            appPreferences.getValue(appPreferences.sonarrEnabled) ||
+                appPreferences.getValue(appPreferences.radarrEnabled)
+        val icons = if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
         _state.emit(_state.value.copy(pvrServiceIcons = icons))
     }
 
