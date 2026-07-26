@@ -1410,3 +1410,66 @@ pass, not yet designed in detail. Open questions: exact scope (movie/show
 only vs. season/episode too), cascade UX (single dialog with checkboxes vs.
 sequential prompts), and whether to gate on server-reported delete
 permission before showing the action at all.
+
+## FINDROID-39: UI consistency pass round 2 + calendar preload
+
+A long back-and-forth session unifying detail-screen headers/download
+widgets further, redesigning search, and preloading the calendar cache.
+
+- [x] Detail-page header banner (`ItemHeader`) switched from a flat 288dp
+      box to the same 16:9 aspect ratio the Home hero carousel uses, so
+      both scale with device width instead of reading as two different
+      sizes. Home's carousel item (`HomeCarouselItem`) then dropped its own
+      rounded-corner/margin card treatment in favor of a new static (non-
+      scrolling) `ItemHeader` overload - one shared full-bleed hero banner
+      shape for every screen instead of a bespoke one per screen.
+- [x] New `HeaderIconButton` - the one black-70%-alpha circular button both
+      `ItemTopBar` (Movie/Show/Season/Episode/Person) and `HomeHeader` now
+      build every icon action from, replacing Home's previously separate
+      solid-`surfaceContainerHigh` button style. Also fixed `HomeHeader`'s
+      row height (was pinned to 56dp) and edge padding (was borrowing the
+      wider body-content padding instead of `ItemTopBar`'s own formula) so
+      the two headers are pixel-identical instead of visibly different
+      heights/shifted buttons.
+- [x] Favorites moved from a `HomeHeader` icon button (-> a dedicated
+      `FavoritesScreen` with no other entry point) to its own reorderable
+      Home section, same shape as Continue Watching/Next Up, gated by a new
+      `appPreferences.homeFavorites` toggle. `FavoritesScreen`/
+      `FavoritesViewModel`/`FavoritesRoute` removed entirely as dead code.
+- [x] "Manage servers" (Home's server switcher) now opens Settings >
+      Connections instead of the dedicated `ServersRoute`/`AddServerRoute`/
+      `UsersRoute`/`LoginRoute` flow - Connections already has the same
+      add/switch server and add/switch user UI inline. First-run onboarding
+      (`WelcomeRoute` -> ...) is untouched, since there's no Settings screen
+      to redirect to before a server exists yet.
+- [x] Search redesigned: dropped Material3's `SearchBar` component (its
+      "expanded" state is an inherently floating, shadowed, scrimmed
+      near-fullscreen surface - read as a dialog/popup) for a new
+      `FilmSearchScreen` - a plain back button + text field row (no
+      shadow/elevation/scrim) directly followed by the same results grid,
+      fully swapping in for Home's content instead of overlaying it.
+- [x] Pull-to-refresh unified: Home used to suppress the default Material3
+      indicator and show a second, separate spinner in `HomeHeader`'s retry
+      button - removed, Home's `PullToRefreshBox` now shows the same
+      default indicator Downloads/Library already used. Movie/Show/Season/
+      Episode/Person had no pull-to-refresh at all - added it, each gained
+      an `isRefreshing` state field (separate from the `item == null`
+      first-load gate) and a `PullToRefreshBox` wired to the same load
+      function the screen already calls on first entry.
+- [x] `PreloadCalendarWorker` (new, `core/.../work/`) warms the Sonarr/
+      Radarr/Jellyfin calendar cache in the background - scheduled
+      periodically (every 12h) and once at app startup, same shape as
+      `AutoDownloadWorker`/`PendingDownloadWorker`. `CalendarCache` moved
+      from `modes:film` to `data` (so `core`'s worker can share it - `core`
+      doesn't depend on `modes:film`) and gained an actual TTL
+      (`isFresh()`, 12h) it never had before; `CalendarViewModel`'s
+      tab-reopen background refresh now respects that TTL too, only an
+      explicit pull-to-refresh forces a fetch regardless of freshness.
+- [x] Version bumped to 2.2.0 (code 35) for this batch of work.
+
+Status: **done** (2026-07-26). Verified via remote
+`:app:phone:compileLibreDebugKotlin`/`:app:tv:compileLibreDebugKotlin`,
+`:modes:film:compileDebugKotlin`, `:data:compileDebugKotlin`,
+`:core:compileLibreDebugKotlin`, and `ktfmtCheck` on rofl-13, plus CI-signed
+installs on all three test devices (Mi Pad 4, Pixel 5, ASUS Zenfone) after
+each change. No Room schema changes in this batch.
