@@ -8,6 +8,8 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -336,12 +338,20 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
 
             val payload = state.payload
             if (payload != null) {
-                val bitmap = remember(payload) { QrCodec.encode(payload).toBitmap() }
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
+                Crossfade(
+                    targetState = payload,
+                    animationSpec = tween(durationMillis = 300),
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                )
+                    label = "qr-code",
+                ) { crossfadedPayload ->
+                    val bitmap =
+                        remember(crossfadedPayload) { QrCodec.encode(crossfadedPayload).toBitmap() }
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }

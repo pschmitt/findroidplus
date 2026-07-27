@@ -149,6 +149,19 @@ hand on every new device.
       code/Restore from backup), including a new hand-authored
       `ic_qr_code` drawable (no existing "qr code" glyph in this project's
       Feather-style icon set).
+- [x] Custom encoding: the QR payload is a `findroidplus://setup?p=<base64url>`
+      URI (`QrConfigCodec`), not a bare blob - self-identifying in any QR
+      scanner app, not just this one. A matching intent-filter on
+      `MainActivity` + `AndroidManifest.xml` means scanning the code with
+      *any* app and tapping "Open" launches straight into Findroid+'s
+      `ScanQrRoute` with the payload already in hand (skips the camera
+      screen entirely - `QrScanScreen`'s new `initialRaw` param). The
+      in-app camera scanner also now ignores any QR code that isn't one of
+      ours (`QrConfigCodec.looksLikeQrConfigUri`) instead of flashing an
+      "invalid code" error at unrelated codes (wifi, URLs, ...).
+- [x] Crossfade animation between QR codes on the export screen when the
+      selection/passphrase changes and a new code is generated, instead of
+      an instant swap.
 - [ ] Not done: TV-side export (phone-only in v1, see FINDROID-43's own
       scope note above) and interactive on-device UX testing of the full
       flow (biometric prompt → generate → scan → apply) - verified so far

@@ -57,6 +57,7 @@ import com.google.zxing.common.HybridBinarizer
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.setup.components.RootLayout
 import dev.jdtech.jellyfin.qrsetup.QrCodec
+import dev.jdtech.jellyfin.qrsetup.QrConfigCodec
 import dev.jdtech.jellyfin.setup.presentation.qrscan.QrScanAction
 import dev.jdtech.jellyfin.setup.presentation.qrscan.QrScanState
 import dev.jdtech.jellyfin.setup.presentation.qrscan.QrScanViewModel
@@ -65,9 +66,19 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.delay
 
 @Composable
-fun QrScanScreen(onBackClick: () -> Unit, viewModel: QrScanViewModel = hiltViewModel()) {
+fun QrScanScreen(
+    onBackClick: () -> Unit,
+    initialRaw: String? = null,
+    viewModel: QrScanViewModel = hiltViewModel(),
+) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Arrived via the findroidplus:// deep link (e.g. tapped from a different scanner app) -
+    // the payload's already in hand, so apply it straight away instead of opening the camera.
+    LaunchedEffect(initialRaw) {
+        initialRaw?.let { viewModel.onAction(QrScanAction.OnCodeScanned(it)) }
+    }
 
     LaunchedEffect(state.done) {
         if (state.done) {
@@ -81,6 +92,7 @@ fun QrScanScreen(onBackClick: () -> Unit, viewModel: QrScanViewModel = hiltViewM
 
     QrScanScreenLayout(
         state = state,
+        skipCamera = initialRaw != null,
         onAction = { action ->
             when (action) {
                 is QrScanAction.OnBackClick -> onBackClick()
@@ -91,7 +103,11 @@ fun QrScanScreen(onBackClick: () -> Unit, viewModel: QrScanViewModel = hiltViewM
 }
 
 @Composable
-private fun QrScanScreenLayout(state: QrScanState, onAction: (QrScanAction) -> Unit) {
+private fun QrScanScreenLayout(
+    state: QrScanState,
+    skipCamera: Boolean,
+    onAction: (QrScanAction) -> Unit,
+) {
     val context = LocalContext.current
 
     var hasCameraPermission by rememberSaveable {
@@ -115,7 +131,8 @@ private fun QrScanScreenLayout(state: QrScanState, onAction: (QrScanAction) -> U
         }
 
     LaunchedEffect(Unit) {
-        if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
+        if (!hasCameraPermission && !skipCamera)
+            permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
     RootLayout {
@@ -137,7 +154,7 @@ private fun QrScanScreenLayout(state: QrScanState, onAction: (QrScanAction) -> U
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
-                state.isApplying -> CircularProgressIndicator()
+                skipCamera || state.isApplying -> CircularProgressIndicator()
                 hasCameraPermission -> {
                     Text(
                         text = stringResource(CoreR.string.qr_scan_summary),
@@ -147,14 +164,6 @@ private fun QrScanScreenLayout(state: QrScanState, onAction: (QrScanAction) -> U
                         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                         onCodeScanned = { onAction(QrScanAction.OnCodeScanned(it)) },
                     )
-                    val error = state.error
-                    if (error != null) {
-                        Text(
-                            text = stringResource(CoreR.string.qr_scan_error, error),
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
                 }
                 permissionPermanentlyDenied -> {
                     Text(text = stringResource(CoreR.string.qr_scan_permission_denied))
@@ -181,6 +190,15 @@ private fun QrScanScreenLayout(state: QrScanState, onAction: (QrScanAction) -> U
                         Text(text = stringResource(CoreR.string.qr_scan_title))
                     }
                 }
+            }
+
+            val error = state.error
+            if (error != null) {
+                Text(
+                    text = stringResource(CoreR.string.qr_scan_error, error),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
         }
     }
@@ -285,5 +303,8 @@ private fun decodeQrCode(imageProxy: ImageProxy): String? {
             imageProxy.height,
             false,
         )
-    return QrCodec.decode(BinaryBitmap(HybridBinarizer(source)))
+    val text = QrCodec.decode(BinaryBitmap(HybridBinarizer(source))) ?: return null
+    // Ignore any other kind of QR code in view (wifi, URLs, ...) instead of flashing an
+    // "invalid code" error at the user for pointing the camera at the wrong thing.
+    return text.takeIf { QrConfigCodec.looksLikeQrConfigUri(it) }
 }

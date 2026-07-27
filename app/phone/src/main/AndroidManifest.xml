@@ -55,6 +55,18 @@
                 <data android:scheme="jellyfin" />
             </intent-filter>
 
+            <!-- QR device-provisioning codes (see QrConfigCodec) - lets any QR scanner app open
+                 a scanned setup code straight into Findroid+, not just this app's own camera
+                 screen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="findroidplus"
+                    android:host="setup" />
+            </intent-filter>
+
         </activity>
 
         <receiver

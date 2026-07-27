@@ -8,9 +8,18 @@ import kotlinx.serialization.json.Json
  * Pure encode/decode of a [QrConfigEnvelope] to/from the string that actually gets put in the QR
  * code - no `ServerDatabaseDao`/`AppPreferences` dependency (see [QrConfigManager] for the
  * DB/prefs-touching half), so this is plain-JVM unit-testable and not DI-wired.
+ *
+ * The encoded string is a `findroidplus://setup?p=<payload>` URI, not a bare blob - this makes a
+ * scanned code self-identifying in any QR reader (not just this app's), and lets Android route it
+ * straight back to Findroid+ via the matching intent-filter on `MainActivity` instead of only
+ * working through this app's own camera screen.
  */
 object QrConfigCodec {
     private val json = Json { prettyPrint = false }
+
+    // Base64 URL-safe alphabet only (no `+`/`/`) so the payload needs no percent-encoding to sit
+    // in a URI query value as-is.
+    private const val URI_PREFIX = "findroidplus://setup?p="
 
     class UnsupportedVersionException(val payloadVersion: Int) :
         Exception(
@@ -19,11 +28,15 @@ object QrConfigCodec {
 
     class InvalidPayloadException : Exception("Not a valid Findroid+ setup code")
 
+    /** True if [text] looks like one of our codes, without actually decoding it. */
+    fun looksLikeQrConfigUri(text: String): Boolean = text.startsWith(URI_PREFIX)
+
     /** @throws BackupCrypto.PasswordRequiredException, BackupCrypto.WrongPasswordException */
     fun decodePayload(raw: String, password: String?): QrConfigEnvelope {
+        val encoded = raw.removePrefix(URI_PREFIX)
         val bytes =
             try {
-                Base64.getDecoder().decode(raw)
+                Base64.getUrlDecoder().decode(encoded)
             } catch (e: IllegalArgumentException) {
                 throw InvalidPayloadException()
             }
@@ -45,9 +58,10 @@ object QrConfigCodec {
         return envelope
     }
 
+    /** Returns a full `findroidplus://setup?p=...` URI, ready to encode straight into a QR code. */
     fun encodePayload(envelope: QrConfigEnvelope, password: String?): String {
         val plainBytes = json.encodeToString(QrConfigEnvelope.serializer(), envelope).toByteArray()
         val bytes = BackupCrypto.encode(plainBytes, password)
-        return Base64.getEncoder().encodeToString(bytes)
+        return URI_PREFIX + Base64.getUrlEncoder().encodeToString(bytes)
     }
 }

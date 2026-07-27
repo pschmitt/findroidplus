@@ -9,6 +9,7 @@ import dev.jdtech.jellyfin.models.User
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class QrConfigCodecTest {
@@ -46,6 +47,18 @@ class QrConfigCodecTest {
             plainPrefs = mapOf("pref_pvr_sonarr_enabled" to PrefValue.BoolValue(true)),
             secrets = mapOf("sonarr_api_key" to "abc123"),
         )
+
+    @Test
+    fun `encoded payload is a recognizable findroidplus URI`() {
+        val payload = QrConfigCodec.encodePayload(sampleEnvelope, password = null)
+        assertTrue(payload.startsWith("findroidplus://setup?p="))
+        assertTrue(QrConfigCodec.looksLikeQrConfigUri(payload))
+    }
+
+    @Test
+    fun `looksLikeQrConfigUri rejects unrelated text`() {
+        assertEquals(false, QrConfigCodec.looksLikeQrConfigUri("https://example.com"))
+    }
 
     @Test
     fun `round trips without a password`() {

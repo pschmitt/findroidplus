@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val deepLinkViewModel: DeepLinkViewModel by viewModels()
     private var openDownloadsRequested by mutableStateOf(false)
+    private var pendingQrPayload by mutableStateOf<String?>(null)
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -81,9 +82,7 @@ class MainActivity : AppCompatActivity() {
                             is FindroidShow ->
                                 navController.navigate(ShowRoute(showId = target.id.toString()))
                             is FindroidSeason ->
-                                navController.navigate(
-                                    SeasonRoute(seasonId = target.id.toString())
-                                )
+                                navController.navigate(SeasonRoute(seasonId = target.id.toString()))
                             is FindroidEpisode ->
                                 navController.navigate(
                                     EpisodeRoute(episodeId = target.id.toString())
@@ -100,6 +99,12 @@ class MainActivity : AppCompatActivity() {
                             openDownloadsRequested = false
                         }
                     }
+                    LaunchedEffect(pendingQrPayload) {
+                        pendingQrPayload?.let {
+                            navController.navigate(ScanQrRoute(rawPayload = it))
+                            pendingQrPayload = null
+                        }
+                    }
                 }
             }
         }
@@ -112,6 +117,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent) {
         intent.data?.let { deepLinkViewModel.resolve(it) }
+        // findroidplus://setup?p=... - a QR provisioning code opened via some other scanner app
+        // (see QrConfigCodec/AndroidManifest's intent-filter), not through this app's own camera.
+        intent.data
+            ?.takeIf { it.scheme == "findroidplus" }
+            ?.let { pendingQrPayload = it.toString() }
         if (intent.getBooleanExtra(EXTRA_OPEN_DOWNLOADS, false)) {
             openDownloadsRequested = true
         }
@@ -119,12 +129,14 @@ class MainActivity : AppCompatActivity() {
         // the item by id, no fuzzy matching needed since the notification already knows exactly
         // which item it's about.
         intent.getStringExtra(EXTRA_OPEN_ITEM_ID)?.let { itemId ->
-            runCatching { UUID.fromString(itemId) }.getOrNull()?.let {
-                deepLinkViewModel.resolveItem(
-                    it,
-                    isMovie = intent.getBooleanExtra(EXTRA_OPEN_ITEM_IS_MOVIE, false),
-                )
-            }
+            runCatching { UUID.fromString(itemId) }
+                .getOrNull()
+                ?.let {
+                    deepLinkViewModel.resolveItem(
+                        it,
+                        isMovie = intent.getBooleanExtra(EXTRA_OPEN_ITEM_IS_MOVIE, false),
+                    )
+                }
         }
     }
 }

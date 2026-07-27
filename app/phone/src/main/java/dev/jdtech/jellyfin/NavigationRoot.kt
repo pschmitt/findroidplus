@@ -152,7 +152,7 @@ data class SeerrMediaRoute(
 
 @Serializable data object RestoreBackupRoute
 
-@Serializable data object ScanQrRoute
+@Serializable data class ScanQrRoute(val rawPayload: String? = null)
 
 data class TabBarItem(
     @param:StringRes val title: Int = 0,
@@ -368,7 +368,7 @@ fun NavigationRoot(
                 WelcomeScreen(
                     onContinueClick = { navController.safeNavigate(ServersRoute) },
                     onRestoreClick = { navController.safeNavigate(RestoreBackupRoute) },
-                    onScanQrClick = { navController.safeNavigate(ScanQrRoute) },
+                    onScanQrClick = { navController.safeNavigate(ScanQrRoute()) },
                 )
             }
             composable<ServersRoute> {
@@ -800,8 +800,12 @@ fun NavigationRoot(
             composable<RestoreBackupRoute> {
                 RestoreBackupScreen(onBackClick = { navController.safePopBackStack() })
             }
-            composable<ScanQrRoute> {
-                QrScanScreen(onBackClick = { navController.safePopBackStack() })
+            composable<ScanQrRoute> { backStackEntry ->
+                val route: ScanQrRoute = backStackEntry.toRoute()
+                QrScanScreen(
+                    onBackClick = { navController.safePopBackStack() },
+                    initialRaw = route.rawPayload,
+                )
             }
             composable<SettingsFileEditRoute> { backStackEntry ->
                 val route: SettingsFileEditRoute = backStackEntry.toRoute()
