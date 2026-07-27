@@ -65,6 +65,7 @@ class FakeJellyfinRepository(
         sortOrder: SortOrder,
         startIndex: Int?,
         limit: Int?,
+        searchTerm: String?,
     ): List<FindroidItem> = error("not used in test")
 
     override suspend fun getItemsPaging(
@@ -73,6 +74,7 @@ class FakeJellyfinRepository(
         recursive: Boolean,
         sortBy: SortBy,
         sortOrder: SortOrder,
+        searchTerm: String?,
     ): Flow<PagingData<FindroidItem>> = error("not used in test")
 
     override suspend fun getPerson(personId: UUID): FindroidPerson = error("not used in test")
@@ -127,6 +129,10 @@ class FakeJellyfinRepository(
     override suspend fun markAsUnplayed(itemId: UUID) = error("not used in test")
 
     override suspend fun refreshLibrary() = error("not used in test")
+
+    override suspend fun deleteItem(itemId: UUID) = error("not used in test")
+
+    override suspend fun canDeleteMedia(): Boolean = error("not used in test")
 
     override fun getBaseUrl(): String = error("not used in test")
 

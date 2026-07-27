@@ -24,6 +24,10 @@ class FakeDownloader : Downloader {
 
     override suspend fun resumeDownload(downloadId: Long): UiText? = error("not used")
 
+    override suspend fun pauseAllForBatterySaver() = error("not used")
+
+    override suspend fun resumeBatterySaverPausedDownloads() = error("not used")
+
     override suspend fun forceDownload(downloadId: Long) = error("not used")
 
     override suspend fun forceDownloadGroup(downloadIds: List<Long>) = error("not used")
