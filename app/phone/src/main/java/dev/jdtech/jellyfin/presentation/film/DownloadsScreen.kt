@@ -35,13 +35,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -1438,255 +1436,223 @@ private fun DownloadRow(
     val swipeEnabled = activeProgress == null && !selectionMode && !isMigrating
 
     val content: @Composable () -> Unit = {
-        Column {
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .combinedClickable(
-                            onClick = {
-                                when {
-                                    selectionMode -> onToggleSelection()
-                                    // The file's mid-copy to another volume right now - its DB path
-                                    // is about to change and the bytes at the old one may already
-                                    // be
-                                    // gone, so opening it for playback is unsafe until that
-                                    // settles.
-                                    isMigrating -> {}
-                                    // Nothing on disk to play - use the re-download/delete icons
-                                    // instead of guessing what a tap here should do.
-                                    isBroken -> {}
-                                    else -> onClick()
-                                }
-                            },
-                            onLongClick = onLongClick,
-                        )
-                        .padding(
-                            horizontal = MaterialTheme.spacings.default,
-                            vertical = MaterialTheme.spacings.small,
-                        ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
-                    ItemPoster(item = item, direction = Direction.HORIZONTAL)
-                }
-                Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    when {
-                        activeProgress != null -> {
-                            Text(
-                                text =
-                                    when {
-                                        isPending -> stringResource(CoreR.string.download_queued)
-                                        isPaused -> stringResource(CoreR.string.download_paused)
-                                        isAwaitingForeground ->
-                                            stringResource(
-                                                CoreR.string.download_awaiting_foreground
-                                            )
-                                        isVerifying ->
-                                            stringResource(CoreR.string.download_verifying)
-                                        activeProgress.percent >= 0 ->
-                                            stringResource(
-                                                CoreR.string.download_progress_status,
-                                                activeProgress.percent,
-                                                formatDownloadSpeed(
-                                                    activeProgress.speedBytesPerSecond
-                                                ),
-                                                formatEta(activeProgress.etaSeconds),
-                                            )
-                                        else -> stringResource(CoreR.string.download_downloading)
-                                    },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (!isPending && !isAwaitingForeground) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                LinearProgressIndicator(
-                                    progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
-                                    // 4.dp, not 3 - Material3's default end-of-track "stop
-                                    // indicator"
-                                    // dot is itself 4.dp, so a shorter track clips it into
-                                    // invisibility.
-                                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                                )
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .combinedClickable(
+                        onClick = {
+                            when {
+                                selectionMode -> onToggleSelection()
+                                // The file's mid-copy to another volume right now - its DB path
+                                // is about to change and the bytes at the old one may already
+                                // be
+                                // gone, so opening it for playback is unsafe until that
+                                // settles.
+                                isMigrating -> {}
+                                // Nothing on disk to play - use the re-download/delete icons
+                                // instead of guessing what a tap here should do.
+                                isBroken -> {}
+                                else -> onClick()
                             }
+                        },
+                        onLongClick = onLongClick,
+                    )
+                    .padding(
+                        horizontal = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.small,
+                    ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
+                ItemPoster(item = item, direction = Direction.HORIZONTAL)
+            }
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                when {
+                    activeProgress != null -> {
+                        Text(
+                            text =
+                                when {
+                                    isPending -> stringResource(CoreR.string.download_queued)
+                                    isPaused -> stringResource(CoreR.string.download_paused)
+                                    isAwaitingForeground ->
+                                        stringResource(CoreR.string.download_awaiting_foreground)
+                                    isVerifying -> stringResource(CoreR.string.download_verifying)
+                                    activeProgress.percent >= 0 ->
+                                        stringResource(
+                                            CoreR.string.download_progress_status,
+                                            activeProgress.percent,
+                                            formatDownloadSpeed(activeProgress.speedBytesPerSecond),
+                                            formatEta(activeProgress.etaSeconds),
+                                        )
+                                    else -> stringResource(CoreR.string.download_downloading)
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (!isPending && !isAwaitingForeground) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
+                                // 4.dp, not 3 - Material3's default end-of-track "stop
+                                // indicator"
+                                // dot is itself 4.dp, so a shorter track clips it into
+                                // invisibility.
+                                modifier = Modifier.fillMaxWidth().height(4.dp),
+                            )
                         }
-                        isMigrating -> {
+                    }
+                    isMigrating -> {
+                        Text(
+                            text = stringResource(CoreR.string.download_row_migrating),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // Indeterminate - MigrateDownloadsWorker only reports an aggregate
+                        // done/total for the whole batch, not this item's own progress.
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
+                    }
+                    isBroken -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_alert_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = stringResource(CoreR.string.download_row_migrating),
+                                text = stringResource(CoreR.string.download_row_broken),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    else -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            storageIcon?.let { icon ->
+                                Icon(
+                                    painter = painterResource(icon),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = formatBinaryFileSize(sizeBytes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // Indeterminate - MigrateDownloadsWorker only reports an aggregate
-                            // done/total for the whole batch, not this item's own progress.
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
-                        }
-                        isBroken -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isMarkedForDeletion) {
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
-                                    painter = painterResource(CoreR.drawable.ic_alert_circle),
+                                    painter = painterResource(CoreR.drawable.ic_trash),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
+                                    tint = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.size(14.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = stringResource(CoreR.string.download_row_broken),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                        else -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                storageIcon?.let { icon ->
-                                    Icon(
-                                        painter = painterResource(icon),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(14.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                }
-                                Text(
-                                    text = formatBinaryFileSize(sizeBytes),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                if (isMarkedForDeletion) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_trash),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.size(14.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                CoreR.string.download_row_marked_for_deletion
-                                            ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                when {
-                    selectionMode -> {
-                        Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
-                    }
-                    activeProgress != null -> {
-                        if (isPending) {
-                            IconButton(onClick = { onDownloadAction(DownloadAction.Force) }) {
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_fast_forward),
-                                    contentDescription =
-                                        stringResource(CoreR.string.download_action_force),
-                                )
-                            }
-                        } else if (!isVerifying) {
-                            IconButton(
-                                onClick = {
-                                    onDownloadAction(
-                                        if (showResumeAction) DownloadAction.Resume
-                                        else DownloadAction.Pause
-                                    )
-                                }
-                            ) {
-                                Icon(
-                                    painter =
-                                        painterResource(
-                                            if (showResumeAction) CoreR.drawable.ic_play
-                                            else CoreR.drawable.ic_pause
-                                        ),
-                                    contentDescription =
+                                    text =
                                         stringResource(
-                                            if (showResumeAction)
-                                                CoreR.string.download_action_resume
-                                            else CoreR.string.download_action_pause
+                                            CoreR.string.download_row_marked_for_deletion
                                         ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
                                 )
                             }
-                        }
-                        IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_x),
-                                contentDescription =
-                                    stringResource(CoreR.string.download_action_cancel),
-                            )
-                        }
-                    }
-                    // No play button while the file is mid-move - see the onClick guard above for
-                    // why.
-                    isMigrating -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(2.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    }
-                    // No play button here either - there's nothing playable on disk. Offer the two
-                    // ways out instead: try again, or give up and remove the dangling entry (the
-                    // trash icon here is a shortcut for the same swipe-to-delete gesture below).
-                    isBroken -> {
-                        IconButton(onClick = onRedownloadRequest) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_download),
-                                contentDescription =
-                                    stringResource(CoreR.string.download_action_redownload),
-                            )
-                        }
-                        IconButton(onClick = onSwipeDeleteRequest) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_trash),
-                                contentDescription = stringResource(CoreR.string.delete_download),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                    item.isDownloaded() -> {
-                        IconButton(onClick = onClick) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_play),
-                                contentDescription =
-                                    stringResource(CoreR.string.download_action_play),
-                            )
                         }
                     }
                 }
             }
-            if (item.isDownloaded()) {
-                FilledTonalButton(
-                    onClick = onSwipeDeleteRequest,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                horizontal = MaterialTheme.spacings.default,
-                                vertical = MaterialTheme.spacings.small,
-                            ),
-                    colors =
-                        ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        ),
-                ) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_trash),
-                        contentDescription = null,
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+            when {
+                selectionMode -> {
+                    Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
+                }
+                activeProgress != null -> {
+                    if (isPending) {
+                        IconButton(onClick = { onDownloadAction(DownloadAction.Force) }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_fast_forward),
+                                contentDescription =
+                                    stringResource(CoreR.string.download_action_force),
+                            )
+                        }
+                    } else if (!isVerifying) {
+                        IconButton(
+                            onClick = {
+                                onDownloadAction(
+                                    if (showResumeAction) DownloadAction.Resume
+                                    else DownloadAction.Pause
+                                )
+                            }
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (showResumeAction) CoreR.drawable.ic_play
+                                        else CoreR.drawable.ic_pause
+                                    ),
+                                contentDescription =
+                                    stringResource(
+                                        if (showResumeAction) CoreR.string.download_action_resume
+                                        else CoreR.string.download_action_pause
+                                    ),
+                            )
+                        }
+                    }
+                    IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_x),
+                            contentDescription =
+                                stringResource(CoreR.string.download_action_cancel),
+                        )
+                    }
+                }
+                // No play button while the file is mid-move - see the onClick guard above for
+                // why.
+                isMigrating -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp).padding(2.dp),
+                        strokeWidth = 2.dp,
                     )
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                    Text(stringResource(CoreR.string.delete_download))
+                }
+                // No play button here either - there's nothing playable on disk. Offer the two
+                // ways out instead: try again, or give up and remove the dangling entry (the
+                // trash icon here is a shortcut for the same swipe-to-delete gesture below).
+                isBroken -> {
+                    IconButton(onClick = onRedownloadRequest) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_download),
+                            contentDescription =
+                                stringResource(CoreR.string.download_action_redownload),
+                        )
+                    }
+                    IconButton(onClick = onSwipeDeleteRequest) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = stringResource(CoreR.string.delete_download),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                item.isDownloaded() -> {
+                    IconButton(onClick = onClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_play),
+                            contentDescription = stringResource(CoreR.string.download_action_play),
+                        )
+                    }
                 }
             }
         }

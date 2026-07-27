@@ -81,9 +81,9 @@ fun ItemButtonsBar(
         },
     downloadIconTint: Color? = null,
     trailingContent: @Composable FlowRowScope.() -> Unit = {},
-    // Rendered outside the wrapping tile row entirely, pinned to the row's right edge (e.g.
-    // ItemOverflowMenu) - unlike [trailingContent], which is just the last tile(s) in the same
-    // wrapping FlowRow as everything else.
+    // Rendered alongside whichever of the download progress card/Delete/Download button is
+    // currently showing below the tile row (e.g. ItemOverflowMenu) - unlike [trailingContent],
+    // which is just another tile in the same wrapping FlowRow as everything else.
     overflowContent: @Composable () -> Unit = {},
     // Set when this item's own PVR queue entry has an import warning/failure to resolve - makes
     // the download progress card tappable to open the manage-import sheet.
@@ -150,106 +150,123 @@ fun ItemButtonsBar(
         // anything injected via [trailingContent], like the "delete downloads" tile - shares the
         // same icon-above-label silhouette. Played/favorite toggles only appear here when the
         // caller wires them up (Show/Season); Episode/Movie surface those on their meta line
-        // instead. [overflowContent] (e.g. ItemOverflowMenu) sits outside this FlowRow entirely,
-        // pinned to the row's right edge via the outer Row's weight - it's a persistent icon-only
-        // control, not another wrapping tile.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            FlowRow(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-            ) {
-                val canRestart = item.playbackPositionTicks.div(600000000) > 0
-                if (canRestart) {
-                    ItemActionButton(
-                        icon = painterResource(CoreR.drawable.ic_rotate_ccw),
-                        label = stringResource(CoreR.string.restart_from_beginning),
-                        onClick = { onPlayClick(true) },
-                    )
-                }
-                trailerUri?.let { uri ->
-                    ItemActionButton(
-                        icon = painterResource(CoreR.drawable.ic_film),
-                        label = stringResource(CoreR.string.trailer),
-                        onClick = { onTrailerClick(uri) },
-                    )
-                }
-                trailingContent()
+        // instead. [overflowContent] (e.g. ItemOverflowMenu) sits below this FlowRow, alongside
+        // whichever of the download progress card/Delete/Download button is showing - see there.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+        ) {
+            val canRestart = item.playbackPositionTicks.div(600000000) > 0
+            if (canRestart) {
+                ItemActionButton(
+                    icon = painterResource(CoreR.drawable.ic_rotate_ccw),
+                    label = stringResource(CoreR.string.restart_from_beginning),
+                    onClick = { onPlayClick(true) },
+                )
             }
-            overflowContent()
+            trailerUri?.let { uri ->
+                ItemActionButton(
+                    icon = painterResource(CoreR.drawable.ic_film),
+                    label = stringResource(CoreR.string.trailer),
+                    onClick = { onTrailerClick(uri) },
+                )
+            }
+            trailingContent()
         }
-        // Exactly one of these three renders at a time, in the same slot below the tile row:
-        // the live progress card while downloading, a large "Delete download" button once
-        // downloaded, or a large "Download" button when neither. While isDeleting, none of them
-        // show - the button disappears rather than risk a second tap queuing another delete of a
-        // file that's already going away.
+        // Exactly one of these three renders at a time, each sharing its row with
+        // [overflowContent]: the live progress card while downloading, a large "Delete download"
+        // button once downloaded, or a large "Download" button when neither. While isDeleting,
+        // neither button shows (a second tap could queue another delete of a file that's already
+        // going away) - the overflow menu still needs a place, so it renders alone on its own row.
         if (downloaderState != null) {
             AnimatedVisibility(downloaderState.isDownloading) {
                 Column {
-                    DownloaderCard(
-                        state = downloaderState,
-                        onCancelClick = { cancelDownloadDialogOpen = true },
-                        onRetryClick = { onDownloadClick(selectedStorageIndex) },
-                        onForceClick = onDownloadForceClick,
-                        onPauseClick = onDownloadPauseClick,
-                        onResumeClick = onDownloadResumeClick,
-                        onCardClick = onDownloadCardClick,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        DownloaderCard(
+                            state = downloaderState,
+                            onCancelClick = { cancelDownloadDialogOpen = true },
+                            onRetryClick = { onDownloadClick(selectedStorageIndex) },
+                            onForceClick = onDownloadForceClick,
+                            onPauseClick = onDownloadPauseClick,
+                            onResumeClick = onDownloadResumeClick,
+                            onCardClick = onDownloadCardClick,
+                            modifier = Modifier.weight(1f),
+                        )
+                        overflowContent()
+                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                 }
             }
             if (!downloaderState.isDownloading) {
                 if (item.isDownloaded() && !downloaderState.isDeleting) {
-                    // The label doubles as the on-disk size so it doesn't need its own separate
-                    // caption elsewhere on the screen - falls back to the generic label for a
-                    // broken (0-byte/missing) download, where a size reading would be misleading.
-                    // Path details still live in the confirmation dialog this opens.
-                    FilledTonalButton(
-                        onClick = { deleteDownloadDialogOpen = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            ),
-                    ) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_trash),
-                            contentDescription = null,
-                        )
-                        Spacer(Modifier.width(MaterialTheme.spacings.small))
-                        Text(
-                            downloadedSource
-                                ?.takeIf { it.size > 0L }
-                                ?.let { formatBinaryFileSize(it.size) }
-                                ?: stringResource(CoreR.string.delete_download)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The label doubles as the on-disk size so it doesn't need its own
+                        // separate caption elsewhere on the screen - falls back to the generic
+                        // label for a broken (0-byte/missing) download, where a size reading
+                        // would be misleading. Path details still live in the confirmation dialog
+                        // this opens.
+                        FilledTonalButton(
+                            onClick = { deleteDownloadDialogOpen = true },
+                            modifier = Modifier.weight(1f),
+                            colors =
+                                ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                ),
+                        ) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_trash),
+                                contentDescription = null,
+                            )
+                            Spacer(Modifier.width(MaterialTheme.spacings.small))
+                            Text(
+                                downloadedSource
+                                    ?.takeIf { it.size > 0L }
+                                    ?.let { formatBinaryFileSize(it.size) }
+                                    ?: stringResource(CoreR.string.delete_download)
+                            )
+                        }
+                        overflowContent()
                     }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                 } else if (
                     !downloaderState.isDeleting &&
                         (item.canDownload || item is FindroidShow || item is FindroidSeason)
                 ) {
-                    FilledTonalButton(
-                        onClick = {
-                            if (enableDownloadDialog) {
-                                downloadScopeDialogOpen = true
-                            } else {
-                                startDownload()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_download),
-                            contentDescription = null,
-                            tint = downloadIconTint ?: LocalContentColor.current,
-                        )
-                        Spacer(Modifier.width(MaterialTheme.spacings.small))
-                        Text(stringResource(CoreR.string.download))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FilledTonalButton(
+                            onClick = {
+                                if (enableDownloadDialog) {
+                                    downloadScopeDialogOpen = true
+                                } else {
+                                    startDownload()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_download),
+                                contentDescription = null,
+                                tint = downloadIconTint ?: LocalContentColor.current,
+                            )
+                            Spacer(Modifier.width(MaterialTheme.spacings.small))
+                            Text(stringResource(CoreR.string.download))
+                        }
+                        overflowContent()
                     }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        overflowContent()
+                    }
                 }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                overflowContent()
             }
         }
     }
