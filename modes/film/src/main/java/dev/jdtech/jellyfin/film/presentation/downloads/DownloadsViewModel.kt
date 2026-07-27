@@ -589,6 +589,7 @@ internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGro
                         PvrQueueUiItem(
                             itemId = entry.item?.id,
                             title = entry.item.toQueueTitle(fallback = entry.title),
+                            subtitle = (entry.item as? FindroidEpisode)?.name,
                             item = entry.item,
                             posterUrl = entry.posterUrl,
                             tmdbId = entry.tmdbId,

@@ -1679,6 +1679,15 @@ private fun PvrQueueRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            queueItem.subtitle?.let { subtitle ->
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             // The trailing action icon (right edge of the row) already signals a problem - no
             // need to repeat it here too now that this line no longer carries any status text.
             if (!isProblem) {

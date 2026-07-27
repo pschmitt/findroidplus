@@ -67,6 +67,11 @@ data class DownloadShowGroup(
 data class PvrQueueUiItem(
     val itemId: UUID?,
     val title: String,
+    // The episode's own title (e.g. "The Red Dragon and the Gold"), distinct from [title], which
+    // is "Series - S3E6"-shaped. Only available once matched to a Jellyfin FindroidEpisode -
+    // Sonarr/Radarr's queue APIs don't return an episode title for unmatched entries, and movies
+    // have no separate subtitle concept at all (their title already is the movie title).
+    val subtitle: String? = null,
     val item: FindroidItem? = null,
     val posterUrl: String? = null,
     val tmdbId: Int? = null,
