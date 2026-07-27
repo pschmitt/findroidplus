@@ -20,6 +20,7 @@ import dev.jdtech.jellyfin.repository.PvrDiskSpaceRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.repository.groupDuplicates
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
 import dev.jdtech.jellyfin.utils.Downloader
 import java.util.UUID
 import javax.inject.Inject
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 @HiltViewModel
 class DownloadsViewModel
@@ -222,9 +224,25 @@ constructor(
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
             queueStatusRepository.refreshNow()
+            evaluateAutoDownloadRules()
             refreshDownloads()
         }
         refreshStorage()
+    }
+
+    // Mirrors AutoDownloadWorker's own evaluation - a manual pull-to-refresh shouldn't have to
+    // wait for the next scheduled background check to pick up episodes a rule already covers.
+    private suspend fun evaluateAutoDownloadRules() {
+        try {
+            val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return
+            val userId = repository.getUserId()
+            val evaluator = AutoDownloadRuleEvaluator()
+            for (rule in autoDownloadRuleRepository.getEnabledRules(serverId, userId)) {
+                evaluator.evaluate(rule, database, repository, downloader, appPreferences)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to evaluate auto-download rules on manual refresh")
+        }
     }
 
     private fun reconcileDownloadProgress(
