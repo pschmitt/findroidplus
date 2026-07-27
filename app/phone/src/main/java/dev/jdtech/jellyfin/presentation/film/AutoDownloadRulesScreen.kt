@@ -30,6 +30,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,19 +54,23 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyShow
+import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRuleEvent
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesAction
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesState
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadRulesViewModel
 import dev.jdtech.jellyfin.film.presentation.autodownload.AutoDownloadShowRuleUiModel
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
+import dev.jdtech.jellyfin.presentation.film.components.RemoteDevicePicker
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import java.util.UUID
 
 @Composable
@@ -75,13 +80,28 @@ fun AutoDownloadRulesScreen(
     viewModel: AutoDownloadRulesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(true) { viewModel.loadRules() }
+
+    ObserveAsEvents(viewModel.events) { event ->
+        when (event) {
+            is AutoDownloadRuleEvent.RuleSentToDevice ->
+                Toast.makeText(
+                        context,
+                        context.getString(CoreR.string.remote_config_rule_sent_toast, event.deviceName),
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
+        }
+    }
 
     AutoDownloadRulesScreenLayout(
         state = state,
         onNavigateToDownloadSettings = navigateToDownloadSettings,
         getSeasons = viewModel::getSeasons,
+        getOtherDevices = viewModel::getOtherDevices,
+        onRefresh = viewModel::refresh,
         onAction = { action ->
             when (action) {
                 is AutoDownloadRulesAction.OnBackClick -> navigateBack()
@@ -99,6 +119,8 @@ private fun AutoDownloadRulesScreenLayout(
     onAction: (AutoDownloadRulesAction) -> Unit,
     onNavigateToDownloadSettings: () -> Unit = {},
     getSeasons: suspend (UUID) -> List<FindroidSeason> = { emptyList() },
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
+    onRefresh: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -129,7 +151,15 @@ private fun AutoDownloadRulesScreenLayout(
         },
         contentWindowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
+        // language across the whole app instead of a screen-specific spinner. Refreshing here
+        // drives an immediate RemoteConfigRepository.syncNow() rather than waiting out
+        // RemoteConfigWorker's periodic WorkManager floor.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        ) {
             if (state.shows.isEmpty() && !state.isLoading) {
                 Text(
                     text = stringResource(CoreR.string.no_auto_download_rules),
@@ -139,7 +169,12 @@ private fun AutoDownloadRulesScreenLayout(
             }
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(items = state.shows, key = { it.seriesId }) { show ->
-                    AutoDownloadShowRuleRow(show = show, onAction = onAction, getSeasons = getSeasons)
+                    AutoDownloadShowRuleRow(
+                        show = show,
+                        onAction = onAction,
+                        getSeasons = getSeasons,
+                        getOtherDevices = getOtherDevices,
+                    )
                 }
             }
         }
@@ -151,6 +186,7 @@ private fun AutoDownloadShowRuleRow(
     show: AutoDownloadShowRuleUiModel,
     onAction: (AutoDownloadRulesAction) -> Unit,
     getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
 ) {
     val context = LocalContext.current
     var deleteDialogOpen by remember { mutableStateOf(false) }
@@ -222,7 +258,8 @@ private fun AutoDownloadShowRuleRow(
         EditRuleDialog(
             show = show,
             getSeasons = getSeasons,
-            onConfirm = { seasonIds, alsoFutureSeasons, onlyNewEpisodes, onlyUnwatched ->
+            getOtherDevices = getOtherDevices,
+            onConfirm = { seasonIds, alsoFutureSeasons, onlyNewEpisodes, onlyUnwatched, targetDeviceId ->
                 onAction(
                     AutoDownloadRulesAction.UpdateShowRule(
                         show.seriesId,
@@ -230,6 +267,7 @@ private fun AutoDownloadShowRuleRow(
                         alsoFutureSeasons,
                         onlyNewEpisodes,
                         onlyUnwatched,
+                        targetDeviceId,
                     )
                 )
                 editDialogOpen = false
@@ -267,23 +305,28 @@ private fun AutoDownloadShowRuleRow(
 private fun EditRuleDialog(
     show: AutoDownloadShowRuleUiModel,
     getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
     onConfirm:
         (
             seasonIds: Set<UUID>,
             alsoFutureSeasons: Boolean,
             onlyNewEpisodes: Boolean,
             onlyUnwatched: Boolean,
+            targetDeviceId: String?,
         ) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+    var otherDevices by remember { mutableStateOf<List<RemoteDeviceInfo>>(emptyList()) }
     var selectedSeasonIds by remember { mutableStateOf(show.seasonIds) }
     var alsoFutureSeasons by remember { mutableStateOf(show.alsoFutureSeasons) }
     var onlyNewEpisodes by remember { mutableStateOf(show.onlyNewEpisodes) }
     var onlyUnwatched by remember { mutableStateOf(show.onlyUnwatched) }
     var seasonsExpanded by remember { mutableStateOf(false) }
+    var selectedDeviceId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(show.seriesId) { seasons = getSeasons(show.seriesId) }
+    LaunchedEffect(Unit) { otherDevices = getOtherDevices() }
 
     val canConfirm = selectedSeasonIds.isNotEmpty() || alsoFutureSeasons
 
@@ -379,6 +422,14 @@ private fun EditRuleDialog(
                             onToggle = { onlyNewEpisodes = it },
                         )
                     }
+                    if (otherDevices.isNotEmpty()) {
+                        HorizontalDivider()
+                        RemoteDevicePicker(
+                            otherDevices = otherDevices,
+                            selectedDeviceId = selectedDeviceId,
+                            onSelected = { selectedDeviceId = it },
+                        )
+                    }
                 }
             }
         },
@@ -387,7 +438,13 @@ private fun EditRuleDialog(
             TextButton(
                 enabled = seasons != null && canConfirm,
                 onClick = {
-                    onConfirm(selectedSeasonIds, alsoFutureSeasons, onlyNewEpisodes, onlyUnwatched)
+                    onConfirm(
+                        selectedSeasonIds,
+                        alsoFutureSeasons,
+                        onlyNewEpisodes,
+                        onlyUnwatched,
+                        selectedDeviceId,
+                    )
                 },
             ) {
                 Icon(

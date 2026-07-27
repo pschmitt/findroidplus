@@ -2,6 +2,7 @@ package dev.jdtech.jellyfin.settings.domain
 
 import android.content.SharedPreferences
 import dev.jdtech.jellyfin.settings.domain.models.Preference
+import java.util.UUID
 import javax.inject.Inject
 import timber.log.Timber
 
@@ -163,6 +164,18 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // devices and in backups, and renaming them would silently reset the configuration.
     val seerrEnabled = Preference("pref_pvr_jellyseerr_enabled", false)
     val seerrBaseUrl = Preference<String?>("pref_pvr_jellyseerr_base_url", null)
+
+    // Remote config (cross-device auto-download rule push, see RemoteConfigRepository) - an
+    // opaque per-install identifier, generated lazily on first use rather than at install time so
+    // no migration/onCreate hook is needed for it.
+    val thisDeviceId = Preference<String?>("pref_this_device_id", null)
+
+    fun getOrCreateThisDeviceId(): String {
+        getValue(thisDeviceId)?.let { return it }
+        val id = UUID.randomUUID().toString()
+        setValue(thisDeviceId, id)
+        return id
+    }
 
     inline fun <reified T> getValue(preference: Preference<T>): T {
         return try {

@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.DisplayPreferencesDto
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.PublicSystemInfo
 import org.jellyfin.sdk.model.api.UserConfiguration
@@ -345,5 +346,17 @@ class JellyfinRepositoryOfflineImpl(
 
     override fun getUserId(): UUID {
         return jellyfinApi.userId!!
+    }
+
+    override suspend fun getDisplayPreferences(displayPreferencesId: String, client: String): DisplayPreferencesDto {
+        throw Exception("Remote config is not available in offline mode")
+    }
+
+    override suspend fun updateDisplayPreferences(
+        displayPreferencesId: String,
+        client: String,
+        data: DisplayPreferencesDto,
+    ) {
+        throw Exception("Remote config is not available in offline mode")
     }
 }

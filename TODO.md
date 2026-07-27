@@ -29,152 +29,17 @@ Status: in progress (2026-07-18) - automation enabled; the manual "review and
 selectively pull in upstream dependency updates" item is still open and requires
 human judgment.
 
-## FINDROID-41: Overflow menu polish round 2 - right-alignment, favorite move, Show search
-
-Fast-follow on FINDROID-38/40's `ItemOverflowMenu` work, all from live testing
-feedback right after it shipped.
-
-- [x] The overflow icon was sitting wherever it fell in `ItemButtonsBar`'s
-      wrapping `FlowRow` (visually wedged between Trailer and Download tiles).
-      Added a new `overflowContent` param, rendered outside the FlowRow
-      entirely via an outer `Row(verticalAlignment = CenterVertically)` with
-      the FlowRow on `Modifier.weight(1f)` - the overflow icon now always
-      sits pinned to the row's right edge regardless of how many tiles wrap.
-      `trailingContent` (the Show/Season "delete downloads" size tile) still
-      wraps normally inside the FlowRow - only the overflow icon itself moved.
-- [x] Favorite/unfavorite moved from `ItemMetaRow`'s inline toggle into the
-      overflow menu (as a heart-icon `DropdownMenuItem`) on all four detail
-      screens - watched/unwatched stays on the meta line, favorite didn't.
-- [x] Search (auto)/(manual) `DropdownMenuItem`s now carry the Sonarr/Radarr
-      brand icon (`Color.Unspecified` tint, same as the old `PvrSearchButton`
-      tile) instead of no icon at all.
-- [x] Show's overflow was missing a search entry entirely (FINDROID-40 only
-      added Info+Delete there, reasoning Show had no pre-existing PVR search
-      feature to move). Added "Search (auto)" - `ShowAction
-      .SearchSeriesAutomatic` → `SonarrSearchRepository
-      .searchSeriesByTmdbId` (`ShowViewModel` already had the repository
-      injected for the delete cascade). No manual/interactive counterpart -
-      Sonarr's release picker is per-episode, not per-series, so there's no
-      clean single "pick a release for the whole series" flow to build.
-  - [x] Along the way, found and fixed: the new Show aggregate Info dialog
-        was showing "0 episodes" - `ShowState.episodeCount` was computed from
-        `database.getEpisodesByShowId`, which only knows about episodes
-        that were downloaded or individually visited, not the show's true
-        total. Replaced with a real per-season `repository.getEpisodes(showId,
-        season.id)` count sum (downloads-size itself correctly stays
-        Room-based - that one's genuinely about local disk usage).
-
-Status: **done** (2026-07-27). Verified via remote
-`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
-CI-signed installs on all three test devices.
-
-## FINDROID-42: DropdownMenu mispositioned + Mark watched moved to overflow
-
-- [x] `ItemOverflowMenu`'s `DropdownMenu` was landing in a visibly wrong spot
-      relative to its ⋮ icon - our bug, not a platform quirk: Material3's
-      `DropdownMenu` anchors to its nearest positioned parent, not whatever
-      composable happens to precede it, and the icon + menu weren't wrapped
-      in a shared `Box`. Added one.
-- [x] Mark watched/unwatched moved from `ItemMetaRow`'s inline toggle into
-      the overflow menu too (joining favorite, moved there in FINDROID-41) -
-      `ItemMetaRow` no longer has any toggle machinery at all now (removed
-      `played`/`favorite`/`onPlayedClick`/`onFavoriteClick` params and the
-      `MetaToggle` composable entirely - dead code once nothing called them).
-
-Status: **done** (2026-07-27). Verified via remote
-`:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
-CI-signed installs on all three test devices.
-
 ## FINDROID-43: QR-code device provisioning
 
 Scan-to-configure a new Findroid+ install from an already-configured instance,
 instead of retyping server URL/credentials and Sonarr/Radarr/Seerr config by
 hand on every new device.
 
-- [x] Export side: Settings → "Provision device" (`QrExportScreen`, `data/.../qrsetup/QrConfigManager.buildEnvelope`)
-      serializes the current instance's config into a JSON payload and
-      renders it as a QR code (ZXing `core`, no camera/GMS dependency).
-      Checkboxes (all on by default, hidden/disabled per-service when that
-      service isn't configured) to selectively include Jellyfin, Sonarr,
-      Radarr, and Seerr config in the payload.
-  - [x] Jellyfin section: server address(es) + a chosen user's session
-        (reuses `backup.BackupServer`/`Server`/`ServerAddress`/`User`
-        scoped to one server/user). When more than one server/user
-        combination is configured on the device, a picker
-        (`JellyfinServerUserPicker`, radio-button `BaseDialog`, same pattern
-        as `SettingsSelectDialog`) lets you choose which one to embed,
-        defaulting to the currently-active one; hidden entirely when
-        there's only one combination. Stretch goal (typing in credentials
-        for a user *not already logged in* on this device at all) is still
-        deferred, not implemented.
-  - [x] Export screen gated behind a biometric/PIN prompt
-        (`androidx.biometric` `BiometricPrompt`, `BIOMETRIC_WEAK or
-        DEVICE_CREDENTIAL`) before rendering anything, plus
-        `FLAG_SECURE` on the window while the code is displayed to block
-        screenshots.
-  - [x] Sonarr/Radarr/Seerr checkboxes collapsed under an "Advanced"
-        expandable section (collapsed by default); Jellyfin stays top-level.
-  - [x] The code regenerates automatically on every relevant change
-        (checkbox, server/user picker, passphrase) - no "Generate" button.
-        `QrExportViewModel` cancels any in-flight generate job before
-        starting a new one so rapid toggling can't let a stale result
-        clobber a newer one.
-  - [x] Encryption is on by default, not opt-in: a random 12-character
-        legible-alphabet passphrase (`QrExportViewModel.generatePassword`,
-        `SecureRandom`, ~60 bits, excludes `0/O/1/I/L`) is generated on
-        load. The passphrase field is read-only (nothing to type) with a
-        show/hide eye toggle and a regenerate button - the idea is you read
-        it off this screen and tell it to whoever's scanning, not type one
-        in yourself.
-- [x] Import side: "Scan QR code" entry point on the Welcome screen
-      (`QrScanScreen`, CameraX `ImageAnalysis` + ZXing `MultiFormatReader`)
-      that decodes the payload and applies it via
-      `QrConfigManager.applyEnvelope` (`AppPreferences`, Room
-      server/address/user rows, `SecureCredentialStore` secrets), shows a
-      brief success confirmation, then does a full process restart
-      (`Activity.restartProcess()`, same as the existing restore-from-backup
-      flow) so the newly-current server/user take effect.
-- [x] Payload is a `BackupCrypto`-wrapped (AES-256-GCM + PBKDF2, reused
-      as-is from the backup feature), Base64-encoded blob with an optional
-      user-supplied passphrase (blank = unencrypted) - same
-      optional-password UX as the existing backup/restore feature.
-- [x] Versioned from the start: `QrConfigEnvelope.version`
-      (`data/.../qrsetup/QrConfigData.kt`), decode rejects payloads with a
-      newer version than the client understands
-      (`QrConfigCodec.UnsupportedVersionException`).
-- [x] JVM unit tests for the pure encode/decode pipeline (crypto round-trip
-      incl. wrong-password/corrupt-payload/unsupported-version cases, and a
-      ZXing encode→decode round-trip) - `data/src/test/.../qrsetup/`.
-- [x] Icons on the Welcome screen's buttons (Learn more/Continue/Scan QR
-      code/Restore from backup), including a new hand-authored
-      `ic_qr_code` drawable (no existing "qr code" glyph in this project's
-      Feather-style icon set).
-- [x] Custom encoding: the QR payload is a `findroidplus://setup?p=<base64url>`
-      URI (`QrConfigCodec`), not a bare blob - self-identifying in any QR
-      scanner app, not just this one. A matching intent-filter on
-      `MainActivity` + `AndroidManifest.xml` means scanning the code with
-      *any* app and tapping "Open" launches straight into Findroid+'s
-      `ScanQrRoute` with the payload already in hand (skips the camera
-      screen entirely - `QrScanScreen`'s new `initialRaw` param). The
-      in-app camera scanner also now ignores any QR code that isn't one of
-      ours (`QrConfigCodec.looksLikeQrConfigUri`) instead of flashing an
-      "invalid code" error at unrelated codes (wifi, URLs, ...).
-- [x] Crossfade animation between QR codes on the export screen when the
-      selection/passphrase changes and a new code is generated, instead of
-      an instant swap.
-- [x] Stretch goal delivered: the Jellyfin username field is editable
-      (pre-filled with the selected user's name) and the password field,
-      left blank by default, embeds the current session's token as before;
-      typing a password performs a real live login against the selected
-      server (via a throwaway `JellyfinApi` instance so the app's actual
-      active session is never touched) and embeds the fresh token/user id
-      instead - `QrExportViewModel.authenticate`. Sonarr/Radarr/Seerr base
-      URL/API key are now also editable inline under the Advanced section
-      (pre-filled from `AppPreferences`/`SecureCredentialStore`, override
-      is one-off for this export, never persisted) -
-      `QrConfigManager.PvrOverride`/`JellyfinUserOverride`. All of this
-      goes through the same debounced auto-regenerate path (500ms) so
-      typing doesn't hammer the server with login attempts per keystroke.
+Core export/import flow (biometric-gated encrypted QR export on phone, scan
++ apply + restart on import, versioned payload, editable Jellyfin/Sonarr/
+Radarr/Seerr overrides, custom `findroidplus://` scheme + deep link, JVM unit
+tests) is implemented and merged - see git log for FINDROID-43 commits.
+
 - [ ] Not done: TV-side export (phone-only in v1, see FINDROID-43's own
       scope note above) and interactive on-device UX testing of the full
       flow (biometric prompt → generate → scan → apply) - verified so far
@@ -190,25 +55,106 @@ fully done.
 
 ## FINDROID-44: Remote configuration of a running Findroid+ instance
 
-Rough idea, not yet designed: be able to manage a Findroid+ instance running
-on another device (e.g. create Sonarr/Radarr auto-download rules on the Mi
+Manage a Findroid+ instance running on another device (e.g. push a
+Sonarr/Radarr auto-download rule, or a one-off episode download, to the Mi
 Pad 4's instance) remotely, without touching that device directly.
 
-- [ ] Figure out the actual architecture - this likely needs *some* server
-      component the app can poll or receive pushes from, since Android apps
-      aren't normally reachable inbound. Options to weigh: a lightweight
-      companion service/relay, piggybacking on an existing always-on service
-      the user already runs, or a pull-based model (app periodically checks
-      for pending remote-config changes against a server) instead of a
-      push/inbound one.
-  - [ ] Whichever model is chosen, needs auth so only the owner can push
-        config changes to their own instance(s).
-- [ ] Scope which config should even be remotely manageable first (the
-      motivating case is Sonarr/Radarr auto-download rules) rather than
-      trying to make all settings remotely editable from day one.
-- [ ] Revisit after FINDROID-43 lands - the QR export/import payload format
-      and PVR-config data model built there likely overlaps heavily with
-      whatever a remote-config channel would need to transmit.
+- [x] Architecture chosen: no dedicated relay/server. Reuses Jellyfin's own
+      per-user `DisplayPreferences` custom-data API (`customPrefs: Map
+      <String,String>`) as the transport, scoped to `(displayPreferencesId
+      ="findroidplus-remoteconfig", userId, client)` - every instance
+      already talks to this same Jellyfin account continuously, so this
+      needs zero new infrastructure and works for any fork user. Auth is
+      implicit (same Jellyfin session that already gates everything else),
+      not a separate mechanism.
+- [x] Wire format: `RemoteConfigCommand` (`data/.../models/
+      AutoDownloadRemoteCommand.kt`) is a `@Serializable sealed interface`
+      with three variants sharing one JSON-serialized queue under
+      `customPrefs["pending"]` - `ReconcileRules` (persists an ongoing
+      auto-download rule, replaying `AutoDownloadRuleRepository
+      .reconcileRules`'s own parameters verbatim rather than modeling
+      add/remove separately), `EvaluateNow` (one-time "download whatever
+      currently matches this scope, right now," no rule persisted - mirrors
+      a local bulk download made without "also download new episodes"), and
+      `DownloadItem` (a single already-known item + media source,
+      immediate - the "this episode" case). A device heartbeat registry
+      (`RemoteDeviceInfo`) lives alongside it under `customPrefs["devices"]`
+      so a controller can list "which of my other devices are out there."
+- [x] `RemoteConfigRepository` (interface in `data`) /
+      `RemoteConfigRepositoryImpl` (impl in **`core`**, not `data` - applying
+      `EvaluateNow`/`DownloadItem` needs `AutoDownloadRuleEvaluator`/
+      `Downloader`, both `core`-only, and `data` has no dependency on `core`)
+      implement enqueue (`pushRuleUpdate`/`pushDownloadWithScope`/
+      `pushItemDownload`) and periodic apply (`syncNow`, via
+      `RemoteConfigWorker`/`RemoteConfigScheduler`, 15-minute WorkManager
+      floor, unconditional). The actual sync decision logic (which commands
+      to apply/expire/dead-letter, which devices to prune) is a pure
+      top-level function (`planRemoteConfigSync`, `data/.../repository/
+      RemoteConfigSyncPlan.kt`) rather than a method on the impl, agnostic
+      to which command subtype it's handling, so it's unit-testable without
+      mocks - this `data` module has no mocking framework, and the existing
+      convention here (`QueueStatusMatchingTest` et al.) is to extract pure
+      branching logic into plain functions instead. `RemoteConfigSyncPlanTest`
+      covers device-scoping, TTL expiry/dead-lettering, mixed command
+      types, and the "device known-stale vs simply never seen yet"
+      distinction (a real bug the tests caught - the first implementation
+      dead-lettered commands for any device absent from the registry, not
+      just ones confirmed stale via heartbeat TTL, which would have
+      silently dropped rules pushed to a device before its very first
+      sync).
+- [x] Controller UX, two entry points, both sharing one `RemoteDevicePicker`
+      component (`app/phone/.../film/components/RemoteDevicePicker.kt`,
+      modeled 1:1 on `JellyfinServerUserPicker` from the QR export screen):
+  - The dedicated auto-download rule editor
+    (`AutoDownloadRulesScreen.kt`'s `EditRuleDialog`) - default "This
+    device" applies to Room as before, picking another device calls
+    `pushRuleUpdate` instead and shows a "Rule sent to X" toast
+    (channel-based one-shot event, same pattern as `SearchEvent`/
+    `DeleteItemEvent` elsewhere in the app).
+  - The regular one-off Download popup (`DownloadScopeDialog.kt`, opened
+    from `ItemButtonsBar`'s Download button on Show/Season/Episode
+    screens) - the bulk/season scope branches to `pushDownloadWithScope`
+    (mirroring each screen's local `downloadWithScope` exactly: an
+    `EvaluateNow` command when seasons are picked, a `ReconcileRules`
+    command too when "also download new episodes" is on - independent of
+    each other, matching local semantics), and the Episode screen's
+    "this episode" immediate case (new `DownloaderAction.PushDownload`,
+    handled in `DownloaderViewModel` since that's what owns
+    `Downloader.downloadItem` locally) branches to `pushItemDownload`.
+- [x] Pull-to-refresh added to the auto-download rules screen
+    (`PullToRefreshBox`, same Material3 indicator as Downloads/Library/
+    Home) - drives an immediate `RemoteConfigRepository.syncNow()` instead
+    of waiting out `RemoteConfigWorker`'s 15-minute WorkManager floor.
+    Added after discovering (via `adb shell cmd jobscheduler run -f`
+    testing) that force-running the WorkManager job doesn't actually
+    execute `doWork()` if WorkManager's own scheduler considers it "before
+    schedule" - it silently re-defers instead, which is why an early manual
+    test looked like the push "didn't work." Pull-to-refresh sidesteps
+    WorkManager's timing entirely by calling `syncNow()` directly.
+- [x] Verified via remote `:app:phone:compileLibreDebugKotlin`, `ktfmtCheck`,
+      and `:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest` on
+      rofl-13 - all green (2026-07-28, after fixing two real cross-module
+      issues the first build caught: `core` was missing the
+      kotlinx.serialization plugin/dependency, and `planRemoteConfigSync`/
+      `RemoteConfigSyncPlan` were `internal` in `data`, invisible from the
+      impl once it moved to `core`).
+- [x] Partial on-device verification (2026-07-28, CI-signed release install
+      on Mi Pad 4 and px5): confirmed live against the real Jellyfin
+      server - app launches cleanly (no Hilt/DI crash from the new
+      `RemoteConfigRepository`/`Downloader` injections), the Download
+      dialog's device picker correctly lists a real other device ("Pixel
+      5") fetched from the shared `DisplayPreferences` registry, proving
+      the transport/heartbeat round-trip genuinely works end to end. Did
+      **not** complete an actual push+download, since px5 was in active
+      use at the time and confirming would have started a real multi-GB
+      background download on it without more explicit go-ahead - stopped
+      short of that deliberately rather than risk it.
+- [ ] Not done: a completed push→receive round trip (queue a command from
+      one device, confirm the target actually downloads/applies it) -
+      blocked on both test devices being free/idle at the same time.
+- [ ] Not done: TV-side support - this only touches the phone module.
 
-Status: not started (2026-07-27) - design only, no implementation approach
-chosen yet.
+Status: implementation done (2026-07-28), passing remote build/lint/unit
+tests, and spot-verified live against the real server on both physical test
+devices. Still needs one fully hands-off push→receive run and has no
+TV-side counterpart yet.

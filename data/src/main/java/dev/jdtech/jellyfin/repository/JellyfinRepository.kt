@@ -16,6 +16,7 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.DisplayPreferencesDto
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.PublicSystemInfo
 import org.jellyfin.sdk.model.api.UserConfiguration
@@ -142,4 +143,15 @@ interface JellyfinRepository {
     suspend fun getDownloads(): List<FindroidItem>
 
     fun getUserId(): UUID
+
+    /**
+     * Reads the shared per-user [DisplayPreferencesDto] bucket identified by
+     * [displayPreferencesId]/[client] - used as a zero-infrastructure transport for cross-device
+     * remote config (see [dev.jdtech.jellyfin.repository.RemoteConfigRepository]), since every
+     * instance already talks to this same Jellyfin account continuously.
+     */
+    suspend fun getDisplayPreferences(displayPreferencesId: String, client: String): DisplayPreferencesDto
+
+    /** Writes back a [DisplayPreferencesDto] previously obtained from [getDisplayPreferences]. */
+    suspend fun updateDisplayPreferences(displayPreferencesId: String, client: String, data: DisplayPreferencesDto)
 }

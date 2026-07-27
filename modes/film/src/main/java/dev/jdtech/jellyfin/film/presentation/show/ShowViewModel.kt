@@ -15,6 +15,7 @@ import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.toFindroidEpisode
@@ -24,6 +25,7 @@ import dev.jdtech.jellyfin.repository.CalendarRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.PendingDownloadRequestRepository
+import dev.jdtech.jellyfin.repository.RemoteConfigRepository
 import dev.jdtech.jellyfin.repository.SeasonEpisodesRepository
 import dev.jdtech.jellyfin.repository.SeerrRepository
 import dev.jdtech.jellyfin.repository.SonarrSearchRepository
@@ -56,6 +58,7 @@ constructor(
     private val database: ServerDatabaseDao,
     private val downloader: Downloader,
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
     private val appPreferences: AppPreferences,
     private val calendarRepository: CalendarRepository,
     private val seasonEpisodesRepository: SeasonEpisodesRepository,
@@ -213,10 +216,13 @@ constructor(
         return autoDownloadRuleRepository.getRulesForSeries(serverId, userId, showId).toExistingScope()
     }
 
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+
     private fun downloadWithScope(
         selection: DownloadSelection,
         alsoFollowNew: Boolean,
         onlyUnwatched: Boolean,
+        targetDeviceId: String? = null,
     ) {
         // Deliberately not viewModelScope: enqueuing a full show/season can take a while (one
         // network round trip per episode), and viewModelScope is cancelled the instant this
@@ -226,6 +232,20 @@ constructor(
         externalScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             val userId = repository.getUserId()
+
+            if (targetDeviceId != null) {
+                remoteConfigRepository.pushDownloadWithScope(
+                    targetDeviceId = targetDeviceId,
+                    serverId = serverId,
+                    userId = userId,
+                    seriesId = showId,
+                    seasonIds = selection.seasonIds,
+                    alsoFollowNew = alsoFollowNew,
+                    alsoFutureSeasons = selection.alsoFutureSeasons,
+                    onlyUnwatched = onlyUnwatched,
+                )
+                return@launch
+            }
 
             // Only the explicitly-picked seasons are downloaded immediately - "auto-download
             // future seasons" is a no-op today by definition, it only matters once persisted.
@@ -453,7 +473,12 @@ constructor(
                 }
             }
             is ShowAction.DownloadWithScope ->
-                downloadWithScope(action.selection, action.alsoFollowNew, action.onlyUnwatched)
+                downloadWithScope(
+                    action.selection,
+                    action.alsoFollowNew,
+                    action.onlyUnwatched,
+                    action.targetDeviceId,
+                )
             is ShowAction.DeleteShowDownloads -> deleteShowDownloads(action.alsoRemoveRules)
             is ShowAction.DeleteItem -> deleteItem(action.cascadeToPvr)
             is ShowAction.SearchSeriesAutomatic -> searchSeriesAutomatic()

@@ -40,6 +40,7 @@ import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.formatBinaryFileSize
@@ -72,7 +73,13 @@ fun DownloadScopeDialog(
     initialOnlyUnwatched: Boolean = false,
     canDelete: Boolean = false,
     onDelete: (() -> Unit)? = null,
-    onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
+    onConfirm:
+        (
+            selection: DownloadSelection,
+            alsoFollowNew: Boolean,
+            onlyUnwatched: Boolean,
+            targetDeviceId: String?,
+        ) -> Unit,
     onDismiss: () -> Unit,
     getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
         null,
@@ -80,6 +87,9 @@ fun DownloadScopeDialog(
     // require one, so this covers the "this episode" scope instead of going through the cache.
     episodeSize: DownloadSizeEstimate? = null,
     downloadLocationPreference: String = "ask",
+    // FINDROID-44: devices other than this one seen via heartbeat - empty hides the picker
+    // entirely (matches EditRuleDialog's same gating).
+    otherDevices: List<RemoteDeviceInfo> = emptyList(),
 ) {
     val hasExistingRule =
         initialSelection.seasonIds.isNotEmpty() || initialSelection.alsoFutureSeasons
@@ -96,6 +106,7 @@ fun DownloadScopeDialog(
         remember { mutableStateOf(initialAlsoFollowNew || initialSelection.alsoFutureSeasons) }
     var onlyUnwatched by remember { mutableStateOf(initialOnlyUnwatched) }
     var seasonsExpanded by remember { mutableStateOf(false) }
+    var selectedDeviceId by remember { mutableStateOf<String?>(null) }
 
     // Whether a season/rule scope is configured, independent of thisEpisodeOnly - the two can be
     // active together (see the "also download new episodes" toggle below).
@@ -302,6 +313,14 @@ fun DownloadScopeDialog(
                         onToggle = { onlyUnwatched = it },
                     )
                 }
+                if (otherDevices.isNotEmpty()) {
+                    HorizontalDivider()
+                    RemoteDevicePicker(
+                        otherDevices = otherDevices,
+                        selectedDeviceId = selectedDeviceId,
+                        onSelected = { selectedDeviceId = it },
+                    )
+                }
             }
         },
         onDismissRequest = onDismiss,
@@ -353,6 +372,7 @@ fun DownloadScopeDialog(
                                 ),
                                 alsoFollowNew,
                                 onlyUnwatched,
+                                selectedDeviceId,
                             )
                         },
                     ) {
@@ -409,7 +429,7 @@ private fun DownloadScopeDialogPreview() {
         DownloadScopeDialog(
             seasons = emptyList(),
             showEpisodeOption = true,
-            onConfirm = { _, _, _ -> },
+            onConfirm = { _, _, _, _ -> },
             onDismiss = {},
         )
     }

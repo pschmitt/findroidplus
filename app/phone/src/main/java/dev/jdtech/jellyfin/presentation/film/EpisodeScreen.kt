@@ -51,6 +51,7 @@ import dev.jdtech.jellyfin.film.presentation.episode.EpisodeAction
 import dev.jdtech.jellyfin.film.presentation.episode.EpisodeState
 import dev.jdtech.jellyfin.film.presentation.episode.EpisodeViewModel
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.isDownloadBroken
@@ -162,6 +163,7 @@ fun EpisodeScreen(
         downloadLocationPreference = downloaderViewModel.downloadLocationPreference,
         getSeasons = viewModel::getSeasons,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        getOtherDevices = viewModel::getOtherDevices,
         onRefresh = { viewModel.loadEpisode(episodeId = episodeId) },
         onAction = { action ->
             when (action) {
@@ -236,6 +238,7 @@ private fun EpisodeScreenLayout(
         { _, _ ->
             DownloadSizeEstimate()
         },
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
     onAction: (EpisodeAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
     onManageImportClick: () -> Unit = {},
@@ -578,14 +581,35 @@ private fun EpisodeScreenLayout(
                             initialOnlyUnwatched = state.existingScope.onlyUnwatched,
                             getSeasons = getSeasons,
                             getSeasonSize = getSeasonSize,
-                            onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
+                            getOtherDevices = getOtherDevices,
+                            onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
                                 onAction(
                                     EpisodeAction.DownloadWithScope(
                                         selection,
                                         alsoFollowNew,
                                         onlyUnwatched,
+                                        targetDeviceId,
                                     )
                                 )
+                                if (targetDeviceId != null) {
+                                    Toast.makeText(
+                                            androidContext,
+                                            CoreR.string.remote_config_download_sent_toast,
+                                            Toast.LENGTH_SHORT,
+                                        )
+                                        .show()
+                                }
+                            },
+                            onPushEpisodeDownload = { targetDeviceId ->
+                                onDownloaderAction(
+                                    DownloaderAction.PushDownload(episode, targetDeviceId)
+                                )
+                                Toast.makeText(
+                                        androidContext,
+                                        CoreR.string.remote_config_download_sent_toast,
+                                        Toast.LENGTH_SHORT,
+                                    )
+                                    .show()
                             },
                         )
                         downloadedSource?.let { source ->

@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.isDownloading
+import dev.jdtech.jellyfin.repository.RemoteConfigRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
 import javax.inject.Inject
@@ -21,8 +22,11 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class DownloaderViewModel
 @Inject
-constructor(private val downloader: Downloader, private val appPreferences: AppPreferences) :
-    ViewModel() {
+constructor(
+    private val downloader: Downloader,
+    private val appPreferences: AppPreferences,
+    private val remoteConfigRepository: RemoteConfigRepository,
+) : ViewModel() {
     private val _state = MutableStateFlow(DownloaderState())
     val state = _state.asStateFlow()
 
@@ -66,6 +70,18 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
                     DownloaderState(status = DownloadManager.STATUS_FAILED, errorText = uiText)
                 )
             }
+        }
+    }
+
+    private fun pushDownload(item: FindroidItem, targetDeviceId: String) {
+        viewModelScope.launch {
+            val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
+            remoteConfigRepository.pushItemDownload(
+                targetDeviceId = targetDeviceId,
+                serverId = serverId,
+                itemId = item.id,
+                sourceId = item.sources.first().id,
+            )
         }
     }
 
@@ -119,6 +135,7 @@ constructor(private val downloader: Downloader, private val appPreferences: AppP
     fun onAction(action: DownloaderAction) {
         when (action) {
             is DownloaderAction.Download -> download(action.item, action.storageIndex)
+            is DownloaderAction.PushDownload -> pushDownload(action.item, action.targetDeviceId)
             is DownloaderAction.DeleteDownload -> deleteDownload(action.item)
             is DownloaderAction.CancelDownload -> cancelDownload()
             is DownloaderAction.ForceDownload -> forceDownload()

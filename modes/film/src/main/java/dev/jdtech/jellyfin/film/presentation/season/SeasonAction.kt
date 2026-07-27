@@ -22,6 +22,8 @@ sealed interface SeasonAction {
         val selection: DownloadSelection,
         val alsoFollowNew: Boolean,
         val onlyUnwatched: Boolean,
+        // null = this device (applies locally as today); non-null = push to that device instead.
+        val targetDeviceId: String? = null,
     ) : SeasonAction
 
     data class DeleteSeasonDownloads(val alsoRemoveRules: Boolean) : SeasonAction

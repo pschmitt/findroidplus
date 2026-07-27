@@ -21,6 +21,8 @@ sealed interface EpisodeAction {
         val selection: DownloadSelection,
         val alsoFollowNew: Boolean,
         val onlyUnwatched: Boolean,
+        // null = this device (applies locally as today); non-null = push to that device instead.
+        val targetDeviceId: String? = null,
     ) : EpisodeAction
 
     data object OnBackClick : EpisodeAction

@@ -37,6 +37,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.DeviceOptionsDto
 import org.jellyfin.sdk.model.api.DeviceProfile
+import org.jellyfin.sdk.model.api.DisplayPreferencesDto
 import org.jellyfin.sdk.model.api.GeneralCommandType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
@@ -613,5 +614,27 @@ class JellyfinRepositoryImpl(
 
     override fun getUserId(): UUID {
         return jellyfinApi.userId!!
+    }
+
+    override suspend fun getDisplayPreferences(displayPreferencesId: String, client: String): DisplayPreferencesDto =
+        withContext(Dispatchers.IO) {
+            jellyfinApi.displayPreferencesApi
+                .getDisplayPreferences(displayPreferencesId, jellyfinApi.userId!!, client)
+                .content
+        }
+
+    override suspend fun updateDisplayPreferences(
+        displayPreferencesId: String,
+        client: String,
+        data: DisplayPreferencesDto,
+    ) {
+        withContext(Dispatchers.IO) {
+            jellyfinApi.displayPreferencesApi.updateDisplayPreferences(
+                displayPreferencesId,
+                jellyfinApi.userId!!,
+                client,
+                data,
+            )
+        }
     }
 }

@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.jdtech.jellyfin.core.presentation.downloader.DownloaderState
@@ -119,6 +120,7 @@ fun SeasonScreen(
         state = state,
         getSeasons = viewModel::getSeasons,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        getOtherDevices = viewModel::getOtherDevices,
         onRefresh = { viewModel.loadSeason(seasonId = seasonId) },
         onAction = { action ->
             when (action) {
@@ -187,6 +189,7 @@ private fun SeasonScreenLayout(
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
         DownloadSizeEstimate()
     },
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
 ) {
     val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
@@ -289,6 +292,7 @@ private fun SeasonScreenLayout(
                         enableDownloadDialog = true,
                         getSeasons = getSeasons,
                         getSeasonSize = getSeasonSize,
+                        getOtherDevices = getOtherDevices,
                         initialSelection =
                             DownloadSelection(
                                 seasonIds = state.existingScope.seasonIds.ifEmpty { setOf(season.id) },
@@ -300,20 +304,22 @@ private fun SeasonScreenLayout(
                         onDeleteDownloads = { clearSeasonDownloadsDialogOpen = true },
                         downloadIconTint =
                             if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
-                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
+                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
                             onAction(
                                 SeasonAction.DownloadWithScope(
                                     selection,
                                     alsoFollowNew,
                                     onlyUnwatched,
+                                    targetDeviceId,
                                 )
                             )
                             Toast.makeText(
                                     androidContext,
-                                    if (alsoFollowNew) {
-                                        CoreR.string.auto_download_enabled_toast
-                                    } else {
-                                        CoreR.string.download_queued_toast
+                                    when {
+                                        targetDeviceId != null ->
+                                            CoreR.string.remote_config_download_sent_toast
+                                        alsoFollowNew -> CoreR.string.auto_download_enabled_toast
+                                        else -> CoreR.string.download_queued_toast
                                     },
                                     Toast.LENGTH_SHORT,
                                 )

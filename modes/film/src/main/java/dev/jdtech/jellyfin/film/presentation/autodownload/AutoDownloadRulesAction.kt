@@ -11,6 +11,8 @@ sealed interface AutoDownloadRulesAction {
         val alsoFutureSeasons: Boolean,
         val onlyNewEpisodes: Boolean,
         val onlyUnwatched: Boolean,
+        // null = this device (applies to Room as today); non-null = push to that device instead.
+        val targetDeviceId: String? = null,
     ) : AutoDownloadRulesAction
 
     data class DeleteShowRule(val seriesId: UUID, val alsoDeleteDownloads: Boolean) :

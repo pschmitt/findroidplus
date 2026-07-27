@@ -8,10 +8,12 @@ import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.RemoteConfigRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
@@ -20,8 +22,10 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -32,6 +36,7 @@ class AutoDownloadRulesViewModel
 constructor(
     private val repository: JellyfinRepository,
     private val ruleRepository: AutoDownloadRuleRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
     private val appPreferences: AppPreferences,
     private val database: ServerDatabaseDao,
     private val downloader: Downloader,
@@ -39,34 +44,58 @@ constructor(
     private val _state = MutableStateFlow(AutoDownloadRulesState())
     val state = _state.asStateFlow()
 
+    private val eventsChannel = Channel<AutoDownloadRuleEvent>()
+    val events = eventsChannel.receiveAsFlow()
+
     suspend fun getSeasons(seriesId: UUID): List<FindroidSeason> = repository.getSeasons(seriesId)
+
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
 
     fun loadRules() {
         viewModelScope.launch {
             _state.emit(_state.value.copy(isLoading = true, error = null))
             try {
-                val serverId =
-                    appPreferences.getValue(appPreferences.currentServer)
-                        ?: run {
-                            _state.emit(_state.value.copy(isLoading = false))
-                            return@launch
-                        }
-                val userId = repository.getUserId()
-                val rules = ruleRepository.getRules(serverId, userId)
-                val uiModels =
-                    rules
-                        .groupBy { it.seriesId }
-                        .mapNotNull { (seriesId, rulesForShow) ->
-                            try {
-                                toUiModel(seriesId, rulesForShow)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to resolve auto-download rules for $seriesId")
-                                null
-                            }
-                        }
-                _state.emit(_state.value.copy(isLoading = false, shows = uiModels))
+                val uiModels = fetchUiModels()
+                _state.emit(_state.value.copy(isLoading = false, shows = uiModels ?: _state.value.shows))
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(isLoading = false, error = e))
+            }
+        }
+    }
+
+    // Pull-to-refresh: unlike loadRules()'s local-only reload, this also drives an immediate
+    // RemoteConfigRepository.syncNow() first - so a rule pushed from another device doesn't have
+    // to wait out RemoteConfigWorker's 15-minute WorkManager floor to show up here. A sync
+    // failure (offline, server hiccup) is non-fatal - still reload whatever's already local.
+    fun refresh() {
+        viewModelScope.launch {
+            _state.emit(_state.value.copy(isRefreshing = true, error = null))
+            try {
+                remoteConfigRepository.syncNow()
+            } catch (e: Exception) {
+                Timber.w(e, "Manual remote config sync failed")
+            }
+            try {
+                val uiModels = fetchUiModels()
+                _state.emit(
+                    _state.value.copy(isRefreshing = false, shows = uiModels ?: _state.value.shows)
+                )
+            } catch (e: Exception) {
+                _state.emit(_state.value.copy(isRefreshing = false, error = e))
+            }
+        }
+    }
+
+    private suspend fun fetchUiModels(): List<AutoDownloadShowRuleUiModel>? {
+        val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return null
+        val userId = repository.getUserId()
+        val rules = ruleRepository.getRules(serverId, userId)
+        return rules.groupBy { it.seriesId }.mapNotNull { (seriesId, rulesForShow) ->
+            try {
+                toUiModel(seriesId, rulesForShow)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to resolve auto-download rules for $seriesId")
+                null
             }
         }
     }
@@ -143,20 +172,36 @@ constructor(
         alsoFutureSeasons: Boolean,
         onlyNewEpisodes: Boolean,
         onlyUnwatched: Boolean,
+        targetDeviceId: String? = null,
     ) {
         viewModelScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             val userId = repository.getUserId()
-            ruleRepository.reconcileRules(
-                serverId = serverId,
-                userId = userId,
-                seriesId = seriesId,
-                seasonIds = seasonIds,
-                alsoFutureSeasons = alsoFutureSeasons,
-                onlyNewEpisodes = onlyNewEpisodes,
-                onlyUnwatched = onlyUnwatched,
-            )
-            loadRules()
+            if (targetDeviceId == null) {
+                ruleRepository.reconcileRules(
+                    serverId = serverId,
+                    userId = userId,
+                    seriesId = seriesId,
+                    seasonIds = seasonIds,
+                    alsoFutureSeasons = alsoFutureSeasons,
+                    onlyNewEpisodes = onlyNewEpisodes,
+                    onlyUnwatched = onlyUnwatched,
+                )
+                loadRules()
+            } else {
+                val deviceName = getOtherDevices().find { it.id == targetDeviceId }?.name ?: targetDeviceId
+                remoteConfigRepository.pushRuleUpdate(
+                    targetDeviceId = targetDeviceId,
+                    serverId = serverId,
+                    userId = userId,
+                    seriesId = seriesId,
+                    seasonIds = seasonIds,
+                    alsoFutureSeasons = alsoFutureSeasons,
+                    onlyNewEpisodes = onlyNewEpisodes,
+                    onlyUnwatched = onlyUnwatched,
+                )
+                eventsChannel.send(AutoDownloadRuleEvent.RuleSentToDevice(deviceName))
+            }
         }
     }
 
@@ -189,6 +234,7 @@ constructor(
                     action.alsoFutureSeasons,
                     action.onlyNewEpisodes,
                     action.onlyUnwatched,
+                    action.targetDeviceId,
                 )
             is AutoDownloadRulesAction.DeleteShowRule ->
                 deleteShowRule(action.seriesId, action.alsoDeleteDownloads)

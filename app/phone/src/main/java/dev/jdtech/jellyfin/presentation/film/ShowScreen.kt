@@ -57,6 +57,7 @@ import dev.jdtech.jellyfin.film.presentation.show.ShowState
 import dev.jdtech.jellyfin.film.presentation.show.ShowViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.UpcomingSeason
 import dev.jdtech.jellyfin.presentation.film.components.ActorsRow
 import dev.jdtech.jellyfin.presentation.film.components.AggregateInfoDialog
@@ -144,6 +145,7 @@ fun ShowScreen(
     ShowScreenLayout(
         state = state,
         getSeasonSize = viewModel::getUndownloadedEpisodeSize,
+        getOtherDevices = viewModel::getOtherDevices,
         onRefresh = { viewModel.loadShow(showId = showId) },
         onAction = { action ->
             when (action) {
@@ -209,6 +211,7 @@ private fun ShowScreenLayout(
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
         DownloadSizeEstimate()
     },
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
 ) {
     val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
@@ -292,20 +295,27 @@ private fun ShowScreenLayout(
                         initialOnlyUnwatched = state.existingScope.onlyUnwatched,
                         getSeasons = { state.seasons },
                         getSeasonSize = getSeasonSize,
+                        getOtherDevices = getOtherDevices,
                         hasActiveDownloadOrRule = state.hasDownloads || state.autoDownloadEnabled,
                         onDeleteDownloads = { clearShowDownloadsDialogOpen = true },
                         downloadIconTint =
                             if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
-                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
+                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
                             onAction(
-                                ShowAction.DownloadWithScope(selection, alsoFollowNew, onlyUnwatched)
+                                ShowAction.DownloadWithScope(
+                                    selection,
+                                    alsoFollowNew,
+                                    onlyUnwatched,
+                                    targetDeviceId,
+                                )
                             )
                             Toast.makeText(
                                     androidContext,
-                                    if (alsoFollowNew) {
-                                        CoreR.string.auto_download_enabled_toast
-                                    } else {
-                                        CoreR.string.download_queued_toast
+                                    when {
+                                        targetDeviceId != null ->
+                                            CoreR.string.remote_config_download_sent_toast
+                                        alsoFollowNew -> CoreR.string.auto_download_enabled_toast
+                                        else -> CoreR.string.download_queued_toast
                                     },
                                     Toast.LENGTH_SHORT,
                                 )

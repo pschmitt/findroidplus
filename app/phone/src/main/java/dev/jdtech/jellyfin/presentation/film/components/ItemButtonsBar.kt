@@ -43,6 +43,7 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -75,10 +76,22 @@ fun ItemButtonsBar(
         null,
     hasActiveDownloadOrRule: Boolean = false,
     onDeleteDownloads: (() -> Unit)? = null,
+    // FINDROID-44: devices other than this one seen via heartbeat, for DownloadScopeDialog's
+    // device picker - null hides the picker entirely (same gating as a null getSeasons).
+    getOtherDevices: (suspend () -> List<RemoteDeviceInfo>)? = null,
     onBulkDownload:
-        (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit =
-        { _, _, _ ->
+        (
+            selection: DownloadSelection,
+            alsoFollowNew: Boolean,
+            onlyUnwatched: Boolean,
+            targetDeviceId: String?,
+        ) -> Unit =
+        { _, _, _, _ ->
         },
+    // Only reachable when showEpisodeDownloadOption is true (Episode screen) and a target device
+    // was picked - the local "this episode" immediate download instead goes through
+    // onDownloadClick/startDownload as always.
+    onPushEpisodeDownload: (targetDeviceId: String) -> Unit = {},
     downloadIconTint: Color? = null,
     trailingContent: @Composable FlowRowScope.() -> Unit = {},
     // Rendered alongside whichever of the download progress card/Delete/Download button is
@@ -316,7 +329,9 @@ fun ItemButtonsBar(
     }
     if (downloadScopeDialogOpen) {
         var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+        var otherDevices by remember { mutableStateOf<List<RemoteDeviceInfo>>(emptyList()) }
         LaunchedEffect(Unit) { seasons = getSeasons?.invoke() ?: emptyList() }
+        LaunchedEffect(Unit) { otherDevices = getOtherDevices?.invoke() ?: emptyList() }
         DownloadScopeDialog(
             seasons = seasons,
             showEpisodeOption = showEpisodeDownloadOption,
@@ -327,6 +342,7 @@ fun ItemButtonsBar(
             getSeasonSize = getSeasonSize,
             episodeSize = singleItemSize,
             downloadLocationPreference = downloadLocationPreference,
+            otherDevices = otherDevices,
             onDelete =
                 onDeleteDownloads?.let {
                     {
@@ -334,21 +350,25 @@ fun ItemButtonsBar(
                         it()
                     }
                 },
-            onConfirm = { selection, alsoFollowNew, onlyUnwatched ->
+            onConfirm = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
                 downloadScopeDialogOpen = false
+                if (targetDeviceId != null && selection.thisEpisodeOnly) {
+                    // The immediate single-item case has no season/rule scope at all, so it's a
+                    // wholly separate remote path from onBulkDownload below.
+                    onPushEpisodeDownload(targetDeviceId)
+                } else if (selection.thisEpisodeOnly) {
+                    startDownload()
+                }
                 // Not mutually exclusive: "this episode" is an immediate single download,
                 // "also download new episodes" is a forward-looking rule - both can be selected
                 // at once and both should happen. The rule branch only needs to fire on top of a
                 // single download when it's actually configured (matches the non-episode
                 // seasons/show flows, where this always ran because thisEpisodeOnly is never true
                 // there).
-                if (selection.thisEpisodeOnly) {
-                    startDownload()
-                }
                 if (
                     !selection.thisEpisodeOnly || alsoFollowNew || selection.seasonIds.isNotEmpty()
                 ) {
-                    onBulkDownload(selection, alsoFollowNew, onlyUnwatched)
+                    onBulkDownload(selection, alsoFollowNew, onlyUnwatched, targetDeviceId)
                 }
             },
             onDismiss = { downloadScopeDialogOpen = false },

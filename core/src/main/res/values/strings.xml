@@ -177,6 +177,10 @@
     <string name="auto_download_rule_deleted_toast">Auto-download rule deleted</string>
     <string name="auto_download_rule_enabled_toast">Auto-download rule enabled</string>
     <string name="auto_download_rule_disabled_toast">Auto-download rule disabled</string>
+    <string name="remote_config_this_device">This device</string>
+    <string name="remote_config_target_device">Push to</string>
+    <string name="remote_config_rule_sent_toast">Rule sent to %1$s</string>
+    <string name="remote_config_download_sent_toast">Download sent to another device</string>
     <string name="download_settings">Download settings</string>
     <string name="download_deleted_toast">Download deleted</string>
     <string name="delete_from_jellyfin">Delete from Jellyfin</string>

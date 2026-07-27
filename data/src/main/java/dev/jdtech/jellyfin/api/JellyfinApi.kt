@@ -9,6 +9,7 @@ import kotlin.time.toDuration
 import org.jellyfin.sdk.api.client.HttpClientOptions
 import org.jellyfin.sdk.api.client.extensions.brandingApi
 import org.jellyfin.sdk.api.client.extensions.devicesApi
+import org.jellyfin.sdk.api.client.extensions.displayPreferencesApi
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
@@ -64,6 +65,7 @@ class JellyfinApi(
 
     val brandingApi = api.brandingApi
     val devicesApi = api.devicesApi
+    val displayPreferencesApi = api.displayPreferencesApi
     val itemsApi = api.itemsApi
     val libraryApi = api.libraryApi
     val mediaInfoApi = api.mediaInfoApi

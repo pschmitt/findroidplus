@@ -14,6 +14,7 @@ import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.models.UpcomingEpisode
 import dev.jdtech.jellyfin.models.isDownloading
 import dev.jdtech.jellyfin.models.toFindroidEpisode
@@ -23,6 +24,7 @@ import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.PendingDownloadRequestRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
+import dev.jdtech.jellyfin.repository.RemoteConfigRepository
 import dev.jdtech.jellyfin.repository.SeasonEpisodesRepository
 import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
@@ -53,6 +55,7 @@ constructor(
     private val database: ServerDatabaseDao,
     private val downloader: Downloader,
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
     private val appPreferences: AppPreferences,
     private val queueStatusRepository: QueueStatusRepository,
     private val seasonEpisodesRepository: SeasonEpisodesRepository,
@@ -330,10 +333,13 @@ constructor(
         }
     }
 
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+
     private fun downloadWithScope(
         selection: DownloadSelection,
         alsoFollowNew: Boolean,
         onlyUnwatched: Boolean,
+        targetDeviceId: String? = null,
     ) {
         val seriesId = seriesId ?: return
         // Deliberately not viewModelScope - see ShowViewModel.downloadWithScope's kdoc for why:
@@ -342,6 +348,20 @@ constructor(
         externalScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             val userId = repository.getUserId()
+
+            if (targetDeviceId != null) {
+                remoteConfigRepository.pushDownloadWithScope(
+                    targetDeviceId = targetDeviceId,
+                    serverId = serverId,
+                    userId = userId,
+                    seriesId = seriesId,
+                    seasonIds = selection.seasonIds,
+                    alsoFollowNew = alsoFollowNew,
+                    alsoFutureSeasons = selection.alsoFutureSeasons,
+                    onlyUnwatched = onlyUnwatched,
+                )
+                return@launch
+            }
 
             for (targetSeasonId in selection.seasonIds) {
                 val transientRule =
@@ -431,7 +451,12 @@ constructor(
                 }
             }
             is SeasonAction.DownloadWithScope ->
-                downloadWithScope(action.selection, action.alsoFollowNew, action.onlyUnwatched)
+                downloadWithScope(
+                    action.selection,
+                    action.alsoFollowNew,
+                    action.onlyUnwatched,
+                    action.targetDeviceId,
+                )
             is SeasonAction.DeleteSeasonDownloads -> deleteSeasonDownloads(action.alsoRemoveRules)
             is SeasonAction.SearchEpisodeAutomatic ->
                 searchEpisodeAutomatic(action.episodeNumber, action.knownEpisodeId)

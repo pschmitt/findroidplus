@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
@@ -38,6 +39,7 @@ dependencies {
     implementation(projects.settings)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.ui)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.hilt.work)

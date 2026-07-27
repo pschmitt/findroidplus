@@ -41,6 +41,7 @@ import dev.jdtech.jellyfin.work.NewItemNotificationWorker
 import dev.jdtech.jellyfin.work.PendingDownloadWorker
 import dev.jdtech.jellyfin.work.PreloadCalendarWorker
 import dev.jdtech.jellyfin.work.QueueStatusScheduler
+import dev.jdtech.jellyfin.work.RemoteConfigScheduler
 import dev.jdtech.jellyfin.work.SyncWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -124,6 +125,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         schedulePreloadCalendar(workManager)
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
         QueueStatusScheduler.schedule(applicationContext, appPreferences)
+        RemoteConfigScheduler.schedule(applicationContext)
         pauseDownloadsIfBatterySaverAlreadyOn()
         ForegroundDownloadResumer(downloader).start()
     }
