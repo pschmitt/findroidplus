@@ -72,6 +72,8 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
             is SettingsEvent.NavigateToBackupSettings -> Unit
+            // QR device provisioning is phone-only (needs a camera) - nothing for TV to react to.
+            is SettingsEvent.NavigateToQrExport -> Unit
             // Integrations settings are phone-only for this pass - nothing for TV to react to.
             is SettingsEvent.NavigateToConnections -> Unit
             // Home layout reordering is phone-only for this pass - nothing for TV to react to.
