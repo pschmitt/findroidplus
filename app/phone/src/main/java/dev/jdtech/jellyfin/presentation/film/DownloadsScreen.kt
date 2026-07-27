@@ -1679,9 +1679,13 @@ private fun PvrQueueRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            queueItem.subtitle?.let { subtitle ->
+            // Episode rows always get a subtitle line - "TBA" (matching Sonarr's own placeholder
+            // for an episode whose title isn't known yet, e.g. unaired or metadata not synced)
+            // when we don't have a real one. Movies have no separate subtitle concept at all
+            // (their title already is the title), so Radarr rows show nothing here.
+            if (queueItem.status.source == PvrSource.SONARR) {
                 Text(
-                    text = subtitle,
+                    text = queueItem.subtitle ?: stringResource(CoreR.string.episode_title_tba),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
