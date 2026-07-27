@@ -114,6 +114,18 @@ hand on every new device.
         screenshots.
   - [x] Sonarr/Radarr/Seerr checkboxes collapsed under an "Advanced"
         expandable section (collapsed by default); Jellyfin stays top-level.
+  - [x] The code regenerates automatically on every relevant change
+        (checkbox, server/user picker, passphrase) - no "Generate" button.
+        `QrExportViewModel` cancels any in-flight generate job before
+        starting a new one so rapid toggling can't let a stale result
+        clobber a newer one.
+  - [x] Encryption is on by default, not opt-in: a random 12-character
+        legible-alphabet passphrase (`QrExportViewModel.generatePassword`,
+        `SecureRandom`, ~60 bits, excludes `0/O/1/I/L`) is generated on
+        load. The passphrase field is read-only (nothing to type) with a
+        show/hide eye toggle and a regenerate button - the idea is you read
+        it off this screen and tell it to whoever's scanning, not type one
+        in yourself.
 - [x] Import side: "Scan QR code" entry point on the Welcome screen
       (`QrScanScreen`, CameraX `ImageAnalysis` + ZXing `MultiFormatReader`)
       that decodes the payload and applies it via

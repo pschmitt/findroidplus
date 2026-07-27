@@ -19,9 +19,9 @@ sealed interface QrExportAction {
 
     data object OnAdvancedToggle : QrExportAction
 
-    data class OnPasswordChanged(val password: String) : QrExportAction
+    data object OnRegeneratePassword : QrExportAction
 
-    data object OnGenerateClick : QrExportAction
+    data object OnTogglePasswordVisibility : QrExportAction
 
     data object OnBackClick : QrExportAction
 }

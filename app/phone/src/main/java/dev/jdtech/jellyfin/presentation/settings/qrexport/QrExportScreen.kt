@@ -20,9 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,8 +46,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -272,14 +270,40 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
 
             OutlinedTextField(
                 value = state.password,
-                onValueChange = { onAction(QrExportAction.OnPasswordChanged(it)) },
+                onValueChange = {},
+                readOnly = true,
                 label = { Text(text = stringResource(CoreR.string.qr_export_password)) },
                 supportingText = {
                     Text(text = stringResource(CoreR.string.qr_export_password_summary))
                 },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation =
+                    if (state.passwordVisible) VisualTransformation.None
+                    else PasswordVisualTransformation(),
+                trailingIcon = {
+                    Row {
+                        IconButton(
+                            onClick = { onAction(QrExportAction.OnTogglePasswordVisibility) }
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (state.passwordVisible) CoreR.drawable.ic_eye_off
+                                        else CoreR.drawable.ic_eye
+                                    ),
+                                contentDescription =
+                                    stringResource(CoreR.string.qr_export_toggle_password),
+                            )
+                        }
+                        IconButton(onClick = { onAction(QrExportAction.OnRegeneratePassword) }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_refresh_cw),
+                                contentDescription =
+                                    stringResource(CoreR.string.qr_export_regenerate_password),
+                            )
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -288,14 +312,6 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                     !(state.includeSonarr && state.sonarrAvailable) &&
                     !(state.includeRadarr && state.radarrAvailable) &&
                     !(state.includeSeerr && state.seerrAvailable)
-
-            Button(
-                onClick = { onAction(QrExportAction.OnGenerateClick) },
-                enabled = !nothingSelected && !state.isGenerating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(CoreR.string.qr_export_generate))
-            }
 
             if (nothingSelected) {
                 Text(

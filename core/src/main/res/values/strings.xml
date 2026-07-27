@@ -273,9 +273,10 @@
     <string name="qr_export_include_radarr">Radarr</string>
     <string name="qr_export_include_seerr">Seerr</string>
     <string name="qr_export_not_configured">Not configured</string>
-    <string name="qr_export_password">Passphrase (optional)</string>
-    <string name="qr_export_password_summary">Encrypts the code. Leave blank for no encryption - anyone who scans or photographs the code can otherwise read it directly.</string>
-    <string name="qr_export_generate">Generate QR code</string>
+    <string name="qr_export_password">Passphrase</string>
+    <string name="qr_export_password_summary">Encrypts the code - read this off to whoever is scanning it, they\'ll be asked for it. Tap refresh for a new one.</string>
+    <string name="qr_export_toggle_password">Show/hide passphrase</string>
+    <string name="qr_export_regenerate_password">Generate a new passphrase</string>
     <string name="qr_export_nothing_selected">Select at least one section above</string>
     <string name="qr_export_jellyfin_account">Jellyfin account</string>
     <string name="qr_export_advanced">Advanced</string>

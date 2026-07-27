@@ -18,7 +18,10 @@ data class QrExportState(
     val selectedServerId: String? = null,
     val selectedUserId: UUID? = null,
     val advancedExpanded: Boolean = false,
+    // Auto-generated on load (see QrExportViewModel.generatePassword) - the export is encrypted
+    // by default, not opt-in; the user reads/re-generates it here rather than typing one in.
     val password: String = "",
+    val passwordVisible: Boolean = false,
     val isGenerating: Boolean = false,
     val payload: String? = null,
     val error: String? = null,
