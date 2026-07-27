@@ -1679,15 +1679,10 @@ private fun PvrQueueRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            if (isProblem) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_alert_circle),
-                    contentDescription = stringResource(CoreR.string.import_issue_title),
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(14.dp),
-                )
-            } else {
+            // The trailing action icon (right edge of the row) already signals a problem - no
+            // need to repeat it here too now that this line no longer carries any status text.
+            if (!isProblem) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = statusText,
                     style = MaterialTheme.typography.bodySmall,
