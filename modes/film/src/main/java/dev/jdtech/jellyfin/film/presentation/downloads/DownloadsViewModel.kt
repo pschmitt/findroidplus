@@ -67,26 +67,25 @@ constructor(
         // Unlike the one-shot registrations below, re-run every time the screen is (re-)entered,
         // not just the first time this ViewModel instance observes anything - the ViewModel (and
         // refreshJob) can outlive a single visit to this screen (e.g. surviving a tab switch), in
-        // which case the early return below would otherwise skip this forever after the first visit.
+        // which case the early return below would otherwise skip this forever after the first
+        // visit.
         refreshStorage()
         if (refreshJob != null) return
-        refreshJob =
-            viewModelScope.launch {
-                while (isActive) {
-                    refreshDownloads()
-                    delay(REFRESH_INTERVAL_MS)
-                }
+        refreshJob = viewModelScope.launch {
+            while (isActive) {
+                refreshDownloads()
+                delay(REFRESH_INTERVAL_MS)
             }
-        pvrRefreshJob =
-            viewModelScope.launch {
-                while (isActive) {
-                    // PVR ETA/speed comes from Sonarr/Radarr, not DownloadManager. Refreshing
-                    // while this screen is visible keeps those values useful without tightening
-                    // the app-wide background polling interval.
-                    queueStatusRepository.refreshNow()
-                    delay(PVR_REFRESH_INTERVAL_MS)
-                }
+        }
+        pvrRefreshJob = viewModelScope.launch {
+            while (isActive) {
+                // PVR ETA/speed comes from Sonarr/Radarr, not DownloadManager. Refreshing
+                // while this screen is visible keeps those values useful without tightening
+                // the app-wide background polling interval.
+                queueStatusRepository.refreshNow()
+                delay(PVR_REFRESH_INTERVAL_MS)
             }
+        }
         viewModelScope.launch {
             downloader.getDeleteProgressFlow().collect { progress ->
                 val wasRunning = _state.value.deleteProgress != null
@@ -115,7 +114,8 @@ constructor(
         viewModelScope.launch {
             queueStatusRepository.getQueueSnapshotFlow().collect { snapshot ->
                 val groups = buildPvrQueueGroups(snapshot.entries)
-                val liveKeys = groups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
+                val liveKeys =
+                    groups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
                 _state.update {
                     it.copy(
                         pvrQueueGroups = groups,
@@ -203,8 +203,10 @@ constructor(
                     movies = movies,
                     showGroups = showGroups,
                     selectedIds = it.selectedIds.intersect(allIds),
-                    autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
-                    autoDeleteWatchedHours = appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
+                    autoDeleteWatchedEnabled =
+                        appPreferences.getValue(appPreferences.autoDeleteWatched),
+                    autoDeleteWatchedHours =
+                        appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
                     maxDownloadSizeEnabled =
                         appPreferences.getValue(appPreferences.maxDownloadSizeEnabled),
                     maxDownloadSizeGb = appPreferences.getValue(appPreferences.maxDownloadSizeGb),
@@ -225,7 +227,10 @@ constructor(
         refreshStorage()
     }
 
-    private fun reconcileDownloadProgress(movies: List<FindroidMovie>, episodes: List<FindroidEpisode>) {
+    private fun reconcileDownloadProgress(
+        movies: List<FindroidMovie>,
+        episodes: List<FindroidEpisode>,
+    ) {
         val trackedItems: List<Pair<UUID, FindroidItem>> =
             movies.filter { it.isDownloading() }.map { it.id to it } +
                 episodes.filter { it.isDownloading() }.map { it.id to it }
@@ -243,14 +248,13 @@ constructor(
                 item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.downloadId
                     ?: return@forEach
             downloadIdsByItem[id] = downloadId
-            progressJobs[id] =
-                viewModelScope.launch {
-                    downloader.getProgressFlow(downloadId).collect { progress ->
-                        _state.update {
-                            it.copy(downloadProgress = it.downloadProgress + (id to progress))
-                        }
+            progressJobs[id] = viewModelScope.launch {
+                downloader.getProgressFlow(downloadId).collect { progress ->
+                    _state.update {
+                        it.copy(downloadProgress = it.downloadProgress + (id to progress))
                     }
                 }
+            }
         }
     }
 
@@ -265,7 +269,8 @@ constructor(
             val newSelectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
             it.copy(
                 selectedIds = newSelectedIds,
-                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
+                selectedPvrQueueIds =
+                    if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
             )
         }
     }
@@ -273,12 +278,14 @@ constructor(
     fun toggleSelectAll(selectAll: Boolean) {
         _state.update { state ->
             val allIds =
-                (state.movies.map { it.id } + state.showGroups.flatMap { it.episodes }.map { it.id })
+                (state.movies.map { it.id } +
+                        state.showGroups.flatMap { it.episodes }.map { it.id })
                     .toSet()
             val newSelectedIds = if (selectAll) allIds else emptySet()
             state.copy(
                 selectedIds = newSelectedIds,
-                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else state.selectedPvrQueueIds,
+                selectedPvrQueueIds =
+                    if (newSelectedIds.isNotEmpty()) emptySet() else state.selectedPvrQueueIds,
             )
         }
     }
@@ -289,7 +296,8 @@ constructor(
             val newSelectedIds = if (selected) selectedIds + ids else selectedIds - ids
             it.copy(
                 selectedIds = newSelectedIds,
-                selectedPvrQueueIds = if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
+                selectedPvrQueueIds =
+                    if (newSelectedIds.isNotEmpty()) emptySet() else it.selectedPvrQueueIds,
             )
         }
     }
@@ -309,7 +317,8 @@ constructor(
     fun togglePvrQueueSelectAll(selectAll: Boolean) {
         _state.update { state ->
             val allKeys =
-                state.pvrQueueGroups.flatMap { group -> group.items.map { group.source to it.queueItemId } }
+                state.pvrQueueGroups
+                    .flatMap { group -> group.items.map { group.source to it.queueItemId } }
                     .toSet()
             val newSelected = if (selectAll) allKeys else emptySet()
             state.copy(
@@ -348,7 +357,9 @@ constructor(
         viewModelScope.launch { downloader.deleteItems(ids) }
     }
 
-    /** Moves the current selection to a different storage volume - see [Downloader.migrateItems]. */
+    /**
+     * Moves the current selection to a different storage volume - see [Downloader.migrateItems].
+     */
     fun migrateSelected(toStorageIndex: Int) {
         val ids = _state.value.selectedIds.toList()
         if (ids.isEmpty()) return
@@ -356,7 +367,10 @@ constructor(
         // enqueues MigrateDownloadsWorker (fast), so waiting on it first would leave a beat where
         // the selection's cleared but no "moving" indicator has appeared yet.
         _state.update {
-            it.copy(selectedIds = it.selectedIds - ids.toSet(), migratingIds = it.migratingIds + ids)
+            it.copy(
+                selectedIds = it.selectedIds - ids.toSet(),
+                migratingIds = it.migratingIds + ids,
+            )
         }
         viewModelScope.launch { downloader.migrateItems(ids, toStorageIndex) }
     }
@@ -395,18 +409,6 @@ constructor(
         downloader.downloadItem(item, sourceId, storageIndex)
     }
 
-    /**
-     * Pins/unpins a downloaded episode against [AutoDeleteWatchedWorker][dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker]
-     * - see [dev.jdtech.jellyfin.models.FindroidEpisode.isMarkedForAutoDeletion].
-     */
-    fun toggleExcludeFromAutoDelete(item: FindroidItem) {
-        val source = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: return
-        viewModelScope.launch {
-            database.setSourceExcludeFromAutoDelete(source.id, !source.excludeFromAutoDelete)
-            refreshDownloads()
-        }
-    }
-
     fun onDownloadAction(itemId: UUID, action: DownloadAction) {
         viewModelScope.launch {
             val downloadId = downloadIdsByItem[itemId] ?: return@launch
@@ -442,8 +444,8 @@ constructor(
     }
 
     /**
-     * Removes a Sonarr/Radarr queue entry (there is no API-side pause - that lives in the
-     * download client). See [QueueStatusRepository.removeQueueItem] for the flag semantics.
+     * Removes a Sonarr/Radarr queue entry (there is no API-side pause - that lives in the download
+     * client). See [QueueStatusRepository.removeQueueItem] for the flag semantics.
      */
     fun removePvrQueueItem(
         item: PvrQueueUiItem,
@@ -489,9 +491,9 @@ constructor(
     /**
      * Opens the "manage imports" sheet for a queue entry (see [ManualImportSheetState]) - seeded
      * with every entry in [item]'s duplicate cluster (see [PvrQueueUiItem.duplicates]), not just
-     * the one this row displays, so the sheet can offer a choice when there's more than one.
-     * No-ops when none of the cluster's entries have a `downloadId` - shouldn't happen in
-     * practice, but Sonarr/Radarr technically don't guarantee the field.
+     * the one this row displays, so the sheet can offer a choice when there's more than one. No-ops
+     * when none of the cluster's entries have a `downloadId` - shouldn't happen in practice, but
+     * Sonarr/Radarr technically don't guarantee the field.
      */
     fun openManualImport(item: PvrQueueUiItem, source: PvrSource) {
         val refs =
@@ -504,9 +506,13 @@ constructor(
 
     fun confirmManualImport() {
         manualImport.confirm(
-            onSuccess = { viewModelScope.launch { eventsChannel.send(DownloadsEvent.ManualImportCompleted) } },
+            onSuccess = {
+                viewModelScope.launch { eventsChannel.send(DownloadsEvent.ManualImportCompleted) }
+            },
             onFailure = { message ->
-                viewModelScope.launch { eventsChannel.send(DownloadsEvent.ManualImportFailed(message)) }
+                viewModelScope.launch {
+                    eventsChannel.send(DownloadsEvent.ManualImportFailed(message))
+                }
             },
         )
     }
@@ -523,7 +529,11 @@ constructor(
         manualImport.reject(
             removeFromClient,
             blocklist,
-            onSuccess = { viewModelScope.launch { eventsChannel.send(DownloadsEvent.PvrQueueItemRemoved(title)) } },
+            onSuccess = {
+                viewModelScope.launch {
+                    eventsChannel.send(DownloadsEvent.PvrQueueItemRemoved(title))
+                }
+            },
             onFailure = { message ->
                 viewModelScope.launch {
                     eventsChannel.send(DownloadsEvent.PvrQueueItemRemoveFailed(message))
@@ -575,8 +585,8 @@ constructor(
  * manually on the PVR side for something not yet in Jellyfin) become title-only rows using the
  * PVR-side title the repository built.
  *
- * A free function (not a method) so it's directly unit-testable without a ViewModel/Hilt/Android
- * in the loop.
+ * A free function (not a method) so it's directly unit-testable without a ViewModel/Hilt/Android in
+ * the loop.
  */
 internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGroup> =
     entries

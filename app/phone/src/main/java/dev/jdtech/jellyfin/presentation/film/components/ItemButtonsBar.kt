@@ -10,8 +10,15 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,8 +85,6 @@ fun ItemButtonsBar(
     // ItemOverflowMenu) - unlike [trailingContent], which is just the last tile(s) in the same
     // wrapping FlowRow as everything else.
     overflowContent: @Composable () -> Unit = {},
-    excludeFromAutoDelete: Boolean = false,
-    onToggleExcludeFromAutoDeleteClick: (() -> Unit)? = null,
     // Set when this item's own PVR queue entry has an import warning/failure to resolve - makes
     // the download progress card tappable to open the manage-import sheet.
     onDownloadCardClick: (() -> Unit)? = null,
@@ -169,60 +174,15 @@ fun ItemButtonsBar(
                         onClick = { onTrailerClick(uri) },
                     )
                 }
-                if (downloaderState != null && !downloaderState.isDownloading) {
-                    // While isDeleting, neither branch shows - the delete tile disappears rather
-                    // than risk a second tap queuing another delete of a file that's already
-                    // going away.
-                    if (item.isDownloaded() && !downloaderState.isDeleting) {
-                        onToggleExcludeFromAutoDeleteClick?.let { toggleClick ->
-                            ItemActionButton(
-                                icon =
-                                    painterResource(
-                                        if (excludeFromAutoDelete) CoreR.drawable.ic_lock
-                                        else CoreR.drawable.ic_unlock
-                                    ),
-                                label = stringResource(CoreR.string.download_keep_label),
-                                onClick = toggleClick,
-                                checked = excludeFromAutoDelete,
-                            )
-                        }
-                        // The label doubles as the on-disk size so it doesn't need its own
-                        // separate caption elsewhere on the screen - falls back to the generic
-                        // label for a broken (0-byte/missing) download, where a size reading
-                        // would be misleading. Path details still live in the confirmation
-                        // dialog this opens.
-                        ItemActionButton(
-                            icon = painterResource(CoreR.drawable.ic_trash),
-                            label =
-                                downloadedSource
-                                    ?.takeIf { it.size > 0L }
-                                    ?.let { formatBinaryFileSize(it.size) }
-                                    ?: stringResource(CoreR.string.delete_download),
-                            onClick = { deleteDownloadDialogOpen = true },
-                            contentColor = MaterialTheme.colorScheme.error,
-                        )
-                    } else if (
-                        !downloaderState.isDeleting &&
-                            (item.canDownload || item is FindroidShow || item is FindroidSeason)
-                    ) {
-                        ItemActionButton(
-                            icon = painterResource(CoreR.drawable.ic_download),
-                            label = stringResource(CoreR.string.download),
-                            onClick = {
-                                if (enableDownloadDialog) {
-                                    downloadScopeDialogOpen = true
-                                } else {
-                                    startDownload()
-                                }
-                            },
-                            contentColor = downloadIconTint,
-                        )
-                    }
-                }
                 trailingContent()
             }
             overflowContent()
         }
+        // Exactly one of these three renders at a time, in the same slot below the tile row:
+        // the live progress card while downloading, a large "Delete download" button once
+        // downloaded, or a large "Download" button when neither. While isDeleting, none of them
+        // show - the button disappears rather than risk a second tap queuing another delete of a
+        // file that's already going away.
         if (downloaderState != null) {
             AnimatedVisibility(downloaderState.isDownloading) {
                 Column {
@@ -235,6 +195,59 @@ fun ItemButtonsBar(
                         onResumeClick = onDownloadResumeClick,
                         onCardClick = onDownloadCardClick,
                     )
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                }
+            }
+            if (!downloaderState.isDownloading) {
+                if (item.isDownloaded() && !downloaderState.isDeleting) {
+                    // The label doubles as the on-disk size so it doesn't need its own separate
+                    // caption elsewhere on the screen - falls back to the generic label for a
+                    // broken (0-byte/missing) download, where a size reading would be misleading.
+                    // Path details still live in the confirmation dialog this opens.
+                    FilledTonalButton(
+                        onClick = { deleteDownloadDialogOpen = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                    ) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                        )
+                        Spacer(Modifier.width(MaterialTheme.spacings.small))
+                        Text(
+                            downloadedSource
+                                ?.takeIf { it.size > 0L }
+                                ?.let { formatBinaryFileSize(it.size) }
+                                ?: stringResource(CoreR.string.delete_download)
+                        )
+                    }
+                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                } else if (
+                    !downloaderState.isDeleting &&
+                        (item.canDownload || item is FindroidShow || item is FindroidSeason)
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            if (enableDownloadDialog) {
+                                downloadScopeDialogOpen = true
+                            } else {
+                                startDownload()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_download),
+                            contentDescription = null,
+                            tint = downloadIconTint ?: LocalContentColor.current,
+                        )
+                        Spacer(Modifier.width(MaterialTheme.spacings.small))
+                        Text(stringResource(CoreR.string.download))
+                    }
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                 }
             }
@@ -315,7 +328,9 @@ fun ItemButtonsBar(
                 if (selection.thisEpisodeOnly) {
                     startDownload()
                 }
-                if (!selection.thisEpisodeOnly || alsoFollowNew || selection.seasonIds.isNotEmpty()) {
+                if (
+                    !selection.thisEpisodeOnly || alsoFollowNew || selection.seasonIds.isNotEmpty()
+                ) {
                     onBulkDownload(selection, alsoFollowNew, onlyUnwatched)
                 }
             },

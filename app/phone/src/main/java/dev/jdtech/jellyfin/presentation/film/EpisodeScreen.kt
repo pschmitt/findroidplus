@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -18,8 +17,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +33,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.PlayerActivity
@@ -125,8 +123,10 @@ fun EpisodeScreen(
     ObserveAsEvents(viewModel.searchEvents) { event ->
         val message =
             when (event) {
-                is SearchEvent.SearchTriggered -> context.getString(CoreR.string.search_triggered_toast)
-                is SearchEvent.ReleaseGrabbed -> context.getString(CoreR.string.release_grabbed_toast)
+                is SearchEvent.SearchTriggered ->
+                    context.getString(CoreR.string.search_triggered_toast)
+                is SearchEvent.ReleaseGrabbed ->
+                    context.getString(CoreR.string.release_grabbed_toast)
                 is SearchEvent.Failed ->
                     context.getString(
                         CoreR.string.search_failed_toast,
@@ -176,10 +176,18 @@ fun EpisodeScreen(
                     Toast.makeText(context, CoreR.string.marked_as_played_toast, Toast.LENGTH_SHORT)
                         .show()
                 is EpisodeAction.UnmarkAsPlayed ->
-                    Toast.makeText(context, CoreR.string.marked_as_unplayed_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.marked_as_unplayed_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 is EpisodeAction.MarkAsFavorite ->
-                    Toast.makeText(context, CoreR.string.added_to_favorites_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.added_to_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 is EpisodeAction.UnmarkAsFavorite ->
                     Toast.makeText(
@@ -224,9 +232,10 @@ private fun EpisodeScreenLayout(
     downloadLocationPreference: String = "ask",
     onRefresh: () -> Unit = {},
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
-    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
-        DownloadSizeEstimate()
-    },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
+        { _, _ ->
+            DownloadSizeEstimate()
+        },
     onAction: (EpisodeAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
     onManageImportClick: () -> Unit = {},
@@ -266,340 +275,389 @@ private fun EpisodeScreenLayout(
         },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        state.episode?.let { episode ->
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                ItemHeader(
-                    item = episode,
-                    scrollState = scrollState,
-                    content = {
-                        PlayOverlayButton(
-                            item = episode,
-                            onClick = { onAction(EpisodeAction.Play(startFromBeginning = false)) },
-                            enabled = episode.canPlay,
-                            isDeleting = downloaderState.isDeleting,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    },
-                )
-                Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    Text(
-                        text = episode.name,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 2,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    val downloadedSource =
-                        if (episode.isDownloaded()) {
-                            episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
-                        } else {
-                            null
-                        }
-                    Text(
-                        text = episode.seriesName,
-                        modifier =
-                            Modifier.clickable {
-                                onAction(EpisodeAction.NavigateToShow(episode.seriesId))
-                            },
-                        maxLines = 1,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    val seasonName =
-                        episode.seasonName
-                            ?: stringResource(
-                                CoreR.string.season_number,
-                                episode.parentIndexNumber,
-                            )
-                    Text(
-                        text =
-                            "$seasonName - " +
-                                stringResource(
-                                    id = CoreR.string.episode_number,
-                                    episode.indexNumber,
-                                ),
-                        modifier =
-                            Modifier.clickable {
-                                onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
-                            },
-                        maxLines = 1,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    ItemMetaRow(
-                        dateText = episode.premiereDate?.format(state.dateFormat),
-                        runtimeTicks = episode.runtimeTicks,
-                        communityRating = episode.communityRating,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    val deleteDownload: () -> Unit = {
-                        onDownloaderAction(DownloaderAction.DeleteDownload(episode))
-                        Toast.makeText(
-                                androidContext,
-                                CoreR.string.download_deleted_toast,
-                                Toast.LENGTH_SHORT,
-                            )
-                            .show()
-                    }
-                    ItemButtonsBar(
+            state.episode?.let { episode ->
+                Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+                    ItemHeader(
                         item = episode,
-                        downloaderState = downloaderState,
-                        downloadLocationPreference = downloadLocationPreference,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning))
+                        scrollState = scrollState,
+                        content = {
+                            PlayOverlayButton(
+                                item = episode,
+                                onClick = {
+                                    onAction(EpisodeAction.Play(startFromBeginning = false))
+                                },
+                                enabled = episode.canPlay,
+                                isDeleting = downloaderState.isDeleting,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
                         },
-                        onTrailerClick = {},
-                        onDownloadClick = { storageIndex ->
-                            onDownloaderAction(DownloaderAction.Download(episode, storageIndex))
-                        },
-                        onDownloadCancelClick = {
-                            onDownloaderAction(DownloaderAction.CancelDownload(episode))
-                        },
-                        onDownloadForceClick = {
-                            onDownloaderAction(DownloaderAction.ForceDownload)
-                        },
-                        onDownloadPauseClick = {
-                            onDownloaderAction(DownloaderAction.PauseDownload)
-                        },
-                        onDownloadResumeClick = {
-                            onDownloaderAction(DownloaderAction.ResumeDownload)
-                        },
-                        onDownloadDeleteClick = deleteDownload,
-                        onDownloadCardClick =
-                            state.queueStatus
-                                ?.status
-                                ?.takeIf {
-                                    it == QueueItemStatus.WARNING || it == QueueItemStatus.FAILED
-                                }
-                                ?.let { { onManageImportClick() } },
-                        overflowContent = {
-                            ItemOverflowMenu { closeMenu ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (episode.played) CoreR.string.unmark_as_played
-                                                else CoreR.string.mark_as_played
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_check),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (episode.played) EpisodeAction.UnmarkAsPlayed
-                                            else EpisodeAction.MarkAsPlayed
-                                        )
-                                    },
+                    )
+                    Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        Text(
+                            text = episode.name,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 2,
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                        val downloadedSource =
+                            if (episode.isDownloaded()) {
+                                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                            } else {
+                                null
+                            }
+                        Text(
+                            text = episode.seriesName,
+                            modifier =
+                                Modifier.clickable {
+                                    onAction(EpisodeAction.NavigateToShow(episode.seriesId))
+                                },
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        val seasonName =
+                            episode.seasonName
+                                ?: stringResource(
+                                    CoreR.string.season_number,
+                                    episode.parentIndexNumber,
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (episode.favorite) {
-                                                    CoreR.string.remove_from_favorites
-                                                } else {
-                                                    CoreR.string.add_to_favorites
-                                                }
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    if (episode.favorite) {
-                                                        CoreR.drawable.ic_heart_filled
-                                                    } else {
-                                                        CoreR.drawable.ic_heart
-                                                    }
-                                                ),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (episode.favorite) EpisodeAction.UnmarkAsFavorite
-                                            else EpisodeAction.MarkAsFavorite
-                                        )
-                                    },
+                        Text(
+                            text =
+                                "$seasonName - " +
+                                    stringResource(
+                                        id = CoreR.string.episode_number,
+                                        episode.indexNumber,
+                                    ),
+                            modifier =
+                                Modifier.clickable {
+                                    onAction(EpisodeAction.NavigateToSeason(episode.seasonId))
+                                },
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        ItemMetaRow(
+                            dateText = episode.premiereDate?.format(state.dateFormat),
+                            runtimeTicks = episode.runtimeTicks,
+                            communityRating = episode.communityRating,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        val deleteDownload: () -> Unit = {
+                            onDownloaderAction(DownloaderAction.DeleteDownload(episode))
+                            Toast.makeText(
+                                    androidContext,
+                                    CoreR.string.download_deleted_toast,
+                                    Toast.LENGTH_SHORT,
                                 )
-                                // Always offered, regardless of Sonarr configuration/tvdbId
-                                // presence - a search that can't resolve a target fails with a
-                                // clear toast instead of the entry silently vanishing.
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(CoreR.string.search_episode_automatic))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_sonarr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(EpisodeAction.SearchEpisodeAutomatic)
-                                    },
+                                .show()
+                        }
+                        ItemButtonsBar(
+                            item = episode,
+                            downloaderState = downloaderState,
+                            downloadLocationPreference = downloadLocationPreference,
+                            onPlayClick = { startFromBeginning ->
+                                onAction(
+                                    EpisodeAction.Play(startFromBeginning = startFromBeginning)
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(CoreR.string.search_episode_manual))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_sonarr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(EpisodeAction.OpenReleasePicker)
-                                    },
-                                )
-                                if (state.videoMetadata != null) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(CoreR.string.info)) },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_info),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            infoDialogOpen = true
-                                        },
-                                    )
-                                }
-                                if (state.canDelete) {
-                                    HorizontalDivider()
+                            },
+                            onTrailerClick = {},
+                            onDownloadClick = { storageIndex ->
+                                onDownloaderAction(DownloaderAction.Download(episode, storageIndex))
+                            },
+                            onDownloadCancelClick = {
+                                onDownloaderAction(DownloaderAction.CancelDownload(episode))
+                            },
+                            onDownloadForceClick = {
+                                onDownloaderAction(DownloaderAction.ForceDownload)
+                            },
+                            onDownloadPauseClick = {
+                                onDownloaderAction(DownloaderAction.PauseDownload)
+                            },
+                            onDownloadResumeClick = {
+                                onDownloaderAction(DownloaderAction.ResumeDownload)
+                            },
+                            onDownloadDeleteClick = deleteDownload,
+                            onDownloadCardClick =
+                                state.queueStatus
+                                    ?.status
+                                    ?.takeIf {
+                                        it == QueueItemStatus.WARNING ||
+                                            it == QueueItemStatus.FAILED
+                                    }
+                                    ?.let { { onManageImportClick() } },
+                            overflowContent = {
+                                ItemOverflowMenu { closeMenu ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = stringResource(CoreR.string.delete_from_jellyfin),
-                                                color = MaterialTheme.colorScheme.error,
+                                                stringResource(
+                                                    if (episode.played)
+                                                        CoreR.string.unmark_as_played
+                                                    else CoreR.string.mark_as_played
+                                                )
                                             )
                                         },
                                         leadingIcon = {
                                             Icon(
-                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                painter = painterResource(CoreR.drawable.ic_check),
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error,
                                             )
                                         },
                                         onClick = {
                                             closeMenu()
-                                            deleteDialogOpen = true
+                                            onAction(
+                                                if (episode.played) EpisodeAction.UnmarkAsPlayed
+                                                else EpisodeAction.MarkAsPlayed
+                                            )
                                         },
                                     )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (episode.favorite) {
+                                                        CoreR.string.remove_from_favorites
+                                                    } else {
+                                                        CoreR.string.add_to_favorites
+                                                    }
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        if (episode.favorite) {
+                                                            CoreR.drawable.ic_heart_filled
+                                                        } else {
+                                                            CoreR.drawable.ic_heart
+                                                        }
+                                                    ),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(
+                                                if (episode.favorite) EpisodeAction.UnmarkAsFavorite
+                                                else EpisodeAction.MarkAsFavorite
+                                            )
+                                        },
+                                    )
+                                    // Always offered, regardless of Sonarr configuration/tvdbId
+                                    // presence - a search that can't resolve a target fails with a
+                                    // clear toast instead of the entry silently vanishing.
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    CoreR.string.search_episode_automatic
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_sonarr),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(EpisodeAction.SearchEpisodeAutomatic)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(stringResource(CoreR.string.search_episode_manual))
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_sonarr),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(EpisodeAction.OpenReleasePicker)
+                                        },
+                                    )
+                                    if (state.videoMetadata != null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(CoreR.string.info)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(CoreR.drawable.ic_info),
+                                                    contentDescription = null,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                infoDialogOpen = true
+                                            },
+                                        )
+                                    }
+                                    if (
+                                        state.autoDeleteWatchedEnabled && downloadedSource != null
+                                    ) {
+                                        val excludeFromAutoDelete =
+                                            downloadedSource.excludeFromAutoDelete
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    stringResource(
+                                                        if (excludeFromAutoDelete) {
+                                                            CoreR.string
+                                                                .download_action_allow_auto_delete
+                                                        } else {
+                                                            CoreR.string
+                                                                .download_action_exclude_from_auto_delete
+                                                        }
+                                                    )
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(
+                                                            if (excludeFromAutoDelete) {
+                                                                CoreR.drawable.ic_lock
+                                                            } else {
+                                                                CoreR.drawable.ic_unlock
+                                                            }
+                                                        ),
+                                                    contentDescription = null,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                onAction(EpisodeAction.ToggleExcludeFromAutoDelete)
+                                            },
+                                        )
+                                    }
+                                    if (state.canDelete) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text =
+                                                        stringResource(
+                                                            CoreR.string.delete_from_jellyfin
+                                                        ),
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(CoreR.drawable.ic_trash),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                deleteDialogOpen = true
+                                            },
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enableDownloadDialog = true,
-                        showEpisodeDownloadOption = true,
-                        initialSelection =
-                            DownloadSelection(
-                                seasonIds = state.existingScope.seasonIds,
-                                alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
-                            ),
-                        initialAlsoFollowNew = state.existingScope.alsoFollowNew,
-                        initialOnlyUnwatched = state.existingScope.onlyUnwatched,
-                        getSeasons = getSeasons,
-                        getSeasonSize = getSeasonSize,
-                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
-                            onAction(
-                                EpisodeAction.DownloadWithScope(
-                                    selection,
-                                    alsoFollowNew,
-                                    onlyUnwatched,
-                                )
-                            )
-                        },
-                        excludeFromAutoDelete = downloadedSource?.excludeFromAutoDelete == true,
-                        onToggleExcludeFromAutoDeleteClick =
-                            if (state.autoDeleteWatchedEnabled) {
-                                { onAction(EpisodeAction.ToggleExcludeFromAutoDelete) }
-                            } else {
-                                null
                             },
-                    )
-                    downloadedSource?.let { source ->
-                        val isBroken = episode.isDownloadBroken()
-                        val isMarkedForDeletion =
-                            state.autoDeleteWatchedEnabled &&
-                                episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours)
-                        // Size lives on the "Delete download" tile above - only surface this
-                        // caption for states that tile can't show.
-                        if (!source.path.endsWith(".download") &&
-                            (isBroken || isMarkedForDeletion)
-                        ) {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            LocalStorageIndicator(
-                                path = source.path,
-                                sizeBytes = source.size,
-                                isBroken = isBroken,
-                                isMarkedForDeletion = isMarkedForDeletion,
-                                showSize = false,
+                            modifier = Modifier.fillMaxWidth(),
+                            enableDownloadDialog = true,
+                            showEpisodeDownloadOption = true,
+                            initialSelection =
+                                DownloadSelection(
+                                    seasonIds = state.existingScope.seasonIds,
+                                    alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
+                                ),
+                            initialAlsoFollowNew = state.existingScope.alsoFollowNew,
+                            initialOnlyUnwatched = state.existingScope.onlyUnwatched,
+                            getSeasons = getSeasons,
+                            getSeasonSize = getSeasonSize,
+                            onBulkDownload = { selection, alsoFollowNew, onlyUnwatched ->
+                                onAction(
+                                    EpisodeAction.DownloadWithScope(
+                                        selection,
+                                        alsoFollowNew,
+                                        onlyUnwatched,
+                                    )
+                                )
+                            },
+                        )
+                        downloadedSource?.let { source ->
+                            val isBroken = episode.isDownloadBroken()
+                            val isMarkedForDeletion =
+                                state.autoDeleteWatchedEnabled &&
+                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours)
+                            // Size lives on the "Delete download" tile above - only surface this
+                            // caption for states that tile can't show.
+                            if (
+                                !source.path.endsWith(".download") &&
+                                    (isBroken || isMarkedForDeletion)
+                            ) {
+                                Spacer(Modifier.height(MaterialTheme.spacings.small))
+                                LocalStorageIndicator(
+                                    path = source.path,
+                                    sizeBytes = source.size,
+                                    isBroken = isBroken,
+                                    isMarkedForDeletion = isMarkedForDeletion,
+                                    showSize = false,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        if (infoDialogOpen && state.videoMetadata != null) {
+                            InfoDialog(
+                                videoMetadata = state.videoMetadata!!,
+                                downloadedFilePath =
+                                    downloadedSource?.path?.takeUnless { it.endsWith(".download") },
+                                onDismiss = { infoDialogOpen = false },
                             )
                         }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    if (infoDialogOpen && state.videoMetadata != null) {
-                        InfoDialog(
-                            videoMetadata = state.videoMetadata!!,
-                            downloadedFilePath =
-                                downloadedSource?.path?.takeUnless { it.endsWith(".download") },
-                            onDismiss = { infoDialogOpen = false },
-                        )
-                    }
-                    if (deleteDialogOpen) {
-                        val pvrCascadable = state.seriesTvdbId != null && state.sonarrConfigured
-                        DeleteItemDialog(
-                            message = stringResource(CoreR.string.delete_episode_message),
-                            pvrCascadeLabel =
-                                if (pvrCascadable) {
-                                    stringResource(CoreR.string.also_unmonitor_in_sonarr)
-                                } else {
-                                    null
+                        if (deleteDialogOpen) {
+                            val pvrCascadable = state.seriesTvdbId != null && state.sonarrConfigured
+                            DeleteItemDialog(
+                                message = stringResource(CoreR.string.delete_episode_message),
+                                pvrCascadeLabel =
+                                    if (pvrCascadable) {
+                                        stringResource(CoreR.string.also_unmonitor_in_sonarr)
+                                    } else {
+                                        null
+                                    },
+                                pvrCascadeSummary =
+                                    if (pvrCascadable) {
+                                        stringResource(
+                                            CoreR.string.also_unmonitor_in_sonarr_summary
+                                        )
+                                    } else {
+                                        null
+                                    },
+                                onConfirm = { cascadeToPvr ->
+                                    onAction(EpisodeAction.DeleteItem(cascadeToPvr))
+                                    deleteDialogOpen = false
                                 },
-                            pvrCascadeSummary =
-                                if (pvrCascadable) {
-                                    stringResource(CoreR.string.also_unmonitor_in_sonarr_summary)
-                                } else {
-                                    null
-                                },
-                            onConfirm = { cascadeToPvr ->
-                                onAction(EpisodeAction.DeleteItem(cascadeToPvr))
-                                deleteDialogOpen = false
+                                onDismiss = { deleteDialogOpen = false },
+                            )
+                        }
+                        OverviewText(text = episode.overview)
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    }
+                    if (state.actors.isNotEmpty()) {
+                        ActorsRow(
+                            actors = state.actors,
+                            onActorClick = { personId ->
+                                onAction(EpisodeAction.NavigateToPerson(personId))
                             },
-                            onDismiss = { deleteDialogOpen = false },
+                            contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
                         )
                     }
-                    OverviewText(text = episode.overview)
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    Spacer(Modifier.height(paddingBottom))
                 }
-                if (state.actors.isNotEmpty()) {
-                    ActorsRow(
-                        actors = state.actors,
-                        onActorClick = { personId ->
-                            onAction(EpisodeAction.NavigateToPerson(personId))
-                        },
-                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                    )
-                }
-                Spacer(Modifier.height(paddingBottom))
-            }
-        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
         }
     }
 

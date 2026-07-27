@@ -10,8 +10,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,20 +25,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -83,13 +85,11 @@ import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyQueueStatus
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadAction
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadShowGroup
+import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsEvent
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsState
 import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel
-import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportSheetState
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueGroup
-import dev.jdtech.jellyfin.film.presentation.downloads.DownloadsEvent
 import dev.jdtech.jellyfin.film.presentation.downloads.PvrQueueUiItem
-import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSource
 import dev.jdtech.jellyfin.models.FindroidSourceType
@@ -112,9 +112,9 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.HeaderIconColors
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.DeleteProgress
-import dev.jdtech.jellyfin.utils.MigrateProgress
 import dev.jdtech.jellyfin.utils.DeviceStorageStats
 import dev.jdtech.jellyfin.utils.DownloadProgress
+import dev.jdtech.jellyfin.utils.MigrateProgress
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import dev.jdtech.jellyfin.utils.formatBinaryFileSize
 import dev.jdtech.jellyfin.utils.formatBinaryUsagePair
@@ -187,13 +187,17 @@ fun DownloadsScreen(
     val allItems = state.movies + state.showGroups.flatMap { it.episodes }
     val totalSizeBytes =
         remember(allItems) {
-            allItems.sumOf { it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L }
+            allItems.sumOf {
+                it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+            }
         }
     val selectedSizeBytes =
         remember(allItems, state.selectedIds) {
             allItems
                 .filter { it.id in state.selectedIds }
-                .sumOf { it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L }
+                .sumOf {
+                    it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                }
         }
     val selectedLocalSources =
         remember(allItems, state.selectedIds) {
@@ -240,7 +244,6 @@ fun DownloadsScreen(
         onRefresh = viewModel::refresh,
         onRedownloadRequest = viewModel::redownloadItem,
         onRedownloadAllBrokenClick = viewModel::redownloadAllBroken,
-        onToggleExcludeFromAutoDelete = viewModel::toggleExcludeFromAutoDelete,
     )
 
     manualImportState?.let { manualImport ->
@@ -388,7 +391,6 @@ private fun DownloadsScreenLayout(
     onRefresh: () -> Unit = {},
     onRedownloadRequest: (FindroidItem) -> Unit = {},
     onRedownloadAllBrokenClick: () -> Unit = {},
-    onToggleExcludeFromAutoDelete: (FindroidItem) -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val allIds =
@@ -405,7 +407,9 @@ private fun DownloadsScreenLayout(
     val totalLocalSizeBytes = remember(localSources) { localSources.sumOf { it.size } }
     val brokenCount =
         remember(state.movies, state.showGroups) {
-            (state.movies + state.showGroups.flatMap { it.episodes }).count { it.isDownloadBroken() }
+            (state.movies + state.showGroups.flatMap { it.episodes }).count {
+                it.isDownloadBroken()
+            }
         }
     val allSelected = allIds.isNotEmpty() && state.selectedIds.containsAll(allIds)
     val selectionMode = state.selectedIds.isNotEmpty()
@@ -413,7 +417,8 @@ private fun DownloadsScreenLayout(
         remember(state.pvrQueueGroups) {
             state.pvrQueueGroups.flatMap { g -> g.items.map { g.source to it.queueItemId } }.toSet()
         }
-    val pvrAllSelected = pvrQueueKeys.isNotEmpty() && state.selectedPvrQueueIds.containsAll(pvrQueueKeys)
+    val pvrAllSelected =
+        pvrQueueKeys.isNotEmpty() && state.selectedPvrQueueIds.containsAll(pvrQueueKeys)
     val pvrSelectionMode = state.selectedPvrQueueIds.isNotEmpty()
     // Which of Sonarr/Radarr's brand icons the "Pending downloads" header shows - whichever
     // service(s) actually have a group or an error right now, not a static "is it configured"
@@ -423,7 +428,8 @@ private fun DownloadsScreenLayout(
             (state.pvrQueueGroups.map { it.source } + state.pvrErrors.map { it.source })
                 .distinct()
                 .map { source ->
-                    if (source == PvrSource.SONARR) CoreR.drawable.ic_sonarr else CoreR.drawable.ic_radarr
+                    if (source == PvrSource.SONARR) CoreR.drawable.ic_sonarr
+                    else CoreR.drawable.ic_radarr
                 }
         }
 
@@ -487,7 +493,9 @@ private fun DownloadsScreenLayout(
                     }
                 },
                 actions = {
-                    if (!selectionMode && !pvrSelectionMode && state.downloadProgress.isNotEmpty()) {
+                    if (
+                        !selectionMode && !pvrSelectionMode && state.downloadProgress.isNotEmpty()
+                    ) {
                         val allPaused =
                             state.downloadProgress.values.all {
                                 it.status == DownloadManager.STATUS_PAUSED ||
@@ -512,7 +520,8 @@ private fun DownloadsScreenLayout(
                         IconButton(onClick = onMigrateClick) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_arrow_right_left),
-                                contentDescription = stringResource(CoreR.string.migrate_selected_downloads),
+                                contentDescription =
+                                    stringResource(CoreR.string.migrate_selected_downloads),
                             )
                         }
                     }
@@ -522,8 +531,12 @@ private fun DownloadsScreenLayout(
                                 painter = painterResource(CoreR.drawable.ic_trash),
                                 contentDescription =
                                     when {
-                                        selectionMode -> stringResource(CoreR.string.delete_selected_downloads)
-                                        pvrSelectionMode -> stringResource(CoreR.string.pvr_queue_remove_selected_title)
+                                        selectionMode ->
+                                            stringResource(CoreR.string.delete_selected_downloads)
+                                        pvrSelectionMode ->
+                                            stringResource(
+                                                CoreR.string.pvr_queue_remove_selected_title
+                                            )
                                         else -> stringResource(CoreR.string.clear_all_downloads)
                                     },
                             )
@@ -551,245 +564,268 @@ private fun DownloadsScreenLayout(
             // and never receive taps, making its "Go to Home" button appear completely dead.
             PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (state.deviceStorages.isNotEmpty() || state.diskSpace.storage != null) {
-                    item {
-                        DownloadsStorageSummaryCard(
-                            localSources = localSources,
-                            deviceStorages = state.deviceStorages,
-                            pvrStorage = state.diskSpace.storage,
-                        )
+                    if (state.deviceStorages.isNotEmpty() || state.diskSpace.storage != null) {
+                        item {
+                            DownloadsStorageSummaryCard(
+                                localSources = localSources,
+                                deviceStorages = state.deviceStorages,
+                                pvrStorage = state.diskSpace.storage,
+                            )
+                        }
                     }
-                }
-                if (
-                    state.pvrQueueGroups.isNotEmpty() ||
-                        state.pvrErrors.isNotEmpty() ||
-                        state.pvrPendingSources.isNotEmpty()
-                ) {
-                    stickyHeader {
-                        SectionHeader(
-                            text = stringResource(CoreR.string.pvr_queue_section_title),
-                            onLongClick =
-                                if (pvrQueueKeys.isNotEmpty()) {
-                                    { onTogglePvrQueueSelectAll(!pvrAllSelected) }
-                                } else {
-                                    null
-                                },
-                            collapsed = pvrQueueCollapsed,
-                            onToggleCollapsed = { pvrQueueCollapsed = !pvrQueueCollapsed },
-                            leadingIcons = pvrHeaderIcons,
-                        )
+                    if (
+                        state.pvrQueueGroups.isNotEmpty() ||
+                            state.pvrErrors.isNotEmpty() ||
+                            state.pvrPendingSources.isNotEmpty()
+                    ) {
+                        stickyHeader {
+                            SectionHeader(
+                                text = stringResource(CoreR.string.pvr_queue_section_title),
+                                onLongClick =
+                                    if (pvrQueueKeys.isNotEmpty()) {
+                                        { onTogglePvrQueueSelectAll(!pvrAllSelected) }
+                                    } else {
+                                        null
+                                    },
+                                collapsed = pvrQueueCollapsed,
+                                onToggleCollapsed = { pvrQueueCollapsed = !pvrQueueCollapsed },
+                                leadingIcons = pvrHeaderIcons,
+                            )
+                        }
+                        if (!pvrQueueCollapsed) {
+                            if (state.pvrErrors.isNotEmpty()) {
+                                item {
+                                    PvrErrorBanner(
+                                        errors = state.pvrErrors,
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal = MaterialTheme.spacings.default,
+                                                vertical = MaterialTheme.spacings.small,
+                                            ),
+                                    )
+                                }
+                            } else if (
+                                state.pvrQueueGroups.isEmpty() &&
+                                    state.pvrPendingSources.isNotEmpty()
+                            ) {
+                                // Still waiting on this service's first successful poll this
+                                // session -
+                                // distinct from "genuinely nothing queued" (section wouldn't render
+                                // at
+                                // all) and from "confirmed unreachable" (the error banner above).
+                                item {
+                                    PvrQueueLoadingPlaceholder(
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal = MaterialTheme.spacings.default,
+                                                vertical = MaterialTheme.spacings.small,
+                                            )
+                                    )
+                                }
+                            }
+                            state.pvrQueueGroups.forEach { group ->
+                                items(items = group.items) { queueItem ->
+                                    val key = group.source to queueItem.queueItemId
+                                    PvrQueueRow(
+                                        queueItem = queueItem,
+                                        selectionMode = pvrSelectionMode,
+                                        checked = key in state.selectedPvrQueueIds,
+                                        onClick =
+                                            if (
+                                                queueItem.item != null || queueItem.tmdbId != null
+                                            ) {
+                                                {
+                                                    queueItem.item?.let(onItemClick)
+                                                        ?: onPvrItemClick(queueItem, group.source)
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        onLongClick = {
+                                            onTogglePvrQueueSelection(
+                                                group.source,
+                                                queueItem.queueItemId,
+                                            )
+                                        },
+                                        onToggleSelection = {
+                                            onTogglePvrQueueSelection(
+                                                group.source,
+                                                queueItem.queueItemId,
+                                            )
+                                        },
+                                        onRemove = { onPvrRemoveRequest(queueItem, group.source) },
+                                        onManageImport =
+                                            if (queueItem.status.downloadId != null) {
+                                                { onManageImport(queueItem, group.source) }
+                                            } else {
+                                                null
+                                            },
+                                    )
+                                }
+                            }
+                        }
                     }
-                    if (!pvrQueueCollapsed) {
-                        if (state.pvrErrors.isNotEmpty()) {
-                            item {
-                                PvrErrorBanner(
-                                    errors = state.pvrErrors,
-                                    modifier =
-                                        Modifier.padding(
+                    val maxDownloadSizeBytes =
+                        state.maxDownloadSizeGb.toLong() * Constants.BYTES_PER_GIB
+                    if (
+                        state.maxDownloadSizeEnabled && totalLocalSizeBytes > maxDownloadSizeBytes
+                    ) {
+                        item {
+                            MaxDownloadSizeBanner(
+                                usedBytes = totalLocalSizeBytes,
+                                capBytes = maxDownloadSizeBytes,
+                            )
+                        }
+                    }
+                    if (brokenCount > 0) {
+                        item {
+                            BrokenDownloadsBanner(
+                                count = brokenCount,
+                                onRedownloadAllClick = onRedownloadAllBrokenClick,
+                            )
+                        }
+                    }
+                    if (selectionMode) {
+                        item {
+                            Row(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .clickable { onToggleSelectAll(!allSelected) }
+                                        .padding(
                                             horizontal = MaterialTheme.spacings.default,
                                             vertical = MaterialTheme.spacings.small,
                                         ),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = allSelected, onCheckedChange = onToggleSelectAll)
+                                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                                Text(
+                                    text = stringResource(CoreR.string.manage_downloads_select_all)
                                 )
                             }
-                        } else if (
-                            state.pvrQueueGroups.isEmpty() && state.pvrPendingSources.isNotEmpty()
-                        ) {
-                            // Still waiting on this service's first successful poll this session -
-                            // distinct from "genuinely nothing queued" (section wouldn't render at
-                            // all) and from "confirmed unreachable" (the error banner above).
-                            item {
-                                PvrQueueLoadingPlaceholder(
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = MaterialTheme.spacings.default,
-                                            vertical = MaterialTheme.spacings.small,
+                        }
+                    }
+                    if (state.movies.isNotEmpty()) {
+                        stickyHeader {
+                            SectionHeader(
+                                text = stringResource(CoreR.string.movies_label),
+                                onClick = onMoviesClick,
+                                collapsed = moviesCollapsed,
+                                onToggleCollapsed = { moviesCollapsed = !moviesCollapsed },
+                            )
+                        }
+                        if (!moviesCollapsed) {
+                            items(items = state.movies, key = { it.id }) { movie ->
+                                DownloadRow(
+                                    item = movie,
+                                    title = movie.name,
+                                    checked = movie.id in state.selectedIds,
+                                    selectionMode = selectionMode,
+                                    progress = state.downloadProgress[movie.id],
+                                    onClick = { onItemClick(movie) },
+                                    onLongClick = { onToggleSelection(movie.id) },
+                                    onToggleSelection = { onToggleSelection(movie.id) },
+                                    onDownloadAction = { onDownloadAction(movie.id, it) },
+                                    onSwipeDeleteRequest = {
+                                        val source =
+                                            movie.sources.firstOrNull {
+                                                it.type == FindroidSourceType.LOCAL
+                                            }
+                                        onSwipeDeleteRequest(
+                                            movie.id,
+                                            movie.name,
+                                            source?.path,
+                                            source?.size,
                                         )
-                                )
-                            }
-                        }
-                        state.pvrQueueGroups.forEach { group ->
-                            items(items = group.items) { queueItem ->
-                                val key = group.source to queueItem.queueItemId
-                                PvrQueueRow(
-                                    queueItem = queueItem,
-                                    selectionMode = pvrSelectionMode,
-                                    checked = key in state.selectedPvrQueueIds,
-                                    onClick =
-                                        if (queueItem.item != null || queueItem.tmdbId != null) {
-                                            { queueItem.item?.let(onItemClick) ?: onPvrItemClick(queueItem, group.source) }
-                                        } else {
-                                            null
-                                        },
-                                    onLongClick = { onTogglePvrQueueSelection(group.source, queueItem.queueItemId) },
-                                    onToggleSelection = { onTogglePvrQueueSelection(group.source, queueItem.queueItemId) },
-                                    onRemove = { onPvrRemoveRequest(queueItem, group.source) },
-                                    onManageImport =
-                                        if (queueItem.status.downloadId != null) {
-                                            { onManageImport(queueItem, group.source) }
-                                        } else {
-                                            null
-                                        },
+                                    },
+                                    deviceStorages = state.deviceStorages,
+                                    isMigrating = movie.id in state.migratingIds,
+                                    onRedownloadRequest = { onRedownloadRequest(movie) },
                                 )
                             }
                         }
                     }
-                }
-                val maxDownloadSizeBytes =
-                    state.maxDownloadSizeGb.toLong() * Constants.BYTES_PER_GIB
-                if (state.maxDownloadSizeEnabled && totalLocalSizeBytes > maxDownloadSizeBytes) {
-                    item {
-                        MaxDownloadSizeBanner(
-                            usedBytes = totalLocalSizeBytes,
-                            capBytes = maxDownloadSizeBytes,
-                        )
-                    }
-                }
-                if (brokenCount > 0) {
-                    item {
-                        BrokenDownloadsBanner(
-                            count = brokenCount,
-                            onRedownloadAllClick = onRedownloadAllBrokenClick,
-                        )
-                    }
-                }
-                if (selectionMode) {
-                    item {
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable { onToggleSelectAll(!allSelected) }
-                                    .padding(
-                                        horizontal = MaterialTheme.spacings.default,
-                                        vertical = MaterialTheme.spacings.small,
-                                    ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(checked = allSelected, onCheckedChange = onToggleSelectAll)
-                            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                            Text(text = stringResource(CoreR.string.manage_downloads_select_all))
-                        }
-                    }
-                }
-                if (state.movies.isNotEmpty()) {
-                    stickyHeader {
-                        SectionHeader(
-                            text = stringResource(CoreR.string.movies_label),
-                            onClick = onMoviesClick,
-                            collapsed = moviesCollapsed,
-                            onToggleCollapsed = { moviesCollapsed = !moviesCollapsed },
-                        )
-                    }
-                    if (!moviesCollapsed) {
-                        items(items = state.movies, key = { it.id }) { movie ->
-                            DownloadRow(
-                                item = movie,
-                                title = movie.name,
-                                checked = movie.id in state.selectedIds,
+                    state.showGroups.forEach { group ->
+                        val groupIds = group.episodes.map { it.id }.toSet()
+                        val groupSelected =
+                            groupIds.isNotEmpty() && state.selectedIds.containsAll(groupIds)
+                        val hasQueuedEpisode =
+                            group.episodes.any {
+                                state.downloadProgress[it.id]?.status ==
+                                    DownloadManager.STATUS_PENDING
+                            }
+                        val hasActiveDownload =
+                            group.episodes.any {
+                                state.downloadProgress[it.id]?.status?.let { status ->
+                                    status != DownloadManager.STATUS_SUCCESSFUL
+                                } == true
+                            }
+                        val hasMigratingEpisode = group.episodes.any { it.id in state.migratingIds }
+                        val groupCollapsed = group.seriesId in collapsedGroupIds
+                        stickyHeader {
+                            ShowGroupHeader(
+                                group = group,
+                                checked = groupSelected,
                                 selectionMode = selectionMode,
-                                progress = state.downloadProgress[movie.id],
-                                onClick = { onItemClick(movie) },
-                                onLongClick = { onToggleSelection(movie.id) },
-                                onToggleSelection = { onToggleSelection(movie.id) },
-                                onDownloadAction = { onDownloadAction(movie.id, it) },
+                                onToggle = { onToggleGroupSelection(groupIds, !groupSelected) },
+                                onLongClick = { onToggleGroupSelection(groupIds, !groupSelected) },
+                                onClick = { onShowClick(group.seriesId) },
+                                canForce = hasQueuedEpisode,
+                                onForceClick = { onForceGroup(group.episodes.map { it.id }) },
+                                collapsed = groupCollapsed,
+                                onToggleCollapsed = {
+                                    collapsedGroupIds =
+                                        if (groupCollapsed) collapsedGroupIds - group.seriesId
+                                        else collapsedGroupIds + group.seriesId
+                                },
+                                swipeEnabled =
+                                    !selectionMode && !hasActiveDownload && !hasMigratingEpisode,
+                                onSwipeDeleteRequest = { onSwipeDeleteGroupRequest(group) },
+                                deviceStorages = state.deviceStorages,
+                            )
+                        }
+                        if (groupCollapsed) return@forEach
+                        items(items = group.episodes, key = { it.id }) { episode ->
+                            val episodeTitle =
+                                stringResource(
+                                    CoreR.string.episode_name_extended,
+                                    episode.parentIndexNumber,
+                                    episode.indexNumber,
+                                    episode.name,
+                                )
+                            DownloadRow(
+                                item = episode,
+                                title = episodeTitle,
+                                checked = episode.id in state.selectedIds,
+                                selectionMode = selectionMode,
+                                progress = state.downloadProgress[episode.id],
+                                onClick = { onItemClick(episode) },
+                                onLongClick = { onToggleSelection(episode.id) },
+                                onToggleSelection = { onToggleSelection(episode.id) },
+                                onDownloadAction = { onDownloadAction(episode.id, it) },
                                 onSwipeDeleteRequest = {
                                     val source =
-                                        movie.sources.firstOrNull {
+                                        episode.sources.firstOrNull {
                                             it.type == FindroidSourceType.LOCAL
                                         }
                                     onSwipeDeleteRequest(
-                                        movie.id,
-                                        movie.name,
+                                        episode.id,
+                                        episodeTitle,
                                         source?.path,
                                         source?.size,
                                     )
                                 },
                                 deviceStorages = state.deviceStorages,
-                                isMigrating = movie.id in state.migratingIds,
-                                onRedownloadRequest = { onRedownloadRequest(movie) },
+                                isMigrating = episode.id in state.migratingIds,
+                                onRedownloadRequest = { onRedownloadRequest(episode) },
+                                isMarkedForDeletion =
+                                    state.autoDeleteWatchedEnabled &&
+                                        episode.isMarkedForAutoDeletion(
+                                            state.autoDeleteWatchedHours
+                                        ),
                             )
                         }
                     }
-                }
-                state.showGroups.forEach { group ->
-                    val groupIds = group.episodes.map { it.id }.toSet()
-                    val groupSelected = groupIds.isNotEmpty() && state.selectedIds.containsAll(groupIds)
-                    val hasQueuedEpisode =
-                        group.episodes.any {
-                            state.downloadProgress[it.id]?.status == DownloadManager.STATUS_PENDING
-                        }
-                    val hasActiveDownload =
-                        group.episodes.any {
-                            state.downloadProgress[it.id]?.status?.let { status ->
-                                status != DownloadManager.STATUS_SUCCESSFUL
-                            } == true
-                        }
-                    val hasMigratingEpisode = group.episodes.any { it.id in state.migratingIds }
-                    val groupCollapsed = group.seriesId in collapsedGroupIds
-                    stickyHeader {
-                        ShowGroupHeader(
-                            group = group,
-                            checked = groupSelected,
-                            selectionMode = selectionMode,
-                            onToggle = { onToggleGroupSelection(groupIds, !groupSelected) },
-                            onLongClick = { onToggleGroupSelection(groupIds, !groupSelected) },
-                            onClick = { onShowClick(group.seriesId) },
-                            canForce = hasQueuedEpisode,
-                            onForceClick = { onForceGroup(group.episodes.map { it.id }) },
-                            collapsed = groupCollapsed,
-                            onToggleCollapsed = {
-                                collapsedGroupIds =
-                                    if (groupCollapsed) collapsedGroupIds - group.seriesId
-                                    else collapsedGroupIds + group.seriesId
-                            },
-                            swipeEnabled = !selectionMode && !hasActiveDownload && !hasMigratingEpisode,
-                            onSwipeDeleteRequest = { onSwipeDeleteGroupRequest(group) },
-                            deviceStorages = state.deviceStorages,
-                        )
-                    }
-                    if (groupCollapsed) return@forEach
-                    items(items = group.episodes, key = { it.id }) { episode ->
-                        val episodeTitle =
-                            stringResource(
-                                CoreR.string.episode_name_extended,
-                                episode.parentIndexNumber,
-                                episode.indexNumber,
-                                episode.name,
-                            )
-                        DownloadRow(
-                            item = episode,
-                            title = episodeTitle,
-                            checked = episode.id in state.selectedIds,
-                            selectionMode = selectionMode,
-                            progress = state.downloadProgress[episode.id],
-                            onClick = { onItemClick(episode) },
-                            onLongClick = { onToggleSelection(episode.id) },
-                            onToggleSelection = { onToggleSelection(episode.id) },
-                            onDownloadAction = { onDownloadAction(episode.id, it) },
-                            onSwipeDeleteRequest = {
-                                val source =
-                                    episode.sources.firstOrNull {
-                                        it.type == FindroidSourceType.LOCAL
-                                    }
-                                onSwipeDeleteRequest(
-                                    episode.id,
-                                    episodeTitle,
-                                    source?.path,
-                                    source?.size,
-                                )
-                            },
-                            deviceStorages = state.deviceStorages,
-                            isMigrating = episode.id in state.migratingIds,
-                            onRedownloadRequest = { onRedownloadRequest(episode) },
-                            isMarkedForDeletion =
-                                state.autoDeleteWatchedEnabled &&
-                                    episode.isMarkedForAutoDeletion(state.autoDeleteWatchedHours),
-                            autoDeleteEnabled = state.autoDeleteWatchedEnabled,
-                            onToggleExcludeFromAutoDelete = {
-                                onToggleExcludeFromAutoDelete(episode)
-                            },
-                        )
-                    }
-                }
                 }
             }
             // Only show the empty state when there is truly nothing to display - no local
@@ -845,8 +881,8 @@ private fun DownloadsEmptyState(onGoToHomeClick: () -> Unit, modifier: Modifier 
 /**
  * Shown whenever one or more downloaded items have a missing/empty local file (see
  * [dev.jdtech.jellyfin.models.isDownloadBroken]) - most commonly after a storage volume the
- * downloads lived on got removed or reformatted. A single button re-downloads every broken item
- * at once rather than making the user hunt each one down individually in a long list.
+ * downloads lived on got removed or reformatted. A single button re-downloads every broken item at
+ * once rather than making the user hunt each one down individually in a long list.
  */
 @Composable
 private fun MaxDownloadSizeBanner(usedBytes: Long, capBytes: Long, modifier: Modifier = Modifier) {
@@ -906,7 +942,10 @@ private fun BrokenDownloadsBanner(
                 )
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                 Button(onClick = onRedownloadAllClick) {
-                    Icon(painter = painterResource(CoreR.drawable.ic_download), contentDescription = null)
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_download),
+                        contentDescription = null,
+                    )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                     Text(text = stringResource(CoreR.string.broken_downloads_banner_action))
                 }
@@ -916,8 +955,8 @@ private fun BrokenDownloadsBanner(
 }
 
 /**
- * Storage at a glance: on-device space used (with a highlighted sub-segment for what this app's
- * own downloads occupy), plus a single PVR-side number - see
+ * Storage at a glance: on-device space used (with a highlighted sub-segment for what this app's own
+ * downloads occupy), plus a single PVR-side number - see
  * [dev.jdtech.jellyfin.models.PvrDiskSpaceResult] for why Sonarr/Radarr never both get a row, and
  * why there's no Jellyfin-server number at all (the server API has no storage endpoint).
  */
@@ -955,11 +994,14 @@ private fun DownloadsStorageSummaryCard(
                 // than silently implying Findroid's downloads are the only thing using space.
                 val deviceUsedBytes = (device.totalBytes - device.availableBytes).coerceAtLeast(0L)
                 StorageUsageBar(
-                    iconRes = if (device.isRemovable) CoreR.drawable.ic_sd_card else CoreR.drawable.ic_smartphone,
+                    iconRes =
+                        if (device.isRemovable) CoreR.drawable.ic_sd_card
+                        else CoreR.drawable.ic_smartphone,
                     label =
                         if (deviceStorages.size > 1) {
                             stringResource(
-                                if (device.isRemovable) CoreR.string.external else CoreR.string.internal
+                                if (device.isRemovable) CoreR.string.external
+                                else CoreR.string.internal
                             )
                         } else {
                             stringResource(CoreR.string.storage_summary_on_device)
@@ -969,7 +1011,10 @@ private fun DownloadsStorageSummaryCard(
                     highlightBytes = localUsedBytes.coerceAtMost(deviceUsedBytes),
                     highlightCaption =
                         if (localUsedBytes > 0) {
-                            stringResource(CoreR.string.storage_downloads_caption, formatBinaryFileSize(localUsedBytes))
+                            stringResource(
+                                CoreR.string.storage_downloads_caption,
+                                formatBinaryFileSize(localUsedBytes),
+                            )
                         } else {
                             null
                         },
@@ -990,8 +1035,8 @@ private fun DownloadsStorageSummaryCard(
 /**
  * One storage row: icon/label/"X of Y used" header, plus a color-coded usage bar below it.
  * [highlightBytes] carves out a visually distinct sub-segment of [usedBytes] (e.g. "of the total
- * space used, this much is this app's own downloads") instead of a single flat fill color; omit
- * it (or pass 0) for a plain single-color bar.
+ * space used, this much is this app's own downloads") instead of a single flat fill color; omit it
+ * (or pass 0) for a plain single-color bar.
  */
 @Composable
 private fun StorageUsageBar(
@@ -1047,10 +1092,20 @@ private fun StorageUsageBar(
                     Modifier.fillMaxSize().clip(RoundedCornerShape(3.dp)).background(trackColor)
             ) {
                 if (highlightBytes > 0) {
-                    Box(modifier = Modifier.weight(highlightBytes.toFloat()).fillMaxHeight().background(warningColor))
+                    Box(
+                        modifier =
+                            Modifier.weight(highlightBytes.toFloat())
+                                .fillMaxHeight()
+                                .background(warningColor)
+                    )
                 }
                 if (otherUsedBytes > 0) {
-                    Box(modifier = Modifier.weight(otherUsedBytes.toFloat()).fillMaxHeight().background(otherUsedColor))
+                    Box(
+                        modifier =
+                            Modifier.weight(otherUsedBytes.toFloat())
+                                .fillMaxHeight()
+                                .background(otherUsedColor)
+                    )
                 }
                 if (freeBytes > 0) {
                     Box(modifier = Modifier.weight(freeBytes.toFloat()).fillMaxHeight())
@@ -1086,11 +1141,10 @@ private fun StorageUsageBar(
 }
 
 /**
- * Which storage volume a downloaded file's [path] actually lives on, as an icon - only
- * meaningful once there's more than one volume to distinguish between (matches the gating
- * already used for the "Internal"/"External" labels and the migrate action). Returns null for a
- * single-volume device (nothing to disambiguate) or when [path] doesn't match any known volume
- * (e.g. still resolving).
+ * Which storage volume a downloaded file's [path] actually lives on, as an icon - only meaningful
+ * once there's more than one volume to distinguish between (matches the gating already used for the
+ * "Internal"/"External" labels and the migrate action). Returns null for a single-volume device
+ * (nothing to disambiguate) or when [path] doesn't match any known volume (e.g. still resolving).
  */
 private fun storageIconFor(path: String?, deviceStorages: List<DeviceStorageStats>): Int? {
     if (path == null || deviceStorages.size <= 1) return null
@@ -1102,8 +1156,7 @@ private fun storageIconFor(path: String?, deviceStorages: List<DeviceStorageStat
 private fun DeleteProgressCard(progress: DeleteProgress, onDismiss: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
         Row(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -1141,8 +1194,7 @@ private fun DeleteProgressCard(progress: DeleteProgress, onDismiss: () -> Unit) 
 private fun MoveProgressCard(progress: MigrateProgress, onDismiss: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default)) {
         Row(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -1189,14 +1241,13 @@ private fun SectionHeader(
     Card {
         Row(
             modifier =
-                Modifier.fillMaxWidth()
-                    .let { modifier ->
-                        if (onLongClick != null) {
-                            modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                        } else {
-                            modifier.clickable(onClick = onClick)
-                        }
-                    },
+                Modifier.fillMaxWidth().let { modifier ->
+                    if (onLongClick != null) {
+                        modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    } else {
+                        modifier.clickable(onClick = onClick)
+                    }
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -1363,8 +1414,6 @@ private fun DownloadRow(
     isMigrating: Boolean = false,
     onRedownloadRequest: () -> Unit = {},
     isMarkedForDeletion: Boolean = false,
-    autoDeleteEnabled: Boolean = false,
-    onToggleExcludeFromAutoDelete: () -> Unit = {},
 ) {
     val activeProgress = progress?.takeIf { it.status != DownloadManager.STATUS_SUCCESSFUL }
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
@@ -1382,240 +1431,262 @@ private fun DownloadRow(
     val isBroken = activeProgress == null && !isMigrating && item.isDownloadBroken()
     val localSource = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
     val sizeBytes = localSource?.size ?: 0L
-    val excludedFromAutoDelete = localSource?.excludeFromAutoDelete == true
-    val storageIcon = remember(localSource?.path, deviceStorages) {
-        storageIconFor(localSource?.path, deviceStorages)
-    }
+    val storageIcon =
+        remember(localSource?.path, deviceStorages) {
+            storageIconFor(localSource?.path, deviceStorages)
+        }
     val swipeEnabled = activeProgress == null && !selectionMode && !isMigrating
 
     val content: @Composable () -> Unit = {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {
-                            when {
-                                selectionMode -> onToggleSelection()
-                                // The file's mid-copy to another volume right now - its DB path
-                                // is about to change and the bytes at the old one may already be
-                                // gone, so opening it for playback is unsafe until that settles.
-                                isMigrating -> {}
-                                // Nothing on disk to play - use the re-download/delete icons
-                                // instead of guessing what a tap here should do.
-                                isBroken -> {}
-                                else -> onClick()
-                            }
-                        },
-                        onLongClick = onLongClick,
-                    )
-                    .padding(
-                        horizontal = MaterialTheme.spacings.default,
-                        vertical = MaterialTheme.spacings.small,
-                    ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
-                ItemPoster(item = item, direction = Direction.HORIZONTAL)
-            }
-            Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                when {
-                    activeProgress != null -> {
-                        Text(
-                            text =
+        Column {
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .combinedClickable(
+                            onClick = {
                                 when {
-                                    isPending -> stringResource(CoreR.string.download_queued)
-                                    isPaused -> stringResource(CoreR.string.download_paused)
-                                    isAwaitingForeground ->
-                                        stringResource(CoreR.string.download_awaiting_foreground)
-                                    isVerifying -> stringResource(CoreR.string.download_verifying)
-                                    activeProgress.percent >= 0 ->
-                                        stringResource(
-                                            CoreR.string.download_progress_status,
-                                            activeProgress.percent,
-                                            formatDownloadSpeed(activeProgress.speedBytesPerSecond),
-                                            formatEta(activeProgress.etaSeconds),
-                                        )
-                                    else -> stringResource(CoreR.string.download_downloading)
-                                },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    selectionMode -> onToggleSelection()
+                                    // The file's mid-copy to another volume right now - its DB path
+                                    // is about to change and the bytes at the old one may already
+                                    // be
+                                    // gone, so opening it for playback is unsafe until that
+                                    // settles.
+                                    isMigrating -> {}
+                                    // Nothing on disk to play - use the re-download/delete icons
+                                    // instead of guessing what a tap here should do.
+                                    isBroken -> {}
+                                    else -> onClick()
+                                }
+                            },
+                            onLongClick = onLongClick,
                         )
-                        if (!isPending && !isAwaitingForeground) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            LinearProgressIndicator(
-                                progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
-                                // 4.dp, not 3 - Material3's default end-of-track "stop indicator"
-                                // dot is itself 4.dp, so a shorter track clips it into invisibility.
-                                modifier = Modifier.fillMaxWidth().height(4.dp),
-                            )
-                        }
-                    }
-                    isMigrating -> {
-                        Text(
-                            text = stringResource(CoreR.string.download_row_migrating),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        // Indeterminate - MigrateDownloadsWorker only reports an aggregate
-                        // done/total for the whole batch, not this item's own progress.
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
-                    }
-                    isBroken -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_alert_circle),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                        .padding(
+                            horizontal = MaterialTheme.spacings.default,
+                            vertical = MaterialTheme.spacings.small,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.width(96.dp).clip(MaterialTheme.shapes.small)) {
+                    ItemPoster(item = item, direction = Direction.HORIZONTAL)
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    when {
+                        activeProgress != null -> {
                             Text(
-                                text = stringResource(CoreR.string.download_row_broken),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                    else -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            storageIcon?.let { icon ->
-                                Icon(
-                                    painter = painterResource(icon),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                            }
-                            Text(
-                                text = formatBinaryFileSize(sizeBytes),
+                                text =
+                                    when {
+                                        isPending -> stringResource(CoreR.string.download_queued)
+                                        isPaused -> stringResource(CoreR.string.download_paused)
+                                        isAwaitingForeground ->
+                                            stringResource(
+                                                CoreR.string.download_awaiting_foreground
+                                            )
+                                        isVerifying ->
+                                            stringResource(CoreR.string.download_verifying)
+                                        activeProgress.percent >= 0 ->
+                                            stringResource(
+                                                CoreR.string.download_progress_status,
+                                                activeProgress.percent,
+                                                formatDownloadSpeed(
+                                                    activeProgress.speedBytesPerSecond
+                                                ),
+                                                formatEta(activeProgress.etaSeconds),
+                                            )
+                                        else -> stringResource(CoreR.string.download_downloading)
+                                    },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            if (isMarkedForDeletion) {
-                                Spacer(modifier = Modifier.width(8.dp))
+                            if (!isPending && !isAwaitingForeground) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                LinearProgressIndicator(
+                                    progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
+                                    // 4.dp, not 3 - Material3's default end-of-track "stop
+                                    // indicator"
+                                    // dot is itself 4.dp, so a shorter track clips it into
+                                    // invisibility.
+                                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                                )
+                            }
+                        }
+                        isMigrating -> {
+                            Text(
+                                text = stringResource(CoreR.string.download_row_migrating),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Indeterminate - MigrateDownloadsWorker only reports an aggregate
+                            // done/total for the whole batch, not this item's own progress.
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
+                        }
+                        isBroken -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    painter = painterResource(CoreR.drawable.ic_trash),
+                                    painter = painterResource(CoreR.drawable.ic_alert_circle),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(14.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = stringResource(CoreR.string.download_row_marked_for_deletion),
+                                    text = stringResource(CoreR.string.download_row_broken),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
+                        }
+                        else -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                storageIcon?.let { icon ->
+                                    Icon(
+                                        painter = painterResource(icon),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = formatBinaryFileSize(sizeBytes),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (isMarkedForDeletion) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        painter = painterResource(CoreR.drawable.ic_trash),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                CoreR.string.download_row_marked_for_deletion
+                                            ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                when {
+                    selectionMode -> {
+                        Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
+                    }
+                    activeProgress != null -> {
+                        if (isPending) {
+                            IconButton(onClick = { onDownloadAction(DownloadAction.Force) }) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_fast_forward),
+                                    contentDescription =
+                                        stringResource(CoreR.string.download_action_force),
+                                )
+                            }
+                        } else if (!isVerifying) {
+                            IconButton(
+                                onClick = {
+                                    onDownloadAction(
+                                        if (showResumeAction) DownloadAction.Resume
+                                        else DownloadAction.Pause
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    painter =
+                                        painterResource(
+                                            if (showResumeAction) CoreR.drawable.ic_play
+                                            else CoreR.drawable.ic_pause
+                                        ),
+                                    contentDescription =
+                                        stringResource(
+                                            if (showResumeAction)
+                                                CoreR.string.download_action_resume
+                                            else CoreR.string.download_action_pause
+                                        ),
+                                )
+                            }
+                        }
+                        IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_x),
+                                contentDescription =
+                                    stringResource(CoreR.string.download_action_cancel),
+                            )
+                        }
+                    }
+                    // No play button while the file is mid-move - see the onClick guard above for
+                    // why.
+                    isMigrating -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(2.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    // No play button here either - there's nothing playable on disk. Offer the two
+                    // ways out instead: try again, or give up and remove the dangling entry (the
+                    // trash icon here is a shortcut for the same swipe-to-delete gesture below).
+                    isBroken -> {
+                        IconButton(onClick = onRedownloadRequest) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_download),
+                                contentDescription =
+                                    stringResource(CoreR.string.download_action_redownload),
+                            )
+                        }
+                        IconButton(onClick = onSwipeDeleteRequest) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_trash),
+                                contentDescription = stringResource(CoreR.string.delete_download),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    item.isDownloaded() -> {
+                        IconButton(onClick = onClick) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_play),
+                                contentDescription =
+                                    stringResource(CoreR.string.download_action_play),
+                            )
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-            when {
-                selectionMode -> {
-                    Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
-                }
-                activeProgress != null -> {
-                    if (isPending) {
-                        IconButton(onClick = { onDownloadAction(DownloadAction.Force) }) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_fast_forward),
-                                contentDescription = stringResource(CoreR.string.download_action_force),
-                            )
-                        }
-                    } else if (!isVerifying) {
-                        IconButton(
-                            onClick = {
-                                onDownloadAction(
-                                    if (showResumeAction) DownloadAction.Resume else DownloadAction.Pause
-                                )
-                            }
-                        ) {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        if (showResumeAction) CoreR.drawable.ic_play
-                                        else CoreR.drawable.ic_pause
-                                    ),
-                                contentDescription =
-                                    stringResource(
-                                        if (showResumeAction) CoreR.string.download_action_resume
-                                        else CoreR.string.download_action_pause
-                                    ),
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onDownloadAction(DownloadAction.Cancel) }) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_x),
-                            contentDescription = stringResource(CoreR.string.download_action_cancel),
-                        )
-                    }
-                }
-                // No play button while the file is mid-move - see the onClick guard above for why.
-                isMigrating -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp).padding(2.dp),
-                        strokeWidth = 2.dp,
+            if (item.isDownloaded()) {
+                FilledTonalButton(
+                    onClick = onSwipeDeleteRequest,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacings.default,
+                                vertical = MaterialTheme.spacings.small,
+                            ),
+                    colors =
+                        ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_trash),
+                        contentDescription = null,
                     )
-                }
-                // No play button here either - there's nothing playable on disk. Offer the two
-                // ways out instead: try again, or give up and remove the dangling entry (the
-                // trash icon here is a shortcut for the same swipe-to-delete gesture below).
-                isBroken -> {
-                    IconButton(onClick = onRedownloadRequest) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_download),
-                            contentDescription = stringResource(CoreR.string.download_action_redownload),
-                        )
-                    }
-                    IconButton(onClick = onSwipeDeleteRequest) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_trash),
-                            contentDescription = stringResource(CoreR.string.delete_download),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-                item.isDownloaded() -> {
-                    if (autoDeleteEnabled && item is FindroidEpisode) {
-                        IconButton(onClick = onToggleExcludeFromAutoDelete) {
-                            Icon(
-                                painter =
-                                    painterResource(
-                                        if (excludedFromAutoDelete) CoreR.drawable.ic_lock
-                                        else CoreR.drawable.ic_unlock
-                                    ),
-                                contentDescription =
-                                    stringResource(
-                                        if (excludedFromAutoDelete) {
-                                            CoreR.string.download_action_allow_auto_delete
-                                        } else {
-                                            CoreR.string.download_action_exclude_from_auto_delete
-                                        }
-                                    ),
-                                tint =
-                                    if (excludedFromAutoDelete) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    IconButton(onClick = onClick) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_play),
-                            contentDescription = stringResource(CoreR.string.download_action_play),
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                    Text(stringResource(CoreR.string.delete_download))
                 }
             }
         }
@@ -1628,8 +1699,8 @@ private fun DownloadRow(
 
 /**
  * Row for a single Sonarr/Radarr queue entry - same visual shape as [DownloadRow] (poster, title,
- * progress bar, status text). The only available action is [onRemove] (delete from the PVR
- * queue): pause/resume live in the download client, which the PVR APIs don't expose. When
+ * progress bar, status text). The only available action is [onRemove] (delete from the PVR queue):
+ * pause/resume live in the download client, which the PVR APIs don't expose. When
  * [PvrQueueUiItem.item] is null (the queue entry couldn't be matched to a local Jellyfin item), a
  * PVR's own poster is used when the queue entry has not reached Jellyfin yet. The row remains
  * non-clickable until Jellyfin supplies a matching item.
@@ -1647,7 +1718,8 @@ private fun PvrQueueRow(
     onManageImport: (() -> Unit)? = null,
 ) {
     val status = queueItem.status
-    val isProblem = status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
+    val isProblem =
+        status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
     val statusText =
         when (status.status) {
             QueueItemStatus.QUEUED -> stringResource(CoreR.string.download_queued)
@@ -1782,7 +1854,8 @@ private fun PvrQueueRow(
             IconButton(onClick = onManageImport) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_alert_circle),
-                    contentDescription = stringResource(CoreR.string.pvr_queue_manual_import_action),
+                    contentDescription =
+                        stringResource(CoreR.string.pvr_queue_manual_import_action),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -1799,8 +1872,8 @@ private fun PvrQueueRow(
 }
 
 /**
- * Confirmation for removing a Sonarr/Radarr queue entry, with the two flags their queue-delete
- * API offers. "Remove from download client" defaults to on (matching the services' own web UI);
+ * Confirmation for removing a Sonarr/Radarr queue entry, with the two flags their queue-delete API
+ * offers. "Remove from download client" defaults to on (matching the services' own web UI);
  * blocklisting is opt-in for the "this release is broken, grab another" case.
  */
 @Composable
@@ -1924,7 +1997,9 @@ private fun SwipeToDeleteContainer(
                         state =
                             rememberDraggableState { delta ->
                                 scope.launch {
-                                    offsetX.snapTo((offsetX.value + delta).coerceIn(-maxSwipePx, 0f))
+                                    offsetX.snapTo(
+                                        (offsetX.value + delta).coerceIn(-maxSwipePx, 0f)
+                                    )
                                 }
                             },
                         onDragStopped = {
@@ -1943,11 +2018,11 @@ private fun SwipeToDeleteContainer(
 /**
  * Confirmation for migrating the current selection to another storage volume. Usually a plain
  * confirmation - the selection normally lives entirely on one volume, so there's exactly one
- * sensible destination (the other one), which is never offered as its own destination. But when
- * the selection is already split across more than one volume, either direction is a legitimate
- * choice (e.g. consolidate onto internal vs. onto external), so this lets the user pick - and
- * reacts live to that choice, since which sources actually need to move (and how many/how big)
- * depends on which volume is already "home" for a given item.
+ * sensible destination (the other one), which is never offered as its own destination. But when the
+ * selection is already split across more than one volume, either direction is a legitimate choice
+ * (e.g. consolidate onto internal vs. onto external), so this lets the user pick - and reacts live
+ * to that choice, since which sources actually need to move (and how many/how big) depends on which
+ * volume is already "home" for a given item.
  */
 @Composable
 private fun MigrateDownloadsDialog(
@@ -1984,11 +2059,15 @@ private fun MigrateDownloadsDialog(
         }
 
     val toStorage = deviceStorages[selectedTargetIndex]
-    val toLabel = stringResource(if (toStorage.isRemovable) CoreR.string.external else CoreR.string.internal)
+    val toLabel =
+        stringResource(if (toStorage.isRemovable) CoreR.string.external else CoreR.string.internal)
     val fromIndex =
         deviceStorages.indices.firstOrNull { it != selectedTargetIndex } ?: selectedTargetIndex
     val fromLabel =
-        stringResource(if (deviceStorages[fromIndex].isRemovable) CoreR.string.external else CoreR.string.internal)
+        stringResource(
+            if (deviceStorages[fromIndex].isRemovable) CoreR.string.external
+            else CoreR.string.internal
+        )
 
     // Only sources not already on the destination actually move - with a mixed selection,
     // switching the destination changes which items those are, hence the count/size below.
@@ -2008,7 +2087,10 @@ private fun MigrateDownloadsDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(painter = painterResource(CoreR.drawable.ic_arrow_right_left), contentDescription = null)
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_arrow_right_left),
+                    contentDescription = null,
+                )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                 Text(text = stringResource(CoreR.string.migrate_storage_title))
             }
@@ -2023,7 +2105,10 @@ private fun MigrateDownloadsDialog(
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                     deviceStorages.forEachIndexed { index, storage ->
                         val label =
-                            stringResource(if (storage.isRemovable) CoreR.string.external else CoreR.string.internal)
+                            stringResource(
+                                if (storage.isRemovable) CoreR.string.external
+                                else CoreR.string.internal
+                            )
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
@@ -2054,13 +2139,16 @@ private fun MigrateDownloadsDialog(
                     )
                 } else {
                     Text(
-                        text = stringResource(CoreR.string.migrate_storage_nothing_to_move, toLabel),
+                        text =
+                            stringResource(CoreR.string.migrate_storage_nothing_to_move, toLabel),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                 StorageUsageBar(
-                    iconRes = if (toStorage.isRemovable) CoreR.drawable.ic_sd_card else CoreR.drawable.ic_smartphone,
+                    iconRes =
+                        if (toStorage.isRemovable) CoreR.drawable.ic_sd_card
+                        else CoreR.drawable.ic_smartphone,
                     label = toLabel,
                     usedBytes = projectedUsedBytes,
                     totalBytes = toStorage.totalBytes,
@@ -2079,7 +2167,10 @@ private fun MigrateDownloadsDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(selectedTargetIndex) }, enabled = itemCount > 0) {
-                Icon(painter = painterResource(CoreR.drawable.ic_arrow_right_left), contentDescription = null)
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_arrow_right_left),
+                    contentDescription = null,
+                )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                 Text(text = stringResource(CoreR.string.move))
             }
@@ -2295,7 +2386,8 @@ private val dummyPvrQueueGroups =
                 listOf(
                     PvrQueueUiItem(
                         itemId = dummyEpisode.id,
-                        title = "${dummyEpisode.seriesName} - S${dummyEpisode.parentIndexNumber}E${dummyEpisode.indexNumber}",
+                        title =
+                            "${dummyEpisode.seriesName} - S${dummyEpisode.parentIndexNumber}E${dummyEpisode.indexNumber}",
                         item = dummyEpisode,
                         status = dummyQueueStatus,
                     ),
@@ -2303,7 +2395,8 @@ private val dummyPvrQueueGroups =
                         itemId = null,
                         title = "Some Unsynced Show - S01E02",
                         item = null,
-                        status = dummyQueueStatus.copy(status = QueueItemStatus.QUEUED, percent = -1),
+                        status =
+                            dummyQueueStatus.copy(status = QueueItemStatus.QUEUED, percent = -1),
                     ),
                 ),
         ),
