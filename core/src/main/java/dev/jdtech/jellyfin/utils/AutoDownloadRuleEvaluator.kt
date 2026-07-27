@@ -1,9 +1,11 @@
 package dev.jdtech.jellyfin.utils
 
+import dev.jdtech.jellyfin.core.Constants
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.time.Instant
 import java.time.ZoneId
 import org.jellyfin.sdk.model.api.ItemFields
@@ -20,6 +22,7 @@ class AutoDownloadRuleEvaluator {
         database: ServerDatabaseDao,
         repository: JellyfinRepository,
         downloader: Downloader,
+        appPreferences: AppPreferences,
         onlyUnwatched: Boolean = false,
     ) {
         if (!rule.enabled) return
@@ -28,6 +31,16 @@ class AutoDownloadRuleEvaluator {
         // mid-loop, and this is what makes every episode land on the user's actually-configured
         // download location instead of always ending up on storage index 0 regardless of it.
         val storageIndex = downloader.resolvePreferredStorageIndex()
+
+        // Only gates this evaluator/PendingDownloadFulfiller - manual downloads are never capped.
+        // Tracked as a running total (rather than re-reading getTotalDownloadedBytes() per
+        // episode) so a rule matching many episodes at once stops as soon as the cumulative
+        // estimate crosses the cap, instead of firing every match and only then discovering the
+        // overshoot.
+        val maxSizeEnabled = appPreferences.getValue(appPreferences.maxDownloadSizeEnabled)
+        val maxSizeBytes =
+            appPreferences.getValue(appPreferences.maxDownloadSizeGb) * Constants.BYTES_PER_GIB
+        var totalDownloadedBytes = if (maxSizeEnabled) downloader.getTotalDownloadedBytes() else 0L
 
         val ruleSeasonId = rule.seasonId
         val seasonIds =
@@ -74,8 +87,16 @@ class AutoDownloadRuleEvaluator {
                         continue
                     }
 
-                    val sourceId = episode.sources.firstOrNull()?.id ?: continue
-                    downloader.downloadItem(episode, sourceId, storageIndex = storageIndex)
+                    if (maxSizeEnabled && totalDownloadedBytes >= maxSizeBytes) {
+                        Timber.i(
+                            "Max download size reached - skipping remaining auto-downloads for rule ${rule.id}"
+                        )
+                        return
+                    }
+
+                    val source = episode.sources.firstOrNull() ?: continue
+                    downloader.downloadItem(episode, source.id, storageIndex = storageIndex)
+                    totalDownloadedBytes += source.size
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to queue download for episode ${episode.id}")
                 }

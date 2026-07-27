@@ -299,7 +299,7 @@ constructor(
                         createdAt = System.currentTimeMillis(),
                         onlyNewEpisodes = false,
                     )
-                evaluator.evaluate(transientRule, database, repository, downloader, onlyUnwatched)
+                evaluator.evaluate(transientRule, database, repository, downloader, appPreferences, onlyUnwatched)
             }
 
             if (alsoFollowNew || selection.alsoFutureSeasons) {

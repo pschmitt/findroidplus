@@ -92,6 +92,11 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val maxParallelDownloads = Preference("pref_downloads_max_parallel", 2)
     val pauseDownloadsOnBatterySaver =
         Preference("pref_downloads_pause_on_battery_saver", true)
+    // Optional overall cap on total downloaded content, in GiB - off by default. Only gates
+    // automatic downloads (AutoDownloadRuleEvaluator/PendingDownloadFulfiller); manual downloads
+    // started from the app are never blocked by this.
+    val maxDownloadSizeEnabled = Preference("pref_downloads_max_size_enabled", false)
+    val maxDownloadSizeGb = Preference("pref_downloads_max_size_gb", 20)
 
     // Notifications - new items (movies/episodes) added to the Jellyfin library. Off by default:
     // unlike auto-download (an explicit opt-in rule the user configures per show), this checks

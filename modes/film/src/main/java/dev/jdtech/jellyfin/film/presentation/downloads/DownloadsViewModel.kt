@@ -205,6 +205,9 @@ constructor(
                     selectedIds = it.selectedIds.intersect(allIds),
                     autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
                     autoDeleteWatchedHours = appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
+                    maxDownloadSizeEnabled =
+                        appPreferences.getValue(appPreferences.maxDownloadSizeEnabled),
+                    maxDownloadSizeGb = appPreferences.getValue(appPreferences.maxDownloadSizeGb),
                 )
             }
             reconcileDownloadProgress(movies, episodes)

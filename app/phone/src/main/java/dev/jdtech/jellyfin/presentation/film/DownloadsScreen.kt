@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import dev.jdtech.jellyfin.core.Constants
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
@@ -633,6 +634,16 @@ private fun DownloadsScreenLayout(
                         }
                     }
                 }
+                val maxDownloadSizeBytes =
+                    state.maxDownloadSizeGb.toLong() * Constants.BYTES_PER_GIB
+                if (state.maxDownloadSizeEnabled && totalLocalSizeBytes > maxDownloadSizeBytes) {
+                    item {
+                        MaxDownloadSizeBanner(
+                            usedBytes = totalLocalSizeBytes,
+                            capBytes = maxDownloadSizeBytes,
+                        )
+                    }
+                }
                 if (brokenCount > 0) {
                     item {
                         BrokenDownloadsBanner(
@@ -837,6 +848,36 @@ private fun DownloadsEmptyState(onGoToHomeClick: () -> Unit, modifier: Modifier 
  * downloads lived on got removed or reformatted. A single button re-downloads every broken item
  * at once rather than making the user hunt each one down individually in a long list.
  */
+@Composable
+private fun MaxDownloadSizeBanner(usedBytes: Long, capBytes: Long, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacings.default),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.default),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_alert_circle),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.default))
+            Text(
+                text =
+                    stringResource(
+                        CoreR.string.max_download_size_banner_message,
+                        formatBinaryUsagePair(usedBytes, capBytes),
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
 @Composable
 private fun BrokenDownloadsBanner(
     count: Int,

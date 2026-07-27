@@ -51,6 +51,12 @@ data class DownloadsState(
     // feature is actually on (nothing to protect against otherwise).
     val autoDeleteWatchedEnabled: Boolean = false,
     val autoDeleteWatchedHours: Int = 24,
+    // Mirrors AppPreferences.maxDownloadSizeEnabled/maxDownloadSizeGb - read once per refresh so
+    // the screen can show a warning once the total downloaded size crosses the cap. Only gates
+    // automatic downloads (see AutoDownloadRuleEvaluator/PendingDownloadFulfiller); this is purely
+    // informational here.
+    val maxDownloadSizeEnabled: Boolean = false,
+    val maxDownloadSizeGb: Int = 20,
 ) {
     val isEmpty: Boolean
         get() = movies.isEmpty() && showGroups.isEmpty()

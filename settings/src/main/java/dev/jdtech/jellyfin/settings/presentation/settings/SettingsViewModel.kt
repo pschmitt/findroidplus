@@ -874,6 +874,32 @@ constructor(
                                                     backendPreference =
                                                         appPreferences.pauseDownloadsOnBatterySaver,
                                                 ),
+                                                PreferenceSwitch(
+                                                    nameStringResource =
+                                                        R.string.max_download_size_enabled,
+                                                    descriptionStringRes =
+                                                        R.string.max_download_size_enabled_summary,
+                                                    iconDrawableId = R.drawable.ic_database,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.maxDownloadSizeEnabled,
+                                                ),
+                                                PreferenceIntInput(
+                                                    nameStringResource =
+                                                        R.string.max_download_size_gb,
+                                                    descriptionStringRes =
+                                                        R.string.max_download_size_gb_summary,
+                                                    iconDrawableId = R.drawable.ic_database,
+                                                    dependencies =
+                                                        listOf(
+                                                            appPreferences.maxDownloadSizeEnabled
+                                                        ),
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.maxDownloadSizeGb,
+                                                    suffixRes = R.string.gb_suffix,
+                                                    validRange = 1..10_000,
+                                                ),
                                             ),
                                     ),
                                     PreferenceGroup(

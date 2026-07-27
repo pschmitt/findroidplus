@@ -1,8 +1,10 @@
 package dev.jdtech.jellyfin.utils
 
+import dev.jdtech.jellyfin.core.Constants
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.PendingDownloadRequestDto
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import org.jellyfin.sdk.model.api.ItemFields
 import timber.log.Timber
 
@@ -28,6 +30,7 @@ class PendingDownloadFulfiller {
         database: ServerDatabaseDao,
         repository: JellyfinRepository,
         downloader: Downloader,
+        appPreferences: AppPreferences,
         onFulfilled: suspend (title: String) -> Unit,
     ): Boolean {
         val season =
@@ -66,14 +69,30 @@ class PendingDownloadFulfiller {
             }
 
         var queuedAny = false
+        // Set once an episode was ready to download but skipped for being over the size cap - in
+        // that case the request must stay pending (return false) rather than being deleted as
+        // fulfilled, so it's retried once the cap allows it again instead of being silently
+        // dropped forever.
+        var capReached = false
         val storageIndex = downloader.resolvePreferredStorageIndex()
+        val maxSizeEnabled = appPreferences.getValue(appPreferences.maxDownloadSizeEnabled)
+        val maxSizeBytes =
+            appPreferences.getValue(appPreferences.maxDownloadSizeGb) * Constants.BYTES_PER_GIB
+        var totalDownloadedBytes = if (maxSizeEnabled) downloader.getTotalDownloadedBytes() else 0L
         for (episode in targetEpisodes) {
             try {
                 // A sources row already exists the moment a download is enqueued (before it
                 // finishes), so its mere presence covers already downloaded/queued/running alike.
                 if (database.getSources(episode.id).isNotEmpty()) continue
-                val sourceId = episode.sources.firstOrNull()?.id ?: continue
-                downloader.downloadItem(episode, sourceId, storageIndex = storageIndex)
+
+                if (maxSizeEnabled && totalDownloadedBytes >= maxSizeBytes) {
+                    capReached = true
+                    continue
+                }
+
+                val source = episode.sources.firstOrNull() ?: continue
+                downloader.downloadItem(episode, source.id, storageIndex = storageIndex)
+                totalDownloadedBytes += source.size
                 queuedAny = true
             } catch (e: Exception) {
                 Timber.e(e, "Failed to queue pending download for episode ${episode.id}")
@@ -84,6 +103,6 @@ class PendingDownloadFulfiller {
             val title = if (requestedEpisodeNumber != null) targetEpisodes.first().name else season.name
             onFulfilled(title)
         }
-        return true
+        return !capReached
     }
 }

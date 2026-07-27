@@ -88,6 +88,11 @@ interface Downloader {
     // read (unmounted, StatFs error) is simply omitted rather than the whole list failing.
     fun getAllStorageStats(): List<DeviceStorageStats>
 
+    // Total on-disk size of every downloaded (LOCAL) source across all storage volumes, read live
+    // from each file rather than a stored column (mirrors FindroidItem.isDownloadBroken()) - used
+    // to gate auto-downloads against AppPreferences.maxDownloadSizeGb once it's enabled.
+    fun getTotalDownloadedBytes(): Long
+
     // Resolves the user's configured "download location" preference (internal/external/ask) to a
     // concrete getExternalFilesDirs() index, falling back to 0 when the preference is "ask" or
     // its preferred volume isn't currently mounted - there's no one to ask in a non-interactive

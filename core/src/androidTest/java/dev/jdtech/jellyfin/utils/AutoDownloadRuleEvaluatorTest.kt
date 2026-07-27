@@ -11,6 +11,7 @@ import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidSource
 import dev.jdtech.jellyfin.models.FindroidSourceDto
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -24,6 +25,7 @@ import org.junit.runner.RunWith
 class AutoDownloadRuleEvaluatorTest {
     private lateinit var db: ServerDatabase
     private lateinit var dao: ServerDatabaseDao
+    private lateinit var appPreferences: AppPreferences
     private val evaluator = AutoDownloadRuleEvaluator()
 
     private val seriesId = UUID.randomUUID()
@@ -34,6 +36,8 @@ class AutoDownloadRuleEvaluatorTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, ServerDatabase::class.java).build()
         dao = db.getServerDatabaseDao()
+        appPreferences =
+            AppPreferences(context.getSharedPreferences("evaluator_test_prefs", 0))
     }
 
     @After
@@ -86,7 +90,7 @@ class AutoDownloadRuleEvaluatorTest {
             )
         val downloader = FakeDownloader()
 
-        evaluator.evaluate(rule(seasonId = null), dao, repository, downloader)
+        evaluator.evaluate(rule(seasonId = null), dao, repository, downloader, appPreferences)
 
         assertTrue(downloader.downloadedItemIds.contains(episode1.id.toString()))
         assertTrue(downloader.downloadedItemIds.contains(episode2.id.toString()))
@@ -117,7 +121,7 @@ class AutoDownloadRuleEvaluatorTest {
             )
         val downloader = FakeDownloader()
 
-        evaluator.evaluate(rule(seasonId = season1.id), dao, repository, downloader)
+        evaluator.evaluate(rule(seasonId = season1.id), dao, repository, downloader, appPreferences)
 
         assertTrue(downloader.downloadedItemIds.contains(episode1.id.toString()))
         assertFalse(downloader.downloadedItemIds.contains(episode2.id.toString()))
@@ -159,7 +163,7 @@ class AutoDownloadRuleEvaluatorTest {
             )
         val downloader = FakeDownloader()
 
-        evaluator.evaluate(rule(seasonId = null), dao, repository, downloader)
+        evaluator.evaluate(rule(seasonId = null), dao, repository, downloader, appPreferences)
 
         assertFalse(downloader.downloadedItemIds.contains(episode1.id.toString()))
         assertTrue(downloader.downloadedItemIds.contains(episode2.id.toString()))
@@ -182,7 +186,7 @@ class AutoDownloadRuleEvaluatorTest {
             )
         val downloader = FakeDownloader()
 
-        evaluator.evaluate(rule(seasonId = null, enabled = false), dao, repository, downloader)
+        evaluator.evaluate(rule(seasonId = null, enabled = false), dao, repository, downloader, appPreferences)
 
         assertTrue(downloader.downloadedItemIds.isEmpty())
     }

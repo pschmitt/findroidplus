@@ -301,6 +301,7 @@
     <string name="download_keep_label">Keep download</string>
     <string name="broken_downloads_banner_message">%1$d download(s) have a missing or empty file - e.g. after removing or reformatting a storage volume</string>
     <string name="broken_downloads_banner_action">Re-download all</string>
+    <string name="max_download_size_banner_message">Downloads (%1$s) have reached your configured limit - new episodes/movies won\'t auto-download until you free up space or raise the limit</string>
     <string name="pause_all_downloads">Pause all downloads</string>
     <string name="resume_all_downloads">Resume all downloads</string>
     <string name="downloading_items_count">Downloading %1$d of %2$d episodes</string>

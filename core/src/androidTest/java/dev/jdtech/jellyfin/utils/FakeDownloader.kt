@@ -51,6 +51,8 @@ class FakeDownloader : Downloader {
 
     override fun getAllStorageStats(): List<DeviceStorageStats> = error("not used")
 
+    override fun getTotalDownloadedBytes(): Long = error("not used")
+
     override fun resolvePreferredStorageIndex(): Int = error("not used")
 
     override suspend fun moveItems(

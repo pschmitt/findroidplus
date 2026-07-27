@@ -46,7 +46,7 @@ constructor(
             val fulfiller = PendingDownloadFulfiller()
             for (request in requestRepository.getAll(serverId, userId)) {
                 val fulfilled =
-                    fulfiller.fulfill(request, database, jellyfinRepository, downloader) { title ->
+                    fulfiller.fulfill(request, database, jellyfinRepository, downloader, appPreferences) { title ->
                         notifier.notifyFulfilled(title)
                     }
                 if (fulfilled) {

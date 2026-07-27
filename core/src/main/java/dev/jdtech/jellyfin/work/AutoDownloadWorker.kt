@@ -42,7 +42,7 @@ constructor(
 
             val evaluator = AutoDownloadRuleEvaluator()
             for (rule in ruleRepository.getEnabledRules(serverId, userId)) {
-                evaluator.evaluate(rule, database, jellyfinRepository, downloader)
+                evaluator.evaluate(rule, database, jellyfinRepository, downloader, appPreferences)
             }
 
             Result.success()

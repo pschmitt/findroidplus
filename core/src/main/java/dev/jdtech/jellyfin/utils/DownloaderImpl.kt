@@ -618,6 +618,13 @@ class DownloaderImpl(
         }
     }
 
+    override fun getTotalDownloadedBytes(): Long {
+        return database
+            .getAllSources()
+            .filter { it.type == FindroidSourceType.LOCAL }
+            .sumOf { File(it.path).length() }
+    }
+
     override fun resolvePreferredStorageIndex(): Int {
         val preference = appPreferences.getValue(appPreferences.downloadLocation)
         val resolved = resolveDownloadStorageIndex(context, preference)
