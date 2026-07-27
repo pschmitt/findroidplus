@@ -198,7 +198,9 @@ class DownloaderImpl(
             // The movie/episode row is already gone - fall back to just cleaning up the source
             // row and the partial file directly, since deleteItem() needs the item's type to
             // cascade into season/show cleanup.
-            Timber.e("cancelDownload: no FindroidItem found for source ${sourceDto.id}, cleaning up source only")
+            Timber.e(
+                "cancelDownload: no FindroidItem found for source ${sourceDto.id}, cleaning up source only"
+            )
             database.deleteSource(sourceDto.id)
             File(sourceDto.path).delete()
             return
@@ -264,7 +266,8 @@ class DownloaderImpl(
                 } ?: return UiText.StringResource(CoreR.string.unknown_error)
 
             val itemName =
-                findFindroidItem(sourceDto.itemId)?.let { downloadDisplayName(it) } ?: sourceDto.name
+                findFindroidItem(sourceDto.itemId)?.let { downloadDisplayName(it) }
+                    ?: sourceDto.name
             val finalPath = sourceDto.path.replace(".download", "")
 
             enqueueVideoDownload(
@@ -288,7 +291,8 @@ class DownloaderImpl(
     // instead so concurrent downloads are distinguishable in the notification and Downloads page.
     private fun downloadDisplayName(item: FindroidItem): String =
         when (item) {
-            is FindroidEpisode -> "${item.seriesName} • S${item.parentIndexNumber}E${item.indexNumber}"
+            is FindroidEpisode ->
+                "${item.seriesName} • S${item.parentIndexNumber}E${item.indexNumber}"
             else -> item.name
         }
 
@@ -336,7 +340,10 @@ class DownloaderImpl(
     // downloads" plan for why VideoDownloadService/this call exist at all.
     private fun ensureDownloadServiceStarted() {
         try {
-            ContextCompat.startForegroundService(context, Intent(context, VideoDownloadService::class.java))
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, VideoDownloadService::class.java),
+            )
         } catch (e: Exception) {
             Timber.w(e, "Could not start VideoDownloadService right now")
             ResumeDownloadsJobService.schedule(context)
@@ -452,7 +459,11 @@ class DownloaderImpl(
                 .build()
         // APPEND (not KEEP/REPLACE) for the same reason as deleteItems(): a migrate triggered
         // while an earlier batch is still running queues after it instead of being dropped.
-        workManager.enqueueUniqueWork(MIGRATE_DOWNLOADS_WORK_NAME, ExistingWorkPolicy.APPEND, request)
+        workManager.enqueueUniqueWork(
+            MIGRATE_DOWNLOADS_WORK_NAME,
+            ExistingWorkPolicy.APPEND,
+            request,
+        )
     }
 
     override fun getMigrateProgressFlow(): Flow<MigrateProgress?> {
@@ -467,10 +478,10 @@ class DownloaderImpl(
 
     /** Shared per-source move: the file itself plus any external media stream files. */
     private fun moveSourceFiles(sourceDto: FindroidSourceDto, fromDir: File, toDir: File) {
-        moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)?.let {
-            newPath ->
-            database.setSourcePath(sourceDto.id, newPath)
-        }
+        moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)
+            ?.let { newPath ->
+                database.setSourcePath(sourceDto.id, newPath)
+            }
         for (mediaStream in database.getMediaStreamsBySourceId(sourceDto.id)) {
             moveFile(File(mediaStream.path), fromDir, toDir)?.let { newPath ->
                 database.setMediaStreamPath(mediaStream.id, newPath)
@@ -521,13 +532,13 @@ class DownloaderImpl(
      * Copies [oldFile] (which must live under [fromDir]) to the equivalent relative path under
      * [toDir], verifies the copy, deletes the original, and returns the new path. Uses copy+delete
      * rather than [File.renameTo] since the two storage volumes here are typically different
-     * filesystems, and renameTo silently fails (returns false) across filesystems on some
-     * platforms rather than falling back to a copy.
+     * filesystems, and renameTo silently fails (returns false) across filesystems on some platforms
+     * rather than falling back to a copy.
      *
-     * When [expectedChecksum] is available (the primary video file, once downloaded with a
-     * checksum recorded - see VideoDownloadService), the copy is verified by SHA-256 computed in
-     * the same pass as the copy, not just a length check. Media stream files and sources
-     * downloaded before checksums existed fall back to the length-only check.
+     * When [expectedChecksum] is available (the primary video file, once downloaded with a checksum
+     * recorded - see VideoDownloadService), the copy is verified by SHA-256 computed in the same
+     * pass as the copy, not just a length check. Media stream files and sources downloaded before
+     * checksums existed fall back to the length-only check.
      */
     private fun moveFile(
         oldFile: File,
@@ -582,7 +593,11 @@ class DownloaderImpl(
                 .build()
         // APPEND (not KEEP/REPLACE) so a delete triggered while an earlier batch is still running
         // queues after it instead of being dropped or clobbering the in-flight one.
-        workManager.enqueueUniqueWork(DELETE_DOWNLOADS_WORK_NAME, ExistingWorkPolicy.APPEND, request)
+        workManager.enqueueUniqueWork(
+            DELETE_DOWNLOADS_WORK_NAME,
+            ExistingWorkPolicy.APPEND,
+            request,
+        )
     }
 
     override fun getDeleteProgressFlow(): Flow<DeleteProgress?> {
@@ -638,17 +653,23 @@ class DownloaderImpl(
         return downloadQueueRepository.progressFlow(sourceId)
     }
 
-    // Re-adopts every LOCAL source still mid-transfer (path ending ".download") that isn't
-    // currently tracked by downloadQueueRepository - the app was killed mid-download, or
-    // VideoDownloadService itself was killed while backgrounded with no live job for it. Only
-    // ever called from ForegroundDownloadResumer's ON_START check (a guaranteed
-    // foreground-eligible moment) - see the "Real fix for stuck background downloads" plan.
+    // Re-adopts every LOCAL source still mid-transfer (path ending ".download") that doesn't have
+    // an active transfer job right now - the app was killed mid-download, VideoDownloadService
+    // itself was killed while backgrounded with no live job for it, or (the case this exists to
+    // catch) the service never even got to start in the first place - e.g. its
+    // startForegroundService() call was silently disallowed while backgrounded, leaving the
+    // request sitting unclaimed in downloadQueueRepository forever with nothing consuming it.
+    // Checking hasActiveJob() rather than pendingRequest() != null matters here: a request can
+    // exist in that in-memory map with no job ever having claimed it, which is exactly this stuck
+    // state - checking mere existence would wrongly treat it as already being handled. Only ever
+    // called from ForegroundDownloadResumer's ON_START check (a guaranteed foreground-eligible
+    // moment) - see the "Real fix for stuck background downloads" plan.
     override suspend fun reconcilePendingDownloads() {
         for (sourceDto in database.getAllSources()) {
             val downloadId = sourceDto.downloadId ?: continue
             if (sourceDto.pausedByBatterySaver) continue
             if (!sourceDto.path.endsWith(".download")) continue
-            if (downloadQueueRepository.pendingRequest(sourceDto.id) != null) continue
+            if (downloadQueueRepository.hasActiveJob(sourceDto.id)) continue
             resumeDownload(downloadId)
         }
     }

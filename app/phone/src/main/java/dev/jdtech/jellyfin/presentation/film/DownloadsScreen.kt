@@ -1239,22 +1239,26 @@ private fun SectionHeader(
     Card {
         Row(
             modifier =
-                Modifier.fillMaxWidth().let { modifier ->
-                    if (onLongClick != null) {
-                        modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    } else {
-                        modifier.clickable(onClick = onClick)
+                Modifier.fillMaxWidth()
+                    .let { modifier ->
+                        if (onLongClick != null) {
+                            modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                        } else {
+                            modifier.clickable(onClick = onClick)
+                        }
                     }
-                },
+                    // Matches ShowGroupHeader's own padding exactly, so the trailing collapse
+                    // chevron lands at the same horizontal inset in both - it used to be its own
+                    // inner Row's padding here, leaving the chevron (a sibling, outside that inner
+                    // Row) flush against the Card edge instead.
+                    .padding(
+                        horizontal = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.medium,
+                    ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
-                modifier =
-                    Modifier.weight(1f)
-                        .padding(
-                            horizontal = MaterialTheme.spacings.medium,
-                            vertical = MaterialTheme.spacings.medium,
-                        ),
+                modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
