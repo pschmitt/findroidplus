@@ -23,5 +23,6 @@ data class DownloaderState(
                     DownloadManager.STATUS_PAUSED,
                     DownloadManager.STATUS_FAILED,
                     DownloadProgress.STATUS_VERIFYING,
+                    DownloadProgress.STATUS_AWAITING_FOREGROUND,
                 )
 }

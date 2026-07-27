@@ -32,6 +32,8 @@ class FakeDownloader : Downloader {
 
     override fun getProgressFlow(downloadId: Long): Flow<DownloadProgress> = error("not used")
 
+    override suspend fun reconcilePendingDownloads() = error("not used")
+
     override suspend fun moveDownloads(
         fromStorageIndex: Int,
         toStorageIndex: Int,

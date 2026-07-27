@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.paging)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.work)

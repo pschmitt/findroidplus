@@ -21,5 +21,10 @@ data class DownloadProgress(
         // Synthetic status, not a real DownloadManager constant (those are 1/2/4/8/16) - reported
         // once the file finishes downloading and is being re-read to compute/verify its checksum.
         const val STATUS_VERIFYING = 32
+
+        // Synthetic status - the download service couldn't promote itself to the foreground right
+        // now (app is fully backgrounded, Android refused the start) and is waiting for the app to
+        // be foregrounded again (or, on API 34+, for the user-initiated-job backstop to wake it).
+        const val STATUS_AWAITING_FOREGROUND = 33
     }
 }

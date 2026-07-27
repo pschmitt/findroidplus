@@ -13,6 +13,8 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.utils.Downloader
+import dev.jdtech.jellyfin.work.ForegroundDownloadResumer
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
 import okio.Path.Companion.toOkioPath
@@ -20,6 +22,13 @@ import okio.Path.Companion.toOkioPath
 @HiltAndroidApp
 class BaseApplication : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var appPreferences: AppPreferences
+
+    @Inject lateinit var downloader: Downloader
+
+    override fun onCreate() {
+        super.onCreate()
+        ForegroundDownloadResumer(downloader).start()
+    }
 
     @OptIn(ExperimentalCoilApi::class, ExperimentalTime::class)
     override fun newImageLoader(context: PlatformContext): ImageLoader {

@@ -158,6 +158,7 @@
     <string name="none">None</string>
     <string name="manage_servers">Manage servers</string>
     <string name="download_paused">Paused</string>
+    <string name="download_awaiting_foreground">Paused - open the app to resume</string>
     <string name="download_downloading">Downloading…</string>
     <string name="download_failed">Failed to download</string>
     <string name="auto_download_new_episodes">Automatically download new episodes</string>
@@ -357,6 +358,7 @@
     <string name="pvr_queue_status_importing">Importing…</string>
     <string name="pvr_queue_status_warning">Warning</string>
     <string name="pvr_queue_status_failed">Failed</string>
+    <string name="import_issue_title">Import issue</string>
     <string name="title_calendar">Calendar</string>
     <string name="discover_filter_all">All</string>
     <string name="discover_filter_movies">Movies</string>

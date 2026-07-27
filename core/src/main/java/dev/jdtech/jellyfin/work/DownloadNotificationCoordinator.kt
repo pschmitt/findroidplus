@@ -12,7 +12,7 @@ import dev.jdtech.jellyfin.utils.formatEta
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Every [VideoDownloadWorker] reports into this instead of posting its own notification, so
+ * Every [VideoDownloadService] transfer reports into this instead of posting its own notification, so
  * downloading a whole season doesn't flood the shade with one ongoing entry per episode - they
  * all collapse into a single shared notification (NOTIFICATION_ID). With exactly one active
  * download it still shows that item's own name/percent/speed/ETA and Pause/Cancel actions,

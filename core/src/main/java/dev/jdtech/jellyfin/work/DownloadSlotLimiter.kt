@@ -6,10 +6,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Caps how many [VideoDownloadWorker]s transfer bytes at once. WorkManager has no built-in notion
- * of "run at most N of this worker type", so we gate the actual transfer here - extra workers
+ * Caps how many [VideoDownloadService] transfer coroutines run at once. Nothing about launching a
+ * coroutine limits concurrency on its own, so we gate the actual transfer here - extra requests
  * stay queued (visible to the user via a "Queued" notification) and wait their turn instead of
- * running unbounded or being rejected.
+ * running unbounded.
  *
  * Waiters are served strictly in the order they called [acquire], so a season download started as
  * S01E01, S01E02, ... keeps that order instead of whichever worker happens to win a race for the

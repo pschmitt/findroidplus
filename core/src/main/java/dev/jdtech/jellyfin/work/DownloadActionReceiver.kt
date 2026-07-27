@@ -11,7 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** Handles the Cancel action on the download progress notification, see VideoDownloadWorker. */
+/** Handles the Cancel action on the download progress notification, see VideoDownloadService. */
 @AndroidEntryPoint
 class DownloadActionReceiver : BroadcastReceiver() {
 

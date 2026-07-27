@@ -60,7 +60,8 @@ fun DownloaderCard(
 
     val textColor =
         when (state.status) {
-            DownloadManager.STATUS_PAUSED -> Color.Yellow
+            DownloadManager.STATUS_PAUSED,
+            DownloadProgress.STATUS_AWAITING_FOREGROUND -> Color.Yellow
             DownloadManager.STATUS_FAILED -> MaterialTheme.colorScheme.error
             else -> MaterialTheme.colorScheme.onSurface
         }
@@ -70,6 +71,8 @@ fun DownloaderCard(
             ?: when (state.status) {
                 DownloadManager.STATUS_PENDING -> stringResource(CoreR.string.download_queued)
                 DownloadManager.STATUS_PAUSED -> stringResource(CoreR.string.download_paused)
+                DownloadProgress.STATUS_AWAITING_FOREGROUND ->
+                    stringResource(CoreR.string.download_awaiting_foreground)
                 DownloadManager.STATUS_FAILED -> stringResource(CoreR.string.download_failed)
                 DownloadProgress.STATUS_VERIFYING -> stringResource(CoreR.string.download_verifying)
                 else -> stringResource(CoreR.string.download_downloading)
@@ -77,7 +80,8 @@ fun DownloaderCard(
 
     val progressIndicatorColor =
         when (state.status) {
-            DownloadManager.STATUS_PAUSED -> Color.Yellow
+            DownloadManager.STATUS_PAUSED,
+            DownloadProgress.STATUS_AWAITING_FOREGROUND -> Color.Yellow
             DownloadManager.STATUS_SUCCESSFUL -> Color.Green
             DownloadManager.STATUS_FAILED -> MaterialTheme.colorScheme.error
             else -> ProgressIndicatorDefaults.linearColor
@@ -201,7 +205,8 @@ fun DownloaderCard(
                                     )
                                 }
                             }
-                            DownloadManager.STATUS_PAUSED -> {
+                            DownloadManager.STATUS_PAUSED,
+                            DownloadProgress.STATUS_AWAITING_FOREGROUND -> {
                                 FilledTonalIconButton(onClick = onResumeClick) {
                                     Icon(
                                         painter = painterResource(CoreR.drawable.ic_play),

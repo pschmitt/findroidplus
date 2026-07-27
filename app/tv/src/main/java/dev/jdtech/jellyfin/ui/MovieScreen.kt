@@ -350,6 +350,8 @@ private fun MovieScreenLayout(
                                         stringResource(id = CoreR.string.download_queued)
                                     downloaderState.status == android.app.DownloadManager.STATUS_PAUSED ->
                                         stringResource(id = CoreR.string.download_paused)
+                                    downloaderState.status == DownloadProgress.STATUS_AWAITING_FOREGROUND ->
+                                        stringResource(id = CoreR.string.download_awaiting_foreground)
                                     downloaderState.status == DownloadProgress.STATUS_VERIFYING ->
                                         stringResource(id = CoreR.string.download_verifying)
                                     downloaderState.progress > 0f ->

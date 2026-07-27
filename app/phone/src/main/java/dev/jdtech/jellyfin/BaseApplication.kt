@@ -35,6 +35,7 @@ import dev.jdtech.jellyfin.utils.Downloader
 import dev.jdtech.jellyfin.work.AutoBackupScheduler
 import dev.jdtech.jellyfin.work.AutoDeleteWatchedWorker
 import dev.jdtech.jellyfin.work.AutoDownloadWorker
+import dev.jdtech.jellyfin.work.ForegroundDownloadResumer
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
 import dev.jdtech.jellyfin.work.NewItemNotificationWorker
 import dev.jdtech.jellyfin.work.PendingDownloadWorker
@@ -124,6 +125,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
         QueueStatusScheduler.schedule(applicationContext, appPreferences)
         pauseDownloadsIfBatterySaverAlreadyOn()
+        ForegroundDownloadResumer(downloader).start()
     }
 
     // BatterySaverReceiver only reacts to the moment power-save mode changes - if it was already

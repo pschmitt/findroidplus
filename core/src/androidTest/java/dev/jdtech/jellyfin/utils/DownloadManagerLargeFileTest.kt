@@ -20,7 +20,7 @@ import org.junit.runner.RunWith
  * directly (the transport DownloaderImpl used before the fix) against a sparse ~4.4GiB local file
  * served over a loopback HTTP server, to determine empirically whether the platform's
  * DownloadManager itself is the failure point on real hardware. The actual regression test for
- * the shipped fix is VideoDownloadWorkerLargeFileTest, which exercises the new transport.
+ * the shipped fix is VideoTransferEngineLargeFileTest, which exercises the new transport.
  */
 @RunWith(AndroidJUnit4::class)
 class DownloadManagerLargeFileTest {

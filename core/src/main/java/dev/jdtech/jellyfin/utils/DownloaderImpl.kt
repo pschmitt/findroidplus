@@ -2,13 +2,14 @@ package dev.jdtech.jellyfin.utils
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dev.jdtech.jellyfin.core.R as CoreR
@@ -38,10 +39,13 @@ import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.work.DeleteDownloadsWorker
 import dev.jdtech.jellyfin.work.DownloadNotificationCoordinator
+import dev.jdtech.jellyfin.work.DownloadQueueRepository
 import dev.jdtech.jellyfin.work.DownloadSlotLimiter
 import dev.jdtech.jellyfin.work.ImagesDownloaderWorker
 import dev.jdtech.jellyfin.work.MigrateDownloadsWorker
-import dev.jdtech.jellyfin.work.VideoDownloadWorker
+import dev.jdtech.jellyfin.work.ResumeDownloadsJobService
+import dev.jdtech.jellyfin.work.VideoDownloadRequest
+import dev.jdtech.jellyfin.work.VideoDownloadService
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -63,6 +67,7 @@ class DownloaderImpl(
     private val jellyfinRepository: JellyfinRepository,
     private val appPreferences: AppPreferences,
     private val workManager: WorkManager,
+    private val downloadQueueRepository: DownloadQueueRepository,
 ) : Downloader {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
 
@@ -108,8 +113,8 @@ class DownloaderImpl(
                     ),
                 )
             }
-            // The primary source is streamed by our own VideoDownloadWorker rather than
-            // DownloadManager - see the class doc on VideoDownloadWorker for why. downloadId is
+            // The primary source is streamed by our own VideoDownloadService rather than
+            // DownloadManager - see the class doc on VideoDownloadService for why. downloadId is
             // now a synthetic, locally-unique 64-bit id used purely as a Room lookup key; it no
             // longer comes from DownloadManager.enqueue().
             val downloadId = UUID.randomUUID().mostSignificantBits
@@ -148,7 +153,7 @@ class DownloaderImpl(
             database.insertSource(sourceDto.copy(downloadId = downloadId))
             database.insertUserData(item.toFindroidUserDataDto(jellyfinRepository.getUserId()))
 
-            // Enqueue only after the sources row exists - VideoDownloadWorker updates that row by
+            // Enqueue only after the sources row exists - VideoDownloadService updates that row by
             // id on completion, so it must not race the insert above.
             enqueueVideoDownload(
                 downloadId = downloadId,
@@ -186,7 +191,7 @@ class DownloaderImpl(
 
     override suspend fun cancelDownload(downloadId: Long) {
         val sourceDto = database.getSourceByDownloadId(downloadId) ?: return
-        workManager.cancelUniqueWork(sourceDto.id)
+        downloadQueueRepository.cancel(sourceDto.id)
 
         val item = findFindroidItem(sourceDto.itemId)
         if (item == null) {
@@ -203,16 +208,14 @@ class DownloaderImpl(
 
     override suspend fun pauseDownload(downloadId: Long) {
         val sourceDto = database.getSourceByDownloadId(downloadId) ?: return
-        workManager.cancelUniqueWork(sourceDto.id)
+        downloadQueueRepository.cancel(sourceDto.id)
     }
 
     override suspend fun pauseAllForBatterySaver() {
         for (sourceDto in database.getAllSources()) {
             if (sourceDto.downloadId == null) continue
-            val workInfo =
-                workManager.getWorkInfosForUniqueWorkFlow(sourceDto.id).first().firstOrNull()
-            if (workInfo != null && !workInfo.state.isFinished) {
-                workManager.cancelUniqueWork(sourceDto.id)
+            if (downloadQueueRepository.pendingRequest(sourceDto.id) != null) {
+                downloadQueueRepository.cancel(sourceDto.id)
                 database.setSourcePausedByBatterySaver(sourceDto.id, true)
             }
         }
@@ -311,21 +314,33 @@ class DownloaderImpl(
         expectedSize: Long,
         itemName: String,
     ) {
-        val downloadRequest =
-            OneTimeWorkRequestBuilder<VideoDownloadWorker>()
-                .setInputData(
-                    workDataOf(
-                        VideoDownloadWorker.KEY_DOWNLOAD_ID to downloadId,
-                        VideoDownloadWorker.KEY_SOURCE_ID to sourceId,
-                        VideoDownloadWorker.KEY_SOURCE_URL to sourceUrl,
-                        VideoDownloadWorker.KEY_DESTINATION_PATH to destinationPath,
-                        VideoDownloadWorker.KEY_FINAL_PATH to finalPath,
-                        VideoDownloadWorker.KEY_EXPECTED_SIZE to expectedSize,
-                        VideoDownloadWorker.KEY_ITEM_NAME to itemName,
-                    )
-                )
-                .build()
-        workManager.enqueueUniqueWork(sourceId, ExistingWorkPolicy.KEEP, downloadRequest)
+        downloadQueueRepository.enqueue(
+            VideoDownloadRequest(
+                downloadId = downloadId,
+                sourceId = sourceId,
+                sourceUrl = sourceUrl,
+                destinationPath = destinationPath,
+                finalPath = finalPath,
+                expectedSize = expectedSize,
+                itemName = itemName,
+            )
+        )
+        ensureDownloadServiceStarted()
+    }
+
+    // Only ever called from moments guaranteed to be foreground-eligible - a direct UI action
+    // (downloadItem/resumeDownload/forceDownload), or ForegroundDownloadResumer's ON_START check.
+    // If Android still refuses (e.g. the app was backgrounded in the split second between the
+    // trigger and this call), leave the request queued and let the API 34+ user-initiated job
+    // backstop or the next app foreground pick it up - see the "Real fix for stuck background
+    // downloads" plan for why VideoDownloadService/this call exist at all.
+    private fun ensureDownloadServiceStarted() {
+        try {
+            ContextCompat.startForegroundService(context, Intent(context, VideoDownloadService::class.java))
+        } catch (e: Exception) {
+            Timber.w(e, "Could not start VideoDownloadService right now")
+            ResumeDownloadsJobService.schedule(context)
+        }
     }
 
     override suspend fun deleteItem(item: FindroidItem, source: FindroidSource) {
@@ -510,7 +525,7 @@ class DownloaderImpl(
      * platforms rather than falling back to a copy.
      *
      * When [expectedChecksum] is available (the primary video file, once downloaded with a
-     * checksum recorded - see VideoDownloadWorker), the copy is verified by SHA-256 computed in
+     * checksum recorded - see VideoDownloadService), the copy is verified by SHA-256 computed in
      * the same pass as the copy, not just a length check. Media stream files and sources
      * downloaded before checksums existed fall back to the length-only check.
      */
@@ -613,82 +628,21 @@ class DownloaderImpl(
         val sourceId =
             database.getSourceByDownloadId(downloadId)?.id
                 ?: return flowOf(DownloadProgress(status = DownloadManager.STATUS_FAILED))
+        return downloadQueueRepository.progressFlow(sourceId)
+    }
 
-        // Bytes/time from the previous emission, used to derive a speed for the current one -
-        // this is per-collector state, safe since each getProgressFlow() call builds a fresh flow.
-        var lastBytes = -1L
-        var lastTimeMs = 0L
-
-        return workManager.getWorkInfosForUniqueWorkFlow(sourceId).map { infos ->
-            val workInfo = infos.firstOrNull() ?: return@map DownloadProgress(DownloadManager.STATUS_FAILED)
-
-            when (workInfo.state) {
-                WorkInfo.State.ENQUEUED,
-                WorkInfo.State.BLOCKED -> DownloadProgress(status = DownloadManager.STATUS_PENDING)
-                WorkInfo.State.RUNNING -> {
-                    if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_QUEUED, false)) {
-                        return@map DownloadProgress(status = DownloadManager.STATUS_PENDING)
-                    }
-                    if (workInfo.progress.getBoolean(VideoDownloadWorker.KEY_VERIFYING, false)) {
-                        val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
-                        val hashedBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
-                        val percent =
-                            if (totalBytes > 0 && hashedBytes >= 0) {
-                                hashedBytes.times(100).div(totalBytes).toInt()
-                            } else {
-                                -1
-                            }
-                        return@map DownloadProgress(
-                            status = DownloadProgress.STATUS_VERIFYING,
-                            percent = percent,
-                        )
-                    }
-
-                    val totalBytes = workInfo.progress.getLong(VideoDownloadWorker.KEY_TOTAL, -1L)
-                    val downloadedBytes =
-                        workInfo.progress.getLong(VideoDownloadWorker.KEY_DOWNLOADED, -1L)
-                    val now = System.currentTimeMillis()
-
-                    val speed =
-                        if (lastBytes >= 0 && downloadedBytes >= lastBytes && lastTimeMs > 0) {
-                            val deltaMs = (now - lastTimeMs).coerceAtLeast(1)
-                            (downloadedBytes - lastBytes).times(1000L).div(deltaMs)
-                        } else {
-                            0L
-                        }
-                    lastBytes = downloadedBytes
-                    lastTimeMs = now
-
-                    val percent =
-                        if (totalBytes > 0 && downloadedBytes >= 0) {
-                            downloadedBytes.times(100).div(totalBytes).toInt()
-                        } else {
-                            -1
-                        }
-                    val eta =
-                        if (speed > 0 && totalBytes > 0 && downloadedBytes >= 0) {
-                            (totalBytes - downloadedBytes) / speed
-                        } else {
-                            -1L
-                        }
-
-                    DownloadProgress(
-                        status = DownloadManager.STATUS_RUNNING,
-                        percent = percent,
-                        downloadedBytes = downloadedBytes.coerceAtLeast(0),
-                        totalBytes = totalBytes.coerceAtLeast(0),
-                        speedBytesPerSecond = speed,
-                        etaSeconds = eta,
-                    )
-                }
-                WorkInfo.State.SUCCEEDED ->
-                    DownloadProgress(status = DownloadManager.STATUS_SUCCESSFUL, percent = 100)
-                // A CANCELLED job is what pauseDownload() produces (see the interface doc on
-                // pauseDownload) - report it as paused rather than failed so the Downloads page can
-                // offer Resume instead of treating it as an error.
-                WorkInfo.State.CANCELLED -> DownloadProgress(status = DownloadManager.STATUS_PAUSED)
-                WorkInfo.State.FAILED -> DownloadProgress(status = DownloadManager.STATUS_FAILED)
-            }
+    // Re-adopts every LOCAL source still mid-transfer (path ending ".download") that isn't
+    // currently tracked by downloadQueueRepository - the app was killed mid-download, or
+    // VideoDownloadService itself was killed while backgrounded with no live job for it. Only
+    // ever called from ForegroundDownloadResumer's ON_START check (a guaranteed
+    // foreground-eligible moment) - see the "Real fix for stuck background downloads" plan.
+    override suspend fun reconcilePendingDownloads() {
+        for (sourceDto in database.getAllSources()) {
+            val downloadId = sourceDto.downloadId ?: continue
+            if (sourceDto.pausedByBatterySaver) continue
+            if (!sourceDto.path.endsWith(".download")) continue
+            if (downloadQueueRepository.pendingRequest(sourceDto.id) != null) continue
+            resumeDownload(downloadId)
         }
     }
 

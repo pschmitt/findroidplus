@@ -486,7 +486,8 @@ private fun DownloadsScreenLayout(
                     if (!selectionMode && !pvrSelectionMode && state.downloadProgress.isNotEmpty()) {
                         val allPaused =
                             state.downloadProgress.values.all {
-                                it.status == DownloadManager.STATUS_PAUSED
+                                it.status == DownloadManager.STATUS_PAUSED ||
+                                    it.status == DownloadProgress.STATUS_AWAITING_FOREGROUND
                             }
                         IconButton(onClick = if (allPaused) onResumeAllClick else onPauseAllClick) {
                             Icon(
@@ -1306,6 +1307,12 @@ private fun DownloadRow(
     val isPending = activeProgress?.status == DownloadManager.STATUS_PENDING
     val isPaused = activeProgress?.status == DownloadManager.STATUS_PAUSED
     val isVerifying = activeProgress?.status == DownloadProgress.STATUS_VERIFYING
+    // The download service couldn't promote itself to the foreground right now (app was fully
+    // backgrounded) - it'll resume automatically on next foreground/API 34+ job wake, but tapping
+    // Resume here also works (a direct tap is itself foreground-eligible) - see
+    // DownloadQueueRepository.markAwaitingForeground.
+    val isAwaitingForeground = activeProgress?.status == DownloadProgress.STATUS_AWAITING_FOREGROUND
+    val showResumeAction = isPaused || isAwaitingForeground
     // Only meaningful once the row has settled (not mid-download/mid-move, where the file is
     // legitimately incomplete/absent right now) - a resting completed source is never
     // legitimately 0 bytes, so outside those states it means the file vanished from disk.
@@ -1363,6 +1370,8 @@ private fun DownloadRow(
                                 when {
                                     isPending -> stringResource(CoreR.string.download_queued)
                                     isPaused -> stringResource(CoreR.string.download_paused)
+                                    isAwaitingForeground ->
+                                        stringResource(CoreR.string.download_awaiting_foreground)
                                     isVerifying -> stringResource(CoreR.string.download_verifying)
                                     activeProgress.percent >= 0 ->
                                         stringResource(
@@ -1376,7 +1385,7 @@ private fun DownloadRow(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        if (!isPending) {
+                        if (!isPending && !isAwaitingForeground) {
                             Spacer(modifier = Modifier.height(4.dp))
                             LinearProgressIndicator(
                                 progress = { activeProgress.percent.coerceAtLeast(0) / 100f },
@@ -1465,19 +1474,19 @@ private fun DownloadRow(
                         IconButton(
                             onClick = {
                                 onDownloadAction(
-                                    if (isPaused) DownloadAction.Resume else DownloadAction.Pause
+                                    if (showResumeAction) DownloadAction.Resume else DownloadAction.Pause
                                 )
                             }
                         ) {
                             Icon(
                                 painter =
                                     painterResource(
-                                        if (isPaused) CoreR.drawable.ic_play
+                                        if (showResumeAction) CoreR.drawable.ic_play
                                         else CoreR.drawable.ic_pause
                                     ),
                                 contentDescription =
                                     stringResource(
-                                        if (isPaused) CoreR.string.download_action_resume
+                                        if (showResumeAction) CoreR.string.download_action_resume
                                         else CoreR.string.download_action_pause
                                     ),
                             )
@@ -1576,6 +1585,7 @@ private fun PvrQueueRow(
 ) {
     val status = queueItem.status
     val isProblem = status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
+    var showIssueDialog by remember { mutableStateOf(false) }
     val statusText =
         when (status.status) {
             QueueItemStatus.QUEUED -> stringResource(CoreR.string.download_queued)
@@ -1591,11 +1601,17 @@ private fun PvrQueueRow(
                     stringResource(CoreR.string.download_downloading)
                 }
             QueueItemStatus.IMPORTING -> stringResource(CoreR.string.pvr_queue_status_importing)
-            QueueItemStatus.WARNING ->
-                status.errorMessage ?: stringResource(CoreR.string.pvr_queue_status_warning)
-            QueueItemStatus.FAILED ->
-                status.errorMessage ?: stringResource(CoreR.string.pvr_queue_status_failed)
+            QueueItemStatus.WARNING -> stringResource(CoreR.string.pvr_queue_status_warning)
+            QueueItemStatus.FAILED -> stringResource(CoreR.string.pvr_queue_status_failed)
         }
+
+    if (showIssueDialog) {
+        ImportIssueDialog(
+            title = queueItem.title,
+            message = status.errorMessage ?: statusText,
+            onDismiss = { showIssueDialog = false },
+        )
+    }
 
     Row(
         modifier =
@@ -1671,13 +1687,28 @@ private fun PvrQueueRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodySmall,
-                color =
-                    if (isProblem) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isProblem) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_alert_circle),
+                        contentDescription = stringResource(CoreR.string.import_issue_title),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier =
+                            Modifier.size(14.dp)
+                                .clickable { showIssueDialog = true }
+                                .padding(end = 0.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (isProblem) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = if (isProblem) Modifier.clickable { showIssueDialog = true } else Modifier,
+                )
+            }
             if (status.percent >= 0) {
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
@@ -1709,6 +1740,22 @@ private fun PvrQueueRow(
             }
         }
     }
+}
+
+/**
+ * Shows the raw Sonarr/Radarr import warning/failure message for a queue entry. The row itself
+ * only shows a compact "Warning"/"Failed" badge - the full message (often a whole raw release
+ * filename plus reason, e.g. "...FLUX.mkv: Episode has a TBA title and recently aired") is too
+ * long to render inline without pushing everything else in the row around.
+ */
+@Composable
+private fun ImportIssueDialog(title: String, message: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(CoreR.string.import_issue_title)) },
+        text = { Text(text = "$title\n\n$message") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.close)) } },
+    )
 }
 
 /**

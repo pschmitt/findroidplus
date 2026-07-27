@@ -18,8 +18,8 @@ interface Downloader {
     // without having to reconstruct a FindroidItem first.
     suspend fun cancelDownload(downloadId: Long)
 
-    // "Pausing" is just cancelling the WorkManager job without running deleteItem() - the partial
-    // .download file and the sources DB row are left in place, so VideoDownloadWorker's Range-based
+    // "Pausing" is just cancelling the transfer without running deleteItem() - the partial
+    // .download file and the sources DB row are left in place, so VideoDownloadService's Range-based
     // resume logic picks the file back up the next time this source is enqueued.
     suspend fun pauseDownload(downloadId: Long)
 
@@ -47,6 +47,11 @@ interface Downloader {
     suspend fun deleteItem(item: FindroidItem, source: FindroidSource)
 
     fun getProgressFlow(downloadId: Long): Flow<DownloadProgress>
+
+    // Re-adopts every download left mid-transfer with no active job (the app or
+    // VideoDownloadService was killed) - only ever called from a guaranteed foreground-eligible
+    // moment (ForegroundDownloadResumer's ON_START check), never from a background trigger.
+    suspend fun reconcilePendingDownloads()
 
     // Copies every downloaded (LOCAL) source and its external media streams currently under
     // fromStorageIndex's volume over to toStorageIndex's volume, repointing the DB rows at the
