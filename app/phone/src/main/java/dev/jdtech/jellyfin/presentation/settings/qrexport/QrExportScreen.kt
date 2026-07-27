@@ -504,6 +504,9 @@ private fun PvrOverrideFields(
             value = apiKey,
             onValueChange = onApiKeyChange,
             label = { Text(text = stringResource(CoreR.string.integrations_api_key)) },
+            supportingText = {
+                Text(text = stringResource(CoreR.string.qr_export_api_key_summary))
+            },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),

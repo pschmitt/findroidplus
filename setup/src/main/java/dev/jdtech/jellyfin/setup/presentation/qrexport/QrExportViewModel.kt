@@ -130,10 +130,6 @@ constructor(
             val currentUser =
                 currentServer?.users?.find { it.id == currentServer.server.currentUserId }
                     ?: currentServer?.users?.firstOrNull()
-            val sonarrFields = qrConfigManager.currentSonarrFields()
-            val radarrFields = qrConfigManager.currentRadarrFields()
-            val seerrFields = qrConfigManager.currentSeerrFields()
-
             _state.value =
                 _state.value.copy(
                     jellyfinAvailable = currentServer != null,
@@ -144,12 +140,9 @@ constructor(
                     selectedServerId = currentServer?.server?.id,
                     selectedUserId = currentUser?.id,
                     jellyfinUsername = currentUser?.name.orEmpty(),
-                    sonarrBaseUrl = sonarrFields.baseUrl,
-                    sonarrApiKey = sonarrFields.apiKey,
-                    radarrBaseUrl = radarrFields.baseUrl,
-                    radarrApiKey = radarrFields.apiKey,
-                    seerrBaseUrl = seerrFields.baseUrl,
-                    seerrApiKey = seerrFields.apiKey,
+                    sonarrBaseUrl = qrConfigManager.currentSonarrBaseUrl(),
+                    radarrBaseUrl = qrConfigManager.currentRadarrBaseUrl(),
+                    seerrBaseUrl = qrConfigManager.currentSeerrBaseUrl(),
                     password = generatePassword(),
                 )
             generate()

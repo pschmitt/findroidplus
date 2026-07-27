@@ -20,8 +20,10 @@ data class QrExportState(
     val advancedExpanded: Boolean = false,
     // Pre-filled from the selected user/current storage, editable - a blank jellyfinPassword
     // means "keep the existing session" (no re-auth); a non-blank one triggers a live login
-    // against the selected server to embed a fresh token instead. Sonarr/Radarr/Seerr fields are
-    // plain overrides (no re-auth involved), pre-filled from AppPreferences/SecureCredentialStore.
+    // against the selected server to embed a fresh token instead. Sonarr/Radarr/Seerr apiKey
+    // fields follow the same blank-means-"keep the stored one" pattern - only baseUrl is
+    // pre-filled from AppPreferences; apiKey starts blank and QrConfigManager falls back to
+    // SecureCredentialStore's value when it's left that way.
     val jellyfinUsername: String = "",
     val jellyfinPassword: String = "",
     val jellyfinPasswordVisible: Boolean = false,

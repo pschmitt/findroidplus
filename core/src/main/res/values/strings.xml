@@ -283,6 +283,7 @@
     <string name="qr_export_jellyfin_username">Username</string>
     <string name="qr_export_jellyfin_password">Password (optional)</string>
     <string name="qr_export_jellyfin_password_summary">Leave blank to embed this device\'s current login. Fill in to sign in as a different user instead - verified live against the server before the code updates.</string>
+    <string name="qr_export_api_key_summary">Leave blank to embed the currently configured API key.</string>
     <string name="qr_export_jellyfin_verifying">Signing in…</string>
     <string name="qr_export_error">Couldn\'t generate code: %1$s</string>
     <string name="qr_export_biometric_title">Unlock to provision a device</string>

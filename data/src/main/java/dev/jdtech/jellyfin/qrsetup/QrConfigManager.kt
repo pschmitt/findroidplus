@@ -105,23 +105,16 @@ class QrConfigManager(
         withContext(Dispatchers.IO) { database.getAllServersWithAddressesAndUsers() }
 
     /**
-     * Currently-stored (not overridden) base URL/API key, to pre-fill the export screen's editable
-     * fields. Empty strings if not configured.
+     * Currently-stored base URL, to pre-fill the export screen's editable field. The API key is
+     * deliberately not exposed here - like `jellyfinPassword`, its export-screen field starts
+     * blank and only the export's [putPvrFields] falls back to the stored secret. Empty string if
+     * not configured.
      */
-    fun currentSonarrFields(): PvrOverride =
-        currentPvrFields(appPreferences.sonarrBaseUrl, PvrCredentialKeys.SONARR_API_KEY)
+    fun currentSonarrBaseUrl(): String = appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty()
 
-    fun currentRadarrFields(): PvrOverride =
-        currentPvrFields(appPreferences.radarrBaseUrl, PvrCredentialKeys.RADARR_API_KEY)
+    fun currentRadarrBaseUrl(): String = appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty()
 
-    fun currentSeerrFields(): PvrOverride =
-        currentPvrFields(appPreferences.seerrBaseUrl, PvrCredentialKeys.SEERR_API_KEY)
-
-    private fun currentPvrFields(baseUrl: Preference<String?>, apiKeyKey: String): PvrOverride =
-        PvrOverride(
-            baseUrl = appPreferences.getValue(baseUrl).orEmpty(),
-            apiKey = getSecret(apiKeyKey).orEmpty(),
-        )
+    fun currentSeerrBaseUrl(): String = appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty()
 
     suspend fun applyEnvelope(envelope: QrConfigEnvelope): QrImportSummary =
         withContext(Dispatchers.IO) {
@@ -196,7 +189,14 @@ class QrConfigManager(
         plainPrefs[enabled.backendName] = PrefValue.BoolValue(true)
         if (override != null) {
             plainPrefs[baseUrl.backendName] = PrefValue.StringValue(override.baseUrl)
-            if (override.apiKey.isNotBlank()) secrets[secretKeys.first()] = override.apiKey
+            // A blank apiKey means "keep the existing one" (see QrExportState's apiKey fields),
+            // same as a blank jellyfinPassword - fall back to what's already stored instead of
+            // dropping the secret from the export.
+            if (override.apiKey.isNotBlank()) {
+                secrets[secretKeys.first()] = override.apiKey
+            } else {
+                getSecret(secretKeys.first())?.let { secrets[secretKeys.first()] = it }
+            }
             // Headers/basic-auth aren't exposed as editable override fields - carry over
             // whatever's already stored for them.
             for (key in secretKeys.drop(1)) getSecret(key)?.let { secrets[key] = it }
