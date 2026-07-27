@@ -61,9 +61,11 @@ import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.backup.BackupSettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.homelayout.HomeLayoutSettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.integrations.IntegrationsSettingsScreen
+import dev.jdtech.jellyfin.presentation.settings.qrexport.QrExportScreen
 import dev.jdtech.jellyfin.presentation.setup.addresses.ServerAddressesScreen
 import dev.jdtech.jellyfin.presentation.setup.addserver.AddServerScreen
 import dev.jdtech.jellyfin.presentation.setup.login.LoginScreen
+import dev.jdtech.jellyfin.presentation.setup.qrscan.QrScanScreen
 import dev.jdtech.jellyfin.presentation.setup.restore.RestoreBackupScreen
 import dev.jdtech.jellyfin.presentation.setup.servers.ServersScreen
 import dev.jdtech.jellyfin.presentation.setup.users.UsersScreen
@@ -136,19 +138,21 @@ data class SeerrMediaRoute(
 
 @Serializable data class SettingsRoute(val indexes: IntArray)
 
-@Serializable data class SettingsFileEditRoute(
-    val filePath: String,
-)
+@Serializable data class SettingsFileEditRoute(val filePath: String)
 
 @Serializable data object AboutRoute
 
 @Serializable data object BackupSettingsRoute
+
+@Serializable data object QrExportRoute
 
 @Serializable data object ConnectionsRoute
 
 @Serializable data object HomeLayoutSettingsRoute
 
 @Serializable data object RestoreBackupRoute
+
+@Serializable data object ScanQrRoute
 
 data class TabBarItem(
     @param:StringRes val title: Int = 0,
@@ -158,8 +162,7 @@ data class TabBarItem(
     val enabled: Boolean = true,
 )
 
-@Composable
-private fun TabBarItem.resolvedTitle(): String = titleText ?: stringResource(title)
+@Composable private fun TabBarItem.resolvedTitle(): String = titleText ?: stringResource(title)
 
 @DrawableRes
 private fun libraryIcon(type: CollectionType): Int =
@@ -266,8 +269,9 @@ fun NavigationRoot(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
     val currentRoute = navBackStackEntry?.destination?.route
-    val currentLibraryRoute =
-        navBackStackEntry?.let { entry -> runCatching { entry.toRoute<LibraryRoute>() }.getOrNull() }
+    val currentLibraryRoute = navBackStackEntry?.let { entry ->
+        runCatching { entry.toRoute<LibraryRoute>() }.getOrNull()
+    }
 
     fun TabBarItem.isSelected(): Boolean =
         when (val r = route) {
@@ -364,6 +368,7 @@ fun NavigationRoot(
                 WelcomeScreen(
                     onContinueClick = { navController.safeNavigate(ServersRoute) },
                     onRestoreClick = { navController.safeNavigate(RestoreBackupRoute) },
+                    onScanQrClick = { navController.safeNavigate(ScanQrRoute) },
                 )
             }
             composable<ServersRoute> {
@@ -693,7 +698,13 @@ fun NavigationRoot(
                             launchSingleTop = true
                         }
                     },
-                    navigateToSeerr = { tmdbId, seasonNumber, episodeNumber, sonarrEpisodeId, airDate, airTime ->
+                    navigateToSeerr = {
+                        tmdbId,
+                        seasonNumber,
+                        episodeNumber,
+                        sonarrEpisodeId,
+                        airDate,
+                        airTime ->
                         navController.safeNavigate(
                             SeerrMediaRoute(
                                 tmdbId = tmdbId,
@@ -759,6 +770,9 @@ fun NavigationRoot(
                     navigateToBackupSettings = {
                         navController.safeNavigate(BackupSettingsRoute)
                     },
+                    navigateToQrExport = {
+                        navController.safeNavigate(QrExportRoute)
+                    },
                     navigateToConnections = {
                         navController.safeNavigate(ConnectionsRoute)
                     },
@@ -777,19 +791,24 @@ fun NavigationRoot(
                     navigateToRestore = { navController.safeNavigate(RestoreBackupRoute) },
                 )
             }
+            composable<QrExportRoute> {
+                QrExportScreen(navigateBack = { navController.safePopBackStack() })
+            }
             composable<ConnectionsRoute> {
-                IntegrationsSettingsScreen(
-                    navigateBack = { navController.safePopBackStack() },
-                )
+                IntegrationsSettingsScreen(navigateBack = { navController.safePopBackStack() })
             }
             composable<RestoreBackupRoute> {
                 RestoreBackupScreen(onBackClick = { navController.safePopBackStack() })
+            }
+            composable<ScanQrRoute> {
+                QrScanScreen(onBackClick = { navController.safePopBackStack() })
             }
             composable<SettingsFileEditRoute> { backStackEntry ->
                 val route: SettingsFileEditRoute = backStackEntry.toRoute()
                 SettingsFileEditScreen(
                     filePath = route.filePath,
-                    navigateBack = { navController.safePopBackStack() })
+                    navigateBack = { navController.safePopBackStack() },
+                )
             }
             composable<AboutRoute> {
                 AboutScreen(navigateBack = { navController.safePopBackStack() })

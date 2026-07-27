@@ -84,3 +84,93 @@ CI-signed installs on all three test devices.
 Status: **done** (2026-07-27). Verified via remote
 `:app:phone:compileLibreDebugKotlin` and `ktfmtCheck` on rofl-13, plus
 CI-signed installs on all three test devices.
+
+## FINDROID-43: QR-code device provisioning
+
+Scan-to-configure a new Findroid+ install from an already-configured instance,
+instead of retyping server URL/credentials and Sonarr/Radarr/Seerr config by
+hand on every new device.
+
+- [x] Export side: Settings → "Provision device" (`QrExportScreen`, `data/.../qrsetup/QrConfigManager.buildEnvelope`)
+      serializes the current instance's config into a JSON payload and
+      renders it as a QR code (ZXing `core`, no camera/GMS dependency).
+      Checkboxes (all on by default, hidden/disabled per-service when that
+      service isn't configured) to selectively include Jellyfin, Sonarr,
+      Radarr, and Seerr config in the payload.
+  - [x] Jellyfin section: server address(es) + a chosen user's session
+        (reuses `backup.BackupServer`/`Server`/`ServerAddress`/`User`
+        scoped to one server/user). When more than one server/user
+        combination is configured on the device, a picker
+        (`JellyfinServerUserPicker`, radio-button `BaseDialog`, same pattern
+        as `SettingsSelectDialog`) lets you choose which one to embed,
+        defaulting to the currently-active one; hidden entirely when
+        there's only one combination. Stretch goal (typing in credentials
+        for a user *not already logged in* on this device at all) is still
+        deferred, not implemented.
+  - [x] Export screen gated behind a biometric/PIN prompt
+        (`androidx.biometric` `BiometricPrompt`, `BIOMETRIC_WEAK or
+        DEVICE_CREDENTIAL`) before rendering anything, plus
+        `FLAG_SECURE` on the window while the code is displayed to block
+        screenshots.
+  - [x] Sonarr/Radarr/Seerr checkboxes collapsed under an "Advanced"
+        expandable section (collapsed by default); Jellyfin stays top-level.
+- [x] Import side: "Scan QR code" entry point on the Welcome screen
+      (`QrScanScreen`, CameraX `ImageAnalysis` + ZXing `MultiFormatReader`)
+      that decodes the payload and applies it via
+      `QrConfigManager.applyEnvelope` (`AppPreferences`, Room
+      server/address/user rows, `SecureCredentialStore` secrets), shows a
+      brief success confirmation, then does a full process restart
+      (`Activity.restartProcess()`, same as the existing restore-from-backup
+      flow) so the newly-current server/user take effect.
+- [x] Payload is a `BackupCrypto`-wrapped (AES-256-GCM + PBKDF2, reused
+      as-is from the backup feature), Base64-encoded blob with an optional
+      user-supplied passphrase (blank = unencrypted) - same
+      optional-password UX as the existing backup/restore feature.
+- [x] Versioned from the start: `QrConfigEnvelope.version`
+      (`data/.../qrsetup/QrConfigData.kt`), decode rejects payloads with a
+      newer version than the client understands
+      (`QrConfigCodec.UnsupportedVersionException`).
+- [x] JVM unit tests for the pure encode/decode pipeline (crypto round-trip
+      incl. wrong-password/corrupt-payload/unsupported-version cases, and a
+      ZXing encode→decode round-trip) - `data/src/test/.../qrsetup/`.
+- [x] Icons on the Welcome screen's buttons (Learn more/Continue/Scan QR
+      code/Restore from backup), including a new hand-authored
+      `ic_qr_code` drawable (no existing "qr code" glyph in this project's
+      Feather-style icon set).
+- [ ] Not done: TV-side export (phone-only in v1, see FINDROID-43's own
+      scope note above) and interactive on-device UX testing of the full
+      flow (biometric prompt → generate → scan → apply) - verified so far
+      via `just lint`/`just test`/a full `assembleLibreDebug` compile and a
+      real CI-signed release install on both test devices (Mi Pad 4, Pixel
+      5 "px5"), but nobody has actually tapped through the feature yet.
+
+Status: mostly done (2026-07-27). Core export/import flow implemented,
+compiles, lints, and unit tests pass; release APK built with the real CI
+signing key and installed on both physical test devices. Still needs an
+actual hands-on run-through of the QR scan/generate UX before calling this
+fully done.
+
+## FINDROID-44: Remote configuration of a running Findroid+ instance
+
+Rough idea, not yet designed: be able to manage a Findroid+ instance running
+on another device (e.g. create Sonarr/Radarr auto-download rules on the Mi
+Pad 4's instance) remotely, without touching that device directly.
+
+- [ ] Figure out the actual architecture - this likely needs *some* server
+      component the app can poll or receive pushes from, since Android apps
+      aren't normally reachable inbound. Options to weigh: a lightweight
+      companion service/relay, piggybacking on an existing always-on service
+      the user already runs, or a pull-based model (app periodically checks
+      for pending remote-config changes against a server) instead of a
+      push/inbound one.
+  - [ ] Whichever model is chosen, needs auth so only the owner can push
+        config changes to their own instance(s).
+- [ ] Scope which config should even be remotely manageable first (the
+      motivating case is Sonarr/Radarr auto-download rules) rather than
+      trying to make all settings remotely editable from day one.
+- [ ] Revisit after FINDROID-43 lands - the QR export/import payload format
+      and PVR-config data model built there likely overlaps heavily with
+      whatever a remote-config channel would need to transmit.
+
+Status: not started (2026-07-27) - design only, no implementation approach
+chosen yet.

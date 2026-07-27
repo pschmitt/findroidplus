@@ -12,6 +12,8 @@
     <string name="settings_category_servers_summary">Manage the Jellyfin servers connected to this app</string>
     <string name="settings_category_backup">Backup &amp; Restore</string>
     <string name="settings_category_backup_summary">Export or import your app settings</string>
+    <string name="settings_category_qr_export">Provision device</string>
+    <string name="settings_category_qr_export_summary">Set up a new device by scanning a QR code</string>
     <string name="settings_category_integrations">Integrations</string>
     <string name="settings_category_player">Player</string>
     <string name="settings_category_player_summary">Playback, gestures, seeking and media segments</string>

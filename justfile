@@ -127,7 +127,7 @@ build-fetch *flags:
 lint host=remote_host: (gradle host "ktfmtCheck")
 
 # Run the fast unit test suites remotely
-test host=remote_host: (gradle host ":data:testLibreDebugUnitTest" ":core:testLibreDebugUnitTest")
+test host=remote_host: (gradle host ":data:testDebugUnitTest" ":core:testLibreDebugUnitTest")
 
 # Remote `./gradlew clean`
 clean host=remote_host: (gradle host "clean")

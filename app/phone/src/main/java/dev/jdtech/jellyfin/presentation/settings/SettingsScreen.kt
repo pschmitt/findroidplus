@@ -72,6 +72,7 @@ fun SettingsScreen(
     navigateToAbout: () -> Unit,
     navigateToAutoDownloadRules: () -> Unit,
     navigateToBackupSettings: () -> Unit,
+    navigateToQrExport: () -> Unit,
     navigateToConnections: () -> Unit,
     navigateToHomeLayout: () -> Unit,
     navigateBack: () -> Unit,
@@ -88,12 +89,14 @@ fun SettingsScreen(
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             is SettingsEvent.NavigateToSettings -> navigateToSettings(event.indexes)
-            is SettingsEvent.NavigateToSettingsFileEdit -> navigateToSettingsFileEdit(event.filePath)
+            is SettingsEvent.NavigateToSettingsFileEdit ->
+                navigateToSettingsFileEdit(event.filePath)
             is SettingsEvent.NavigateToUsers -> Unit
             is SettingsEvent.NavigateToServers -> Unit
             is SettingsEvent.NavigateToAbout -> navigateToAbout()
             is SettingsEvent.NavigateToAutoDownloadRules -> navigateToAutoDownloadRules()
             is SettingsEvent.NavigateToBackupSettings -> navigateToBackupSettings()
+            is SettingsEvent.NavigateToQrExport -> navigateToQrExport()
             is SettingsEvent.NavigateToConnections -> navigateToConnections()
             is SettingsEvent.NavigateToHomeLayout -> navigateToHomeLayout()
             is SettingsEvent.UpdateTheme -> {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -30,7 +31,11 @@ import dev.jdtech.jellyfin.setup.R as SetupR
 import dev.jdtech.jellyfin.setup.presentation.welcome.WelcomeAction
 
 @Composable
-fun WelcomeScreen(onContinueClick: () -> Unit, onRestoreClick: () -> Unit) {
+fun WelcomeScreen(
+    onContinueClick: () -> Unit,
+    onRestoreClick: () -> Unit,
+    onScanQrClick: () -> Unit,
+) {
     val uriHandler = LocalUriHandler.current
 
     WelcomeScreenLayout(
@@ -38,6 +43,7 @@ fun WelcomeScreen(onContinueClick: () -> Unit, onRestoreClick: () -> Unit) {
             when (action) {
                 is WelcomeAction.OnContinueClick -> onContinueClick()
                 is WelcomeAction.OnRestoreClick -> onRestoreClick()
+                is WelcomeAction.OnScanQrClick -> onScanQrClick()
                 is WelcomeAction.OnLearnMoreClick -> {
                     uriHandler.openUri("https://jellyfin.org/")
                 }
@@ -75,6 +81,11 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
                     onClick = { onAction(WelcomeAction.OnLearnMoreClick) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_info),
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(SetupR.string.welcome_btn_learn_more))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -83,12 +94,34 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(text = stringResource(SetupR.string.welcome_btn_continue))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_arrow_right),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { onAction(WelcomeAction.OnScanQrClick) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_qr_code),
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(SetupR.string.welcome_btn_scan_qr))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedButton(
                     onClick = { onAction(WelcomeAction.OnRestoreClick) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(SetupR.string.welcome_btn_restore))
                 }
             }

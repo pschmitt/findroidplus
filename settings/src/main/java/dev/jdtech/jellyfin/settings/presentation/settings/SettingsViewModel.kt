@@ -42,20 +42,22 @@ constructor(
     val state = _state.asStateFlow()
 
     /**
-     * "Internal"/"External"/"Ask" only makes sense to offer a choice when a removable volume
-     * (SD card/USB) actually exists - on a device with only built-in storage there's nothing to
-     * choose between, so the whole preference is disabled rather than left offering options that
-     * don't do anything different from each other. Duplicates the removable-volume check in
-     * core/utils/DownloadStorage.kt rather than depending on it - `core` depends on `settings`,
-     * not the other way around, so reusing it here isn't possible.
+     * "Internal"/"External"/"Ask" only makes sense to offer a choice when a removable volume (SD
+     * card/USB) actually exists - on a device with only built-in storage there's nothing to choose
+     * between, so the whole preference is disabled rather than left offering options that don't do
+     * anything different from each other. Duplicates the removable-volume check in
+     * core/utils/DownloadStorage.kt rather than depending on it - `core` depends on `settings`, not
+     * the other way around, so reusing it here isn't possible.
      */
     private fun hasRemovableStorage(): Boolean =
-        context.getExternalFilesDirs(null).any { it != null && Environment.isExternalStorageRemovable(it) }
+        context.getExternalFilesDirs(null).any {
+            it != null && Environment.isExternalStorageRemovable(it)
+        }
 
     /**
      * Same idea for the mobile-data/roaming download switches: on a device without cellular
-     * connectivity (e.g. a Wi-Fi-only tablet) they can't ever do anything, so disable them
-     * instead of offering dead options.
+     * connectivity (e.g. a Wi-Fi-only tablet) they can't ever do anything, so disable them instead
+     * of offering dead options.
      */
     private fun hasCellularConnectivity(): Boolean =
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
@@ -199,7 +201,8 @@ constructor(
                                                         Build.VERSION.SDK_INT >=
                                                             Build.VERSION_CODES.S,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    backendPreference = appPreferences.dynamicColors,
+                                                    backendPreference =
+                                                        appPreferences.dynamicColors,
                                                 ),
                                                 PreferenceSelect(
                                                     nameStringResource = R.string.date_format,
@@ -246,7 +249,8 @@ constructor(
                                                     descriptionStringRes =
                                                         R.string.home_favorites_summary,
                                                     iconDrawableId = R.drawable.ic_heart,
-                                                    backendPreference = appPreferences.homeFavorites,
+                                                    backendPreference =
+                                                        appPreferences.homeFavorites,
                                                 ),
                                                 PreferenceSwitch(
                                                     nameStringResource = R.string.home_latest,
@@ -261,8 +265,7 @@ constructor(
                                                         R.string.home_discover_summary,
                                                     iconDrawableId = R.drawable.ic_compass,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    backendPreference =
-                                                        appPreferences.homeDiscover,
+                                                    backendPreference = appPreferences.homeDiscover,
                                                 ),
                                                 PreferenceCategory(
                                                     nameStringResource =
@@ -330,15 +333,16 @@ constructor(
                                         preferences =
                                             listOf(
                                                 PreferenceSelect(
-                                                    nameStringResource = R.string.pref_player_backend,
+                                                    nameStringResource =
+                                                        R.string.pref_player_backend,
                                                     descriptionStringRes =
                                                         R.string.pref_player_backend_summary,
                                                     iconDrawableId = R.drawable.ic_settings,
-                                                    backendPreference = appPreferences.playerBackend,
+                                                    backendPreference =
+                                                        appPreferences.playerBackend,
                                                     options = R.array.player_backends,
-                                                    optionValues = R.array.player_backends
-                                                ),
-
+                                                    optionValues = R.array.player_backends,
+                                                )
                                             )
                                     ),
                                     PreferenceGroup(
@@ -354,7 +358,11 @@ constructor(
                                                         viewModelScope.launch {
                                                             eventsChannel.send(
                                                                 SettingsEvent.NavigateToSettings(
-                                                                    intArrayOf(R.string.settings_category_player, it.nameStringResource)
+                                                                    intArrayOf(
+                                                                        R.string
+                                                                            .settings_category_player,
+                                                                        it.nameStringResource,
+                                                                    )
                                                                 )
                                                             )
                                                         }
@@ -366,80 +374,120 @@ constructor(
                                                                     listOf(
                                                                         PreferenceSelect(
                                                                             nameStringResource =
-                                                                                R.string.pref_player_mpv_hwdec,
+                                                                                R.string
+                                                                                    .pref_player_mpv_hwdec,
                                                                             descriptionStringRes =
-                                                                                R.string.pref_player_mpv_hwdec_summary,
+                                                                                R.string
+                                                                                    .pref_player_mpv_hwdec_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable.ic_cpu,
                                                                             backendPreference =
-                                                                                appPreferences.playerMpvHwdec,
-                                                                            options = R.array.mpv_hwdec,
-                                                                            optionValues = R.array.mpv_hwdec,
+                                                                                appPreferences
+                                                                                    .playerMpvHwdec,
+                                                                            options =
+                                                                                R.array.mpv_hwdec,
+                                                                            optionValues =
+                                                                                R.array.mpv_hwdec,
                                                                         ),
                                                                         PreferenceSelect(
                                                                             nameStringResource =
-                                                                                R.string.pref_player_mpv_vo,
+                                                                                R.string
+                                                                                    .pref_player_mpv_vo,
                                                                             descriptionStringRes =
-                                                                                R.string.pref_player_mpv_vo_summary,
+                                                                                R.string
+                                                                                    .pref_player_mpv_vo_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_monitor,
-                                                                            backendPreference = appPreferences.playerMpvVo,
-                                                                            options = R.array.mpv_vos,
-                                                                            optionValues = R.array.mpv_vos,
+                                                                            backendPreference =
+                                                                                appPreferences
+                                                                                    .playerMpvVo,
+                                                                            options =
+                                                                                R.array.mpv_vos,
+                                                                            optionValues =
+                                                                                R.array.mpv_vos,
                                                                         ),
                                                                         PreferenceSelect(
                                                                             nameStringResource =
-                                                                                R.string.pref_player_mpv_ao,
+                                                                                R.string
+                                                                                    .pref_player_mpv_ao,
                                                                             descriptionStringRes =
-                                                                                R.string.pref_player_mpv_ao_summary,
+                                                                                R.string
+                                                                                    .pref_player_mpv_ao_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_speaker,
-                                                                            backendPreference = appPreferences.playerMpvAo,
-                                                                            options = R.array.mpv_aos,
-                                                                            optionValues = R.array.mpv_aos,
+                                                                            backendPreference =
+                                                                                appPreferences
+                                                                                    .playerMpvAo,
+                                                                            options =
+                                                                                R.array.mpv_aos,
+                                                                            optionValues =
+                                                                                R.array.mpv_aos,
                                                                         ),
-                                                                    ),
+                                                                    )
                                                             ),
                                                             PreferenceGroup(
-                                                                nameStringResource = R.string.advanced,
+                                                                nameStringResource =
+                                                                    R.string.advanced,
                                                                 preferences =
                                                                     listOf(
                                                                         PreferenceFileEdit(
-                                                                            nameStringResource = R.string.edit_file_title,
-                                                                            descriptionStringRes = R.string.mpv_conf_edit_summary,
+                                                                            nameStringResource =
+                                                                                R.string
+                                                                                    .edit_file_title,
+                                                                            descriptionStringRes =
+                                                                                R.string
+                                                                                    .mpv_conf_edit_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_file_text,
-                                                                            filePath = "mpv/mpv.conf",
+                                                                            filePath =
+                                                                                "mpv/mpv.conf",
                                                                             onClick = {
-                                                                                viewModelScope.launch {
-                                                                                    eventsChannel.send(
-                                                                                        SettingsEvent.NavigateToSettingsFileEdit(it.filePath)
-                                                                                    )
-                                                                                }
-                                                                            }
+                                                                                viewModelScope
+                                                                                    .launch {
+                                                                                        eventsChannel
+                                                                                            .send(
+                                                                                                SettingsEvent
+                                                                                                    .NavigateToSettingsFileEdit(
+                                                                                                        it
+                                                                                                            .filePath
+                                                                                                    )
+                                                                                            )
+                                                                                    }
+                                                                            },
                                                                         ),
                                                                         PreferenceFileEdit(
-                                                                            nameStringResource = R.string.edit_file_title,
-                                                                            descriptionStringRes = R.string.mpv_input_conf_edit_summary,
+                                                                            nameStringResource =
+                                                                                R.string
+                                                                                    .edit_file_title,
+                                                                            descriptionStringRes =
+                                                                                R.string
+                                                                                    .mpv_input_conf_edit_summary,
                                                                             iconDrawableId =
                                                                                 R.drawable
                                                                                     .ic_keyboard,
-                                                                            filePath = "mpv/input.conf",
+                                                                            filePath =
+                                                                                "mpv/input.conf",
                                                                             onClick = {
-                                                                                viewModelScope.launch {
-                                                                                    eventsChannel.send(
-                                                                                        SettingsEvent.NavigateToSettingsFileEdit(it.filePath)
-                                                                                    )
-                                                                                }
-                                                                            }
-                                                                        )
-                                                                    )
+                                                                                viewModelScope
+                                                                                    .launch {
+                                                                                        eventsChannel
+                                                                                            .send(
+                                                                                                SettingsEvent
+                                                                                                    .NavigateToSettingsFileEdit(
+                                                                                                        it
+                                                                                                            .filePath
+                                                                                                    )
+                                                                                            )
+                                                                                    }
+                                                                            },
+                                                                        ),
+                                                                    ),
                                                             ),
-                                                        )
-                                                ),
+                                                        ),
+                                                )
                                             )
                                     ),
                                     PreferenceGroup(
@@ -472,8 +520,7 @@ constructor(
                                                         R.string.player_gestures_seek,
                                                     descriptionStringRes =
                                                         R.string.player_gestures_seek_summary,
-                                                    iconDrawableId =
-                                                        R.drawable.ic_move_horizontal,
+                                                    iconDrawableId = R.drawable.ic_move_horizontal,
                                                     dependencies =
                                                         listOf(appPreferences.playerGestures),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -498,8 +545,7 @@ constructor(
                                                     descriptionStringRes =
                                                         R.string
                                                             .player_gestures_chapter_skip_summary,
-                                                    iconDrawableId =
-                                                        R.drawable.ic_chevrons_right,
+                                                    iconDrawableId = R.drawable.ic_chevrons_right,
                                                     dependencies =
                                                         listOf(appPreferences.playerGestures),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -575,7 +621,8 @@ constructor(
                                                             .pref_player_media_segments_skip_button_summary,
                                                     iconDrawableId = R.drawable.ic_skip_forward,
                                                     backendPreference =
-                                                        appPreferences.playerMediaSegmentsSkipButton,
+                                                        appPreferences
+                                                            .playerMediaSegmentsSkipButton,
                                                 ),
                                                 PreferenceMultiSelect(
                                                     nameStringResource =
@@ -702,8 +749,7 @@ constructor(
                                                     descriptionStringRes =
                                                         R.string
                                                             .pref_player_gestures_seek_trickplay_summary,
-                                                    iconDrawableId =
-                                                        R.drawable.ic_move_horizontal,
+                                                    iconDrawableId = R.drawable.ic_move_horizontal,
                                                     dependencies =
                                                         listOf(appPreferences.playerTrickplay),
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
@@ -769,7 +815,7 @@ constructor(
                                 }
                             },
                         ),
-                    ),
+                    )
             ),
             PreferenceGroup(
                 preferences =
@@ -784,7 +830,18 @@ constructor(
                                     eventsChannel.send(SettingsEvent.NavigateToBackupSettings)
                                 }
                             },
-                        )
+                        ),
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_qr_export,
+                            descriptionStringRes = R.string.settings_category_qr_export_summary,
+                            iconDrawableId = R.drawable.ic_smartphone,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToQrExport)
+                                }
+                            },
+                        ),
                     )
             ),
             PreferenceGroup(
@@ -851,7 +908,8 @@ constructor(
                                                     backendPreference =
                                                         appPreferences.downloadLocation,
                                                     options = R.array.download_locations,
-                                                    optionValues = R.array.download_locations_values,
+                                                    optionValues =
+                                                        R.array.download_locations_values,
                                                 ),
                                                 PreferenceIntInput(
                                                     nameStringResource =
@@ -939,11 +997,13 @@ constructor(
                                                     nameStringResource =
                                                         R.string.auto_download_check_interval,
                                                     descriptionStringRes =
-                                                        R.string.auto_download_check_interval_summary,
+                                                        R.string
+                                                            .auto_download_check_interval_summary,
                                                     iconDrawableId = R.drawable.ic_refresh_cw,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference =
-                                                        appPreferences.autoDownloadCheckIntervalMinutes,
+                                                        appPreferences
+                                                            .autoDownloadCheckIntervalMinutes,
                                                     suffixRes = R.string.minutes_suffix,
                                                     presetsMinutes =
                                                         listOf(15, 30, 60, 120, 240, 720, 1440),
@@ -1066,7 +1126,8 @@ constructor(
                                                     nameStringResource =
                                                         R.string.settings_pvr_search_timeout,
                                                     descriptionStringRes =
-                                                        R.string.settings_pvr_search_timeout_summary,
+                                                        R.string
+                                                            .settings_pvr_search_timeout_summary,
                                                     iconDrawableId = R.drawable.ic_search,
                                                     backendPreference =
                                                         appPreferences.pvrSearchTimeout,

@@ -42,6 +42,7 @@ fun WelcomeScreen(onContinueClick: () -> Unit) {
                     uriHandler.openUri("https://jellyfin.org/")
                 }
                 is WelcomeAction.OnRestoreClick -> Unit
+                is WelcomeAction.OnScanQrClick -> Unit
             }
         }
     )

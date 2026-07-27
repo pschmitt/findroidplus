@@ -6,4 +6,6 @@ sealed interface WelcomeAction {
     data object OnLearnMoreClick : WelcomeAction
 
     data object OnRestoreClick : WelcomeAction
+
+    data object OnScanQrClick : WelcomeAction
 }

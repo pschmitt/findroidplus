@@ -9,6 +9,8 @@ sealed interface SettingsEvent {
 
     data object NavigateToBackupSettings : SettingsEvent
 
+    data object NavigateToQrExport : SettingsEvent
+
     data object NavigateToConnections : SettingsEvent
 
     data object NavigateToHomeLayout : SettingsEvent
