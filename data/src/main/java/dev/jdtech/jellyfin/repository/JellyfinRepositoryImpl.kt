@@ -570,6 +570,10 @@ class JellyfinRepositoryImpl(
         withContext(Dispatchers.IO) { jellyfinApi.libraryApi.deleteItem(itemId) }
     }
 
+    override suspend fun refreshLibrary() {
+        withContext(Dispatchers.IO) { jellyfinApi.libraryApi.refreshLibrary() }
+    }
+
     override fun getBaseUrl() = jellyfinApi.api.baseUrl.orEmpty()
 
     override suspend fun updateDeviceName(name: String) {

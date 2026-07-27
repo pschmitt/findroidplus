@@ -121,6 +121,36 @@ fun List<PvrQueueEntry>.toSonarrQueueStatusMap(): Map<Int, QueueStatus> =
         .toMap()
 
 /**
+ * The key two [PvrQueueEntry]s share when they're actually duplicates of the same underlying
+ * release (e.g. two competing grabs of the same episode/movie still both awaiting manual import).
+ * Deliberately not [PvrQueueEntry.item]'s id - that's *derived* from these same provider ids plus
+ * a Jellyfin-side lookup, and can come back null on one entry but not the other if that lookup is
+ * incomplete on just one side. [tmdbId]/[sonarrEpisodeId] come straight from the raw Sonarr/Radarr
+ * queue row, independent of Jellyfin matching, so they're the reliable key. `null` when neither id
+ * is present - nothing safe to group by, so the entry stays its own singleton.
+ */
+fun PvrQueueEntry.duplicateGroupKey(): Pair<PvrSource, Int>? =
+    when (status.source) {
+        PvrSource.RADARR -> tmdbId?.let { PvrSource.RADARR to it }
+        PvrSource.SONARR -> sonarrEpisodeId?.let { PvrSource.SONARR to it }
+    }
+
+/**
+ * Groups entries sharing a non-null [duplicateGroupKey] together, preserving first-occurrence
+ * order; entries with no key each become their own single-element group.
+ */
+fun List<PvrQueueEntry>.groupDuplicates(): List<List<PvrQueueEntry>> {
+    // Ungroupable entries get a unique key (identity) so they land in their own single-element
+    // group instead of colliding with each other under a shared "null" key.
+    val groups = LinkedHashMap<Any, MutableList<PvrQueueEntry>>()
+    for (entry in this) {
+        val key: Any = entry.duplicateGroupKey() ?: entry
+        groups.getOrPut(key) { mutableListOf() }.add(entry)
+    }
+    return groups.values.map { it.toList() }
+}
+
+/**
  * "Series - S1E5" when the episode is identified, "Series - Season 1" for season-pack grabs
  * (no per-episode number), falling back to the release title Sonarr reports for the download.
  */

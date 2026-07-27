@@ -96,6 +96,34 @@ class QueueStatusRepositoryImpl(
     override fun getSonarrQueueStatusFlow(): Flow<Map<Int, QueueStatus>> =
         getQueueSnapshotFlow().map { it.entries.toSonarrQueueStatusMap() }.distinctUntilChanged()
 
+    override fun getQueueEntriesFlow(itemId: UUID): Flow<List<PvrQueueEntry>> =
+        getQueueSnapshotFlow()
+            .map { snapshot ->
+                val anchor = snapshot.entries.firstOrNull { it.item?.id == itemId }
+                if (anchor == null) {
+                    emptyList()
+                } else {
+                    val key = anchor.duplicateGroupKey()
+                    if (key == null) listOf(anchor) else snapshot.entries.filter { it.duplicateGroupKey() == key }
+                }
+            }
+            .distinctUntilChanged()
+
+    override fun getQueueEntriesFlow(
+        source: PvrSource,
+        tmdbId: Int?,
+        sonarrEpisodeId: Int?,
+    ): Flow<List<PvrQueueEntry>> =
+        getQueueSnapshotFlow()
+            .map { snapshot ->
+                snapshot.entries.filter { entry ->
+                    entry.status.source == source &&
+                        ((tmdbId != null && entry.tmdbId == tmdbId) ||
+                            (sonarrEpisodeId != null && entry.sonarrEpisodeId == sonarrEpisodeId))
+                }
+            }
+            .distinctUntilChanged()
+
     override suspend fun refreshNow() {
         // Serializes concurrent callers (poll loop, WorkManager backstop, a manual pull-to-refresh)
         // so two overlapping fetches can't race to publish a stale result after a fresher one.
@@ -248,6 +276,13 @@ class QueueStatusRepositoryImpl(
                 }
             }
             refreshNow()
+            // Sonarr/Radarr's import command is async - the HTTP call above only means it was
+            // accepted, not that the file has actually landed on disk yet. Wait for this entry to
+            // actually leave the queue (Sonarr/Radarr remove the row once the import genuinely
+            // finishes) before telling Jellyfin to scan, rather than racing a scan against a file
+            // that isn't there yet. Fire-and-forget on the repository's own scope - the caller
+            // (the manage-import sheet) has already gotten its success result and moved on.
+            scope.launch { awaitImportThenRefreshLibrary(source, downloadId) }
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -255,6 +290,20 @@ class QueueStatusRepositoryImpl(
             Timber.w(e, "Failed to perform $serviceName manual import for $downloadId")
             Result.failure(mapPvrSearchError(serviceName, e))
         }
+    }
+
+    private suspend fun awaitImportThenRefreshLibrary(source: PvrSource, downloadId: String) {
+        repeat(IMPORT_POLL_MAX_ATTEMPTS) { attempt ->
+            delay(IMPORT_POLL_INTERVAL_MS)
+            refreshNow()
+            val stillQueued =
+                _queueSnapshot.value.entries.any {
+                    it.status.source == source && it.status.downloadId == downloadId
+                }
+            if (!stillQueued) return jellyfinRepository.refreshLibrary()
+        }
+        // Gave up waiting - scan anyway rather than never telling Jellyfin about a real import.
+        jellyfinRepository.refreshLibrary()
     }
 
     private suspend fun dropFromSnapshot(predicate: (PvrQueueEntry) -> Boolean) {
@@ -506,6 +555,12 @@ class QueueStatusRepositoryImpl(
         // before the error banner appears.
         const val FAILURE_THRESHOLD = 3
         const val RETRY_DELAY_MS = 2_000L
+
+        // How long/often to poll for a manual import to actually finish (see
+        // awaitImportThenRefreshLibrary) before giving up and scanning anyway - 6 * 2s = 12s of
+        // patience, comfortably past the time Sonarr/Radarr's own import command usually takes.
+        const val IMPORT_POLL_MAX_ATTEMPTS = 6
+        const val IMPORT_POLL_INTERVAL_MS = 2_000L
 
         val ACTIVE_STATUSES =
             setOf(QueueItemStatus.QUEUED, QueueItemStatus.DOWNLOADING, QueueItemStatus.IMPORTING)

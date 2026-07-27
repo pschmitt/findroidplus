@@ -135,6 +135,7 @@ fun DownloadsScreen(
 ) {
     val androidContext = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val manualImportState by viewModel.manualImport.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.startObserving() }
 
@@ -240,13 +241,14 @@ fun DownloadsScreen(
         onToggleExcludeFromAutoDelete = viewModel::toggleExcludeFromAutoDelete,
     )
 
-    state.manualImport?.let { manualImport ->
+    manualImportState?.let { manualImport ->
         ManualImportSheet(
             state = manualImport,
-            onToggleSelection = viewModel::toggleManualImportSelection,
+            onSelectEntry = viewModel.manualImport::selectEntry,
+            onToggleSelection = viewModel.manualImport::toggleSelection,
             onConfirm = viewModel::confirmManualImport,
             onReject = viewModel::rejectManualImport,
-            onDismissRequest = viewModel::closeManualImport,
+            onDismissRequest = viewModel.manualImport::close,
         )
     }
 
@@ -1678,22 +1680,18 @@ private fun PvrQueueRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isProblem) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_alert_circle),
-                        contentDescription = stringResource(CoreR.string.import_issue_title),
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
+            if (isProblem) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_alert_circle),
+                    contentDescription = stringResource(CoreR.string.import_issue_title),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(14.dp),
+                )
+            } else {
                 Text(
                     text = statusText,
                     style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (isProblem) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (status.percent >= 0) {

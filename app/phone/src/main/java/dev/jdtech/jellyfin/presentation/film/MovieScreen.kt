@@ -200,6 +200,7 @@ fun MovieScreen(
     manualImportState?.let { manualImport ->
         ManualImportSheet(
             state = manualImport,
+            onSelectEntry = viewModel.manualImport::selectEntry,
             onToggleSelection = viewModel.manualImport::toggleSelection,
             onConfirm = { viewModel.manualImport.confirm() },
             onReject = { removeFromClient, blocklist ->

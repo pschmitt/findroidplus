@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.repository
 
 import dev.jdtech.jellyfin.models.ManualImportCandidate
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.PvrQueueSnapshot
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueStatus
@@ -27,6 +28,25 @@ interface QueueStatusRepository {
 
     /** Sonarr queue status keyed by Sonarr episode id, including episodes not in Jellyfin yet. */
     fun getSonarrQueueStatusFlow(): Flow<Map<Int, QueueStatus>>
+
+    /**
+     * Every queue entry that's a duplicate of (or is itself) [itemId]'s current queue entry - see
+     * `PvrQueueEntry.duplicateGroupKey` for why this can be more than one entry, unlike
+     * [getQueueStatusFlow] (single [UUID] overload), which already collapsed duplicates down to
+     * one. Empty when [itemId] has no current queue entry at all.
+     */
+    fun getQueueEntriesFlow(itemId: UUID): Flow<List<PvrQueueEntry>>
+
+    /**
+     * Same as the [UUID] overload, for callers with no Jellyfin item id to key by yet (e.g.
+     * SeerrMediaScreen, which is showing something not in the library) - matches directly by
+     * [source] plus whichever of [tmdbId]/[sonarrEpisodeId] is non-null.
+     */
+    fun getQueueEntriesFlow(
+        source: PvrSource,
+        tmdbId: Int?,
+        sonarrEpisodeId: Int?,
+    ): Flow<List<PvrQueueEntry>>
 
     /** Forces an immediate fetch+match cycle, independent of the in-process/background polling. */
     suspend fun refreshNow()

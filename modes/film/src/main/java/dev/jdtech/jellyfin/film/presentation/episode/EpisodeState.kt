@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.film.presentation.episode
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.models.VideoMetadata
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
@@ -20,6 +21,9 @@ data class EpisodeState(
     // This episode's own Sonarr queue entry, if any - drives the download widget's "there's an
     // import issue, tap to resolve" affordance. Mirrors MovieState.queueStatus.
     val queueStatus: QueueStatus? = null,
+    // Every entry in this episode's own duplicate cluster (see PvrQueueEntry.duplicateGroupKey) -
+    // unlike [queueStatus], which is already collapsed to one. Mirrors MovieState.queueEntries.
+    val queueEntries: List<PvrQueueEntry> = emptyList(),
     // Whether the current Jellyfin user's policy allows deleting media at all - gates whether
     // "Delete from Jellyfin" is shown in the overflow menu, rather than showing it and having the
     // delete fail with a permissions error.

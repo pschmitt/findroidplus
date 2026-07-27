@@ -126,6 +126,8 @@ class FakeJellyfinRepository(
 
     override suspend fun markAsUnplayed(itemId: UUID) = error("not used in test")
 
+    override suspend fun refreshLibrary() = error("not used in test")
+
     override fun getBaseUrl(): String = error("not used in test")
 
     override suspend fun updateDeviceName(name: String) = error("not used in test")

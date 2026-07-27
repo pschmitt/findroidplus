@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
 import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportController
+import dev.jdtech.jellyfin.film.presentation.downloads.PendingImportRef
 import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMovie
@@ -65,13 +66,20 @@ constructor(
 
     lateinit var movieId: UUID
 
-    /** Opens the manage-import sheet for this movie's own PVR queue entry, if it has one. */
+    /**
+     * Opens the manage-import sheet for this movie's own PVR queue entry (or entries, if it has
+     * duplicates - see [MovieState.queueEntries]), if there's a warning/failure to resolve.
+     */
     fun openManualImportForCurrentItem() {
         val status = _state.value.queueStatus ?: return
         if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
-        val downloadId = status.downloadId ?: return
         val title = _state.value.movie?.name ?: return
-        manualImport.open(status.source, downloadId, status.queueItemId, title)
+        val refs =
+            _state.value.queueEntries.mapNotNull { entry ->
+                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+            }
+        if (refs.isEmpty()) return
+        manualImport.open(title, refs)
     }
 
     fun loadMovie(movieId: UUID) {
@@ -115,6 +123,11 @@ constructor(
                     _state.value = _state.value.copy(queueStatus = status)
                 }
             }
+        viewModelScope.launch {
+            queueStatusRepository.getQueueEntriesFlow(movieId).collect { entries ->
+                _state.value = _state.value.copy(queueEntries = entries)
+            }
+        }
     }
 
     private suspend fun resolveTargetMovieId(): Int? {

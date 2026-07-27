@@ -18,6 +18,7 @@ import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.PvrDiskSpaceRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
+import dev.jdtech.jellyfin.repository.groupDuplicates
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
 import java.util.UUID
@@ -59,6 +60,8 @@ constructor(
     private val progressJobs = mutableMapOf<UUID, Job>()
     private var refreshJob: Job? = null
     private var pvrRefreshJob: Job? = null
+
+    val manualImport = ManualImportController(queueStatusRepository, viewModelScope)
 
     fun startObserving() {
         // Unlike the one-shot registrations below, re-run every time the screen is (re-)entered,
@@ -480,110 +483,49 @@ constructor(
     }
 
     /**
-     * Opens the "manage imports" sheet for a queue entry (see [ManualImportSheetState]) and kicks
-     * off loading its candidate files. No-ops when the entry has no `downloadId` - shouldn't
-     * happen in practice, but Sonarr/Radarr technically don't guarantee the field.
+     * Opens the "manage imports" sheet for a queue entry (see [ManualImportSheetState]) - seeded
+     * with every entry in [item]'s duplicate cluster (see [PvrQueueUiItem.duplicates]), not just
+     * the one this row displays, so the sheet can offer a choice when there's more than one.
+     * No-ops when none of the cluster's entries have a `downloadId` - shouldn't happen in
+     * practice, but Sonarr/Radarr technically don't guarantee the field.
      */
     fun openManualImport(item: PvrQueueUiItem, source: PvrSource) {
-        val downloadId = item.status.downloadId ?: return
-        _state.update {
-            it.copy(
-                manualImport =
-                    ManualImportSheetState(
-                        source = source,
-                        downloadId = downloadId,
-                        queueItemId = item.queueItemId,
-                        title = item.title,
-                    )
-            )
-        }
-        viewModelScope.launch {
-            queueStatusRepository
-                .getManualImportCandidates(source, downloadId)
-                .fold(
-                    onSuccess = { candidates ->
-                        _state.update {
-                            it.copy(
-                                manualImport =
-                                    it.manualImport?.copy(
-                                        isLoading = false,
-                                        candidates = candidates,
-                                        selectedIds =
-                                            candidates.filter { c -> c.canImport }.map { c -> c.id }.toSet(),
-                                    )
-                            )
-                        }
-                    },
-                    onFailure = { e ->
-                        _state.update {
-                            it.copy(manualImport = it.manualImport?.copy(isLoading = false, error = e.message))
-                        }
-                    },
-                )
-        }
-    }
-
-    fun closeManualImport() {
-        _state.update { it.copy(manualImport = null) }
-    }
-
-    fun toggleManualImportSelection(candidateId: Int) {
-        _state.update { state ->
-            val current = state.manualImport ?: return@update state
-            val selected = current.selectedIds
-            val newSelected = if (candidateId in selected) selected - candidateId else selected + candidateId
-            state.copy(manualImport = current.copy(selectedIds = newSelected))
-        }
+        val refs =
+            item.duplicates.mapNotNull { entry ->
+                entry.status.downloadId?.let { PendingImportRef(source, it, entry.queueItemId) }
+            }
+        if (refs.isEmpty()) return
+        manualImport.open(item.title, refs)
     }
 
     fun confirmManualImport() {
-        val current = _state.value.manualImport ?: return
-        if (current.selectedIds.isEmpty() || current.isImporting) return
-        _state.update { it.copy(manualImport = it.manualImport?.copy(isImporting = true)) }
-        viewModelScope.launch {
-            queueStatusRepository
-                .performManualImport(current.source, current.downloadId, current.selectedIds)
-                .fold(
-                    onSuccess = {
-                        _state.update { it.copy(manualImport = null) }
-                        eventsChannel.send(DownloadsEvent.ManualImportCompleted)
-                    },
-                    onFailure = { e ->
-                        _state.update {
-                            it.copy(manualImport = it.manualImport?.copy(isImporting = false, error = e.message))
-                        }
-                        eventsChannel.send(DownloadsEvent.ManualImportFailed(e.message))
-                    },
-                )
-        }
+        manualImport.confirm(
+            onSuccess = { viewModelScope.launch { eventsChannel.send(DownloadsEvent.ManualImportCompleted) } },
+            onFailure = { message ->
+                viewModelScope.launch { eventsChannel.send(DownloadsEvent.ManualImportFailed(message)) }
+            },
+        )
     }
 
     /**
-     * Rejects the whole release the "manage imports" sheet is reviewing - removes its queue entry
-     * and (usually) blocklists it, e.g. a release Sonarr/Radarr flagged as suspicious or one where
-     * none of the files are worth importing. Distinct from [confirmManualImport], which imports a
-     * subset of the files instead of discarding the release outright.
+     * Rejects the whole release cluster the "manage imports" sheet is reviewing - removes every
+     * entry in it and (usually) blocklists it, e.g. a release Sonarr/Radarr flagged as suspicious
+     * or one where none of the files are worth importing. Distinct from [confirmManualImport],
+     * which imports a subset of the files from one entry instead of discarding the cluster
+     * outright.
      */
     fun rejectManualImport(removeFromClient: Boolean, blocklist: Boolean) {
-        val current = _state.value.manualImport ?: return
-        if (current.isRejecting) return
-        _state.update { it.copy(manualImport = it.manualImport?.copy(isRejecting = true)) }
-        viewModelScope.launch {
-            queueStatusRepository
-                .removeQueueItem(current.source, current.queueItemId, removeFromClient, blocklist)
-                .fold(
-                    onSuccess = {
-                        _state.update { it.copy(manualImport = null) }
-                        eventsChannel.send(DownloadsEvent.PvrQueueItemRemoved(current.title))
-                    },
-                    onFailure = { e ->
-                        _state.update {
-                            it.copy(manualImport = it.manualImport?.copy(isRejecting = false, error = e.message))
-                        }
-                        eventsChannel.send(DownloadsEvent.PvrQueueItemRemoveFailed(e.message))
-                    },
-                )
-        }
+        val title = manualImport.state.value?.title ?: return
+        manualImport.reject(
+            removeFromClient,
+            blocklist,
+            onSuccess = { viewModelScope.launch { eventsChannel.send(DownloadsEvent.PvrQueueItemRemoved(title)) } },
+            onFailure = { message ->
+                viewModelScope.launch {
+                    eventsChannel.send(DownloadsEvent.PvrQueueItemRemoveFailed(message))
+                }
+            },
+        )
     }
 
     fun clearAllDownloads(alsoRemoveRules: Boolean) {
@@ -639,7 +581,11 @@ internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGro
             PvrQueueGroup(
                 source = source,
                 items =
-                    groupEntries.map { entry ->
+                    groupEntries.groupDuplicates().map { cluster ->
+                        // Duplicates share the same title/poster/ids by construction (that's what
+                        // makes them a cluster) - only status can differ moment to moment, so the
+                        // most recently-seen entry's is the freshest to show.
+                        val entry = cluster.last()
                         PvrQueueUiItem(
                             itemId = entry.item?.id,
                             title = entry.item.toQueueTitle(fallback = entry.title),
@@ -651,6 +597,7 @@ internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGro
                             episodeNumber = entry.episodeNumber,
                             status = entry.status,
                             queueItemId = entry.queueItemId,
+                            duplicates = cluster,
                         )
                     },
             )

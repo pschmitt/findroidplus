@@ -1,7 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,13 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -39,36 +35,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.film.presentation.seerr.SeerrMediaAction
 import dev.jdtech.jellyfin.film.presentation.seerr.SeerrMediaEvent
 import dev.jdtech.jellyfin.film.presentation.seerr.SeerrMediaState
 import dev.jdtech.jellyfin.film.presentation.seerr.SeerrMediaViewModel
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.SeerrMediaDetail
 import dev.jdtech.jellyfin.models.SeerrMediaStatus
 import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
+import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
+import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
+import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.jdtech.jellyfin.presentation.film.components.SeerrStatusChip
-import dev.jdtech.jellyfin.presentation.film.components.seerrMediaTypeLabel
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
@@ -84,6 +78,7 @@ import java.util.UUID
  * the request/unrequest actions. Identified by TMDB id instead of a Jellyfin item id.
  */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun SeerrMediaScreen(
     tmdbId: Int,
     mediaType: SeerrMediaType,
@@ -101,6 +96,7 @@ fun SeerrMediaScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val manualImportState by viewModel.manualImport.state.collectAsStateWithLifecycle()
 
     // Request and cancel share their failure event, so remember which label to show for it.
     var lastActionWasCancel by remember { mutableStateOf(false) }
@@ -163,7 +159,21 @@ fun SeerrMediaScreen(
             }
             viewModel.onAction(action)
         },
+        onManageImportClick = viewModel::openManualImportForCurrentItem,
     )
+
+    manualImportState?.let { manualImport ->
+        ManualImportSheet(
+            state = manualImport,
+            onSelectEntry = viewModel.manualImport::selectEntry,
+            onToggleSelection = viewModel.manualImport::toggleSelection,
+            onConfirm = { viewModel.manualImport.confirm() },
+            onReject = { removeFromClient, blocklist ->
+                viewModel.manualImport.reject(removeFromClient, blocklist)
+            },
+            onDismissRequest = viewModel.manualImport::close,
+        )
+    }
 }
 
 @Composable
@@ -173,6 +183,7 @@ private fun SeerrMediaScreenLayout(
     navigateToShow: (UUID?) -> Unit,
     navigateToSeason: (Int, UUID?) -> Unit,
     onAction: (SeerrMediaAction) -> Unit,
+    onManageImportClick: () -> Unit = {},
 ) {
     val safePadding = rememberSafePadding()
     val context = LocalContext.current
@@ -192,41 +203,51 @@ private fun SeerrMediaScreenLayout(
             state.detail != null -> {
                 val detail = state.detail!!
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                    SeerrBackdrop(detail = detail)
+                    ItemHeader(
+                        backdropUrl =
+                            detail.episode?.stillUrl
+                                ?: detail.backdropUrl
+                                ?: detail.season?.posterUrl
+                                ?: detail.posterUrl
+                    )
                     Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
                         Text(
                             text = detail.episode?.title ?: detail.title,
                             overflow = TextOverflow.Ellipsis,
-                            maxLines = 3,
+                            maxLines = 2,
                             style = MaterialTheme.typography.headlineMedium,
                         )
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Text(
-                            text = seerrMetaLine(detail, state.knownAirDate, state.knownAirTime),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        // Same breadcrumb style as EpisodeScreen's series-name/season-episode
+                        // lines (plain clickable Text in labelLarge, not a TextButton) - this
+                        // screen's hierarchy is more variable (plain movie, show only, show +
+                        // season, show + season + episode), so the exact rows shown differ, but
+                        // each one that IS shown matches Episode's look exactly.
                         detail.episode?.let { episode ->
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
-                                TextButton(onClick = { navigateToShow(state.jellyfinShowId) }) {
-                                    Text(detail.title)
-                                }
-                                TextButton(
-                                    onClick = {
+                            Text(
+                                text = detail.title,
+                                modifier = Modifier.clickable { navigateToShow(state.jellyfinShowId) },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Text(
+                                text = detail.season?.title ?: "Season ${episode.seasonNumber}",
+                                modifier =
+                                    Modifier.clickable {
                                         navigateToSeason(episode.seasonNumber, state.jellyfinSeasonId)
-                                    }
-                                ) {
-                                    Text(detail.season?.title ?: "Season ${episode.seasonNumber}")
-                                }
-                            }
+                                    },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                         } ?: detail.season?.let {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            TextButton(onClick = { navigateToShow(state.jellyfinShowId) }) {
-                                Text(detail.title)
-                            }
+                            Text(
+                                text = detail.title,
+                                modifier = Modifier.clickable { navigateToShow(state.jellyfinShowId) },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                         }
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
                         // Seerr only tracks request/availability status at the season/show level,
                         // so AVAILABLE/PARTIALLY_AVAILABLE don't mean anything precise for a
                         // single episode - an episode is either in the library or it isn't. Once
@@ -244,17 +265,29 @@ private fun SeerrMediaScreenLayout(
                             }
                         // The chip renders NOT_REQUESTED as "Requested" (its just-requested
                         // marker), so only show it once there actually is a request or status.
-                        if (
+                        val showStatusChip =
                             displayStatus != null &&
                                 (displayStatus != SeerrMediaStatus.NOT_REQUESTED ||
                                     detail.cancellableRequestIds.isNotEmpty())
+                        ItemMetaRow(
+                            dateText = seerrDateText(detail, state.knownAirDate, state.knownAirTime),
+                            runtimeTicks = (detail.runtimeMinutes ?: 0) * 600_000_000L,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            SeerrStatusChip(status = displayStatus)
+                            if (showStatusChip) SeerrStatusChip(status = displayStatus)
                         }
                         state.queueStatus?.let { queueStatus ->
                             Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            PvrQueueDownloadCard(status = queueStatus)
+                            PvrQueueDownloadCard(
+                                status = queueStatus,
+                                onCardClick =
+                                    queueStatus.status
+                                        .takeIf {
+                                            it == QueueItemStatus.WARNING ||
+                                                it == QueueItemStatus.FAILED
+                                        }
+                                        ?.let { { onManageImportClick() } },
+                            )
                         }
                         (detail.episode?.overview ?: detail.season?.overview ?: detail.overview)
                             ?.takeIf { it.isNotBlank() }
@@ -477,83 +510,29 @@ private fun SeerrSeasonRow(seasonNumber: Int, status: SeerrMediaStatus?, onClick
     }
 }
 
-/** 16:9 backdrop, falling back to the poster or a plain surface when there's no image at all. */
+/**
+ * The single date-ish segment [ItemMetaRow] shows - mirrors what MovieScreen/EpisodeScreen pass
+ * as their own `dateText` (a premiere/air date), rather than the old bespoke meta line's full
+ * "title · S03E06 · date" or "year · type · runtime · genres" strings, which don't fit
+ * [ItemMetaRow]'s shape (it only ever shows one date-like segment, runtime, rating, and community
+ * rating - see MovieScreen/EpisodeScreen's own calls for the pattern this now matches).
+ */
 @Composable
-private fun SeerrBackdrop(detail: SeerrMediaDetail) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        val imageUrl = detail.episode?.stillUrl ?: detail.backdropUrl ?: detail.season?.posterUrl ?: detail.posterUrl
-        if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainer),
-                contentScale = ContentScale.Crop,
-            )
-        }
-    }
-}
-
-/** "2014 · Movie · 1h 49m · Comedy, Drama" - skips whatever the payload doesn't have. */
-@Composable
-private fun seerrMetaLine(
+private fun seerrDateText(
     detail: SeerrMediaDetail,
     knownAirDate: LocalDate?,
     knownAirTime: LocalTime?,
-): String {
+): String? {
     detail.episode?.let { episode ->
         // Prefer the already timezone-localized Sonarr air date/time (matches what the Season
         // screen's upcoming-episode row just showed) over Seerr/TMDB's plain, unlocalized
         // air_date string, which can land on a different calendar day - see SeasonAction.
-        val airDateText =
-            knownAirDate?.let { date ->
-                formatCalendarDate(date) +
-                    (knownAirTime?.let { time -> ", ${formatCalendarTime(time)}" } ?: "")
-            } ?: episode.airDate?.take(10)
-        return listOf(
-                detail.season?.title ?: detail.title,
-                stringResource(
-                    CoreR.string.episode_name_extended,
-                    episode.seasonNumber,
-                    episode.episodeNumber,
-                    episode.title,
-                ),
-                airDateText,
-            )
-            .filterNotNull()
-            .joinToString(" · ")
+        return knownAirDate?.let { date ->
+            formatCalendarDate(date) +
+                (knownAirTime?.let { time -> ", ${formatCalendarTime(time)}" } ?: "")
+        } ?: episode.airDate?.take(10)
     }
-    detail.season?.let { season ->
-        return listOf(detail.title, season.title).joinToString(" · ")
-    }
-    val runtimeOrSeasons =
-        when (detail.mediaType) {
-            SeerrMediaType.MOVIE ->
-                detail.runtimeMinutes?.takeIf { it > 0 }?.let { minutes ->
-                    val hours = minutes / 60
-                    if (hours > 0) {
-                        stringResource(CoreR.string.runtime_hours_minutes, hours, minutes % 60)
-                    } else {
-                        stringResource(CoreR.string.runtime_minutes_short, minutes)
-                    }
-                }
-            SeerrMediaType.TV ->
-                detail.numberOfSeasons?.takeIf { it > 0 }?.let { seasons ->
-                    pluralStringResource(CoreR.plurals.seerr_seasons, seasons, seasons)
-                }
-        }
-    return listOfNotNull(
-            detail.year?.toString(),
-            seerrMediaTypeLabel(detail.mediaType),
-            runtimeOrSeasons,
-            detail.genres.takeIf { it.isNotEmpty() }?.joinToString(", "),
-        )
-        .joinToString(" · ")
+    return detail.year?.toString()
 }
 
 @PreviewScreenSizes

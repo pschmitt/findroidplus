@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.film.presentation.movie
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.models.VideoMetadata
 
@@ -15,6 +16,10 @@ data class MovieState(
     val dateFormat: String = "system",
     val releasePicker: ReleasePickerState? = null,
     val queueStatus: QueueStatus? = null,
+    // Every entry in this movie's own duplicate cluster (see PvrQueueEntry.duplicateGroupKey) -
+    // unlike [queueStatus], which is already collapsed to one. Only used to seed the manage-import
+    // sheet with every duplicate's candidates; display still reads [queueStatus].
+    val queueEntries: List<PvrQueueEntry> = emptyList(),
     // Gates the search button - no point offering a Radarr search that can only fail with a
     // toast when Radarr isn't (fully) configured.
     val radarrConfigured: Boolean = false,

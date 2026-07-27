@@ -6,6 +6,7 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.ManualImportCandidate
 import dev.jdtech.jellyfin.models.PvrDiskSpaceResult
 import dev.jdtech.jellyfin.models.PvrFetchError
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.utils.DeleteProgress
@@ -34,7 +35,6 @@ data class DownloadsState(
     // (source, queueItemId) pairs, since Sonarr and Radarr each have their own queue-row id
     // namespace - a bare Int would collide between the two services.
     val selectedPvrQueueIds: Set<Pair<PvrSource, Int>> = emptySet(),
-    val manualImport: ManualImportSheetState? = null,
     val diskSpace: PvrDiskSpaceResult = PvrDiskSpaceResult(),
     // Every mounted app-storage volume (internal, plus external/removable if present) - see
     // Downloader.getAllStorageStats(). Not just one: a device with an SD card configured as the
@@ -75,30 +75,52 @@ data class PvrQueueUiItem(
     val episodeNumber: Int? = null,
     val status: QueueStatus,
     // The PVR service's own queue-row id, needed to remove the entry (see
-    // QueueStatusRepository.removeQueueItem).
+    // QueueStatusRepository.removeQueueItem). Belongs to the entry this row's own display fields
+    // (title/poster/status) were taken from - see [duplicates] for the rest of its cluster.
     val queueItemId: Int = 0,
+    // Every entry in this row's duplicate cluster (see PvrQueueEntry.duplicateGroupKey),
+    // including the one this row displays - a single-element list in the overwhelmingly common
+    // case of no duplicates. Carried here so opening the manage-import sheet can seed every
+    // duplicate's candidates without a second repository round-trip.
+    val duplicates: List<PvrQueueEntry> = emptyList(),
 )
 
 data class PvrQueueGroup(val source: PvrSource, val items: List<PvrQueueUiItem>)
 
 /**
- * Drives the "manage imports" bottom sheet - the individual files inside a queue entry
- * Sonarr/Radarr couldn't fully auto-import (see [ManualImportCandidate]). [selectedIds] defaults
- * to every importable candidate once loaded; the user deselects files they don't want imported
- * (e.g. duplicates already on disk).
+ * One underlying queue entry's manage-import state inside [ManualImportSheetState] - normally
+ * there's exactly one, but a duplicate cluster (see PvrQueueEntry.duplicateGroupKey) seeds one
+ * per entry so the user can pick which release to actually import from.
  */
-data class ManualImportSheetState(
+data class ManualImportEntry(
     val source: PvrSource,
     val downloadId: String,
-    // The underlying queue row's own id - not [downloadId] - needed to reject the whole release
-    // (remove + blocklist) rather than import it. See DownloadsViewModel.rejectManualImport.
+    // The underlying queue row's own id - not [downloadId] - needed to remove this entry (either
+    // as the losing duplicate after a different entry's import, or as part of rejecting the
+    // whole cluster).
     val queueItemId: Int,
-    val title: String,
     val isLoading: Boolean = true,
+    val candidates: List<ManualImportCandidate> = emptyList(),
+    // Defaults to every importable candidate once loaded; the user deselects files they don't
+    // want imported (e.g. duplicates already on disk).
+    val selectedIds: Set<Int> = emptySet(),
+    val error: String? = null,
+)
+
+/**
+ * Drives the "manage imports" bottom sheet. [entries] holds one [ManualImportEntry] per
+ * underlying queue row in the cluster - size 1 in the overwhelmingly common case (nothing to pick
+ * between), 2+ when duplicate grabs of the same release are both still awaiting import.
+ * [selectedEntryIndex] is which one the user is currently reviewing/importing from; confirming
+ * imports from that entry only and then removes every other entry in [entries] as a losing
+ * duplicate - see ManualImportController.confirm.
+ */
+data class ManualImportSheetState(
+    val title: String,
+    val entries: List<ManualImportEntry>,
+    val selectedEntryIndex: Int = 0,
     val isImporting: Boolean = false,
     val isRejecting: Boolean = false,
-    val candidates: List<ManualImportCandidate> = emptyList(),
-    val selectedIds: Set<Int> = emptySet(),
     val error: String? = null,
 )
 

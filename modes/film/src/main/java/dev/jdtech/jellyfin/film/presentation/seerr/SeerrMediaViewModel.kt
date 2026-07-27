@@ -7,6 +7,9 @@ import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.api.pvr.PvrRelease
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
+import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportController
+import dev.jdtech.jellyfin.film.presentation.downloads.PendingImportRef
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.RadarrSearchRepository
 import dev.jdtech.jellyfin.repository.QueueStatusRepository
@@ -65,6 +68,22 @@ constructor(
     private var airTime: LocalTime? = null
     private var releasePickerSource: PvrSource? = null
     private var queueStatusJob: Job? = null
+    private var queueEntriesJob: Job? = null
+
+    val manualImport = ManualImportController(queueStatusRepository, viewModelScope)
+
+    /** Opens the manage-import sheet for this item's own PVR queue entry, if it has one. */
+    fun openManualImportForCurrentItem() {
+        val status = _state.value.queueStatus ?: return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        val title = _state.value.detail?.title ?: return
+        val refs =
+            _state.value.queueEntries.mapNotNull { entry ->
+                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+            }
+        if (refs.isEmpty()) return
+        manualImport.open(title, refs)
+    }
 
     fun loadDetail(
         tmdbId: Int,
@@ -178,6 +197,21 @@ constructor(
                                 )
                         }
                 }
+            }
+        // Only the id that's actually meaningful at this scope - passing the show-level tmdbId
+        // for a Sonarr/episode lookup would match every episode of the same show, not just this
+        // one, since matchSonarr sets PvrQueueEntry.tmdbId from the series, not the episode.
+        queueEntriesJob?.cancel()
+        queueEntriesJob =
+            viewModelScope.launch {
+                val entriesFlow =
+                    when (mediaType) {
+                        SeerrMediaType.MOVIE ->
+                            queueStatusRepository.getQueueEntriesFlow(PvrSource.RADARR, tmdbId, null)
+                        SeerrMediaType.TV ->
+                            queueStatusRepository.getQueueEntriesFlow(PvrSource.SONARR, null, sonarrEpisodeId)
+                    }
+                entriesFlow.collect { entries -> _state.value = _state.value.copy(queueEntries = entries) }
             }
     }
 

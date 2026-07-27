@@ -260,6 +260,9 @@ fun PvrQueueDownloadCard(
     status: QueueStatus,
     title: String? = null,
     modifier: Modifier = Modifier,
+    // Set when this queue entry has an import warning/failure to resolve - makes the whole card
+    // tappable to open the manage-import sheet.
+    onCardClick: (() -> Unit)? = null,
 ) {
     val statusText =
         when (status.status) {
@@ -295,6 +298,7 @@ fun PvrQueueDownloadCard(
         statusTextOverride = statusText,
         showControls = false,
         modifier = modifier,
+        onCardClick = onCardClick,
     )
 }
 

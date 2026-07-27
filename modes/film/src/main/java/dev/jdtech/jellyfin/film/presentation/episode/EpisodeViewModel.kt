@@ -13,6 +13,7 @@ import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
 import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportController
+import dev.jdtech.jellyfin.film.presentation.downloads.PendingImportRef
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
@@ -82,9 +83,13 @@ constructor(
     fun openManualImportForCurrentItem() {
         val status = _state.value.queueStatus ?: return
         if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
-        val downloadId = status.downloadId ?: return
         val title = _state.value.episode?.name ?: return
-        manualImport.open(status.source, downloadId, status.queueItemId, title)
+        val refs =
+            _state.value.queueEntries.mapNotNull { entry ->
+                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+            }
+        if (refs.isEmpty()) return
+        manualImport.open(title, refs)
     }
 
     private fun observeQueueStatus(episodeId: UUID) {
@@ -95,6 +100,11 @@ constructor(
                     _state.value = _state.value.copy(queueStatus = status)
                 }
             }
+        viewModelScope.launch {
+            queueStatusRepository.getQueueEntriesFlow(episodeId).collect { entries ->
+                _state.value = _state.value.copy(queueEntries = entries)
+            }
+        }
     }
 
     fun loadEpisode(episodeId: UUID) {

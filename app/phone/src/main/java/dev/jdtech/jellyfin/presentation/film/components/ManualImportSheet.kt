@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportEntry
 import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportSheetState
 import dev.jdtech.jellyfin.models.ManualImportCandidate
 import dev.jdtech.jellyfin.models.PvrSource
@@ -50,11 +52,18 @@ import dev.jdtech.jellyfin.utils.formatBinaryFileSize
  * `trackedDownloadState=importBlocked`), each with the service's own guessed episode/quality
  * mapping and rejection reasons, letting the user pick which to actually import. Mirrors
  * [ReleasePickerSheet]'s structure (a state-driven [ModalBottomSheet] over a candidate list).
+ *
+ * [state.entries][ManualImportSheetState.entries] normally holds exactly one entry; when
+ * Sonarr/Radarr have two duplicate queue rows for the same release still awaiting import (see
+ * `PvrQueueEntry.duplicateGroupKey`), it holds one per duplicate and a small picker lets the user
+ * choose which one to actually review/import from - the other(s) are removed automatically once
+ * the chosen one is confirmed (see `ManualImportController.confirm`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualImportSheet(
     state: ManualImportSheetState,
+    onSelectEntry: (Int) -> Unit,
     onToggleSelection: (Int) -> Unit,
     onConfirm: () -> Unit,
     onReject: (removeFromClient: Boolean, blocklist: Boolean) -> Unit,
@@ -63,6 +72,8 @@ fun ManualImportSheet(
 ) {
     var showRejectConfirm by remember { mutableStateOf(false) }
     var showErrorDetails by remember { mutableStateOf(false) }
+
+    val selected = state.entries.getOrNull(state.selectedEntryIndex) ?: state.entries.first()
 
     ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
         // The candidate list is wrapped in its own weighted, non-filling Box so it only claims
@@ -86,23 +97,31 @@ fun ManualImportSheet(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (state.entries.size > 1) {
+                HorizontalDivider()
+                ManualImportEntryPicker(
+                    entries = state.entries,
+                    selectedIndex = state.selectedEntryIndex,
+                    onSelect = onSelectEntry,
+                )
+            }
             HorizontalDivider()
             Box(modifier = Modifier.weight(1f, fill = false)) {
                 when {
-                    state.isLoading ->
+                    selected.isLoading ->
                         Box(
                             modifier = Modifier.fillMaxWidth().height(120.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator()
                         }
-                    state.error != null && state.candidates.isEmpty() ->
+                    selected.error != null && selected.candidates.isEmpty() ->
                         Text(
-                            text = stringResource(CoreR.string.manual_import_loading_failed, state.error.orEmpty()),
+                            text = stringResource(CoreR.string.manual_import_loading_failed, selected.error.orEmpty()),
                             modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
                             color = MaterialTheme.colorScheme.error,
                         )
-                    state.candidates.isEmpty() ->
+                    selected.candidates.isEmpty() ->
                         Text(
                             text = stringResource(CoreR.string.manual_import_empty),
                             modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
@@ -110,20 +129,20 @@ fun ManualImportSheet(
                         )
                     else ->
                         LazyColumn(contentPadding = PaddingValues(horizontal = MaterialTheme.spacings.medium)) {
-                            itemsIndexed(items = state.candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
+                            itemsIndexed(items = selected.candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
                                 ManualImportRow(
                                     candidate = candidate,
-                                    checked = candidate.id in state.selectedIds,
+                                    checked = candidate.id in selected.selectedIds,
                                     onToggle = { onToggleSelection(candidate.id) },
                                 )
-                                if (index != state.candidates.lastIndex) {
+                                if (index != selected.candidates.lastIndex) {
                                     HorizontalDivider()
                                 }
                             }
                         }
                 }
             }
-            if (state.candidates.isNotEmpty()) {
+            if (selected.candidates.isNotEmpty()) {
                 HorizontalDivider()
                 Row(
                     modifier =
@@ -159,12 +178,12 @@ fun ManualImportSheet(
                     }
                     Button(
                         onClick = onConfirm,
-                        enabled = state.selectedIds.isNotEmpty() && !state.isImporting && !state.isRejecting,
+                        enabled = selected.selectedIds.isNotEmpty() && !state.isImporting && !state.isRejecting,
                     ) {
                         if (state.isImporting) {
                             CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
                         } else {
-                            Text(text = stringResource(CoreR.string.manual_import_confirm, state.selectedIds.size))
+                            Text(text = stringResource(CoreR.string.manual_import_confirm, selected.selectedIds.size))
                         }
                     }
                 }
@@ -190,6 +209,44 @@ fun ManualImportSheet(
             message = detailsMessage,
             onDismissRequest = { showErrorDetails = false },
         )
+    }
+}
+
+/**
+ * One row per duplicate queue entry, letting the user choose which release to actually review and
+ * import from - shown only when [ManualImportSheetState.entries] has more than one. Labeled by
+ * summed candidate size once loaded (the most useful thing to compare two competing grabs by),
+ * falling back to a plain ordinal while still loading.
+ */
+@Composable
+private fun ManualImportEntryPicker(entries: List<ManualImportEntry>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    Column(modifier = Modifier.padding(vertical = MaterialTheme.spacings.small)) {
+        entries.forEachIndexed { index, entry ->
+            val label =
+                if (entry.isLoading) {
+                    stringResource(CoreR.string.manual_import_release_ordinal, index + 1)
+                } else {
+                    stringResource(
+                        CoreR.string.manual_import_release_size,
+                        index + 1,
+                        formatBinaryFileSize(entry.candidates.sumOf { it.sizeBytes }),
+                    )
+                }
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .clickable { onSelect(index) }
+                        .padding(
+                            horizontal = MaterialTheme.spacings.medium,
+                            vertical = MaterialTheme.spacings.small,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = index == selectedIndex, onClick = { onSelect(index) })
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
 
@@ -302,12 +359,18 @@ private fun ManualImportSheetLoadingPreview() {
         ManualImportSheet(
             state =
                 ManualImportSheetState(
-                    source = PvrSource.SONARR,
-                    downloadId = "abc",
-                    queueItemId = 1,
                     title = "Some Show - Season 1",
-                    isLoading = true,
+                    entries =
+                        listOf(
+                            ManualImportEntry(
+                                source = PvrSource.SONARR,
+                                downloadId = "abc",
+                                queueItemId = 1,
+                                isLoading = true,
+                            )
+                        ),
                 ),
+            onSelectEntry = {},
             onToggleSelection = {},
             onConfirm = {},
             onReject = { _, _ -> },
@@ -324,34 +387,59 @@ private fun ManualImportSheetContentPreview() {
         ManualImportSheet(
             state =
                 ManualImportSheetState(
-                    source = PvrSource.SONARR,
-                    downloadId = "abc",
-                    queueItemId = 1,
                     title = "Some Show - Season 1",
-                    isLoading = false,
-                    candidates =
+                    entries =
                         listOf(
-                            ManualImportCandidate(
-                                id = 1,
-                                name = "S01E06-A Day Off in Roa.mkv",
-                                sizeBytes = 914_265_058L,
-                                qualityName = "Bluray-1080p",
-                                episodeLabel = "S1E6",
-                                canImport = true,
-                                rejections = listOf("Episode file already imported"),
+                            ManualImportEntry(
+                                source = PvrSource.SONARR,
+                                downloadId = "abc",
+                                queueItemId = 1,
+                                isLoading = false,
+                                candidates =
+                                    listOf(
+                                        ManualImportCandidate(
+                                            id = 1,
+                                            name = "S01E06-A Day Off in Roa.mkv",
+                                            sizeBytes = 914_265_058L,
+                                            qualityName = "Bluray-1080p",
+                                            episodeLabel = "S1E6",
+                                            canImport = true,
+                                            rejections = listOf("Episode file already imported"),
+                                        ),
+                                        ManualImportCandidate(
+                                            id = 2,
+                                            name = "Unrecognized.File.mkv",
+                                            sizeBytes = 500_000_000L,
+                                            qualityName = null,
+                                            episodeLabel = null,
+                                            canImport = false,
+                                            rejections = emptyList(),
+                                        ),
+                                    ),
+                                selectedIds = setOf(1),
                             ),
-                            ManualImportCandidate(
-                                id = 2,
-                                name = "Unrecognized.File.mkv",
-                                sizeBytes = 500_000_000L,
-                                qualityName = null,
-                                episodeLabel = null,
-                                canImport = false,
-                                rejections = emptyList(),
+                            ManualImportEntry(
+                                source = PvrSource.SONARR,
+                                downloadId = "def",
+                                queueItemId = 2,
+                                isLoading = false,
+                                candidates =
+                                    listOf(
+                                        ManualImportCandidate(
+                                            id = 1,
+                                            name = "S01E06-A.Day.Off.mkv",
+                                            sizeBytes = 902_000_000L,
+                                            qualityName = "WEBDL-1080p",
+                                            episodeLabel = "S1E6",
+                                            canImport = true,
+                                            rejections = emptyList(),
+                                        )
+                                    ),
+                                selectedIds = setOf(1),
                             ),
                         ),
-                    selectedIds = setOf(1),
                 ),
+            onSelectEntry = {},
             onToggleSelection = {},
             onConfirm = {},
             onReject = { _, _ -> },

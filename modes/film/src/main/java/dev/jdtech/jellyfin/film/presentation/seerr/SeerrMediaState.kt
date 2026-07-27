@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.film.presentation.seerr
 
 import dev.jdtech.jellyfin.models.SeerrMediaDetail
+import dev.jdtech.jellyfin.models.PvrQueueEntry
 import dev.jdtech.jellyfin.models.QueueStatus
 import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import java.time.LocalDate
@@ -19,6 +20,9 @@ data class SeerrMediaState(
     val pvrSearchConfigured: Boolean = false,
     val manualPvrSearchAvailable: Boolean = false,
     val queueStatus: QueueStatus? = null,
+    // Every entry in this item's own duplicate cluster (see PvrQueueEntry.duplicateGroupKey) -
+    // unlike [queueStatus], which is already collapsed to one. Mirrors MovieState.queueEntries.
+    val queueEntries: List<PvrQueueEntry> = emptyList(),
     val jellyfinShowId: UUID? = null,
     val jellyfinSeasonId: UUID? = null,
     // Set only when detail.episode is non-null and this exact episode (not just its season) is

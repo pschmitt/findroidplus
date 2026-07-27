@@ -118,6 +118,14 @@ interface JellyfinRepository {
     suspend fun deleteItem(itemId: UUID)
 
     /**
+     * Kicks off a full library scan (Jellyfin's own "Scan All Libraries" task) - used after a
+     * Sonarr/Radarr manual import finishes so the newly-placed file shows up without waiting for
+     * Jellyfin's own scheduled scan. Fire-and-forget from the server's point of view; this just
+     * requests the scan, it doesn't wait for it to finish.
+     */
+    suspend fun refreshLibrary()
+
+    /**
      * Whether the current Jellyfin user's server-side policy allows deleting media at all
      * ("Allow this user to delete media" in Jellyfin's admin UI) - gates whether the "Delete from
      * Jellyfin" action is even shown, rather than offering it and having [deleteItem] fail with a

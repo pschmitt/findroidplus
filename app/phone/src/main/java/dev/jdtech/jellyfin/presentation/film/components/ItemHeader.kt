@@ -161,7 +161,7 @@ fun ItemHeader(
 
 @Composable
 private fun ItemHeaderBase(
-    item: FindroidItem,
+    item: FindroidItem?,
     modifier: Modifier = Modifier,
     showLogo: Boolean = false,
     backdropImage: @Composable (() -> Unit),
@@ -172,6 +172,7 @@ private fun ItemHeaderBase(
     val logoUri =
         when (item) {
             is FindroidEpisode -> item.images.showLogo
+            null -> null
             else -> item.images.logo
         }
 
@@ -191,7 +192,7 @@ private fun ItemHeaderBase(
             )
         }
         content()
-        if (showLogo) {
+        if (showLogo && logoUri != null) {
             AsyncImage(
                 model = logoUri,
                 contentDescription = null,
@@ -204,4 +205,32 @@ private fun ItemHeaderBase(
             )
         }
     }
+}
+
+/**
+ * Same hero-banner shape as the [FindroidItem] overloads above, for screens whose backdrop isn't
+ * a Jellyfin server image at all (e.g. SeerrMediaScreen, which only has a plain TMDB CDN URL, not
+ * a [FindroidItem]/[Uri]-based one to resolve). No parallax/logo support - neither has been needed
+ * by a non-Jellyfin caller yet.
+ */
+@Composable
+fun ItemHeader(
+    backdropUrl: String?,
+    modifier: Modifier = Modifier,
+    content: @Composable (BoxScope.() -> Unit) = {},
+) {
+    ItemHeaderBase(
+        item = null,
+        modifier = modifier,
+        backdropImage = {
+            AsyncImage(
+                model = backdropUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainer),
+                contentScale = ContentScale.Crop,
+            )
+        },
+        content = content,
+    )
 }

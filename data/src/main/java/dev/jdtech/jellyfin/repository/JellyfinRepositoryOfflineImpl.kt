@@ -309,6 +309,10 @@ class JellyfinRepositoryOfflineImpl(
         throw Exception("Deleting an item is not available in offline mode")
     }
 
+    // Nothing to scan without a server - best-effort/fire-and-forget by design, so a no-op here
+    // rather than throwing.
+    override suspend fun refreshLibrary() {}
+
     override suspend fun canDeleteMedia(): Boolean = false
 
     override fun getBaseUrl(): String {
