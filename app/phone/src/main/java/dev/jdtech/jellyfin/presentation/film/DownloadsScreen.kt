@@ -1585,7 +1585,6 @@ private fun PvrQueueRow(
 ) {
     val status = queueItem.status
     val isProblem = status.status == QueueItemStatus.WARNING || status.status == QueueItemStatus.FAILED
-    var showIssueDialog by remember { mutableStateOf(false) }
     val statusText =
         when (status.status) {
             QueueItemStatus.QUEUED -> stringResource(CoreR.string.download_queued)
@@ -1604,14 +1603,6 @@ private fun PvrQueueRow(
             QueueItemStatus.WARNING -> stringResource(CoreR.string.pvr_queue_status_warning)
             QueueItemStatus.FAILED -> stringResource(CoreR.string.pvr_queue_status_failed)
         }
-
-    if (showIssueDialog) {
-        ImportIssueDialog(
-            title = queueItem.title,
-            message = status.errorMessage ?: statusText,
-            onDismiss = { showIssueDialog = false },
-        )
-    }
 
     Row(
         modifier =
@@ -1693,10 +1684,7 @@ private fun PvrQueueRow(
                         painter = painterResource(CoreR.drawable.ic_alert_circle),
                         contentDescription = stringResource(CoreR.string.import_issue_title),
                         tint = MaterialTheme.colorScheme.error,
-                        modifier =
-                            Modifier.size(14.dp)
-                                .clickable { showIssueDialog = true }
-                                .padding(end = 0.dp),
+                        modifier = Modifier.size(14.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
@@ -1706,7 +1694,6 @@ private fun PvrQueueRow(
                     color =
                         if (isProblem) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = if (isProblem) Modifier.clickable { showIssueDialog = true } else Modifier,
                 )
             }
             if (status.percent >= 0) {
@@ -1722,15 +1709,17 @@ private fun PvrQueueRow(
         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
         if (selectionMode) {
             Checkbox(checked = checked, onCheckedChange = { onToggleSelection() })
-        } else {
-            if (isProblem && onManageImport != null) {
-                IconButton(onClick = onManageImport) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_logs),
-                        contentDescription = stringResource(CoreR.string.pvr_queue_manual_import_action),
-                    )
-                }
+        } else if (isProblem && onManageImport != null) {
+            // Delete/blocklist are both available from inside the manage-import sheet already -
+            // no need for a separate trash icon here once there's an issue to resolve.
+            IconButton(onClick = onManageImport) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_alert_circle),
+                    contentDescription = stringResource(CoreR.string.pvr_queue_manual_import_action),
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
+        } else {
             IconButton(onClick = onRemove) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_trash),
@@ -1740,22 +1729,6 @@ private fun PvrQueueRow(
             }
         }
     }
-}
-
-/**
- * Shows the raw Sonarr/Radarr import warning/failure message for a queue entry. The row itself
- * only shows a compact "Warning"/"Failed" badge - the full message (often a whole raw release
- * filename plus reason, e.g. "...FLUX.mkv: Episode has a TBA title and recently aired") is too
- * long to render inline without pushing everything else in the row around.
- */
-@Composable
-private fun ImportIssueDialog(title: String, message: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(CoreR.string.import_issue_title)) },
-        text = { Text(text = "$title\n\n$message") },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.close)) } },
-    )
 }
 
 /**

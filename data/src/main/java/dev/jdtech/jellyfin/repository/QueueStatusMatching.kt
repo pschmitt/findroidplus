@@ -105,7 +105,10 @@ fun matchRadarr(
  * one), the later entry wins - [toMap] keeps the last occurrence of a duplicate key.
  */
 fun List<PvrQueueEntry>.toQueueStatusMap(): Map<UUID, QueueStatus> =
-    mapNotNull { entry -> entry.item?.let { it.id to entry.status } }.toMap()
+    mapNotNull { entry ->
+        entry.item?.let { it.id to entry.status.copy(queueItemId = entry.queueItemId) }
+    }
+        .toMap()
 
 fun List<PvrQueueEntry>.toRadarrQueueStatusMap(): Map<Int, QueueStatus> =
     filter { it.status.source == PvrSource.RADARR }

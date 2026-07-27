@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,14 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,7 +62,9 @@ import dev.jdtech.jellyfin.models.SeerrMediaStatus
 import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
+import dev.jdtech.jellyfin.presentation.film.components.ItemActionButton
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
+import dev.jdtech.jellyfin.presentation.film.components.PvrSearchButton
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.jdtech.jellyfin.presentation.film.components.SeerrStatusChip
@@ -262,101 +263,77 @@ private fun SeerrMediaScreenLayout(
                             OverviewText(text = overview, maxCollapsedLines = 5)
                         }
                         Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                        Row(
-                            horizontalArrangement =
-                                Arrangement.spacedBy(MaterialTheme.spacings.medium)
+                        // Same tile shell as ItemButtonsBar's action row (Movie/Episode/Show/
+                        // Season) - a wrapping FlowRow of uniform icon-above-label tiles - even
+                        // though this screen's action set (Request/Cancel/Search, no Play/
+                        // Download/overflow) is distinct enough that reusing ItemButtonsBar itself
+                        // isn't a fit.
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                         ) {
                             if (
                                 detail.status == SeerrMediaStatus.NOT_REQUESTED &&
                                     detail.cancellableRequestIds.isEmpty()
                             ) {
-                                Button(
-                                    onClick = { onAction(SeerrMediaAction.OnRequest) },
-                                    enabled = !state.isSubmitting,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_seerr),
-                                        contentDescription = null,
-                                        tint = Color.Unspecified,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                                ItemActionButton(
+                                    icon = painterResource(CoreR.drawable.ic_seerr),
+                                    iconTint = Color.Unspecified,
                                     // Seerr has no per-episode requesting, so a season or episode
                                     // view always ends up requesting the season - make that
                                     // explicit rather than implying the whole show is requested.
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                if (detail.season != null) {
-                                                    CoreR.string.discover_request_season
-                                                } else {
-                                                    CoreR.string.discover_request
-                                                }
-                                            )
-                                    )
-                                }
+                                    label =
+                                        stringResource(
+                                            if (detail.season != null) {
+                                                CoreR.string.discover_request_season
+                                            } else {
+                                                CoreR.string.discover_request
+                                            }
+                                        ),
+                                    onClick = {
+                                        if (!state.isSubmitting) onAction(SeerrMediaAction.OnRequest)
+                                    },
+                                )
                             }
                             if (detail.cancellableRequestIds.isNotEmpty()) {
-                                OutlinedButton(
-                                    onClick = { showCancelDialog = true },
-                                    enabled = !state.isSubmitting,
-                                ) {
-                                    Row(
-                                        horizontalArrangement =
-                                            Arrangement.spacedBy(MaterialTheme.spacings.small)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_seerr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                        Text(text = stringResource(CoreR.string.seerr_cancel_request))
-                                    }
-                                }
+                                ItemActionButton(
+                                    icon = painterResource(CoreR.drawable.ic_seerr),
+                                    iconTint = Color.Unspecified,
+                                    label = stringResource(CoreR.string.seerr_cancel_request),
+                                    onClick = { if (!state.isSubmitting) showCancelDialog = true },
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                )
                             }
                             // Not in the library yet - there's nothing to play, but TMDB usually
                             // has a trailer, so offer that instead while the request works its
                             // way through Sonarr/Radarr.
                             detail.trailerUrl?.let { trailerUrl ->
-                                OutlinedButton(
+                                ItemActionButton(
+                                    icon = painterResource(CoreR.drawable.ic_film),
+                                    label = stringResource(CoreR.string.trailer),
                                     onClick = {
                                         try {
                                             uriHandler.openUri(trailerUrl)
                                         } catch (e: IllegalArgumentException) {
                                             Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
                                         }
-                                    }
-                                ) {
-                                    Row(
-                                        horizontalArrangement =
-                                            Arrangement.spacedBy(MaterialTheme.spacings.small)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_film),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                        Text(text = stringResource(CoreR.string.trailer))
-                                    }
-                                }
+                                    },
+                                )
                             }
-                        }
-                        if (state.pvrSearchConfigured) {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            OutlinedButton(
-                                onClick = { onAction(SeerrMediaAction.OnAutomaticSearchInPvr) },
-                                enabled = !state.isSubmitting,
-                            ) {
-                                PvrSearchButtonLabel(mediaType = detail.mediaType, manual = false)
-                            }
-                        }
-                        if (state.manualPvrSearchAvailable) {
-                            OutlinedButton(
-                                onClick = { onAction(SeerrMediaAction.OnOpenReleasePicker) },
-                                enabled = !state.isSubmitting,
-                            ) {
-                                PvrSearchButtonLabel(mediaType = detail.mediaType, manual = true)
+                            if (state.pvrSearchConfigured || state.manualPvrSearchAvailable) {
+                                PvrSearchButton(
+                                    service =
+                                        if (detail.mediaType == SeerrMediaType.TV) {
+                                            dev.jdtech.jellyfin.models.PvrSource.SONARR
+                                        } else {
+                                            dev.jdtech.jellyfin.models.PvrSource.RADARR
+                                        },
+                                    onAutomaticSearch = {
+                                        onAction(SeerrMediaAction.OnAutomaticSearchInPvr)
+                                    },
+                                    onManualSearch = { onAction(SeerrMediaAction.OnOpenReleasePicker) },
+                                    label = stringResource(CoreR.string.search),
+                                )
                             }
                         }
                         // Show-level view only - a season/episode view is already scoped to one
@@ -471,35 +448,6 @@ private fun SeerrMediaScreenLayout(
             state = releasePicker,
             onGrab = { onAction(SeerrMediaAction.GrabRelease(it)) },
             onDismissRequest = { onAction(SeerrMediaAction.DismissReleasePicker) },
-        )
-    }
-}
-
-@Composable
-private fun PvrSearchButtonLabel(mediaType: SeerrMediaType, manual: Boolean) {
-    Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
-        Icon(
-            painter =
-                painterResource(
-                    if (mediaType == SeerrMediaType.TV) CoreR.drawable.ic_sonarr
-                    else CoreR.drawable.ic_radarr
-                ),
-            contentDescription = null,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text =
-                stringResource(
-                    when (mediaType) {
-                        SeerrMediaType.MOVIE ->
-                            if (manual) CoreR.string.search_movie_in_radarr_manual
-                            else CoreR.string.search_movie_in_radarr_automatic
-                        SeerrMediaType.TV ->
-                            if (manual) CoreR.string.search_episode_in_sonarr_manual
-                            else CoreR.string.search_episode_in_sonarr_automatic
-                    }
-                )
         )
     }
 }

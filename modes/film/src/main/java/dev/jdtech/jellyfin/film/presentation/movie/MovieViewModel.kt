@@ -9,6 +9,8 @@ import dev.jdtech.jellyfin.core.presentation.search.ReleasePickerState
 import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
+import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportController
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.SeerrMediaType
@@ -59,7 +61,18 @@ constructor(
 
     private var queueStatusJob: Job? = null
 
+    val manualImport = ManualImportController(queueStatusRepository, viewModelScope)
+
     lateinit var movieId: UUID
+
+    /** Opens the manage-import sheet for this movie's own PVR queue entry, if it has one. */
+    fun openManualImportForCurrentItem() {
+        val status = _state.value.queueStatus ?: return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        val downloadId = status.downloadId ?: return
+        val title = _state.value.movie?.name ?: return
+        manualImport.open(status.source, downloadId, status.queueItemId, title)
+    }
 
     fun loadMovie(movieId: UUID) {
         this.movieId = movieId

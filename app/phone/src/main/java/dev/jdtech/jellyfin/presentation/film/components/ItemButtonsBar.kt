@@ -80,6 +80,9 @@ fun ItemButtonsBar(
     overflowContent: @Composable () -> Unit = {},
     excludeFromAutoDelete: Boolean = false,
     onToggleExcludeFromAutoDeleteClick: (() -> Unit)? = null,
+    // Set when this item's own PVR queue entry has an import warning/failure to resolve - makes
+    // the download progress card tappable to open the manage-import sheet.
+    onDownloadCardClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -230,6 +233,7 @@ fun ItemButtonsBar(
                         onForceClick = onDownloadForceClick,
                         onPauseClick = onDownloadPauseClick,
                         onResumeClick = onDownloadResumeClick,
+                        onCardClick = onDownloadCardClick,
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                 }

@@ -57,6 +57,10 @@ data class QueueStatus(
     // GET/POST /api/v3/manualimport filters/targets by. Null when the PVR service didn't report
     // one (should not happen in practice, but the field is optional on the wire).
     val downloadId: String? = null,
+    // The PVR queue row's own id (mirrors PvrQueueEntry.queueItemId) - needed to remove/blocklist
+    // the release from the manual-import sheet's reject action. 0 (never a real id) when this
+    // QueueStatus wasn't built from a per-item lookup that carries it - see toQueueStatusMap().
+    val queueItemId: Int = 0,
 )
 
 enum class PvrSource { SONARR, RADARR }

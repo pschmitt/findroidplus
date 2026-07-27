@@ -54,6 +54,7 @@ import dev.jdtech.jellyfin.film.presentation.episode.EpisodeState
 import dev.jdtech.jellyfin.film.presentation.episode.EpisodeViewModel
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.models.isDownloadBroken
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.models.isMarkedForAutoDeletion
@@ -67,6 +68,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemMetaRow
 import dev.jdtech.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
+import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.jdtech.jellyfin.presentation.film.components.ReleasePickerSheet
@@ -80,6 +82,7 @@ import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun EpisodeScreen(
     episodeId: UUID,
     navigateBack: () -> Unit,
@@ -96,6 +99,7 @@ fun EpisodeScreen(
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val downloaderState by downloaderViewModel.state.collectAsStateWithLifecycle()
+    val manualImportState by viewModel.manualImport.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(true) { viewModel.loadEpisode(episodeId = episodeId) }
 
@@ -195,7 +199,20 @@ fun EpisodeScreen(
             viewModel.onAction(action)
         },
         onDownloaderAction = { action -> downloaderViewModel.onAction(action) },
+        onManageImportClick = viewModel::openManualImportForCurrentItem,
     )
+
+    manualImportState?.let { manualImport ->
+        ManualImportSheet(
+            state = manualImport,
+            onToggleSelection = viewModel.manualImport::toggleSelection,
+            onConfirm = { viewModel.manualImport.confirm() },
+            onReject = { removeFromClient, blocklist ->
+                viewModel.manualImport.reject(removeFromClient, blocklist)
+            },
+            onDismissRequest = viewModel.manualImport::close,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -211,6 +228,7 @@ private fun EpisodeScreenLayout(
     },
     onAction: (EpisodeAction) -> Unit,
     onDownloaderAction: (DownloaderAction) -> Unit,
+    onManageImportClick: () -> Unit = {},
 ) {
     val androidContext = LocalContext.current
     val safePadding = rememberSafePadding()
@@ -346,6 +364,13 @@ private fun EpisodeScreenLayout(
                             onDownloaderAction(DownloaderAction.ResumeDownload)
                         },
                         onDownloadDeleteClick = deleteDownload,
+                        onDownloadCardClick =
+                            state.queueStatus
+                                ?.status
+                                ?.takeIf {
+                                    it == QueueItemStatus.WARNING || it == QueueItemStatus.FAILED
+                                }
+                                ?.let { { onManageImportClick() } },
                         overflowContent = {
                             ItemOverflowMenu { closeMenu ->
                                 DropdownMenuItem(

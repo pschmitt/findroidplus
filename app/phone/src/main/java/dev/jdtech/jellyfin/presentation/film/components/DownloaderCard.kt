@@ -51,6 +51,9 @@ fun DownloaderCard(
     onResumeClick: () -> Unit = {},
     statusTextOverride: String? = null,
     showControls: Boolean = true,
+    // Set when the current item has a PVR import warning/failure to resolve - makes the whole
+    // card tappable to open the manage-import sheet, instead of only the per-status icon buttons.
+    onCardClick: (() -> Unit)? = null,
 ) {
     val animatedProgress by
         animateFloatAsState(
@@ -93,7 +96,7 @@ fun DownloaderCard(
             else -> ProgressIndicatorDefaults.linearTrackColor
         }
 
-    OutlinedCard(modifier = modifier) {
+    val cardContent: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
@@ -242,6 +245,12 @@ fun DownloaderCard(
                 }
             }
         }
+    }
+
+    if (onCardClick != null) {
+        OutlinedCard(onClick = onCardClick, modifier = modifier) { cardContent() }
+    } else {
+        OutlinedCard(modifier = modifier) { cardContent() }
     }
 }
 

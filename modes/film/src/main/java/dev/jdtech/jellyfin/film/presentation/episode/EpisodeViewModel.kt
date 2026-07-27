@@ -12,15 +12,18 @@ import dev.jdtech.jellyfin.core.presentation.search.SearchEvent
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
+import dev.jdtech.jellyfin.film.presentation.downloads.ManualImportController
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.QueueItemStatus
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.ExistingAutoDownloadScope
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.QueueStatusRepository
 import dev.jdtech.jellyfin.repository.SonarrSearchRepository
 import dev.jdtech.jellyfin.repository.toExistingScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -32,6 +35,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,6 +57,7 @@ constructor(
     private val downloader: Downloader,
     private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
     private val sonarrSearchRepository: SonarrSearchRepository,
+    private val queueStatusRepository: QueueStatusRepository,
     private val pvrConfiguration: PvrConfiguration,
     @ApplicationScope private val externalScope: CoroutineScope,
 ) : ViewModel() {
@@ -67,10 +72,34 @@ constructor(
 
     private val evaluator = AutoDownloadRuleEvaluator()
 
+    private var queueStatusJob: Job? = null
+
+    val manualImport = ManualImportController(queueStatusRepository, viewModelScope)
+
     lateinit var episodeId: UUID
+
+    /** Opens the manage-import sheet for this episode's own PVR queue entry, if it has one. */
+    fun openManualImportForCurrentItem() {
+        val status = _state.value.queueStatus ?: return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        val downloadId = status.downloadId ?: return
+        val title = _state.value.episode?.name ?: return
+        manualImport.open(status.source, downloadId, status.queueItemId, title)
+    }
+
+    private fun observeQueueStatus(episodeId: UUID) {
+        if (queueStatusJob != null) return
+        queueStatusJob =
+            viewModelScope.launch {
+                queueStatusRepository.getQueueStatusFlow(episodeId).collect { status ->
+                    _state.value = _state.value.copy(queueStatus = status)
+                }
+            }
+    }
 
     fun loadEpisode(episodeId: UUID) {
         this.episodeId = episodeId
+        observeQueueStatus(episodeId)
         viewModelScope.launch {
             _state.emit(_state.value.copy(isRefreshing = true))
             try {
