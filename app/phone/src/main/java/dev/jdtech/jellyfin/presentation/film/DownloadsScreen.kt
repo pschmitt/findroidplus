@@ -1247,15 +1247,14 @@ private fun SectionHeader(
                             modifier.clickable(onClick = onClick)
                         }
                     }
-                    // Horizontal matches ShowGroupHeader's own padding exactly, so the trailing
-                    // collapse chevron lands at the same horizontal inset in both - it used to be
-                    // its own inner Row's padding here, leaving the chevron (a sibling, outside
-                    // that inner Row) flush against the Card edge instead. Vertical is deliberately
-                    // taller than ShowGroupHeader's - this is the outer section header, one level
-                    // up from the per-show tiles below it, and should read as more prominent.
+                    // Matches ShowGroupHeader's own padding exactly, so the trailing collapse
+                    // chevron lands at the same horizontal inset in both, and the two rows read as
+                    // the same height - it used to be its own inner Row's padding here, leaving
+                    // the chevron (a sibling, outside that inner Row) flush against the Card edge
+                    // instead.
                     .padding(
                         horizontal = MaterialTheme.spacings.default,
-                        vertical = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.medium,
                     ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
