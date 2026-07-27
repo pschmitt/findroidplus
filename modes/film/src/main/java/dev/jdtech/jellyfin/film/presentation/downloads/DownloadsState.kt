@@ -32,6 +32,10 @@ data class DownloadsState(
     val migratingIds: Set<UUID> = emptySet(),
     val pvrQueueGroups: List<PvrQueueGroup> = emptyList(),
     val pvrErrors: List<PvrFetchError> = emptyList(),
+    // Services still waiting on their first-ever successful poll this session (see
+    // PvrQueueSnapshot.pendingSources) - drives a "loading" placeholder instead of either
+    // silently showing nothing or jumping straight to an error banner.
+    val pvrPendingSources: Set<PvrSource> = emptySet(),
     // (source, queueItemId) pairs, since Sonarr and Radarr each have their own queue-row id
     // namespace - a bare Int would collide between the two services.
     val selectedPvrQueueIds: Set<Pair<PvrSource, Int>> = emptySet(),

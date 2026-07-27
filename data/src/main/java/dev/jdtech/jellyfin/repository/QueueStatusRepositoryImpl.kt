@@ -81,6 +81,12 @@ class QueueStatusRepositoryImpl(
     private var lastGoodSonarrEntries: List<PvrQueueEntry> = emptyList()
     private var lastGoodRadarrEntries: List<PvrQueueEntry> = emptyList()
 
+    // Once true, stays true for the process's lifetime - distinguishes "still waiting on this
+    // service's very first successful poll" (pendingSources, see PvrQueueSnapshot) from "this
+    // service has known-good data, currently stale" (the < FAILURE_THRESHOLD branch below).
+    private var sonarrEverSucceeded = false
+    private var radarrEverSucceeded = false
+
     override fun getQueueSnapshotFlow(): Flow<PvrQueueSnapshot> =
         _queueSnapshot.onStart { ensurePollingStarted() }
 
@@ -387,6 +393,7 @@ class QueueStatusRepositoryImpl(
             entries = sonarr.entries + radarr.entries,
             errors = sonarr.errors + radarr.errors,
             fetchedSources = sonarr.fetchedSources + radarr.fetchedSources,
+            pendingSources = sonarr.pendingSources + radarr.pendingSources,
         )
     }
 
@@ -409,6 +416,7 @@ class QueueStatusRepositoryImpl(
                 }
             }
             sonarrConsecutiveFailures = 0
+            sonarrEverSucceeded = true
             lastGoodSonarrEntries = entries
             PvrQueueSnapshot(entries = entries, fetchedSources = setOf(PvrSource.SONARR))
         } catch (e: CancellationException) {
@@ -421,7 +429,11 @@ class QueueStatusRepositoryImpl(
             // - fetchedSources stays empty so notifyFinishedDownloads doesn't diff against this
             // reused data and misfire a "finished" notification.
             if (sonarrConsecutiveFailures < FAILURE_THRESHOLD) {
-                PvrQueueSnapshot(entries = lastGoodSonarrEntries)
+                if (sonarrEverSucceeded) {
+                    PvrQueueSnapshot(entries = lastGoodSonarrEntries)
+                } else {
+                    PvrQueueSnapshot(pendingSources = setOf(PvrSource.SONARR))
+                }
             } else {
                 PvrQueueSnapshot(errors = listOf(fetchError(PvrSource.SONARR, "Sonarr", e)))
             }
@@ -445,6 +457,7 @@ class QueueStatusRepositoryImpl(
                 }
             }
             radarrConsecutiveFailures = 0
+            radarrEverSucceeded = true
             lastGoodRadarrEntries = entries
             PvrQueueSnapshot(entries = entries, fetchedSources = setOf(PvrSource.RADARR))
         } catch (e: CancellationException) {
@@ -453,7 +466,11 @@ class QueueStatusRepositoryImpl(
             radarrConsecutiveFailures++
             Timber.w(e, "Failed to refresh Radarr queue status (%d in a row)", radarrConsecutiveFailures)
             if (radarrConsecutiveFailures < FAILURE_THRESHOLD) {
-                PvrQueueSnapshot(entries = lastGoodRadarrEntries)
+                if (radarrEverSucceeded) {
+                    PvrQueueSnapshot(entries = lastGoodRadarrEntries)
+                } else {
+                    PvrQueueSnapshot(pendingSources = setOf(PvrSource.RADARR))
+                }
             } else {
                 PvrQueueSnapshot(errors = listOf(fetchError(PvrSource.RADARR, "Radarr", e)))
             }

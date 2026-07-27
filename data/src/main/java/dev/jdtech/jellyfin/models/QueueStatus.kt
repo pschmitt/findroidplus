@@ -35,6 +35,12 @@ data class PvrQueueSnapshot(
     val entries: List<PvrQueueEntry> = emptyList(),
     val errors: List<PvrFetchError> = emptyList(),
     val fetchedSources: Set<PvrSource> = emptySet(),
+    // Services that are enabled/configured, still trying for their first-ever successful poll
+    // this app session, and haven't failed enough times in a row yet to report an error - i.e.
+    // "still loading, not yet known to be broken or working". A configured-but-never-reachable
+    // service without prior good data would otherwise render identically to "nothing queued" for
+    // the whole tolerated-failure grace window, which is what this exists to distinguish.
+    val pendingSources: Set<PvrSource> = emptySet(),
 )
 
 /** A user-presentable per-service fetch failure - [message] already names the service. */

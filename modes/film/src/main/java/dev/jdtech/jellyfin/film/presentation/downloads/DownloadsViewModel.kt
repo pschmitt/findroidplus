@@ -120,6 +120,7 @@ constructor(
                     it.copy(
                         pvrQueueGroups = groups,
                         pvrErrors = snapshot.errors,
+                        pvrPendingSources = snapshot.pendingSources,
                         selectedPvrQueueIds = it.selectedPvrQueueIds.intersect(liveKeys),
                     )
                 }

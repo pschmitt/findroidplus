@@ -104,6 +104,7 @@ import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.ManualImportSheet
 import dev.jdtech.jellyfin.presentation.film.components.PvrErrorBanner
+import dev.jdtech.jellyfin.presentation.film.components.PvrQueueLoadingPlaceholder
 import dev.jdtech.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -558,7 +559,11 @@ private fun DownloadsScreenLayout(
                         )
                     }
                 }
-                if (state.pvrQueueGroups.isNotEmpty() || state.pvrErrors.isNotEmpty()) {
+                if (
+                    state.pvrQueueGroups.isNotEmpty() ||
+                        state.pvrErrors.isNotEmpty() ||
+                        state.pvrPendingSources.isNotEmpty()
+                ) {
                     stickyHeader {
                         SectionHeader(
                             text = stringResource(CoreR.string.pvr_queue_section_title),
@@ -583,6 +588,21 @@ private fun DownloadsScreenLayout(
                                             horizontal = MaterialTheme.spacings.default,
                                             vertical = MaterialTheme.spacings.small,
                                         ),
+                                )
+                            }
+                        } else if (
+                            state.pvrQueueGroups.isEmpty() && state.pvrPendingSources.isNotEmpty()
+                        ) {
+                            // Still waiting on this service's first successful poll this session -
+                            // distinct from "genuinely nothing queued" (section wouldn't render at
+                            // all) and from "confirmed unreachable" (the error banner above).
+                            item {
+                                PvrQueueLoadingPlaceholder(
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = MaterialTheme.spacings.default,
+                                            vertical = MaterialTheme.spacings.small,
+                                        )
                                 )
                             }
                         }
