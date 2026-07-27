@@ -150,6 +150,7 @@ constructor(
                     radarrApiKey = radarrFields.apiKey,
                     seerrBaseUrl = seerrFields.baseUrl,
                     seerrApiKey = seerrFields.apiKey,
+                    password = generatePassword(),
                 )
             generate()
         }
