@@ -201,16 +201,75 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                 state.availableServers.flatMap { s ->
                     s.users.map { u -> Triple(s.server.id, u.id, "${s.server.name} - ${u.name}") }
                 }
-            if (state.includeJellyfin && state.jellyfinAvailable && serverUserOptions.size > 1) {
-                JellyfinServerUserPicker(
-                    options = serverUserOptions,
-                    selectedServerId = state.selectedServerId,
-                    selectedUserId = state.selectedUserId,
-                    onSelected = { serverId, userId ->
-                        onAction(QrExportAction.OnServerSelected(serverId))
-                        onAction(QrExportAction.OnUserSelected(userId))
+            if (state.includeJellyfin && state.jellyfinAvailable) {
+                if (serverUserOptions.size > 1) {
+                    JellyfinServerUserPicker(
+                        options = serverUserOptions,
+                        selectedServerId = state.selectedServerId,
+                        selectedUserId = state.selectedUserId,
+                        onSelected = { serverId, userId ->
+                            onAction(QrExportAction.OnServerSelected(serverId))
+                            onAction(QrExportAction.OnUserSelected(userId))
+                        },
+                    )
+                }
+                OutlinedTextField(
+                    value = state.jellyfinUsername,
+                    onValueChange = { onAction(QrExportAction.OnJellyfinUsernameChanged(it)) },
+                    label = {
+                        Text(text = stringResource(CoreR.string.qr_export_jellyfin_username))
                     },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                OutlinedTextField(
+                    value = state.jellyfinPassword,
+                    onValueChange = { onAction(QrExportAction.OnJellyfinPasswordChanged(it)) },
+                    label = {
+                        Text(text = stringResource(CoreR.string.qr_export_jellyfin_password))
+                    },
+                    supportingText = {
+                        Text(
+                            text = stringResource(CoreR.string.qr_export_jellyfin_password_summary)
+                        )
+                    },
+                    singleLine = true,
+                    isError = state.jellyfinLoginError != null,
+                    visualTransformation =
+                        if (state.jellyfinPasswordVisible) VisualTransformation.None
+                        else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                onAction(QrExportAction.OnToggleJellyfinPasswordVisibility)
+                            }
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (state.jellyfinPasswordVisible) CoreR.drawable.ic_eye_off
+                                        else CoreR.drawable.ic_eye
+                                    ),
+                                contentDescription =
+                                    stringResource(CoreR.string.qr_export_toggle_password),
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                val jellyfinLoginError = state.jellyfinLoginError
+                if (jellyfinLoginError != null) {
+                    Text(
+                        text = jellyfinLoginError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else if (state.isVerifyingJellyfinLogin) {
+                    Text(
+                        text = stringResource(CoreR.string.qr_export_jellyfin_verifying),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
 
             val advancedAvailable =
@@ -248,6 +307,18 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                                 onAction(QrExportAction.OnIncludeSonarrChanged(it))
                             },
                         )
+                        if (state.includeSonarr && state.sonarrAvailable) {
+                            PvrOverrideFields(
+                                baseUrl = state.sonarrBaseUrl,
+                                apiKey = state.sonarrApiKey,
+                                onBaseUrlChange = {
+                                    onAction(QrExportAction.OnSonarrBaseUrlChanged(it))
+                                },
+                                onApiKeyChange = {
+                                    onAction(QrExportAction.OnSonarrApiKeyChanged(it))
+                                },
+                            )
+                        }
                         SectionCheckbox(
                             labelRes = CoreR.string.qr_export_include_radarr,
                             summaryRes = null,
@@ -257,6 +328,18 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                                 onAction(QrExportAction.OnIncludeRadarrChanged(it))
                             },
                         )
+                        if (state.includeRadarr && state.radarrAvailable) {
+                            PvrOverrideFields(
+                                baseUrl = state.radarrBaseUrl,
+                                apiKey = state.radarrApiKey,
+                                onBaseUrlChange = {
+                                    onAction(QrExportAction.OnRadarrBaseUrlChanged(it))
+                                },
+                                onApiKeyChange = {
+                                    onAction(QrExportAction.OnRadarrApiKeyChanged(it))
+                                },
+                            )
+                        }
                         SectionCheckbox(
                             labelRes = CoreR.string.qr_export_include_seerr,
                             summaryRes = null,
@@ -266,6 +349,18 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                                 onAction(QrExportAction.OnIncludeSeerrChanged(it))
                             },
                         )
+                        if (state.includeSeerr && state.seerrAvailable) {
+                            PvrOverrideFields(
+                                baseUrl = state.seerrBaseUrl,
+                                apiKey = state.seerrApiKey,
+                                onBaseUrlChange = {
+                                    onAction(QrExportAction.OnSeerrBaseUrlChanged(it))
+                                },
+                                onApiKeyChange = {
+                                    onAction(QrExportAction.OnSeerrApiKeyChanged(it))
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -384,6 +479,35 @@ private fun SectionCheckbox(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+    }
+}
+
+@Composable
+private fun PvrOverrideFields(
+    baseUrl: String,
+    apiKey: String,
+    onBaseUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(start = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = baseUrl,
+            onValueChange = onBaseUrlChange,
+            label = { Text(text = stringResource(CoreR.string.integrations_server_url)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = onApiKeyChange,
+            label = { Text(text = stringResource(CoreR.string.integrations_api_key)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

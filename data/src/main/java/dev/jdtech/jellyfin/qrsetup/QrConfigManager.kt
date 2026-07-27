@@ -5,11 +5,25 @@ import dev.jdtech.jellyfin.backup.BackupServer
 import dev.jdtech.jellyfin.backup.PrefValue
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.ServerWithAddressesAndUsers
+import dev.jdtech.jellyfin.models.User
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.domain.models.Preference
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/**
+ * Overrides the Jellyfin user embedded in the payload with a freshly-authenticated one, instead of
+ * reusing whichever [dev.jdtech.jellyfin.models.User] row is already in Room - see
+ * `QrExportViewModel`'s "different login" flow, which performs the actual authentication.
+ */
+data class JellyfinUserOverride(val userId: UUID, val userName: String, val accessToken: String)
+
+/**
+ * Overrides a PVR service's base URL/API key for this export only - not persisted back to
+ * `AppPreferences`/`SecureCredentialStore`.
+ */
+data class PvrOverride(val baseUrl: String, val apiKey: String)
 
 /**
  * Builds and applies QR-provisioning payloads (FINDROID-43) - the DB/prefs-touching half; see
@@ -30,32 +44,54 @@ class QrConfigManager(
         includeJellyfin: Boolean,
         jellyfinServerId: String?,
         jellyfinUserId: UUID?,
+        jellyfinOverride: JellyfinUserOverride? = null,
         includeSonarr: Boolean,
+        sonarrOverride: PvrOverride? = null,
         includeRadarr: Boolean,
+        radarrOverride: PvrOverride? = null,
         includeSeerr: Boolean,
+        seerrOverride: PvrOverride? = null,
     ): QrConfigEnvelope =
         withContext(Dispatchers.IO) {
             val plainPrefs = mutableMapOf<String, PrefValue>()
             val secrets = mutableMapOf<String, String>()
 
             if (includeSonarr) {
-                putIfEnabled(plainPrefs, appPreferences.sonarrEnabled, appPreferences.sonarrBaseUrl)
-                putSecrets(secrets, SONARR_SECRET_KEYS)
+                putPvrFields(
+                    plainPrefs,
+                    secrets,
+                    appPreferences.sonarrEnabled,
+                    appPreferences.sonarrBaseUrl,
+                    SONARR_SECRET_KEYS,
+                    sonarrOverride,
+                )
             }
             if (includeRadarr) {
-                putIfEnabled(plainPrefs, appPreferences.radarrEnabled, appPreferences.radarrBaseUrl)
-                putSecrets(secrets, RADARR_SECRET_KEYS)
+                putPvrFields(
+                    plainPrefs,
+                    secrets,
+                    appPreferences.radarrEnabled,
+                    appPreferences.radarrBaseUrl,
+                    RADARR_SECRET_KEYS,
+                    radarrOverride,
+                )
             }
             if (includeSeerr) {
-                putIfEnabled(plainPrefs, appPreferences.seerrEnabled, appPreferences.seerrBaseUrl)
-                putSecrets(secrets, SEERR_SECRET_KEYS)
+                putPvrFields(
+                    plainPrefs,
+                    secrets,
+                    appPreferences.seerrEnabled,
+                    appPreferences.seerrBaseUrl,
+                    SEERR_SECRET_KEYS,
+                    seerrOverride,
+                )
             }
 
             QrConfigEnvelope(
                 createdAt = System.currentTimeMillis(),
                 server =
                     if (includeJellyfin && jellyfinServerId != null) {
-                        buildServer(jellyfinServerId, jellyfinUserId)
+                        buildServer(jellyfinServerId, jellyfinUserId, jellyfinOverride)
                     } else {
                         null
                     },
@@ -67,6 +103,25 @@ class QrConfigManager(
     /** Every locally-known server (with its addresses/users), for the export screen's picker. */
     suspend fun getAvailableServers(): List<ServerWithAddressesAndUsers> =
         withContext(Dispatchers.IO) { database.getAllServersWithAddressesAndUsers() }
+
+    /**
+     * Currently-stored (not overridden) base URL/API key, to pre-fill the export screen's editable
+     * fields. Empty strings if not configured.
+     */
+    fun currentSonarrFields(): PvrOverride =
+        currentPvrFields(appPreferences.sonarrBaseUrl, PvrCredentialKeys.SONARR_API_KEY)
+
+    fun currentRadarrFields(): PvrOverride =
+        currentPvrFields(appPreferences.radarrBaseUrl, PvrCredentialKeys.RADARR_API_KEY)
+
+    fun currentSeerrFields(): PvrOverride =
+        currentPvrFields(appPreferences.seerrBaseUrl, PvrCredentialKeys.SEERR_API_KEY)
+
+    private fun currentPvrFields(baseUrl: Preference<String?>, apiKeyKey: String): PvrOverride =
+        PvrOverride(
+            baseUrl = appPreferences.getValue(baseUrl).orEmpty(),
+            apiKey = getSecret(apiKeyKey).orEmpty(),
+        )
 
     suspend fun applyEnvelope(envelope: QrConfigEnvelope): QrImportSummary =
         withContext(Dispatchers.IO) {
@@ -97,15 +152,29 @@ class QrConfigManager(
             )
         }
 
-    private fun buildServer(serverId: String, userId: UUID?): BackupServer? {
+    private fun buildServer(
+        serverId: String,
+        userId: UUID?,
+        override: JellyfinUserOverride?,
+    ): BackupServer? {
         val serverData = database.getServerWithAddressesAndUsers(serverId) ?: return null
         val user =
-            serverData.users.find { it.id == userId }
-                ?: serverData.users.find { it.id == serverData.server.currentUserId }
+            if (override != null) {
+                User(
+                    id = override.userId,
+                    name = override.userName,
+                    serverId = serverId,
+                    accessToken = override.accessToken,
+                )
+            } else {
+                serverData.users.find { it.id == userId }
+                    ?: serverData.users.find { it.id == serverData.server.currentUserId }
+                    ?: return null
+            }
         return BackupServer(
             server = serverData.server,
             addresses = serverData.addresses,
-            users = listOfNotNull(user),
+            users = listOf(user),
         )
     }
 
@@ -116,19 +185,27 @@ class QrConfigManager(
         appPreferences.setValue(appPreferences.currentServer, backupServer.server.id)
     }
 
-    private fun putIfEnabled(
-        prefs: MutableMap<String, PrefValue>,
+    private fun putPvrFields(
+        plainPrefs: MutableMap<String, PrefValue>,
+        secrets: MutableMap<String, String>,
         enabled: Preference<Boolean>,
         baseUrl: Preference<String?>,
+        secretKeys: List<String>,
+        override: PvrOverride?,
     ) {
-        prefs[enabled.backendName] = PrefValue.BoolValue(appPreferences.getValue(enabled))
-        appPreferences.getValue(baseUrl)?.let {
-            prefs[baseUrl.backendName] = PrefValue.StringValue(it)
+        plainPrefs[enabled.backendName] = PrefValue.BoolValue(true)
+        if (override != null) {
+            plainPrefs[baseUrl.backendName] = PrefValue.StringValue(override.baseUrl)
+            if (override.apiKey.isNotBlank()) secrets[secretKeys.first()] = override.apiKey
+            // Headers/basic-auth aren't exposed as editable override fields - carry over
+            // whatever's already stored for them.
+            for (key in secretKeys.drop(1)) getSecret(key)?.let { secrets[key] = it }
+        } else {
+            appPreferences.getValue(baseUrl)?.let {
+                plainPrefs[baseUrl.backendName] = PrefValue.StringValue(it)
+            }
+            for (key in secretKeys) getSecret(key)?.let { secrets[key] = it }
         }
-    }
-
-    private fun putSecrets(secrets: MutableMap<String, String>, keys: List<String>) {
-        for (key in keys) getSecret(key)?.let { secrets[key] = it }
     }
 
     private companion object {

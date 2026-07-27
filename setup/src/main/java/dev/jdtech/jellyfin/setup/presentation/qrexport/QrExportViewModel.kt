@@ -1,23 +1,31 @@
 package dev.jdtech.jellyfin.setup.presentation.qrexport
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
+import dev.jdtech.jellyfin.qrsetup.JellyfinUserOverride
+import dev.jdtech.jellyfin.qrsetup.PvrOverride
 import dev.jdtech.jellyfin.qrsetup.QrConfigCodec
 import dev.jdtech.jellyfin.qrsetup.QrConfigManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.security.SecureRandom
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.AuthenticateUserByName
 
 @HiltViewModel
 class QrExportViewModel
 @Inject
 constructor(
+    @param:ApplicationContext private val context: Context,
     private val appPreferences: AppPreferences,
     private val pvrConfiguration: PvrConfiguration,
     private val qrConfigManager: QrConfigManager,
@@ -25,8 +33,9 @@ constructor(
     private val _state = MutableStateFlow(QrExportState())
     val state = _state.asStateFlow()
 
-    // Cancelled/replaced on every regenerate so rapid checkbox toggling can't let an earlier
-    // (now stale) generate() call finish after a later one and clobber its result.
+    // Cancelled/replaced on every regenerate so rapid typing/toggling can't let an earlier (now
+    // stale) generate() call - which may involve a real login network call - finish after a
+    // later one and clobber its result.
     private var generateJob: Job? = null
 
     fun onAction(action: QrExportAction) {
@@ -46,13 +55,58 @@ constructor(
                     server?.users?.find { it.id == server.server.currentUserId }
                         ?: server?.users?.firstOrNull()
                 updateAndRegenerate {
-                    it.copy(selectedServerId = action.serverId, selectedUserId = defaultUser?.id)
+                    it.copy(
+                        selectedServerId = action.serverId,
+                        selectedUserId = defaultUser?.id,
+                        jellyfinUsername = defaultUser?.name.orEmpty(),
+                        jellyfinPassword = "",
+                        jellyfinLoginError = null,
+                    )
                 }
             }
-            is QrExportAction.OnUserSelected ->
-                updateAndRegenerate { it.copy(selectedUserId = action.userId) }
+            is QrExportAction.OnUserSelected -> {
+                val userName =
+                    _state.value.availableServers
+                        .find { it.server.id == _state.value.selectedServerId }
+                        ?.users
+                        ?.find { it.id == action.userId }
+                        ?.name
+                updateAndRegenerate {
+                    it.copy(
+                        selectedUserId = action.userId,
+                        jellyfinUsername = userName.orEmpty(),
+                        jellyfinPassword = "",
+                        jellyfinLoginError = null,
+                    )
+                }
+            }
             is QrExportAction.OnAdvancedToggle ->
                 _state.value = _state.value.copy(advancedExpanded = !_state.value.advancedExpanded)
+            is QrExportAction.OnJellyfinUsernameChanged ->
+                updateAndRegenerate {
+                    it.copy(jellyfinUsername = action.value, jellyfinLoginError = null)
+                }
+            is QrExportAction.OnJellyfinPasswordChanged ->
+                updateAndRegenerate {
+                    it.copy(jellyfinPassword = action.value, jellyfinLoginError = null)
+                }
+            is QrExportAction.OnToggleJellyfinPasswordVisibility ->
+                _state.value =
+                    _state.value.copy(
+                        jellyfinPasswordVisible = !_state.value.jellyfinPasswordVisible
+                    )
+            is QrExportAction.OnSonarrBaseUrlChanged ->
+                updateAndRegenerate { it.copy(sonarrBaseUrl = action.value) }
+            is QrExportAction.OnSonarrApiKeyChanged ->
+                updateAndRegenerate { it.copy(sonarrApiKey = action.value) }
+            is QrExportAction.OnRadarrBaseUrlChanged ->
+                updateAndRegenerate { it.copy(radarrBaseUrl = action.value) }
+            is QrExportAction.OnRadarrApiKeyChanged ->
+                updateAndRegenerate { it.copy(radarrApiKey = action.value) }
+            is QrExportAction.OnSeerrBaseUrlChanged ->
+                updateAndRegenerate { it.copy(seerrBaseUrl = action.value) }
+            is QrExportAction.OnSeerrApiKeyChanged ->
+                updateAndRegenerate { it.copy(seerrApiKey = action.value) }
             is QrExportAction.OnRegeneratePassword ->
                 updateAndRegenerate { it.copy(password = generatePassword()) }
             is QrExportAction.OnTogglePasswordVisibility ->
@@ -76,6 +130,9 @@ constructor(
             val currentUser =
                 currentServer?.users?.find { it.id == currentServer.server.currentUserId }
                     ?: currentServer?.users?.firstOrNull()
+            val sonarrFields = qrConfigManager.currentSonarrFields()
+            val radarrFields = qrConfigManager.currentRadarrFields()
+            val seerrFields = qrConfigManager.currentSeerrFields()
 
             _state.value =
                 _state.value.copy(
@@ -86,7 +143,13 @@ constructor(
                     availableServers = availableServers,
                     selectedServerId = currentServer?.server?.id,
                     selectedUserId = currentUser?.id,
-                    password = generatePassword(),
+                    jellyfinUsername = currentUser?.name.orEmpty(),
+                    sonarrBaseUrl = sonarrFields.baseUrl,
+                    sonarrApiKey = sonarrFields.apiKey,
+                    radarrBaseUrl = radarrFields.baseUrl,
+                    radarrApiKey = radarrFields.apiKey,
+                    seerrBaseUrl = seerrFields.baseUrl,
+                    seerrApiKey = seerrFields.apiKey,
                 )
             generate()
         }
@@ -105,22 +168,113 @@ constructor(
             return
         }
         generateJob = viewModelScope.launch {
+            // Debounced so typing into a text field (username/password/base URL/API key)
+            // doesn't fire a fresh build - and, worse, a fresh login attempt - on every
+            // keystroke.
+            delay(DEBOUNCE_MILLIS)
             _state.value = _state.value.copy(isGenerating = true, error = null)
+
+            val jellyfinOverride =
+                if (
+                    current.includeJellyfin &&
+                        current.jellyfinAvailable &&
+                        current.jellyfinPassword.isNotBlank()
+                ) {
+                    val result = authenticate(current)
+                    if (result == null) {
+                        _state.value = _state.value.copy(isGenerating = false)
+                        return@launch
+                    }
+                    result
+                } else {
+                    null
+                }
+
             try {
                 val envelope =
                     qrConfigManager.buildEnvelope(
                         includeJellyfin = current.includeJellyfin && current.jellyfinAvailable,
                         jellyfinServerId = current.selectedServerId,
                         jellyfinUserId = current.selectedUserId,
+                        jellyfinOverride = jellyfinOverride,
                         includeSonarr = current.includeSonarr && current.sonarrAvailable,
+                        sonarrOverride =
+                            if (current.includeSonarr && current.sonarrAvailable) {
+                                PvrOverride(current.sonarrBaseUrl, current.sonarrApiKey)
+                            } else {
+                                null
+                            },
                         includeRadarr = current.includeRadarr && current.radarrAvailable,
+                        radarrOverride =
+                            if (current.includeRadarr && current.radarrAvailable) {
+                                PvrOverride(current.radarrBaseUrl, current.radarrApiKey)
+                            } else {
+                                null
+                            },
                         includeSeerr = current.includeSeerr && current.seerrAvailable,
+                        seerrOverride =
+                            if (current.includeSeerr && current.seerrAvailable) {
+                                PvrOverride(current.seerrBaseUrl, current.seerrApiKey)
+                            } else {
+                                null
+                            },
                     )
                 val payload = QrConfigCodec.encodePayload(envelope, current.password)
-                _state.value = _state.value.copy(payload = payload, isGenerating = false)
+                _state.value =
+                    _state.value.copy(
+                        payload = payload,
+                        isGenerating = false,
+                        jellyfinLoginError = null,
+                    )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(error = e.message, isGenerating = false)
             }
+        }
+    }
+
+    /**
+     * Live-authenticates against the selected server with the typed username/password, using a
+     * throwaway [JellyfinApi] instance so the app's actual active session is never touched. Returns
+     * null (with [QrExportState.jellyfinLoginError] set) on failure.
+     */
+    private suspend fun authenticate(state: QrExportState): JellyfinUserOverride? {
+        val server = state.availableServers.find { it.server.id == state.selectedServerId }
+        val address =
+            server?.addresses?.find { it.id == server.server.currentServerAddressId }
+                ?: server?.addresses?.firstOrNull()
+        if (address == null) {
+            _state.value = _state.value.copy(jellyfinLoginError = "No server address known")
+            return null
+        }
+
+        _state.value = _state.value.copy(isVerifyingJellyfinLogin = true, jellyfinLoginError = null)
+        return try {
+            val oneOff = JellyfinApi(context)
+            oneOff.api.update(baseUrl = address.address)
+            val authenticationResult by
+                oneOff.userApi.authenticateUserByName(
+                    data =
+                        AuthenticateUserByName(
+                            username = state.jellyfinUsername,
+                            pw = state.jellyfinPassword,
+                        )
+                )
+            JellyfinUserOverride(
+                userId = authenticationResult.user!!.id,
+                userName = authenticationResult.user!!.name!!,
+                accessToken = authenticationResult.accessToken!!,
+            )
+        } catch (e: Exception) {
+            val message =
+                if (e.message?.contains("401") == true) {
+                    "Invalid username or password"
+                } else {
+                    e.message ?: "Couldn't reach the server"
+                }
+            _state.value = _state.value.copy(jellyfinLoginError = message)
+            null
+        } finally {
+            _state.value = _state.value.copy(isVerifyingJellyfinLogin = false)
         }
     }
 
@@ -136,5 +290,9 @@ constructor(
             .map { alphabet[random.nextInt(alphabet.length)] }
             .chunked(4)
             .joinToString("-") { it.joinToString("") }
+    }
+
+    private companion object {
+        const val DEBOUNCE_MILLIS = 500L
     }
 }

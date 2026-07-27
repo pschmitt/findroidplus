@@ -162,6 +162,19 @@ hand on every new device.
 - [x] Crossfade animation between QR codes on the export screen when the
       selection/passphrase changes and a new code is generated, instead of
       an instant swap.
+- [x] Stretch goal delivered: the Jellyfin username field is editable
+      (pre-filled with the selected user's name) and the password field,
+      left blank by default, embeds the current session's token as before;
+      typing a password performs a real live login against the selected
+      server (via a throwaway `JellyfinApi` instance so the app's actual
+      active session is never touched) and embeds the fresh token/user id
+      instead - `QrExportViewModel.authenticate`. Sonarr/Radarr/Seerr base
+      URL/API key are now also editable inline under the Advanced section
+      (pre-filled from `AppPreferences`/`SecureCredentialStore`, override
+      is one-off for this export, never persisted) -
+      `QrConfigManager.PvrOverride`/`JellyfinUserOverride`. All of this
+      goes through the same debounced auto-regenerate path (500ms) so
+      typing doesn't hammer the server with login attempts per keystroke.
 - [ ] Not done: TV-side export (phone-only in v1, see FINDROID-43's own
       scope note above) and interactive on-device UX testing of the full
       flow (biometric prompt → generate → scan → apply) - verified so far

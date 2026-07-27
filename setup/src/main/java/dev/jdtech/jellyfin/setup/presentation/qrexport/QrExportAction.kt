@@ -19,6 +19,24 @@ sealed interface QrExportAction {
 
     data object OnAdvancedToggle : QrExportAction
 
+    data class OnJellyfinUsernameChanged(val value: String) : QrExportAction
+
+    data class OnJellyfinPasswordChanged(val value: String) : QrExportAction
+
+    data object OnToggleJellyfinPasswordVisibility : QrExportAction
+
+    data class OnSonarrBaseUrlChanged(val value: String) : QrExportAction
+
+    data class OnSonarrApiKeyChanged(val value: String) : QrExportAction
+
+    data class OnRadarrBaseUrlChanged(val value: String) : QrExportAction
+
+    data class OnRadarrApiKeyChanged(val value: String) : QrExportAction
+
+    data class OnSeerrBaseUrlChanged(val value: String) : QrExportAction
+
+    data class OnSeerrApiKeyChanged(val value: String) : QrExportAction
+
     data object OnRegeneratePassword : QrExportAction
 
     data object OnTogglePasswordVisibility : QrExportAction
