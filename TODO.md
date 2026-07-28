@@ -184,10 +184,91 @@ Pad 4's instance) remotely, without touching that device directly.
     no confirm needed since it's non-destructive). Spot-verified on Mi Pad
     4: correctly lists "Pixel 5," relative "last seen" time, and an
     accurate empty "No active rules" state; pull-to-refresh works.
+- [x] Per-device opt-out: a "Allow remote management" toggle at the top of
+      the Remote devices screen (`AppPreferences.remoteManagementEnabled`,
+      default on). Turning it off calls
+      `RemoteConfigRepository.setRemoteManagementEnabled(false)`, which
+      removes this device's own entry from the shared registry immediately
+      (not just once its heartbeat goes stale) and drops any commands still
+      queued *for* it - doesn't touch commands this device has queued *for
+      others*, since opting out is about not being managed, not about
+      withdrawing pushes already sent elsewhere. `syncNow()` no-ops
+      entirely while disabled.
+- [x] Show posters on the Remote devices screen: each active-rule row now
+      resolves and renders the real `FindroidShow` poster
+      (`RemoteDevicesViewModel.resolveShowPosters`, concurrent per-show
+      `jellyfinRepository.getShow` calls, best-effort) - a
+      `RemoteActiveRuleSummary` only carries an id + name on the wire, not
+      enough to render a poster, so the viewing device resolves it itself
+      via the same shared Jellyfin session.
 - [ ] Not done: TV-side support - this only touches the phone module.
 
 Status: implementation done (2026-07-28), including cross-device rule/
-download management (remove/cancel) and a dedicated Remote devices screen.
-Passing remote build/lint/unit tests and spot-verified live against the
-real server on both physical test devices, including one full unforced
-push→receive round trip. No TV-side counterpart yet.
+download management (remove/cancel), a dedicated Remote devices screen with
+poster art, and a per-device opt-out. Passing remote build/lint/unit tests
+and spot-verified live against the real server on both physical test
+devices, including one full unforced push→receive round trip. No TV-side
+counterpart yet.
+
+## FINDROID-45: `findroid-cli` - Termux command-line download management
+
+A standalone shell script (bash + curl + jq) for Termux, letting a user
+manage downloads without opening the app: **remote** operations reuse the
+exact same Jellyfin `DisplayPreferences` shared-bucket transport FINDROID-44
+built (list peer devices + their active rules, push/remove a rule, push a
+one-off download, list/cancel this CLI's own pending pushes) - the CLI
+participates in the same device mesh as any real Findroid+ install, just
+without a Room DB or Downloader of its own to apply commands sent *to* it.
+**Local** operations are a lightweight download-it-yourself path (resolve an
+item via the Jellyfin API, `curl` the file straight to local storage, list/
+remove what's there) - deliberately not reading the real Android app's own
+Room-backed downloads, since that data is sandboxed to the app's private
+storage and unreachable from Termux without the app itself exposing a
+control surface (a bigger, separate design question, left for later).
+
+- [x] `cli/findroid-cli` implemented: config via env vars or
+      `~/.config/findroid-cli/config` (`FINDROID_SERVER`/`FINDROID_TOKEN`/
+      `FINDROID_USER_ID`), a persisted per-install device id
+      (`~/.config/findroid-cli/device_id`, mirrors
+      `AppPreferences.getOrCreateThisDeviceId()`'s lazy-generate-once
+      approach) and cached Jellyfin server GUID. Commands: `devices` (list
+      peers + their active rules), `rule push`/`rule remove`, `download
+      push` (remote one-off), `pending list`/`pending cancel`, and local
+      `download get`/`download list`/`download rm`. Every push also
+      refreshes the CLI's own heartbeat entry in the same write (folded
+      into `enqueue_command`, no extra round trip) - so it shows up as a
+      real, pushable device in the app's own Remote Devices screen too,
+      not just a one-way sender.
+  - [x] JSON command shape hand-verified byte-for-byte against the Kotlin
+        side: `RemoteConfigCommand`'s kotlinx.serialization output uses a
+        `"type"` discriminator key (its default, since
+        `RemoteConfigRepositoryImpl`'s `Json {}` doesn't override
+        `classDiscriminator`) with lowerCamelCase field names - confirmed
+        by building a command with the CLI's own `build_reconcile_command`
+        and comparing field-for-field against `AutoDownloadRemoteCommand.kt`.
+  - [x] Shellcheck-clean, `bash -n` syntax-checked, and every pure
+        function (`bool_json`, `csv_to_json_array`,
+        `decode_custom_pref_array`, `build_reconcile_command`, the
+        `cmd_devices` rendering) smoke-tested directly against fake JSON
+        fixtures (no real Jellyfin server needed for these) - all argument-
+        validation paths (missing `--target`/`--series`/`--item`, unknown
+        subcommands, missing config) return exit 2 with a message on
+        stderr as expected.
+- [ ] Not done: real end-to-end test against an actual Jellyfin server (no
+      live server credentials were available in this environment to test
+      the network calls themselves - `api_get`/`api_post_json`/
+      `fetch_bucket`/`write_bucket`/`get_server_id`/`resolve_item_name`/
+      `resolve_first_source_id` are unverified beyond code review).
+- [ ] Not done: any local control surface into the real Android app's own
+      downloads (would need the app to expose something itself - a
+      localhost server, content provider, or similar - out of scope here).
+
+Status: implemented and shellcheck/smoke-tested (2026-07-28), but not yet
+run against a real Jellyfin server - the network-calling code paths are
+unverified beyond review and the JSON-building/parsing logic. Try it for
+real next (e.g. from the Mi Pad 4's own Termux, which AGENTS.md already
+documents as SSH-reachable) before trusting it for anything that matters.
+
+Status: not started (2026-07-28) - design decided (remote via the existing
+shared bucket, local via direct curl downloads, shell+curl/jq runtime per
+user preference), implementation starting now.
