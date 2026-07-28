@@ -197,7 +197,7 @@ print_response_json() {
   local response="$1"
   local status
 
-  jq -c '.body' <<< "${response}"
+  jq '.body' <<< "${response}"
   status=$(jq -r '.status' <<< "${response}")
   [[ "${status}" -ge 200 && "${status}" -lt 300 ]]
 }
@@ -860,7 +860,7 @@ cmd_debug() {
     # Status still goes to stderr here (unlike print_response_json) - for "debug" it's the
     # proxied service's own HTTP code (e.g. Sonarr's real 404), not local-control noise.
     printf 'HTTP %s\n' "${status}" >&2
-    jq -c '.body' <<< "${response}"
+    jq '.body' <<< "${response}"
     return
   fi
   printf 'HTTP %s\n' "${status}" >&2
