@@ -206,6 +206,8 @@
     <string name="local_access_start_failed">Couldn\'t start local control - check logs, or try toggling this off and on again</string>
     <string name="local_access_token_title">Access token</string>
     <string name="local_access_token_summary">Copy this into findroid-cli\'s config to authenticate local commands</string>
+    <string name="local_access_show_token">Show token</string>
+    <string name="local_access_hide_token">Hide token</string>
     <string name="local_access_regenerate_token">Regenerate</string>
     <string name="local_access_regenerate_confirm_title">Regenerate token?</string>
     <string name="local_access_regenerate_confirm_message">Any CLI already configured with the current token will stop working until you update it with the new one.</string>

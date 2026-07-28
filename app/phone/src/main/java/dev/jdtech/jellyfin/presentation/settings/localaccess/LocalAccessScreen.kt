@@ -167,6 +167,7 @@ private fun LocalControlToggleRow(enabled: Boolean, startFailed: Boolean, onTogg
 @Composable
 private fun TokenSection(token: String, onCopy: () -> Unit, onRegenerate: () -> Unit) {
     var confirmRegenerateOpen by remember { mutableStateOf(false) }
+    var tokenVisible by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(MaterialTheme.spacings.default)) {
         Text(
@@ -185,10 +186,26 @@ private fun TokenSection(token: String, onCopy: () -> Unit, onRegenerate: () -> 
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
             Text(
-                text = token,
+                text = if (tokenVisible) token else "•".repeat(token.length),
                 style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (tokenVisible) CoreR.drawable.ic_eye_off else CoreR.drawable.ic_eye
+                        ),
+                    contentDescription =
+                        stringResource(
+                            if (tokenVisible) {
+                                CoreR.string.local_access_hide_token
+                            } else {
+                                CoreR.string.local_access_show_token
+                            }
+                        ),
+                )
+            }
             TextButton(onClick = onCopy) { Text(text = stringResource(CoreR.string.copy)) }
         }
         TextButton(
