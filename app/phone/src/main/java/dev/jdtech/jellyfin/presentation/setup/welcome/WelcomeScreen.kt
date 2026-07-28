@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.setup.components.RootLayout
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.setup.R as SetupR
 import dev.jdtech.jellyfin.setup.presentation.welcome.WelcomeAction
 
@@ -55,6 +57,20 @@ fun WelcomeScreen(
 @Composable
 private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
     RootLayout(padding = PaddingValues(horizontal = 24.dp)) {
+        // Kept out of the main button stack and pinned to the corner since it's an informational
+        // link, not part of the setup flow's call to action.
+        TextButton(
+            onClick = { onAction(WelcomeAction.OnLearnMoreClick) },
+            modifier = Modifier.align(Alignment.TopStart),
+        ) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_info),
+                contentDescription = null,
+                modifier = Modifier.height(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = stringResource(SetupR.string.welcome_btn_learn_more))
+        }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()),
@@ -77,30 +93,23 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
             )
             Spacer(modifier = Modifier.height(32.dp))
             Column(modifier = Modifier.widthIn(max = 480.dp)) {
-                OutlinedButton(
-                    onClick = { onAction(WelcomeAction.OnLearnMoreClick) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_info),
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(SetupR.string.welcome_btn_learn_more))
-                }
-                Spacer(modifier = Modifier.height(4.dp))
+                // Primary CTA: taller and with larger type than the secondary actions below so it
+                // reads as the obvious next step.
                 Button(
                     onClick = { onAction(WelcomeAction.OnContinueClick) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
-                    Text(text = stringResource(SetupR.string.welcome_btn_continue))
+                    Text(
+                        text = stringResource(SetupR.string.welcome_btn_continue),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         painter = painterResource(CoreR.drawable.ic_arrow_right),
                         contentDescription = null,
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
                 OutlinedButton(
                     onClick = { onAction(WelcomeAction.OnScanQrClick) },
                     modifier = Modifier.fillMaxWidth(),
@@ -112,7 +121,7 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(SetupR.string.welcome_btn_scan_qr))
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                 OutlinedButton(
                     onClick = { onAction(WelcomeAction.OnRestoreClick) },
                     modifier = Modifier.fillMaxWidth(),
