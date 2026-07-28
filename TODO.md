@@ -549,3 +549,26 @@ current requirement to separately clone/copy the script from the
       copy-it-yourself status quo.
 
 Status: not started (2026-07-28) - added to the backlog, not implemented yet.
+
+## FINDROID-52: findroid-cli command aliases
+
+Requested (2026-07-28): add short aliases for the more common/verbose
+`findroid-cli` subcommands so frequent usage doesn't require typing the full
+word every time - e.g. `dl` for `download`, `rm`/`del` alongside `remove` for
+`download remove`. Survey the current command list (`cli/findroid-cli`:
+`token`, `settings`, `library`, `search`, `sonarr`, `radarr`, `seerr`,
+`download` [`list`/`trigger`/`cancel`/`remove`/by-name], `debug`) for other
+good alias candidates (e.g. `ls` for `list`, `lib` for `library`) while
+implementing this, not just the two examples given.
+
+- [ ] Design and implement alias dispatch in `cli/findroid-cli` (top-level
+      command aliases and, where it applies, subcommand aliases like
+      `download rm`/`download del` alongside the existing `download remove`).
+      Keep the canonical long-form names as the ones shown in `--help`/usage
+      text; aliases are just shortcuts, not replacements.
+- [ ] Update the script's usage/help text to mention the aliases.
+- [ ] shellcheck-clean, `bash -n` syntax-checked, and re-verify the aliased
+      commands behave identically to their canonical forms (ideally on a real
+      device the way prior findroid-cli work was verified, per FINDROID-45/49/50).
+
+Status: not started (2026-07-28) - added to the backlog, not implemented yet.
