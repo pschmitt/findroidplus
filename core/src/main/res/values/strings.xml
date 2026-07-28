@@ -203,6 +203,7 @@
     <string name="local_access_summary">Let a local CLI (e.g. findroid-cli in Termux) configure downloads on this device</string>
     <string name="local_access_enable_title">Allow local control</string>
     <string name="local_access_enable_summary">Let a local CLI with this token read/write download settings and trigger downloads on this device</string>
+    <string name="local_access_start_failed">Couldn\'t start local control - check logs, or try toggling this off and on again</string>
     <string name="local_access_token_title">Access token</string>
     <string name="local_access_token_summary">Copy this into findroid-cli\'s config to authenticate local commands</string>
     <string name="local_access_regenerate_token">Regenerate</string>

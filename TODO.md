@@ -335,3 +335,53 @@ including finding and fixing the root-requirement blocker above.
   - [ ] "Offline mode" can probably go under "Downloads".
   - [ ] General principle: fewer top-level entries, each one a coherent
         theme, not a 1:1 mapping of every existing category to its own row.
+
+## FINDROID-49: Simplify findroid-cli to local-only, drop root requirement, fix gaps
+
+Reported (2026-07-28) after FINDROID-45's local control feature shipped:
+- The CLI should ONLY talk to the local app - drop the "remote" command
+  group (`devices`/`rule push`/`rule remove`/`pending list`/`pending
+  cancel`, the cross-device Jellyfin `DisplayPreferences`-mesh peer
+  behavior from FINDROID-44) and the plain "local download" group
+  (`download get`/`list`/`rm`, direct-curl-to-storage, bypassing the real
+  app entirely) altogether. `local` stops being a prefixed subcommand
+  group and becomes the CLI's only mode - e.g. `findroid-cli settings get`
+  instead of `findroid-cli local settings get`.
+- Why does it require root? Root is a genuine, real limitation of the
+  `ContentProvider`+`content call` transport specifically (see FINDROID-45:
+  `content call`'s external-access path needs
+  `ACCESS_CONTENT_PROVIDERS_EXTERNALLY`, a signature-level permission only
+  the `shell`/root uid holds - confirmed `pm grant` refuses it even as
+  root). The real fix is switching transport again, to a **loopback TCP
+  socket** (127.0.0.1) instead of a ContentProvider: unlike the
+  abstract-namespace Unix socket tried before THAT (blocked by SELinux
+  domain separation), plain TCP loopback between apps is ordinary,
+  unrestricted socket I/O gated only by the `INTERNET` permission the app
+  already has - no SELinux wall, no signature permission, no root, and
+  plain `curl`/`bash`'s own `/dev/tcp` works directly from Termux. The
+  existing token-based auth (`LocalControlAuth`) and endpoint dispatch
+  (`LocalControlRouter`) don't care about transport and can be reused
+  unchanged - only the "how a request arrives" layer changes again.
+- "Why can't I list downloads?" - there simply isn't a
+  `GET /downloads` (list) endpoint yet, only
+  `GET`/`PATCH /settings/downloads` (settings), `POST /downloads/trigger`
+  (start one), and `POST /debug/proxy`. Needs a real "list current/
+  in-progress downloads" endpoint (reuse
+  `JellyfinRepository.getDownloads()` or equivalent) and a matching CLI
+  command.
+- "pls make sure *all* the cli commands work!" - every remaining command
+  (after the simplification above) needs an actual on-device pass, the
+  same way `settings get`/`settings set` were verified for FINDROID-45,
+  not just a code read-through.
+
+- [x] Switch local control transport from `ContentProvider` to a loopback
+      TCP server (reuse `LocalControlAuth`/`LocalControlRouter` as-is).
+      Implemented as `LocalControlServer` (NanoHTTPD, 127.0.0.1:48411,
+      Bearer-token auth, honest enable-toggle that reports a real bind
+      failure instead of silently claiming success).
+- [x] Add a `GET /downloads` (list) endpoint + CLI `download list` command.
+- [x] Strip `cli/findroid-cli` down to local-only: remove the remote
+      command group and the local-download command group entirely, drop
+      the `local` prefix so its subcommands are top-level.
+- [ ] Verify every remaining command end-to-end on a real device, no root
+      required.

@@ -1,97 +1,51 @@
 #!/usr/bin/env bash
 #
-# findroid-cli - manage Findroid+ downloads from Termux, locally and on
-# other devices logged into the same Jellyfin account.
+# findroid-cli - configure the real, running Findroid+ app on this same
+# device from Termux: read/write its actual download settings, list/
+# trigger real downloads through its own Downloader, and debug-proxy
+# requests to Jellyfin/Sonarr/Radarr/Seerr using its own already-stored
+# credentials. This CLI only ever talks to the local app - it is not a
+# standalone Jellyfin client and does not manage other devices.
 #
-# Remote commands reuse the exact wire format/transport FINDROID-44 built
-# for the app itself: a queue of commands and a device heartbeat registry,
-# both stored as JSON strings inside the shared Jellyfin account's
-# DisplayPreferences "findroidplus-remoteconfig" bucket. This CLI is just
-# another peer in that same mesh - it has no Room database or Downloader of
-# its own, so a command pushed *to* this CLI's device id is never actually
-# applied by anything (it just dead-letters after the app's own 30-day TTL,
-# the same as pushing to a device that's permanently offline).
-#
-# "Local" download commands (download get/list/rm) are a separate, simpler
-# "download the file yourself" path - they do not read or write the real
-# Findroid+ Android app's own downloads, which live in that app's private
-# Room database.
-#
-# The "local" command group is different: it talks to a small ContentProvider
-# the Findroid+ app itself exposes (Settings > Local CLI access), and
-# actually configures *that running app* - its real download settings, a
-# real download triggered through its own Downloader, and a debug proxy to
-# Jellyfin/Sonarr/Radarr/Seerr using its own already-stored credentials.
-# Auth is a single bearer token shown in that same Settings screen (tap
-# Regenerate to invalidate it and issue a new one) - copy it once with
-# `local token set TOKEN`. Talks to the app via Android's own `content call`
-# shell command (a ContentProvider's call() method over Binder) rather than
-# a raw local socket: an earlier version used a Linux abstract-namespace
-# unix socket, which SELinux blocks outright between arbitrary apps on a
-# real device (confirmed: works under permissive, EACCES under enforcing,
-# the normal state) - no app-level fix could work around that, so this
-# switched to the IPC mechanism Android's own policy is written to allow.
-# `content` ships on the OS itself, but its command-line "external" access
-# path only works for the shell uid or root - not a regular app uid like
-# Termux's own (confirmed: even `pm grant` as root refuses to hand out the
-# permission it needs, "not a changeable permission type" - it's tied to how
-# the caller is signed/installed, not something grantable at runtime). `su`
-# runs `content call` as root the same way `adb shell` implicitly has this
-# already, so a rooted device is required for `local` commands specifically
-# - everything else in this script works on any Termux install.
+# Transport: a plain loopback HTTP server the app runs on 127.0.0.1 only
+# (see Settings > Local CLI access to enable it and get a token). This is
+# the third transport tried for this feature - two prior attempts hit
+# real, unfixable-at-the-app-level walls on a real device:
+#   1. A Linux abstract-namespace unix socket - SELinux blocks arbitrary
+#      app-to-app connections outright (confirmed: EACCES under
+#      enforcing, the normal state; works under permissive).
+#   2. A ContentProvider invoked via Android's `content call` shell
+#      command - works, but that command's *external*-access path needs
+#      android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY, a
+#      signature-level permission only the shell/root uid can ever hold
+#      (confirmed: `pm grant` refuses it even as root).
+# Loopback TCP has neither problem - it's ordinary socket I/O gated only
+# by the INTERNET permission the app already has - so this needs no root
+# and no extra Termux packages beyond curl/jq, which almost every Termux
+# install already has.
 
 set -euo pipefail
 
-BUCKET_ID="findroidplus-remoteconfig"
-CLIENT="FindroidPlusRemoteConfig"
 CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
-CONFIG_FILE="${CONFIG_DIR}/config"
-DEVICE_ID_FILE="${CONFIG_DIR}/device_id"
-SERVER_ID_CACHE_FILE="${CONFIG_DIR}/server_id"
-LOCAL_AUTHORITY="${FINDROID_LOCAL_AUTHORITY:-dev.pschmitt.findroidplus.localcontrol}"
-LOCAL_TOKEN_FILE="${CONFIG_DIR}/local_token"
+TOKEN_FILE="${CONFIG_DIR}/local_token"
+BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") COMMAND [OPTIONS]
 
-Manage Findroid+ downloads locally and on other devices logged into the
-same Jellyfin account, from Termux.
+Configure the real Findroid+ app running on this device, from Termux.
+Enable it in the app first: Settings > Downloads > Local CLI access.
 
-Config (environment variables, or sourced from ${CONFIG_FILE}):
-  FINDROID_SERVER        Jellyfin server base URL (e.g. https://jellyfin.example.com)
-  FINDROID_TOKEN         Jellyfin API access token
-  FINDROID_USER_ID       Jellyfin user id
-  FINDROID_DEVICE_NAME   Display name for this CLI as a device (default: device model/hostname)
-  FINDROID_DOWNLOAD_DIR  Local download directory (default: \$HOME/findroid-downloads)
+  token set TOKEN                            Save the token copied from Settings
+  settings get                               Show the app's real download settings
+  settings set KEY=VALUE [KEY=VALUE...]      Change the app's real download settings
+  download list                              List the app's real current downloads
+  download trigger ITEM_ID [SOURCE_ID]       Trigger a real download in the app's own Downloader
+  debug SERVICE METHOD PATH [BODY_JSON]      Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
 
-Remote (cross-device, via the shared Jellyfin account):
-  devices                                    List other devices and their active auto-download rules
-  rule push --target ID --series ID [--seasons ID1,ID2] [--future] [--only-new] [--unwatched] [--name NAME]
-                                              Push/replace an auto-download rule on another device
-  rule remove --target ID --series ID [--name NAME]
-                                              Clear an auto-download rule on another device
-  download push --target ID --item ID [--source ID] [--name NAME]
-                                              Push a one-off episode/movie download to another device
-  pending list                               List this CLI's own not-yet-applied pushes
-  pending cancel ID                          Cancel a still-pending push
-
-Local (this Termux install only, no Jellyfin account needed):
-  download get --item ID [--source ID] [--output DIR]
-                                              Download an item straight to local storage
-  download list                              List locally downloaded files
-  download rm FILE                           Remove a locally downloaded file
-
-Local control (configures the real Findroid+ app on this device - Settings >
-Local CLI access for the toggle + token - requires a rooted device, see
-require_local_transport's comment for why):
-  local token set TOKEN                      Save the token copied from Settings
-  local settings get                         Show the app's real download settings
-  local settings set KEY=VALUE [KEY=VALUE...]
-                                              Change the app's real download settings
-  local download trigger ITEM_ID [SOURCE_ID] Trigger a real download in the app's own Downloader
-  local debug SERVICE METHOD PATH [BODY_JSON]
-                                              Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
+Config (environment variable):
+  FINDROID_LOCAL_URL  Override the local control server URL (default: ${BASE_URL})
 
 Options:
   -h, --help  Show this help
@@ -118,433 +72,68 @@ require_deps() {
   fi
 }
 
-# Only "local" commands need this. An earlier version of this feature used a raw
-# android.net.LocalSocket (a Linux abstract-namespace unix socket) - Android's SELinux policy
-# blocks that outright between arbitrary apps (confirmed: works with SELinux permissive, EACCES
-# under enforcing, which is the normal state on every real device), so no app-level fix could ever
-# make it work. `content call` is Android's own command-line tool for invoking a ContentProvider's
-# call() method over Binder - the IPC mechanism Android's policy is actually written to allow
-# between apps - and it ships on the OS itself, not something Termux needs to separately install.
-#
-# `content call`'s "external" access path (what the standalone command-line tool always uses)
-# requires android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY, a signature/privileged
-# permission normal apps can never hold (confirmed: `pm grant` refuses it even as root - "not a
-# changeable permission type"). `adb shell` has it because the special `shell` uid is granted it
-# by the platform; a real app's own uid (Termux's, here) is not, and can't be made to be. Running
-# `content call` via `su -c` (uid 0) does bypass this the same way `adb shell` does, so Termux
-# needs root for `local` commands specifically - this is a root requirement on the *calling* side,
-# not something the app itself needs.
-require_local_transport() {
-  local missing=""
-
-  if ! command -v jq >/dev/null 2>&1
+get_token() {
+  if [[ -f "${TOKEN_FILE}" ]]
   then
-    missing="jq"
-  fi
-
-  if ! command -v content >/dev/null 2>&1
-  then
-    missing="${missing:+${missing}, }content"
-  fi
-
-  if ! command -v base64 >/dev/null 2>&1
-  then
-    missing="${missing:+${missing}, }base64"
-  fi
-
-  if ! command -v su >/dev/null 2>&1
-  then
-    missing="${missing:+${missing}, }su"
-  fi
-
-  if [[ -n "${missing}" ]]
-  then
-    printf 'Missing required command(s) for "local" commands: %s\n' "${missing}" >&2
-    if [[ "${missing}" == *su* ]]
-    then
-      printf 'Root (su) is required: "content call" only works for the shell uid or root,\n' >&2
-      printf 'not a regular app uid like Termux'"'"'s own - this device needs to be rooted.\n' >&2
-    fi
-    return 2
+    cat "${TOKEN_FILE}"
   fi
 }
 
-load_config() {
-  if [[ -f "${CONFIG_FILE}" ]]
-  then
-    # shellcheck source=/dev/null
-    source "${CONFIG_FILE}"
-  fi
-
-  if [[ -z "${FINDROID_SERVER:-}" || -z "${FINDROID_TOKEN:-}" || -z "${FINDROID_USER_ID:-}" ]]
-  then
-    printf 'Missing configuration.\n' >&2
-    printf 'Set FINDROID_SERVER, FINDROID_TOKEN and FINDROID_USER_ID via environment\n' >&2
-    printf 'variables, or write them to %s\n' "${CONFIG_FILE}" >&2
-    return 2
-  fi
-
-  FINDROID_SERVER="${FINDROID_SERVER%/}"
-}
-
-new_uuid() {
-  if [[ -r /proc/sys/kernel/random/uuid ]]
-  then
-    cat /proc/sys/kernel/random/uuid
-  else
-    printf '%s-%s' "$(date +%s%N)" "$$"
-  fi
-}
-
-get_or_create_device_id() {
-  mkdir -p "${CONFIG_DIR}"
-
-  if [[ -f "${DEVICE_ID_FILE}" ]]
-  then
-    cat "${DEVICE_ID_FILE}"
-    return 0
-  fi
-
-  local id
-  id=$(new_uuid)
-  printf '%s' "${id}" > "${DEVICE_ID_FILE}"
-  printf '%s' "${id}"
-}
-
-get_device_name() {
-  if [[ -n "${FINDROID_DEVICE_NAME:-}" ]]
-  then
-    printf '%s' "${FINDROID_DEVICE_NAME}"
-    return 0
-  fi
-
-  if command -v getprop >/dev/null 2>&1
-  then
-    getprop ro.product.model 2>/dev/null && return 0
-  fi
-
-  hostname
-}
-
-bool_json() {
-  if [[ -n "${1:-}" ]]
-  then
-    printf 'true'
-  else
-    printf 'false'
-  fi
-}
-
-api_get() {
-  local path="$1"
-
-  curl -fsS -H "X-Emby-Token: ${FINDROID_TOKEN}" "${FINDROID_SERVER}${path}"
-}
-
-api_post_json() {
-  local path="$1"
-  local body="$2"
-
-  curl -fsS -X POST \
-    -H "X-Emby-Token: ${FINDROID_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d "${body}" \
-    "${FINDROID_SERVER}${path}" \
-    > /dev/null
-}
-
-get_server_id() {
-  mkdir -p "${CONFIG_DIR}"
-
-  if [[ -f "${SERVER_ID_CACHE_FILE}" ]]
-  then
-    cat "${SERVER_ID_CACHE_FILE}"
-    return 0
-  fi
-
-  local id
-  id=$(api_get "/System/Info" | jq -r '.Id // empty')
-  if [[ -z "${id}" ]]
-  then
-    printf 'Failed to resolve the Jellyfin server id\n' >&2
-    return 1
-  fi
-
-  printf '%s' "${id}" > "${SERVER_ID_CACHE_FILE}"
-  printf '%s' "${id}"
-}
-
-resolve_item_name() {
-  local item_id="$1"
-
-  api_get "/Users/${FINDROID_USER_ID}/Items/${item_id}" | jq -r '.Name // empty'
-}
-
-resolve_first_source_id() {
-  local item_id="$1"
-
-  api_get "/Users/${FINDROID_USER_ID}/Items/${item_id}?Fields=MediaSources" |
-    jq -r '.MediaSources[0].Id // empty'
-}
-
-fetch_bucket() {
-  api_get "/DisplayPreferences/${BUCKET_ID}?userId=${FINDROID_USER_ID}&client=${CLIENT}"
-}
-
-write_bucket() {
-  local bucket_json="$1"
-
-  api_post_json "/DisplayPreferences/${BUCKET_ID}?userId=${FINDROID_USER_ID}&client=${CLIENT}" "${bucket_json}"
-}
-
-# CustomPrefs is a flat Map<String,String> - "pending"/"devices" are themselves JSON strings that
-# need a second decode. Missing/empty defaults to an empty array.
-decode_custom_pref_array() {
-  local bucket="$1"
-  local key="$2"
-  local raw
-
-  raw=$(jq -r --arg k "${key}" '.CustomPrefs[$k] // empty' <<< "${bucket}")
-  if [[ -z "${raw}" ]]
-  then
-    printf '[]'
-  else
-    printf '%s' "${raw}"
-  fi
-}
-
-# Re-fetches immediately before merging, same "accepted tradeoff" as the app's own
-# RemoteConfigRepositoryImpl: no real CAS against the server, just a best-effort narrow window -
-# fine for this low-frequency, manual, personal-use feature.
-#
-# Also refreshes this CLI's own heartbeat entry in the same write, so it shows up as a real
-# device (pushable target, visible in the app's Remote Devices screen) to anyone else on the
-# account - folded into the same round trip as the actual push rather than a separate one, since
-# every caller of enqueue_command is already about to write the bucket anyway. activeRules is
-# always empty here: the CLI has no Room database of its own to run auto-download rules against.
-enqueue_command() {
-  local command_json="$1"
-  local bucket pending new_pending devices new_devices new_bucket this_id name now
-
-  this_id=$(get_or_create_device_id)
-  name=$(get_device_name)
-  now=$(date +%s%3N)
-
-  bucket=$(fetch_bucket)
-
-  pending=$(decode_custom_pref_array "${bucket}" "pending")
-  new_pending=$(jq -c --argjson cmd "${command_json}" '. + [$cmd]' <<< "${pending}")
-
-  devices=$(decode_custom_pref_array "${bucket}" "devices")
-  new_devices=$(
-    jq -c --arg id "${this_id}" --arg name "${name}" --argjson now "${now}" '
-      map(select(.id != $id)) + [{id: $id, name: $name, lastSeenMillis: $now, activeRules: []}]
-    ' <<< "${devices}"
-  )
-
-  new_bucket=$(
-    jq --arg pending "${new_pending}" --arg devices "${new_devices}" '
-      .CustomPrefs.pending = $pending | .CustomPrefs.devices = $devices
-    ' <<< "${bucket}"
-  )
-  write_bucket "${new_bucket}"
-}
-
-# Mirrors RemoteConfigCommand.ReconcileRules exactly (data/.../models/AutoDownloadRemoteCommand.kt)
-# - an empty seasons array with also_future unset clears the rule entirely, same as the app's own
-# pushRemoveRule.
-build_reconcile_command() {
-  local target="$1"
-  local series="$2"
-  local seasons_json="$3"
-  local also_future="$4"
-  local only_new="$5"
-  local only_unwatched="$6"
-  local name="$7"
-  local id origin now server_id
-
-  id=$(new_uuid)
-  origin=$(get_or_create_device_id)
-  now=$(date +%s%3N)
-  server_id=$(get_server_id)
-
-  jq -n \
-    --arg id "${id}" \
-    --arg target "${target}" \
-    --arg origin "${origin}" \
-    --argjson createdAt "${now}" \
-    --arg server "${server_id}" \
-    --arg name "${name}" \
-    --arg userId "${FINDROID_USER_ID}" \
-    --arg seriesId "${series}" \
-    --argjson seasonIds "${seasons_json}" \
-    --argjson alsoFutureSeasons "$(bool_json "${also_future}")" \
-    --argjson onlyNewEpisodes "$(bool_json "${only_new}")" \
-    --argjson onlyUnwatched "$(bool_json "${only_unwatched}")" \
-    '{
-      type: "reconcile_rules",
-      id: $id,
-      targetDeviceId: $target,
-      originDeviceId: $origin,
-      createdAt: $createdAt,
-      serverId: $server,
-      displayName: $name,
-      userId: $userId,
-      seriesId: $seriesId,
-      seasonIds: $seasonIds,
-      alsoFutureSeasons: $alsoFutureSeasons,
-      onlyNewEpisodes: $onlyNewEpisodes,
-      onlyUnwatched: $onlyUnwatched
-    }'
-}
-
-# Mirrors RemoteConfigCommand.DownloadItem exactly - no storage-index field, the target always
-# resolves its own preferred storage at apply time.
-build_download_item_command() {
-  local target="$1"
-  local item_id="$2"
-  local source_id="$3"
-  local name="$4"
-  local id origin now server_id
-
-  id=$(new_uuid)
-  origin=$(get_or_create_device_id)
-  now=$(date +%s%3N)
-  server_id=$(get_server_id)
-
-  jq -n \
-    --arg id "${id}" \
-    --arg target "${target}" \
-    --arg origin "${origin}" \
-    --argjson createdAt "${now}" \
-    --arg server "${server_id}" \
-    --arg name "${name}" \
-    --arg itemId "${item_id}" \
-    --arg sourceId "${source_id}" \
-    '{
-      type: "download_item",
-      id: $id,
-      targetDeviceId: $target,
-      originDeviceId: $origin,
-      createdAt: $createdAt,
-      serverId: $server,
-      displayName: $name,
-      itemId: $itemId,
-      sourceId: $sourceId
-    }'
-}
-
-csv_to_json_array() {
-  local csv="$1"
-
-  if [[ -z "${csv}" ]]
-  then
-    printf '[]'
-    return 0
-  fi
-
-  jq -c -R 'split(",")' <<< "${csv}"
-}
-
-download_dir() {
-  printf '%s' "${FINDROID_DOWNLOAD_DIR:-${HOME}/findroid-downloads}"
-}
-
-get_local_token() {
-  if [[ -f "${LOCAL_TOKEN_FILE}" ]]
-  then
-    cat "${LOCAL_TOKEN_FILE}"
-  fi
-}
-
-cmd_local_token_set() {
+cmd_token_set() {
   local token="${1:-}"
 
   if [[ -z "${token}" ]]
   then
-    printf 'local token set requires the token value (copy it from Settings > Local CLI access)\n' >&2
+    printf 'token set requires the token value (copy it from Settings > Local CLI access)\n' >&2
     return 2
   fi
 
   mkdir -p "${CONFIG_DIR}"
-  printf '%s' "${token}" > "${LOCAL_TOKEN_FILE}"
-  chmod 600 "${LOCAL_TOKEN_FILE}"
-  printf 'Token saved to %s\n' "${LOCAL_TOKEN_FILE}"
+  printf '%s' "${token}" > "${TOKEN_FILE}"
+  chmod 600 "${TOKEN_FILE}"
+  printf 'Token saved to %s\n' "${TOKEN_FILE}"
 }
 
-# Extracts a value from `content call`'s `Result: Bundle[{key=value, key2=value2}]` text output.
-# Only safe because every value this CLI reads back is either digits (status) or base64 (body) -
-# a raw JSON body could itself contain "}"/"," and break naive Bundle-string parsing, which is
-# exactly why the app base64-encodes it before returning it.
-extract_bundle_value() {
-  local output="$1"
-  local key="$2"
-
-  printf '%s' "${output}" | grep -oE "${key}=[A-Za-z0-9+/=]+" | head -1 | cut -d= -f2-
-}
-
-# Builds and sends an authenticated request to the app's local control ContentProvider.
-# $1 = method, $2 = path, $3 = body JSON (optional).
+# Sends an authenticated request to the app's local control server and prints
+# `{"status": <int>, "body": <json-or-null>}`. $1 = method, $2 = path, $3 = body JSON (optional).
 local_request() {
   local method="$1"
   local path="$2"
   local body="${3:-}"
-  local token output status body_b64 raw_body
+  local token response http_status body_out
 
-  token=$(get_local_token)
+  token=$(get_token)
   if [[ -z "${token}" ]]
   then
     printf 'No local control token configured.\n' >&2
     printf 'Copy it from Findroid+ > Settings > Local CLI access, then:\n' >&2
-    printf '  %s local token set YOUR_TOKEN\n' "$(basename "$0")" >&2
+    printf '  %s token set YOUR_TOKEN\n' "$(basename "$0")" >&2
     return 2
   fi
 
-  # `content call` only works for the shell uid or root (see require_local_transport) - `su -c`
-  # runs it as root the same way `adb shell` implicitly does. `su -c` takes a single command
-  # string, so every argument is quoted with printf %q before being appended, rather than passed
-  # as a real argv array.
-  local remote_cmd
-  remote_cmd="content call --uri $(printf '%q' "content://${LOCAL_AUTHORITY}") --method rpc"
-  remote_cmd+=" --extra $(printf '%q' "token:s:${token}")"
-  remote_cmd+=" --extra $(printf '%q' "method:s:${method}")"
-  remote_cmd+=" --extra $(printf '%q' "path:s:${path}")"
+  local curl_args=(-sS -X "${method}" -H "Authorization: Bearer ${token}" -w '\n%{http_code}')
   if [[ -n "${body}" ]]
   then
-    remote_cmd+=" --extra $(printf '%q' "body:s:$(printf '%s' "${body}" | base64 -w0)")"
+    curl_args+=(-H "Content-Type: application/json" -d "${body}")
   fi
 
-  output=$(su -c "${remote_cmd}" 2>&1)
-  status=$(printf '%s' "${output}" | grep -oE 'status=[0-9]+' | head -1 | cut -d= -f2)
-  body_b64=$(extract_bundle_value "${output}" "body")
-
-  if [[ -z "${status}" ]]
+  if ! response=$(curl "${curl_args[@]}" "${BASE_URL}${path}")
   then
-    printf 'No response from Findroid+ local control (is it enabled?)\n' >&2
-    printf 'Raw output: %s\n' "${output}" >&2
+    printf 'No response from Findroid+ local control (is it enabled? URL: %s)\n' "${BASE_URL}${path}" >&2
     return 1
   fi
+  http_status="${response##*$'\n'}"
+  body_out="${response%$'\n'*}"
 
-  if [[ -n "${body_b64}" ]]
-  then
-    raw_body=$(printf '%s' "${body_b64}" | base64 -d 2>/dev/null)
-  fi
-
-  jq -n --argjson status "${status}" --argjson body "${raw_body:-null}" '{status: $status, body: $body}'
+  jq -n --argjson status "${http_status}" --argjson body "${body_out:-null}" '{status: $status, body: $body}'
 }
 
-# Prints an error and fails if $1 (a local control response) is empty or a non-2xx status -
-# shared by every "local" command except `local debug`, which wants to show non-2xx proxied
-# responses too rather than treating them as a CLI-level failure.
-check_local_response() {
+# Prints an error and fails if $1 (a local_request response) is a non-2xx status - shared by
+# every command except `debug`, which wants to show non-2xx proxied responses too rather than
+# treating them as a CLI-level failure.
+check_response() {
   local response="$1"
   local status
-
-  if [[ -z "${response}" ]]
-  then
-    printf 'No response from Findroid+ (is local control enabled in Settings > Local CLI access?)\n' >&2
-    return 1
-  fi
 
   status=$(jq -r '.status' <<< "${response}")
   if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]
@@ -555,18 +144,18 @@ check_local_response() {
   fi
 }
 
-cmd_local_settings_get() {
+cmd_settings_get() {
   local response
 
   response=$(local_request "GET" "/settings/downloads")
-  check_local_response "${response}" || return 1
+  check_response "${response}" || return 1
   jq '.body' <<< "${response}"
 }
 
 # Each KEY=VALUE's value is type-inferred (true/false -> boolean, digits -> number, else string) -
 # the app resolves unknown keys as no-ops rather than failing the whole patch, so a newer CLI
 # talking to an older app degrades gracefully.
-cmd_local_settings_set() {
+cmd_settings_set() {
   if [[ $# -eq 0 ]]
   then
     printf 'settings set requires at least one KEY=VALUE pair\n' >&2
@@ -577,6 +166,11 @@ cmd_local_settings_set() {
   local pair key value
   for pair in "$@"
   do
+    if [[ "${pair}" != *=* ]]
+    then
+      printf 'Invalid KEY=VALUE pair: %s\n' "${pair}" >&2
+      return 2
+    fi
     key="${pair%%=*}"
     value="${pair#*=}"
     patch=$(
@@ -594,17 +188,46 @@ cmd_local_settings_set() {
 
   local response
   response=$(local_request "PATCH" "/settings/downloads" "${patch}")
-  check_local_response "${response}" || return 1
+  check_response "${response}" || return 1
   jq '.body' <<< "${response}"
 }
 
-cmd_local_download_trigger() {
+cmd_download_list() {
+  local response
+
+  response=$(local_request "GET" "/downloads")
+  check_response "${response}" || return 1
+  jq -r '
+    .body |
+    if length == 0 then
+      "No downloads yet."
+    else
+      map(
+        "\(.name)  [\(.itemId)]" + (
+          if (.sources | length) == 0 then
+            ""
+          else
+            "\n" + (
+              .sources | map(
+                "  - " + .name +
+                "  (" + ((.sizeBytes / 1048576 * 10 | round) / 10 | tostring) + " MiB)" +
+                (if .downloadId then "  [download id: \(.downloadId)]" else "" end)
+              ) | join("\n")
+            )
+          end
+        )
+      ) | join("\n\n")
+    end
+  ' <<< "${response}"
+}
+
+cmd_download_trigger() {
   local item_id="${1:-}"
   local source_id="${2:-}"
 
   if [[ -z "${item_id}" ]]
   then
-    printf 'local download trigger requires an item id\n' >&2
+    printf 'download trigger requires an item id\n' >&2
     return 2
   fi
 
@@ -618,14 +241,14 @@ cmd_local_download_trigger() {
 
   local response
   response=$(local_request "POST" "/downloads/trigger" "${body}")
-  check_local_response "${response}" || return 1
+  check_response "${response}" || return 1
   printf 'Download triggered (id: %s)\n' "$(jq -r '.body.downloadId' <<< "${response}")"
 }
 
-# Unlike the other local commands, a non-2xx response here is still useful output (e.g. Sonarr's
-# own 404) rather than a CLI-level failure, so this prints the status and whatever body came back
-# instead of calling check_local_response.
-cmd_local_debug() {
+# Unlike the other commands, a non-2xx response here is still useful output (e.g. Sonarr's own
+# 404) rather than a CLI-level failure, so this prints the status and whatever body came back
+# instead of calling check_response.
+cmd_debug() {
   local service="${1:-}"
   local method="${2:-GET}"
   local path="${3:-}"
@@ -633,7 +256,7 @@ cmd_local_debug() {
 
   if [[ -z "${service}" || -z "${path}" ]]
   then
-    printf 'local debug requires SERVICE and PATH (jellyfin|sonarr|radarr|seerr)\n' >&2
+    printf 'debug requires SERVICE and PATH (jellyfin|sonarr|radarr|seerr)\n' >&2
     return 2
   fi
 
@@ -649,326 +272,9 @@ cmd_local_debug() {
 
   local response status
   response=$(local_request "POST" "/debug/proxy" "${body}")
-  if [[ -z "${response}" ]]
-  then
-    printf 'No response from Findroid+\n' >&2
-    return 1
-  fi
-
   status=$(jq -r '.status' <<< "${response}")
   printf 'HTTP %s\n' "${status}" >&2
   jq -r '.body.body // .body.error // empty' <<< "${response}"
-}
-
-cmd_devices() {
-  local bucket devices
-
-  bucket=$(fetch_bucket)
-  devices=$(decode_custom_pref_array "${bucket}" "devices")
-
-  jq -r '
-    if length == 0 then
-      "No other devices seen yet."
-    else
-      map(
-        "\(.name)  (id: \(.id))\n" +
-        "  last seen: \(.lastSeenMillis / 1000 | todate)\n" +
-        (
-          if (.activeRules | length) == 0 then
-            "  no active rules"
-          else
-            (.activeRules | map(
-              "  - " + .showName +
-              " (" + (.seasonCount | tostring) + " season(s)" +
-              (if .alsoFutureSeasons then ", +future seasons" else "" end) +
-              ")  [series: " + .seriesId + "]"
-            ) | join("\n"))
-          end
-        )
-      ) | join("\n\n")
-    end
-  ' <<< "${devices}"
-}
-
-cmd_rule_push() {
-  local target=""
-  local series=""
-  local seasons=""
-  local also_future=""
-  local only_new=""
-  local only_unwatched=""
-  local name=""
-
-  while [[ -n "${1:-}" ]]
-  do
-    case "$1" in
-      --target)
-        target="$2"
-        shift 2
-        ;;
-      --series)
-        series="$2"
-        shift 2
-        ;;
-      --seasons)
-        seasons="$2"
-        shift 2
-        ;;
-      --future)
-        also_future=1
-        shift
-        ;;
-      --only-new)
-        only_new=1
-        shift
-        ;;
-      --unwatched)
-        only_unwatched=1
-        shift
-        ;;
-      --name)
-        name="$2"
-        shift 2
-        ;;
-      *)
-        printf 'rule push: unknown option: %s\n' "$1" >&2
-        return 2
-        ;;
-    esac
-  done
-
-  if [[ -z "${target}" || -z "${series}" ]]
-  then
-    printf 'rule push requires --target and --series\n' >&2
-    return 2
-  fi
-
-  if [[ -z "${name}" ]]
-  then
-    name=$(resolve_item_name "${series}")
-  fi
-
-  local seasons_json command
-  seasons_json=$(csv_to_json_array "${seasons}")
-  command=$(
-    build_reconcile_command \
-      "${target}" "${series}" "${seasons_json}" \
-      "${also_future}" "${only_new}" "${only_unwatched}" "${name}"
-  )
-  enqueue_command "${command}"
-  printf 'Rule push queued for %s (%s)\n' "${target}" "${name:-${series}}"
-}
-
-cmd_rule_remove() {
-  local target=""
-  local series=""
-  local name=""
-
-  while [[ -n "${1:-}" ]]
-  do
-    case "$1" in
-      --target)
-        target="$2"
-        shift 2
-        ;;
-      --series)
-        series="$2"
-        shift 2
-        ;;
-      --name)
-        name="$2"
-        shift 2
-        ;;
-      *)
-        printf 'rule remove: unknown option: %s\n' "$1" >&2
-        return 2
-        ;;
-    esac
-  done
-
-  if [[ -z "${target}" || -z "${series}" ]]
-  then
-    printf 'rule remove requires --target and --series\n' >&2
-    return 2
-  fi
-
-  if [[ -z "${name}" ]]
-  then
-    name=$(resolve_item_name "${series}")
-  fi
-
-  local command
-  command=$(build_reconcile_command "${target}" "${series}" "[]" "" "" "" "${name}")
-  enqueue_command "${command}"
-  printf 'Rule removal queued for %s (%s)\n' "${target}" "${name:-${series}}"
-}
-
-cmd_download_push() {
-  local target=""
-  local item_id=""
-  local source_id=""
-  local name=""
-
-  while [[ -n "${1:-}" ]]
-  do
-    case "$1" in
-      --target)
-        target="$2"
-        shift 2
-        ;;
-      --item)
-        item_id="$2"
-        shift 2
-        ;;
-      --source)
-        source_id="$2"
-        shift 2
-        ;;
-      --name)
-        name="$2"
-        shift 2
-        ;;
-      *)
-        printf 'download push: unknown option: %s\n' "$1" >&2
-        return 2
-        ;;
-    esac
-  done
-
-  if [[ -z "${target}" || -z "${item_id}" ]]
-  then
-    printf 'download push requires --target and --item\n' >&2
-    return 2
-  fi
-
-  if [[ -z "${source_id}" ]]
-  then
-    source_id=$(resolve_first_source_id "${item_id}")
-  fi
-
-  if [[ -z "${name}" ]]
-  then
-    name=$(resolve_item_name "${item_id}")
-  fi
-
-  local command
-  command=$(build_download_item_command "${target}" "${item_id}" "${source_id}" "${name}")
-  enqueue_command "${command}"
-  printf 'Download push queued for %s (%s)\n' "${target}" "${name:-${item_id}}"
-}
-
-cmd_pending_list() {
-  local this_id bucket pending
-
-  this_id=$(get_or_create_device_id)
-  bucket=$(fetch_bucket)
-  pending=$(decode_custom_pref_array "${bucket}" "pending")
-
-  jq -r --arg id "${this_id}" '
-    map(select(.originDeviceId == $id)) |
-    if length == 0 then
-      "No pending pushes from this device."
-    else
-      map("\(.id)  \(.displayName)  ->  \(.targetDeviceId)  [\(.type)]") | join("\n")
-    end
-  ' <<< "${pending}"
-}
-
-cmd_pending_cancel() {
-  local command_id="${1:-}"
-
-  if [[ -z "${command_id}" ]]
-  then
-    printf 'pending cancel requires a command id\n' >&2
-    return 2
-  fi
-
-  local bucket pending new_pending new_bucket
-
-  bucket=$(fetch_bucket)
-  pending=$(decode_custom_pref_array "${bucket}" "pending")
-  new_pending=$(jq -c --arg id "${command_id}" 'map(select(.id != $id))' <<< "${pending}")
-  new_bucket=$(jq --arg pending "${new_pending}" '.CustomPrefs.pending = $pending' <<< "${bucket}")
-  write_bucket "${new_bucket}"
-  printf 'Canceled %s\n' "${command_id}"
-}
-
-cmd_download_get() {
-  local item_id=""
-  local source_id=""
-  local output_dir
-  output_dir=$(download_dir)
-
-  while [[ -n "${1:-}" ]]
-  do
-    case "$1" in
-      --item)
-        item_id="$2"
-        shift 2
-        ;;
-      --source)
-        source_id="$2"
-        shift 2
-        ;;
-      --output)
-        output_dir="$2"
-        shift 2
-        ;;
-      *)
-        printf 'download get: unknown option: %s\n' "$1" >&2
-        return 2
-        ;;
-    esac
-  done
-
-  if [[ -z "${item_id}" ]]
-  then
-    printf 'download get requires --item\n' >&2
-    return 2
-  fi
-
-  mkdir -p "${output_dir}"
-
-  local name url
-  name=$(resolve_item_name "${item_id}")
-  url="${FINDROID_SERVER}/Items/${item_id}/Download?api_key=${FINDROID_TOKEN}"
-  if [[ -n "${source_id}" ]]
-  then
-    url="${url}&mediaSourceId=${source_id}"
-  fi
-
-  printf 'Downloading "%s" into %s\n' "${name:-${item_id}}" "${output_dir}"
-  (
-    cd "${output_dir}" &&
-      curl -fSL --progress-bar -J -O "${url}"
-  )
-}
-
-cmd_download_list() {
-  local dir
-  dir=$(download_dir)
-
-  if [[ ! -d "${dir}" ]]
-  then
-    printf 'No local downloads yet (%s does not exist)\n' "${dir}"
-    return 0
-  fi
-
-  ls -lh "${dir}"
-}
-
-cmd_download_rm() {
-  local file="${1:-}"
-  local dir
-  dir=$(download_dir)
-
-  if [[ -z "${file}" ]]
-  then
-    printf 'download rm requires a filename (see: download list)\n' >&2
-    return 2
-  fi
-
-  rm -v -- "${dir}/${file}"
 }
 
 main() {
@@ -985,87 +291,32 @@ main() {
       ;;
   esac
 
-  # "local" commands talk only to the app's own ContentProvider - no Jellyfin account needed, so
-  # they skip require_deps/load_config entirely (they need jq/content/base64 instead -
-  # require_local_transport checks for those).
-  if [[ "$1" == "local" ]]
-  then
-    require_local_transport
-    shift
-    case "${1:-}" in
-      token)
-        shift
-        case "${1:-}" in
-          set)
-            shift
-            cmd_local_token_set "$@"
-            ;;
-          *)
-            usage >&2
-            return 2
-            ;;
-        esac
-        ;;
-      settings)
-        shift
-        case "${1:-}" in
-          get)
-            shift
-            cmd_local_settings_get "$@"
-            ;;
-          set)
-            shift
-            cmd_local_settings_set "$@"
-            ;;
-          *)
-            usage >&2
-            return 2
-            ;;
-        esac
-        ;;
-      download)
-        shift
-        case "${1:-}" in
-          trigger)
-            shift
-            cmd_local_download_trigger "$@"
-            ;;
-          *)
-            usage >&2
-            return 2
-            ;;
-        esac
-        ;;
-      debug)
-        shift
-        cmd_local_debug "$@"
-        ;;
-      *)
-        usage >&2
-        return 2
-        ;;
-    esac
-    return
-  fi
-
   require_deps
-  load_config
 
   case "$1" in
-    devices)
-      shift
-      cmd_devices "$@"
-      ;;
-    rule)
+    token)
       shift
       case "${1:-}" in
-        push)
+        set)
           shift
-          cmd_rule_push "$@"
+          cmd_token_set "$@"
           ;;
-        remove)
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
+    settings)
+      shift
+      case "${1:-}" in
+        get)
           shift
-          cmd_rule_remove "$@"
+          cmd_settings_get "$@"
+          ;;
+        set)
+          shift
+          cmd_settings_set "$@"
           ;;
         *)
           usage >&2
@@ -1076,21 +327,13 @@ main() {
     download)
       shift
       case "${1:-}" in
-        push)
-          shift
-          cmd_download_push "$@"
-          ;;
-        get)
-          shift
-          cmd_download_get "$@"
-          ;;
         list)
           shift
           cmd_download_list "$@"
           ;;
-        rm)
+        trigger)
           shift
-          cmd_download_rm "$@"
+          cmd_download_trigger "$@"
           ;;
         *)
           usage >&2
@@ -1098,22 +341,9 @@ main() {
           ;;
       esac
       ;;
-    pending)
+    debug)
       shift
-      case "${1:-}" in
-        list)
-          shift
-          cmd_pending_list "$@"
-          ;;
-        cancel)
-          shift
-          cmd_pending_cancel "$@"
-          ;;
-        *)
-          usage >&2
-          return 2
-          ;;
-      esac
+      cmd_debug "$@"
       ;;
     *)
       printf 'Unknown command: %s\n' "$1" >&2

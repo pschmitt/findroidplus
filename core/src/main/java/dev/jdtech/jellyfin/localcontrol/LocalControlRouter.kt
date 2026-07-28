@@ -5,6 +5,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
 import dev.jdtech.jellyfin.api.pvr.PvrHttpClient
 import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.security.SecureCredentialStore
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -32,10 +34,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 
 /**
- * Dispatches an already-authenticated request (see [LocalControlProvider], which verifies the
+ * Dispatches an already-authenticated request (see [LocalControlServer], which verifies the
  * bearer token before ever calling this) to the actual app state it controls - real
- * [AppPreferences] download settings, a real [Downloader]-triggered download, or a raw debug
- * request against Jellyfin/Sonarr/Radarr/Seerr using the app's own stored credentials.
+ * [AppPreferences] download settings, the real current download list, a real
+ * [Downloader]-triggered download, or a raw debug request against Jellyfin/Sonarr/Radarr/Seerr
+ * using the app's own stored credentials.
  */
 @Singleton
 class LocalControlRouter
@@ -55,6 +58,7 @@ constructor(
                     method == "GET" && path == "/settings/downloads" -> getDownloadSettings()
                     method == "PATCH" && path == "/settings/downloads" ->
                         patchDownloadSettings(body)
+                    method == "GET" && path == "/downloads" -> listDownloads()
                     method == "POST" && path == "/downloads/trigger" -> triggerDownload(body)
                     method == "POST" && path == "/debug/proxy" -> debugProxy(body)
                     else ->
@@ -79,6 +83,38 @@ constructor(
         }
         DownloadSettingsBridge.applyPatch(appPreferences, patch)
         return LocalControlResponse(LocalControlStatus.OK, DownloadSettingsBridge.toJson(appPreferences))
+    }
+
+    private suspend fun listDownloads(): LocalControlResponse {
+        val items = jellyfinRepository.getDownloads()
+        val body = buildJsonArray {
+            items.forEach { item ->
+                add(
+                    buildJsonObject {
+                        put("itemId", item.id.toString())
+                        put("name", item.name)
+                        put(
+                            "sources",
+                            buildJsonArray {
+                                item.sources
+                                    .filter { it.type == FindroidSourceType.LOCAL }
+                                    .forEach { source ->
+                                        add(
+                                            buildJsonObject {
+                                                put("sourceId", source.id)
+                                                put("name", source.name)
+                                                put("sizeBytes", source.size)
+                                                source.downloadId?.let { put("downloadId", it) }
+                                            }
+                                        )
+                                    }
+                            },
+                        )
+                    }
+                )
+            }
+        }
+        return LocalControlResponse(LocalControlStatus.OK, body)
     }
 
     private suspend fun triggerDownload(body: JsonElement?): LocalControlResponse {
