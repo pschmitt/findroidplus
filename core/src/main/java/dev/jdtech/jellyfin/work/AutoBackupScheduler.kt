@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.work
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -53,7 +54,17 @@ object AutoBackupScheduler {
                 .getValue(appPreferences.autoBackupIntervalMinutes)
                 .coerceIn(15, 30 * 24 * 60)
 
-        val constraints = Constraints.Builder().setRequiresBatteryNotLow(true).build()
+        // NetworkType.CONNECTED (same as RemoteConfigScheduler/QueueStatusScheduler): a cloud-backed
+        // SAF folder (Google Drive, etc.) needs live network to create/write a file at all - unlike
+        // a local folder, where this constraint costs nothing. Without it, this job could fire with
+        // no connectivity (Wi-Fi off overnight, etc.), silently failing DocumentFile.createFile()
+        // (it returns null, not an exception) with the confusing "check the backup folder is still
+        // accessible" message even though the folder itself is fine.
+        val constraints =
+            Constraints.Builder()
+                .setRequiresBatteryNotLow(true)
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
         val periodicRequest =
             PeriodicWorkRequestBuilder<AutoBackupWorker>(intervalMinutes.toLong(), TimeUnit.MINUTES)
