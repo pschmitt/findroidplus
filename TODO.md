@@ -273,29 +273,37 @@ credentials, reusing `PvrHttpClient`/`PvrConfiguration`).
 - [x] Remote + local-download groups implemented, shellcheck-clean,
       `bash -n` syntax-checked, JSON wire shape hand-verified against
       `AutoDownloadRemoteCommand.kt`'s kotlinx.serialization output.
-- [x] Local control implemented end-to-end on the `ContentProvider` design:
-      `LocalControlProvider`/`LocalControlAuth`/`LocalControlRouter`/
-      `DownloadSettingsBridge` (core), the `localaccess` Settings screen
-      (phone, token display + regenerate), and the CLI's `local` command
-      group - shellcheck-clean, `bash -n` syntax-checked, the
-      `content call` Bundle-output parsing smoke-tested against fake
-      output fixtures.
+- [x] Local control implemented **and verified end-to-end on real
+      hardware** (Mi Pad 4, 2026-07-28): enabled the toggle, read the real
+      token off the Settings screen (via `uiautomator dump` - the token's
+      own base64 charset made a couple of characters genuinely ambiguous
+      to read from a screenshot, e.g. `O` vs `0`), ran `findroid-cli local
+      settings get` and `local settings set maxParallelDownloads=N` from
+      actual Termux (not adb shell) and got real data back both ways,
+      reverted the test value afterward.
+  - [x] Found and fixed a second real-device-only blocker beyond the
+        SELinux one below: `content call`'s external-access path needs
+        `android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY`, a
+        signature-level permission `pm grant` refuses to hand out even as
+        root ("not a changeable permission type") - it's implicitly held
+        by the special `shell` uid (why plain `adb shell content call`
+        testing worked earlier) but never by a regular app's own uid
+        (Termux's, when run as itself). `su -c 'content call ...'` runs it
+        as root the same way `adb shell` does, which does work - so
+        **a rooted device is required for `local` commands specifically**
+        (findroid-cli now routes through `su -c` automatically; everything
+        else in the script is unaffected).
 - [ ] Not done: real end-to-end test against an actual Jellyfin server for
       the remote/local-download groups (no live server credentials were
       available in this environment).
-- [ ] Not done: real on-device test of the `ContentProvider`-based local
-      control endpoints (the abandoned socket design *was* tested
-      end-to-end on real hardware, which is exactly how the SELinux
-      blocker was found - the new design still needs the same real-device
-      pass: enable the toggle, copy the token, run `local settings get`
-      from Termux on Mi Pad 4/px5).
 
 Status: remote/local-download groups implemented and smoke-tested
 (2026-07-28) but never run against a live server. Local control API
 redesigned (2026-07-28) from a socket+pairing scheme (found to be blocked
 by SELinux on real devices) to a `ContentProvider`+single-token scheme, per
 the user's own suggestion ("something more android-native... AIDL? Binder
-IPC?") - implemented, not yet verified end-to-end on-device.
+IPC?") - implemented and verified end-to-end on real hardware the same day,
+including finding and fixing the root-requirement blocker above.
 
 ## FINDROID-46: Onboarding screen redesign
 
