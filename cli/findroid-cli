@@ -30,9 +30,12 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
 BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
 
+# Set from --json by main() (never `local` there, so this stays a real global).
+JSON_OUTPUT=""
+
 usage() {
   cat <<EOF
-Usage: $(basename "$0") COMMAND [OPTIONS]
+Usage: $(basename "$0") [--json] COMMAND [OPTIONS]
 
 Configure the real Findroid+ app running on this device, from Termux.
 Enable it in the app first: Settings > Downloads > Local CLI access.
@@ -48,6 +51,7 @@ Config (environment variable):
   FINDROID_LOCAL_URL  Override the local control server URL (default: ${BASE_URL})
 
 Options:
+  --json      Print the raw {status, body} response as JSON instead of a table
   -h, --help  Show this help
 EOF
 }
@@ -79,6 +83,29 @@ get_token() {
   fi
 }
 
+# Pretty-aligns tab-separated stdin into columns on a real terminal (like tsvtool) - passed
+# through unchanged when stdout is piped/redirected or `column` isn't installed, so scripts get
+# real TSV instead of column-padded text.
+print_table() {
+  if [[ -t 1 ]] && command -v column >/dev/null 2>&1
+  then
+    column -t -s $'\t'
+  else
+    cat
+  fi
+}
+
+# --json mode: prints $1 (a local_request response) verbatim and reports its HTTP status via the
+# return code - used instead of check_response's human-readable stderr message.
+print_response_json() {
+  local response="$1"
+  local status
+
+  printf '%s\n' "${response}"
+  status=$(jq -r '.status' <<< "${response}")
+  [[ "${status}" -ge 200 && "${status}" -lt 300 ]]
+}
+
 cmd_token_set() {
   local token="${1:-}"
 
@@ -91,7 +118,13 @@ cmd_token_set() {
   mkdir -p "${CONFIG_DIR}"
   printf '%s' "${token}" > "${TOKEN_FILE}"
   chmod 600 "${TOKEN_FILE}"
-  printf 'Token saved to %s\n' "${TOKEN_FILE}"
+
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    jq -n --arg path "${TOKEN_FILE}" '{saved: true, path: $path}'
+  else
+    printf 'Token saved to %s\n' "${TOKEN_FILE}"
+  fi
 }
 
 # Sends an authenticated request to the app's local control server and prints
@@ -148,8 +181,16 @@ cmd_settings_get() {
   local response
 
   response=$(local_request "GET" "/settings/downloads")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
   check_response "${response}" || return 1
-  jq '.body' <<< "${response}"
+  {
+    printf 'KEY\tVALUE\n'
+    jq -r '.body | to_entries[] | [.key, .value] | @tsv' <<< "${response}"
+  } | print_table
 }
 
 # Each KEY=VALUE's value is type-inferred (true/false -> boolean, digits -> number, else string) -
@@ -188,37 +229,46 @@ cmd_settings_set() {
 
   local response
   response=$(local_request "PATCH" "/settings/downloads" "${patch}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
   check_response "${response}" || return 1
-  jq '.body' <<< "${response}"
+  {
+    printf 'KEY\tVALUE\n'
+    jq -r '.body | to_entries[] | [.key, .value] | @tsv' <<< "${response}"
+  } | print_table
 }
 
 cmd_download_list() {
   local response
 
   response=$(local_request "GET" "/downloads")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
   check_response "${response}" || return 1
-  jq -r '
-    .body |
-    if length == 0 then
-      "No downloads yet."
-    else
-      map(
-        "\(.name)  [\(.itemId)]" + (
-          if (.sources | length) == 0 then
-            ""
-          else
-            "\n" + (
-              .sources | map(
-                "  - " + .name +
-                "  (" + ((.sizeBytes / 1048576 * 10 | round) / 10 | tostring) + " MiB)" +
-                (if .downloadId then "  [download id: \(.downloadId)]" else "" end)
-              ) | join("\n")
-            )
-          end
-        )
-      ) | join("\n\n")
-    end
-  ' <<< "${response}"
+  {
+    printf 'ITEM_ID\tNAME\tSOURCE\tSIZE_MIB\tDOWNLOAD_ID\n'
+    jq -r '
+      .body[] as $item |
+      if ($item.sources | length) == 0 then
+        [$item.itemId, $item.name, "-", "-", "-"] | @tsv
+      else
+        $item.sources[] |
+        [
+          $item.itemId,
+          $item.name,
+          .name,
+          (((.sizeBytes / 1048576 * 10 | round) / 10) | tostring),
+          (.downloadId // "-" | tostring)
+        ] | @tsv
+      end
+    ' <<< "${response}"
+  } | print_table
 }
 
 cmd_download_trigger() {
@@ -241,8 +291,16 @@ cmd_download_trigger() {
 
   local response
   response=$(local_request "POST" "/downloads/trigger" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
   check_response "${response}" || return 1
-  printf 'Download triggered (id: %s)\n' "$(jq -r '.body.downloadId' <<< "${response}")"
+  {
+    printf 'DOWNLOAD_ID\n'
+    jq -r '[.body.downloadId] | @tsv' <<< "${response}"
+  } | print_table
 }
 
 # Unlike the other commands, a non-2xx response here is still useful output (e.g. Sonarr's own
@@ -272,12 +330,31 @@ cmd_debug() {
 
   local response status
   response=$(local_request "POST" "/debug/proxy" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    printf '%s\n' "${response}"
+    return
+  fi
   status=$(jq -r '.status' <<< "${response}")
   printf 'HTTP %s\n' "${status}" >&2
   jq -r '.body.body // .body.error // empty' <<< "${response}"
 }
 
 main() {
+  local args=()
+  local arg
+
+  for arg in "$@"
+  do
+    if [[ "${arg}" == "--json" ]]
+    then
+      JSON_OUTPUT=1
+    else
+      args+=("${arg}")
+    fi
+  done
+  set -- "${args[@]}"
+
   if [[ -z "${1:-}" ]]
   then
     usage >&2
