@@ -212,8 +212,8 @@ counterpart yet.
 
 ## FINDROID-45: `findroid-cli` - Termux command-line download management
 
-A shell script (bash + curl/jq + socat) for Termux, with three distinct
-command groups:
+A shell script (bash + curl/jq) for Termux, with three distinct command
+groups:
 
 - **Remote** (`devices`, `rule push`/`remove`, `download push`, `pending
   list`/`cancel`): reuses the exact same Jellyfin `DisplayPreferences`
@@ -224,61 +224,78 @@ command groups:
   download-it-yourself path - resolves an item via the Jellyfin API,
   `curl`s the file straight to local storage. Does not touch the real
   Android app's own downloads at all.
-- **Local control** (`local pair`, `local settings get`/`set`, `local
+- **Local control** (`local token set`, `local settings get`/`set`, `local
   download trigger`, `local debug`): actually configures the *real running
   Findroid+ app* on the same device - added after the user corrected the
   original scope ("my goal is to configure findroidplus itself, and not
   replace it"), since the two groups above only ever act as an independent
   peer, never touching the app's real settings/Downloader/credentials.
 
-Local control transport: `core/.../localcontrol/LocalControlServer.kt` runs
-an `android.net.LocalServerSocket` (Linux abstract namespace - reachable
-from any process on the device, Termux included, bypassing Android's
-per-app filesystem sandboxing) named `findroidplus_control`. Every accepted
-connection's peer uid is read via `LocalSocket.peerCredentials`
-(kernel-verified, unspoofable) - this is the real authorization boundary,
-chosen over a plain loopback-TCP+token design specifically because it lets
-the app show the user the *actual* connecting package name, not a
-self-reported label. Auth is a pairing handshake (`local pair`): the CLI
-sends `{"type":"pair_request","clientId":...}` over the still-open
-connection, the app shows an Approve/Deny notification
-(`PairingNotifier`/`PairingActionReceiver`) naming the real caller, and on
-approval issues a random 256-bit token (only `SHA-256(token)` is persisted,
-via `LocalControlAuth`/`SecureCredentialStore`) that's re-validated against
-the *same peer uid* on every later call, not just the token string. Off by
-default (`AppPreferences.localControlEnabled`), toggled + paired-client
-list/revoke in a new Settings > Local CLI access screen
-(phone-only, `app/phone/.../presentation/settings/localaccess/`).
-Endpoints (`LocalControlRouter`): `GET`/`PATCH /settings/downloads` (via
-`DownloadSettingsBridge`, the 10 real download `AppPreferences`),
-`POST /downloads/trigger` (resolves the item, calls the app's own
-`Downloader.downloadItem` exactly as `RemoteConfigRepositoryImpl` does for
-a remote push), `POST /debug/proxy` (forwards to Jellyfin/Sonarr/Radarr/
-Seerr using the app's already-stored credentials, reusing
-`PvrHttpClient`/`PvrConfiguration`), `GET`/`DELETE /pair/clients`.
+Local control transport went through two designs, the first of which
+turned out to be fundamentally broken on real devices:
+
+1. **First attempt**: `android.net.LocalServerSocket` (a Linux
+   abstract-namespace unix socket), with `LocalSocket.peerCredentials`
+   giving a kernel-verified caller uid and a pairing handshake (notification
+   Approve/Deny, then a token) for auth. On-device testing (2026-07-28)
+   found this doesn't work at all: connecting from a different app
+   (Termux) gets `EACCES` under SELinux enforcing (the normal state on
+   every real device) and only succeeds under permissive mode - confirmed
+   by directly toggling `setenforce` on a rooted test device. SELinux's
+   default policy keeps arbitrary `untrusted_app` domains isolated from
+   each other for raw local-socket IPC; no app-level fix can work around
+   that boundary.
+2. **Current design**: a `ContentProvider`
+   (`core/.../localcontrol/LocalControlProvider.kt`, authority
+   `${applicationId}.localcontrol`), whose `call()` method is Binder-backed
+   - the IPC mechanism Android's own SELinux policy is written to permit
+   between apps - and reachable from a plain shell via the OS's own
+   `content call` command (no compiled helper needed in Termux). Auth is a
+   single bearer token (`LocalControlAuth.getOrCreateToken()`/
+   `regenerateToken()`), shown in Settings > Local CLI access and
+   regeneratable at will, rather than a per-client pairing handshake -
+   simpler, and a `call()` invoked via a shell command doesn't carry
+   meaningful "this is Termux" caller identity the way an app-to-app Binder
+   call would, so per-client tracking wasn't buying anything real. Request/
+   response bodies travel as base64-encoded JSON extras (`token`/`method`/
+   `path`/`body` in, `status`/`body` out) since raw JSON can't safely
+   round-trip through `Bundle`'s `toString()` output or shell-argument
+   passing. Off by default (`AppPreferences.localControlEnabled`).
+
+Endpoints (`LocalControlRouter`, unchanged across both transport designs):
+`GET`/`PATCH /settings/downloads` (via `DownloadSettingsBridge`, the 10 real
+download `AppPreferences`), `POST /downloads/trigger` (resolves the item,
+calls the app's own `Downloader.downloadItem` exactly as
+`RemoteConfigRepositoryImpl` does for a remote push), `POST /debug/proxy`
+(forwards to Jellyfin/Sonarr/Radarr/Seerr using the app's already-stored
+credentials, reusing `PvrHttpClient`/`PvrConfiguration`).
 
 - [x] Remote + local-download groups implemented, shellcheck-clean,
       `bash -n` syntax-checked, JSON wire shape hand-verified against
       `AutoDownloadRemoteCommand.kt`'s kotlinx.serialization output.
-- [x] Local control implemented end-to-end: `LocalControlServer`/
-      `LocalControlAuth`/`LocalControlRouter`/`DownloadSettingsBridge`/
-      `PairingNotifier`/`PairingActionReceiver` (core), the `localaccess`
-      Settings screen (phone), and the CLI's `local` command group -
-      shellcheck-clean, `bash -n` syntax-checked, arg-parsing/JSON-building
-      paths smoke-tested against fake response fixtures.
+- [x] Local control implemented end-to-end on the `ContentProvider` design:
+      `LocalControlProvider`/`LocalControlAuth`/`LocalControlRouter`/
+      `DownloadSettingsBridge` (core), the `localaccess` Settings screen
+      (phone, token display + regenerate), and the CLI's `local` command
+      group - shellcheck-clean, `bash -n` syntax-checked, the
+      `content call` Bundle-output parsing smoke-tested against fake
+      output fixtures.
 - [ ] Not done: real end-to-end test against an actual Jellyfin server for
       the remote/local-download groups (no live server credentials were
       available in this environment).
-- [ ] Not done: real on-device test of the pairing handshake + local
-      control endpoints (needs the actual Findroid+ app running with
-      "Local CLI access" enabled - a Linux abstract-namespace socket can't
-      be meaningfully faked in this dev sandbox, only code-reviewed).
+- [ ] Not done: real on-device test of the `ContentProvider`-based local
+      control endpoints (the abandoned socket design *was* tested
+      end-to-end on real hardware, which is exactly how the SELinux
+      blocker was found - the new design still needs the same real-device
+      pass: enable the toggle, copy the token, run `local settings get`
+      from Termux on Mi Pad 4/px5).
 
 Status: remote/local-download groups implemented and smoke-tested
 (2026-07-28) but never run against a live server. Local control API
-(pairing flow) designed and implemented (2026-07-28) per the user's
-explicit pivot away from "CLI as independent peer" toward "CLI configures
-the real app" - needs a real on-device pairing test next.
+redesigned (2026-07-28) from a socket+pairing scheme (found to be blocked
+by SELinux on real devices) to a `ContentProvider`+single-token scheme, per
+the user's own suggestion ("something more android-native... AIDL? Binder
+IPC?") - implemented, not yet verified end-to-end on-device.
 
 ## FINDROID-46: Onboarding screen redesign
 

@@ -17,18 +17,22 @@
 # Findroid+ Android app's own downloads, which live in that app's private
 # Room database.
 #
-# The "local" command group is different: it talks to a small control
-# socket the Findroid+ app itself exposes (Settings > Local CLI access),
-# and actually configures *that running app* - its real download settings,
-# a real download triggered through its own Downloader, and a debug proxy
-# to Jellyfin/Sonarr/Radarr/Seerr using its own already-stored credentials.
-# Auth is a one-time pairing handshake (`local pair`): the app shows an
-# Approve/Deny notification, and a long-lived token is issued on approval.
-# Requires `socat` or `python3` (the app's socket is a Linux abstract-
-# namespace unix socket, which plain curl/nc/ncat can't address - only
-# tools that build that address themselves, like socat or a language's own
-# socket module, can reach it) - only for `local` commands, everything else
-# in this script is unaffected.
+# The "local" command group is different: it talks to a small ContentProvider
+# the Findroid+ app itself exposes (Settings > Local CLI access), and
+# actually configures *that running app* - its real download settings, a
+# real download triggered through its own Downloader, and a debug proxy to
+# Jellyfin/Sonarr/Radarr/Seerr using its own already-stored credentials.
+# Auth is a single bearer token shown in that same Settings screen (tap
+# Regenerate to invalidate it and issue a new one) - copy it once with
+# `local token set TOKEN`. Talks to the app via Android's own `content call`
+# shell command (a ContentProvider's call() method over Binder) rather than
+# a raw local socket: an earlier version used a Linux abstract-namespace
+# unix socket, which SELinux blocks outright between arbitrary apps on a
+# real device (confirmed: works under permissive, EACCES under enforcing,
+# the normal state) - no app-level fix could work around that, so this
+# switched to the IPC mechanism Android's own policy is written to allow.
+# `content` ships on the OS itself - only `jq`/`base64` (both near-universal
+# in Termux already) are needed for `local` commands specifically.
 
 set -euo pipefail
 
@@ -38,8 +42,7 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 CONFIG_FILE="${CONFIG_DIR}/config"
 DEVICE_ID_FILE="${CONFIG_DIR}/device_id"
 SERVER_ID_CACHE_FILE="${CONFIG_DIR}/server_id"
-LOCAL_SOCKET_NAME="findroidplus_control"
-LOCAL_CLIENT_ID_FILE="${CONFIG_DIR}/local_client_id"
+LOCAL_AUTHORITY="${FINDROID_LOCAL_AUTHORITY:-dev.pschmitt.findroidplus.localcontrol}"
 LOCAL_TOKEN_FILE="${CONFIG_DIR}/local_token"
 
 usage() {
@@ -73,9 +76,9 @@ Local (this Termux install only, no Jellyfin account needed):
   download list                              List locally downloaded files
   download rm FILE                           Remove a locally downloaded file
 
-Local control (configures the real Findroid+ app on this device, via its
-local control socket - Settings > Local CLI access - requires socat or python3):
-  local pair                                 Pair with the app (approve in its notification)
+Local control (configures the real Findroid+ app on this device - Settings >
+Local CLI access for the toggle + token):
+  local token set TOKEN                      Save the token copied from Settings
   local settings get                         Show the app's real download settings
   local settings set KEY=VALUE [KEY=VALUE...]
                                               Change the app's real download settings
@@ -108,37 +111,36 @@ require_deps() {
   fi
 }
 
-# Only "local" commands need this. The app's control socket is a Linux abstract-namespace unix
-# socket (android.net.LocalSocket) - its real address has a leading NUL byte, which can't be
-# expressed as a plain shell command-line argument (argv strings are NUL-terminated), so plain
-# `nc`/`ncat` simply can't address it no matter which flags are used - that's a hard limitation,
-# not a missing feature to work around. `socat` and Python's `socket` module both have their own
-# internal ways to build that address, so either works; this picks whichever is installed
-# (preferring socat) and sets LOCAL_RPC_TOOL for local_rpc() to dispatch on.
-LOCAL_RPC_TOOL=""
-
+# Only "local" commands need this. An earlier version of this feature used a raw
+# android.net.LocalSocket (a Linux abstract-namespace unix socket) - Android's SELinux policy
+# blocks that outright between arbitrary apps (confirmed: works with SELinux permissive, EACCES
+# under enforcing, which is the normal state on every real device), so no app-level fix could ever
+# make it work. `content call` is Android's own command-line tool for invoking a ContentProvider's
+# call() method over Binder - the IPC mechanism Android's policy is actually written to allow
+# between apps - and it ships on the OS itself, not something Termux needs to separately install.
 require_local_transport() {
+  local missing=""
+
   if ! command -v jq >/dev/null 2>&1
   then
-    printf 'Missing required command: jq\n' >&2
+    missing="jq"
+  fi
+
+  if ! command -v content >/dev/null 2>&1
+  then
+    missing="${missing:+${missing}, }content"
+  fi
+
+  if ! command -v base64 >/dev/null 2>&1
+  then
+    missing="${missing:+${missing}, }base64"
+  fi
+
+  if [[ -n "${missing}" ]]
+  then
+    printf 'Missing required command(s) for "local" commands: %s\n' "${missing}" >&2
     return 2
   fi
-
-  if command -v socat >/dev/null 2>&1
-  then
-    LOCAL_RPC_TOOL="socat"
-    return 0
-  fi
-
-  if command -v python3 >/dev/null 2>&1
-  then
-    LOCAL_RPC_TOOL="python3"
-    return 0
-  fi
-
-  printf 'Missing a required command for "local" commands: socat or python3\n' >&2
-  printf 'Install one with: pkg install socat   (or: pkg install python)\n' >&2
-  return 2
 }
 
 load_config() {
@@ -422,21 +424,6 @@ download_dir() {
   printf '%s' "${FINDROID_DOWNLOAD_DIR:-${HOME}/findroid-downloads}"
 }
 
-get_or_create_local_client_id() {
-  mkdir -p "${CONFIG_DIR}"
-
-  if [[ -f "${LOCAL_CLIENT_ID_FILE}" ]]
-  then
-    cat "${LOCAL_CLIENT_ID_FILE}"
-    return 0
-  fi
-
-  local id
-  id=$(new_uuid)
-  printf '%s' "${id}" > "${LOCAL_CLIENT_ID_FILE}"
-  printf '%s' "${id}"
-}
-
 get_local_token() {
   if [[ -f "${LOCAL_TOKEN_FILE}" ]]
   then
@@ -444,79 +431,72 @@ get_local_token() {
   fi
 }
 
-# Sends one JSON request line to the app's local control socket and reads one JSON response line
-# back, via whichever tool require_local_transport() found ($LOCAL_RPC_TOOL). $1 = request JSON,
-# $2 = timeout in seconds (default 10 - pairing passes its own longer timeout since it blocks
-# until the user taps Approve/Deny in the app).
-local_rpc() {
-  local request_json="$1"
-  local timeout="${2:-10}"
+cmd_local_token_set() {
+  local token="${1:-}"
 
-  case "${LOCAL_RPC_TOOL}" in
-    python3)
-      local_rpc_python3 "${request_json}" "${timeout}"
-      ;;
-    *)
-      printf '%s\n' "${request_json}" | socat -t "${timeout}" - "UNIX-CONNECT:@${LOCAL_SOCKET_NAME}"
-      ;;
-  esac
+  if [[ -z "${token}" ]]
+  then
+    printf 'local token set requires the token value (copy it from Settings > Local CLI access)\n' >&2
+    return 2
+  fi
+
+  mkdir -p "${CONFIG_DIR}"
+  printf '%s' "${token}" > "${LOCAL_TOKEN_FILE}"
+  chmod 600 "${LOCAL_TOKEN_FILE}"
+  printf 'Token saved to %s\n' "${LOCAL_TOKEN_FILE}"
 }
 
-# Python's socket module can embed the abstract-namespace address's leading NUL byte directly (no
-# shell argv involved for the address itself), unlike a plain nc/ncat command-line invocation.
-local_rpc_python3() {
-  local request_json="$1"
-  local timeout="$2"
+# Extracts a value from `content call`'s `Result: Bundle[{key=value, key2=value2}]` text output.
+# Only safe because every value this CLI reads back is either digits (status) or base64 (body) -
+# a raw JSON body could itself contain "}"/"," and break naive Bundle-string parsing, which is
+# exactly why the app base64-encodes it before returning it.
+extract_bundle_value() {
+  local output="$1"
+  local key="$2"
 
-  python3 - "${LOCAL_SOCKET_NAME}" "${request_json}" "${timeout}" <<'PYEOF'
-import socket
-import sys
-
-socket_name, request, timeout = sys.argv[1], sys.argv[2], float(sys.argv[3])
-s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-s.settimeout(timeout)
-try:
-    s.connect("\0" + socket_name)
-    s.sendall((request + "\n").encode())
-    s.shutdown(socket.SHUT_WR)
-    buf = b""
-    while True:
-        chunk = s.recv(4096)
-        if not chunk:
-            break
-        buf += chunk
-    sys.stdout.write(buf.decode(errors="replace"))
-except OSError as e:
-    sys.stderr.write(f"{e}\n")
-    sys.exit(1)
-finally:
-    s.close()
-PYEOF
+  printf '%s' "${output}" | grep -oE "${key}=[A-Za-z0-9+/=]+" | head -1 | cut -d= -f2-
 }
 
-# Builds and sends an authenticated request. $1 = method, $2 = path, $3 = body JSON (default null).
+# Builds and sends an authenticated request to the app's local control ContentProvider.
+# $1 = method, $2 = path, $3 = body JSON (optional).
 local_request() {
   local method="$1"
   local path="$2"
-  local body="${3:-null}"
-  local token request
+  local body="${3:-}"
+  local token output status body_b64 raw_body
 
   token=$(get_local_token)
   if [[ -z "${token}" ]]
   then
-    printf 'Not paired yet. Run: %s local pair\n' "$(basename "$0")" >&2
+    printf 'No local control token configured.\n' >&2
+    printf 'Copy it from Findroid+ > Settings > Local CLI access, then:\n' >&2
+    printf '  %s local token set YOUR_TOKEN\n' "$(basename "$0")" >&2
     return 2
   fi
 
-  request=$(
-    jq -n \
-      --arg method "${method}" \
-      --arg path "${path}" \
-      --arg auth "${token}" \
-      --argjson body "${body}" \
-      '{type: "request", method: $method, path: $path, auth: $auth, body: $body}'
-  )
-  local_rpc "${request}"
+  local extras=(--extra "token:s:${token}" --extra "method:s:${method}" --extra "path:s:${path}")
+  if [[ -n "${body}" ]]
+  then
+    extras+=(--extra "body:s:$(printf '%s' "${body}" | base64 -w0)")
+  fi
+
+  output=$(content call --uri "content://${LOCAL_AUTHORITY}" --method rpc "${extras[@]}" 2>&1)
+  status=$(printf '%s' "${output}" | grep -oE 'status=[0-9]+' | head -1 | cut -d= -f2)
+  body_b64=$(extract_bundle_value "${output}" "body")
+
+  if [[ -z "${status}" ]]
+  then
+    printf 'No response from Findroid+ local control (is it enabled?)\n' >&2
+    printf 'Raw output: %s\n' "${output}" >&2
+    return 1
+  fi
+
+  if [[ -n "${body_b64}" ]]
+  then
+    raw_body=$(printf '%s' "${body_b64}" | base64 -d 2>/dev/null)
+  fi
+
+  jq -n --argjson status "${status}" --argjson body "${raw_body:-null}" '{status: $status, body: $body}'
 }
 
 # Prints an error and fails if $1 (a local control response) is empty or a non-2xx status -
@@ -539,40 +519,6 @@ check_local_response() {
       "${status}" "$(jq -r '.body.error // "unknown error"' <<< "${response}")" >&2
     return 1
   fi
-}
-
-cmd_local_pair() {
-  local client_id request response status token
-
-  client_id=$(get_or_create_local_client_id)
-  request=$(jq -n --arg clientId "${client_id}" '{type: "pair_request", clientId: $clientId}')
-
-  printf 'Waiting for approval in the Findroid+ app (up to 2 minutes)...\n'
-  response=$(local_rpc "${request}" 130)
-  if [[ -z "${response}" ]]
-  then
-    printf 'No response - is local control enabled in Findroid+ > Settings > Local CLI access?\n' >&2
-    return 1
-  fi
-
-  status=$(jq -r '.status' <<< "${response}")
-  if [[ "${status}" != "200" ]]
-  then
-    printf 'Pairing denied or timed out.\n' >&2
-    return 1
-  fi
-
-  token=$(jq -r '.body.token // empty' <<< "${response}")
-  if [[ -z "${token}" ]]
-  then
-    printf 'Pairing succeeded but no token was returned.\n' >&2
-    return 1
-  fi
-
-  mkdir -p "${CONFIG_DIR}"
-  printf '%s' "${token}" > "${LOCAL_TOKEN_FILE}"
-  chmod 600 "${LOCAL_TOKEN_FILE}"
-  printf 'Paired. Token saved to %s\n' "${LOCAL_TOKEN_FILE}"
 }
 
 cmd_local_settings_get() {
@@ -1005,17 +951,26 @@ main() {
       ;;
   esac
 
-  # "local" commands talk only to the app's own control socket - no Jellyfin account needed, so
-  # they skip require_deps/load_config entirely (they need jq + socat/python3 instead -
-  # require_local_transport checks for jq and picks whichever of socat/python3 is available).
+  # "local" commands talk only to the app's own ContentProvider - no Jellyfin account needed, so
+  # they skip require_deps/load_config entirely (they need jq/content/base64 instead -
+  # require_local_transport checks for those).
   if [[ "$1" == "local" ]]
   then
     require_local_transport
     shift
     case "${1:-}" in
-      pair)
+      token)
         shift
-        cmd_local_pair "$@"
+        case "${1:-}" in
+          set)
+            shift
+            cmd_local_token_set "$@"
+            ;;
+          *)
+            usage >&2
+            return 2
+            ;;
+        esac
         ;;
       settings)
         shift

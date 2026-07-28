@@ -19,7 +19,6 @@ object NotificationChannels {
     const val NEW_ITEMS = "new_items"
     const val PENDING_DOWNLOADS = "pending_downloads"
     const val AUTOMATIC_SEARCH = "automatic_search"
-    const val PAIRING_REQUESTS = "pairing_requests"
 
     /** Download/delete/move progress and completion for locally downloaded items. */
     fun ensureDownloads(context: Context) =
@@ -69,16 +68,6 @@ object NotificationChannels {
             CoreR.string.automatic_search_channel_name,
             CoreR.string.automatic_search_channel_description,
             NotificationManager.IMPORTANCE_DEFAULT,
-        )
-
-    /** A CLI (or other local process) requesting pairing with the local control API. */
-    fun ensurePairingRequests(context: Context) =
-        ensure(
-            context,
-            PAIRING_REQUESTS,
-            CoreR.string.pairing_channel_name,
-            CoreR.string.pairing_channel_description,
-            NotificationManager.IMPORTANCE_HIGH,
         )
 
     private fun ensure(

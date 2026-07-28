@@ -19,7 +19,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -33,13 +32,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 
 /**
- * Dispatches an already-authenticated [LocalControlRequest] (see [LocalControlServer], which
- * verifies the bearer token/peer uid before ever calling this) to the actual app state it
- * controls - real [AppPreferences] download settings, a real [Downloader]-triggered download, or
- * a raw debug request against Jellyfin/Sonarr/Radarr/Seerr using the app's own stored
- * credentials. Pairing (`pair_request`) is handled directly by [LocalControlServer] instead of
- * here, since it needs to post a notification and hold the connection open - this router only
- * ever sees requests from an already-paired client.
+ * Dispatches an already-authenticated request (see [LocalControlProvider], which verifies the
+ * bearer token before ever calling this) to the actual app state it controls - real
+ * [AppPreferences] download settings, a real [Downloader]-triggered download, or a raw debug
+ * request against Jellyfin/Sonarr/Radarr/Seerr using the app's own stored credentials.
  */
 @Singleton
 class LocalControlRouter
@@ -51,7 +47,6 @@ constructor(
     private val jellyfinRepository: JellyfinRepository,
     private val downloader: Downloader,
     private val pvrConfiguration: PvrConfiguration,
-    private val localControlAuth: LocalControlAuth,
 ) {
     suspend fun handle(method: String, path: String, body: JsonElement?): LocalControlResponse =
         withContext(Dispatchers.IO) {
@@ -62,9 +57,6 @@ constructor(
                         patchDownloadSettings(body)
                     method == "POST" && path == "/downloads/trigger" -> triggerDownload(body)
                     method == "POST" && path == "/debug/proxy" -> debugProxy(body)
-                    method == "GET" && path == "/pair/clients" -> listPairedClients()
-                    method == "DELETE" && path.startsWith("/pair/clients/") ->
-                        revokePairedClient(path.removePrefix("/pair/clients/"))
                     else ->
                         LocalControlResponse(
                             LocalControlStatus.NOT_FOUND,
@@ -76,37 +68,6 @@ constructor(
                 LocalControlResponse(LocalControlStatus.INTERNAL_ERROR, errorBody(e.message ?: "Internal error"))
             }
         }
-
-    private suspend fun listPairedClients(): LocalControlResponse {
-        val clients = localControlAuth.listPairedClients()
-        return LocalControlResponse(
-            LocalControlStatus.OK,
-            buildJsonObject {
-                put(
-                    "clients",
-                    buildJsonArray {
-                        clients.forEach { client ->
-                            add(
-                                buildJsonObject {
-                                    put("clientId", client.clientId)
-                                    put("packageName", client.packageName)
-                                    put("pairedAt", client.pairedAt)
-                                }
-                            )
-                        }
-                    },
-                )
-            },
-        )
-    }
-
-    private suspend fun revokePairedClient(clientId: String): LocalControlResponse {
-        if (clientId.isBlank()) {
-            return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing client id"))
-        }
-        localControlAuth.revoke(clientId)
-        return LocalControlResponse(LocalControlStatus.OK)
-    }
 
     private fun getDownloadSettings(): LocalControlResponse =
         LocalControlResponse(LocalControlStatus.OK, DownloadSettingsBridge.toJson(appPreferences))

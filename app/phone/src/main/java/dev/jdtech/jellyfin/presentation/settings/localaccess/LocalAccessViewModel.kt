@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.localcontrol.LocalControlAuth
-import dev.jdtech.jellyfin.localcontrol.LocalControlServer
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +15,6 @@ class LocalAccessViewModel
 @Inject
 constructor(
     private val localControlAuth: LocalControlAuth,
-    private val localControlServer: LocalControlServer,
     private val appPreferences: AppPreferences,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LocalAccessState())
@@ -24,61 +22,35 @@ constructor(
 
     fun load() {
         viewModelScope.launch {
-            val enabledPref = appPreferences.getValue(appPreferences.localControlEnabled)
             _state.emit(
                 _state.value.copy(
-                    isLoading = true,
-                    error = null,
-                    localControlEnabled = enabledPref,
-                    // The preference alone isn't proof anything is actually listening (e.g. a
-                    // previous start() may have silently failed to bind) - surface that mismatch
-                    // immediately rather than only after the user next flips the switch.
-                    startFailed = enabledPref && !localControlServer.isRunning(),
+                    localControlEnabled = appPreferences.getValue(appPreferences.localControlEnabled),
+                    token = localControlAuth.getOrCreateToken(),
                 )
             )
-            try {
-                val clients = localControlAuth.listPairedClients()
-                _state.emit(_state.value.copy(isLoading = false, pairedClients = clients))
-            } catch (e: Exception) {
-                _state.emit(_state.value.copy(isLoading = false, error = e))
-            }
         }
     }
 
     fun onAction(action: LocalAccessAction) {
         when (action) {
             is LocalAccessAction.SetLocalControlEnabled -> setLocalControlEnabled(action.enabled)
-            is LocalAccessAction.RevokeClient -> revokeClient(action.clientId)
+            is LocalAccessAction.RegenerateToken -> regenerateToken()
             is LocalAccessAction.OnBackClick -> Unit
+            is LocalAccessAction.CopyToken -> Unit
         }
     }
 
     private fun setLocalControlEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            // Applies immediately, not just on next app start - the toggle would otherwise be
-            // misleading (switched on, but nothing actually listening until a restart).
-            val running =
-                if (enabled) {
-                    localControlServer.start()
-                } else {
-                    localControlServer.stop()
-                    true
-                }
-            // Don't persist "enabled" if the bind just failed - a future app start's
-            // startIfEnabled() would only fail again the same way with nobody watching, and the
-            // toggle would keep showing "on" for a feature that has never actually worked.
-            val nowEnabled = enabled && running
-            appPreferences.setValue(appPreferences.localControlEnabled, nowEnabled)
-            _state.emit(
-                _state.value.copy(localControlEnabled = nowEnabled, startFailed = enabled && !running)
-            )
+            appPreferences.setValue(appPreferences.localControlEnabled, enabled)
+            _state.emit(_state.value.copy(localControlEnabled = enabled))
         }
     }
 
-    private fun revokeClient(clientId: String) {
+    private fun regenerateToken() {
         viewModelScope.launch {
-            localControlAuth.revoke(clientId)
-            load()
+            val token = localControlAuth.regenerateToken()
+            _state.emit(_state.value.copy(token = token))
         }
     }
 }

@@ -86,10 +86,6 @@
             android:exported="false" />
 
         <receiver
-            android:name=".localcontrol.PairingActionReceiver"
-            android:exported="false" />
-
-        <receiver
             android:name=".work.BatterySaverReceiver"
             android:exported="true">
             <intent-filter>
@@ -117,6 +113,14 @@
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             tools:node="remove" />
+
+        <!-- Local control API (see core/.../localcontrol/LocalControlProvider.kt) - exported so a
+             plain shell (Termux's `content call`) can reach it; the token check inside call()
+             is the actual gate, not manifest-level permissions. -->
+        <provider
+            android:name="dev.jdtech.jellyfin.localcontrol.LocalControlProvider"
+            android:authorities="${applicationId}.localcontrol"
+            android:exported="true" />
     </application>
 
 </manifest>

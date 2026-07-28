@@ -2,11 +2,9 @@ package dev.jdtech.jellyfin.localcontrol
 
 import dev.jdtech.jellyfin.security.FakeSharedPreferences
 import dev.jdtech.jellyfin.security.SecureCredentialStore
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -20,85 +18,55 @@ class LocalControlAuthTest {
     }
 
     @Test
-    fun `beginPairing records the request with the caller's real uid and package`() {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
+    fun `getOrCreateToken generates a token on first call`() {
+        val token = auth.getOrCreateToken()
 
-        assertEquals("client-1", request.clientId)
-        assertEquals(10123, request.uid)
-        assertEquals("com.termux", request.packageName)
-        assertEquals(request, auth.pendingRequest(request.requestId))
+        assertTrue(token.isNotBlank())
     }
 
     @Test
-    fun `approve issues a token that verifies for the same uid`() = runBlocking {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
+    fun `getOrCreateToken returns the same token on repeated calls`() {
+        val first = auth.getOrCreateToken()
+        val second = auth.getOrCreateToken()
 
-        val token = auth.approve(request.requestId)
-
-        assertNotNull(token)
-        assertTrue(auth.verifyToken(token, uid = 10123))
+        assertEquals(first, second)
     }
 
     @Test
-    fun `approve consumes the pending request`() = runBlocking {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
+    fun `verifyToken accepts the current token`() {
+        val token = auth.getOrCreateToken()
 
-        auth.approve(request.requestId)
-
-        assertNull(auth.pendingRequest(request.requestId))
-        assertNull(auth.approve(request.requestId))
+        assertTrue(auth.verifyToken(token))
     }
 
     @Test
-    fun `verifyToken rejects a token replayed from a different uid`() = runBlocking {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
-        val token = auth.approve(request.requestId)
+    fun `verifyToken rejects a wrong token`() {
+        auth.getOrCreateToken()
 
-        assertFalse(auth.verifyToken(token, uid = 99999))
+        assertFalse(auth.verifyToken("not-the-real-token"))
     }
 
     @Test
-    fun `verifyToken rejects an unknown token`() = runBlocking {
-        assertFalse(auth.verifyToken("not-a-real-token", uid = 10123))
+    fun `verifyToken rejects null or blank`() {
+        auth.getOrCreateToken()
+
+        assertFalse(auth.verifyToken(null))
+        assertFalse(auth.verifyToken(""))
     }
 
     @Test
-    fun `verifyToken rejects a null or blank token`() = runBlocking {
-        assertFalse(auth.verifyToken(null, uid = 10123))
-        assertFalse(auth.verifyToken("", uid = 10123))
+    fun `verifyToken rejects an unset token`() {
+        assertFalse(auth.verifyToken("anything"))
     }
 
     @Test
-    fun `deny clears the pending request without issuing a token`() = runBlocking {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
+    fun `regenerateToken issues a different token and invalidates the old one`() {
+        val original = auth.getOrCreateToken()
 
-        auth.deny(request.requestId)
+        val regenerated = auth.regenerateToken()
 
-        assertNull(auth.pendingRequest(request.requestId))
-        assertNull(auth.approve(request.requestId))
-    }
-
-    @Test
-    fun `re-pairing the same client replaces its previous token`() = runBlocking {
-        val first = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
-        val firstToken = auth.approve(first.requestId)
-
-        val second = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
-        val secondToken = auth.approve(second.requestId)
-
-        assertFalse(auth.verifyToken(firstToken, uid = 10123))
-        assertTrue(auth.verifyToken(secondToken, uid = 10123))
-        assertEquals(1, auth.listPairedClients().size)
-    }
-
-    @Test
-    fun `revoke removes a paired client's token`() = runBlocking {
-        val request = auth.beginPairing("client-1", uid = 10123, packageName = "com.termux")
-        val token = auth.approve(request.requestId)
-
-        auth.revoke("client-1")
-
-        assertFalse(auth.verifyToken(token, uid = 10123))
-        assertTrue(auth.listPairedClients().isEmpty())
+        assertNotEquals(original, regenerated)
+        assertFalse(auth.verifyToken(original))
+        assertTrue(auth.verifyToken(regenerated))
     }
 }
