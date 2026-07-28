@@ -45,20 +45,32 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
   settings get                               Show the app's real download settings
   settings set KEY=VALUE [KEY=VALUE...]      Change the app's real download settings
   library list                               List the Jellyfin libraries (Movies, TV Shows, ...)
-  library browse [PARENT_ID] [--search TERM] Browse a library/folder, or search it
-  search TERM                                Search the whole Jellyfin server
+  library browse [PARENT_ID] [--search TERM] [--type TYPE[,TYPE...]]
+                                              Browse a library/folder, or search it. TYPE:
+                                              movie|show|season|episode|boxset|folder
+  search TERM [--type TYPE[,TYPE...]]        Search the whole Jellyfin server (any item type by
+                                              default - use --type to narrow it, e.g. an episode
+                                              title that isn't also a show/movie name)
   sonarr list                                List Sonarr series
   radarr list                                List Radarr movies
   seerr requests [--take N]                  List Seerr requests
   seerr discover [trending|movies|tv] [--page N]  Browse Seerr discover
   seerr search TERM [--page N]               Search Seerr
-  download list                              List the app's real current downloads
+  download list [--active|--completed]       List the app's real downloads (--active: only
+                                              in-progress, with live percent/speed/eta)
   download trigger ITEM_ID [SOURCE_ID]       Trigger a real download by item id
-  download NAME [SEASON] [EPISODE] [--all]   Trigger a real download by name, e.g.
+  download cancel DOWNLOAD_ID                Stop an in-progress download ("download list" DOWNLOAD_ID)
+  download remove ITEM_ID [ITEM_ID...]       Delete an already-downloaded item ("download list" ITEM_ID)
+  download NAME [SEASON] [EPISODE] [--all]   Trigger a real download by name - matches a movie,
+                                              show, or a single episode's own title directly, e.g.
                                               download "Rick and Morty" "Season 3"
-                                              ("list"/"trigger" are reserved - a show/movie
-                                              literally titled that needs "library browse
-                                              --search" + "download trigger ITEM_ID" instead)
+                                              download "Salute Your Morts"
+                                              An item id (from "library browse"/"search") also
+                                              works here directly, same as "download trigger ID".
+                                              ("list"/"trigger"/"cancel"/"remove" are reserved - a
+                                              show/movie/episode literally titled one of those
+                                              needs "download -- NAME" to force by-name matching,
+                                              or "library browse --search" + "download trigger ID")
   debug SERVICE METHOD PATH [BODY_JSON]      Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
 
 Config (environment variable):
@@ -331,13 +343,17 @@ cmd_library_list() {
 }
 
 cmd_library_browse() {
-  local parent_id="" search=""
+  local parent_id="" search="" type=""
 
   while [[ -n "${1:-}" ]]
   do
     case "$1" in
       --search)
         search="${2:-}"
+        shift 2
+        ;;
+      --type)
+        type="${2:-}"
         shift 2
         ;;
       *)
@@ -354,7 +370,10 @@ cmd_library_browse() {
   fi
 
   local response
-  response=$(local_request "GET" "/jellyfin/items$(build_query "parentId=${parent_id}" "search=${search}")")
+  response=$(
+    local_request "GET" \
+      "/jellyfin/items$(build_query "parentId=${parent_id}" "search=${search}" "type=${type}")"
+  )
   if [[ -n "${JSON_OUTPUT}" ]]
   then
     print_response_json "${response}"
@@ -364,8 +383,25 @@ cmd_library_browse() {
   render_items_table "${response}"
 }
 
+# Searches the whole server, any item type by default (movies/shows/seasons/episodes/...) - pass
+# --type to narrow it, e.g. `search --type episode "Salute Your Morts"` when a title only matches
+# an individual episode rather than a show/movie.
 cmd_search() {
-  local query="${1:-}"
+  local query="" type=""
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --type)
+        type="${2:-}"
+        shift 2
+        ;;
+      *)
+        query="$1"
+        shift
+        ;;
+    esac
+  done
 
   if [[ -z "${query}" ]]
   then
@@ -374,7 +410,7 @@ cmd_search() {
   fi
 
   local response
-  response=$(local_request "GET" "/jellyfin/search$(build_query "q=${query}")")
+  response=$(local_request "GET" "/jellyfin/items$(build_query "search=${query}" "type=${type}")")
   if [[ -n "${JSON_OUTPUT}" ]]
   then
     print_response_json "${response}"
@@ -513,10 +549,33 @@ cmd_seerr_search() {
   render_seerr_search_table "${response}"
 }
 
+# findroid-cli download list [--active|--completed] - one row per downloaded source (movies and,
+# unlike the app's own getDownloads() alone, every downloaded episode too). --active shows only
+# in-progress transfers (with live percent/speed/eta); --completed shows only finished ones;
+# neither flag shows both.
 cmd_download_list() {
-  local response
+  local status=""
 
-  response=$(local_request "GET" "/downloads")
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --active)
+        status="downloading"
+        shift
+        ;;
+      --completed)
+        status="completed"
+        shift
+        ;;
+      *)
+        printf 'Unknown option: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+  done
+
+  local response
+  response=$(local_request "GET" "/downloads$(build_query "status=${status}")")
   if [[ -n "${JSON_OUTPUT}" ]]
   then
     print_response_json "${response}"
@@ -524,23 +583,73 @@ cmd_download_list() {
   fi
   check_response "${response}" || return 1
   {
-    printf 'ITEM_ID\tNAME\tSOURCE\tSIZE_MIB\tDOWNLOAD_ID\n'
+    printf 'ITEM_ID\tNAME\tSTATUS\tPROGRESS\tSIZE_MIB\tDOWNLOAD_ID\n'
     jq -r '
-      .body[] as $item |
-      if ($item.sources | length) == 0 then
-        [$item.itemId, $item.name, "-", "-", "-"] | @tsv
-      else
-        $item.sources[] |
-        [
-          $item.itemId,
-          $item.name,
-          .name,
-          (((.sizeBytes / 1048576 * 10 | round) / 10) | tostring),
-          (.downloadId // "-" | tostring)
-        ] | @tsv
-      end
+      .body[] |
+      [
+        .itemId,
+        (if .seriesName then "\(.seriesName) - \(.name) (S\(.seasonNumber)E\(.episodeNumber))" else .name end),
+        .status,
+        (if .status == "downloading" then "\(.percent)%" else "-" end),
+        ((.sizeBytes / 1048576 * 10 | round) / 10 | tostring),
+        (.downloadId // "-")
+      ] | @tsv
     ' <<< "${response}"
   } | print_table
+}
+
+# findroid-cli download cancel DOWNLOAD_ID - stops an in-progress transfer (from "download list"'s
+# DOWNLOAD_ID column) and cleans up its partial file, same as the app's own Downloads screen.
+cmd_download_cancel() {
+  local download_id="${1:-}"
+
+  if [[ -z "${download_id}" ]]
+  then
+    printf 'download cancel requires a DOWNLOAD_ID (from "download list")\n' >&2
+    return 2
+  fi
+
+  local body
+  body=$(jq -n --arg downloadId "${download_id}" '{downloadId: $downloadId}')
+
+  local response
+  response=$(local_request "POST" "/downloads/cancel" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  printf 'Cancelled download %s\n' "${download_id}"
+}
+
+# findroid-cli download remove ITEM_ID [ITEM_ID...] - deletes an already-downloaded item (from
+# "download list"'s ITEM_ID column), same cascade as the app's own Downloads screen delete. For an
+# in-progress download, use "download cancel" instead.
+cmd_download_remove() {
+  if [[ $# -eq 0 ]]
+  then
+    printf 'download remove requires at least one ITEM_ID (from "download list")\n' >&2
+    return 2
+  fi
+
+  local body
+  if [[ $# -eq 1 ]]
+  then
+    body=$(jq -n --arg itemId "$1" '{itemId: $itemId}')
+  else
+    body=$(jq -n --args '{itemIds: $ARGS.positional}' -- "$@")
+  fi
+
+  local response
+  response=$(local_request "POST" "/downloads/remove" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  printf 'Removed %s item(s)\n' "$(jq -r '.body.removed' <<< "${response}")"
 }
 
 cmd_download_trigger() {
@@ -593,14 +702,23 @@ cmd_download_by_name() {
   done
 
   local name="${positional[0]:-}"
-  local season="${positional[1]:-}"
-  local episode="${positional[2]:-}"
 
   if [[ -z "${name}" ]]
   then
-    printf 'download requires a show/movie name (or "download list" / "download trigger ITEM_ID")\n' >&2
+    printf 'download requires a show/movie/episode name or item id (or "download list")\n' >&2
     return 2
   fi
+
+  # A bare item id (copied from "library browse"/"search" output) works here too - forward
+  # straight to the id-based trigger instead of searching for a literal UUID as if it were a title.
+  if [[ "${name}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]
+  then
+    cmd_download_trigger "${positional[@]}"
+    return
+  fi
+
+  local season="${positional[1]:-}"
+  local episode="${positional[2]:-}"
 
   local body
   body=$(
@@ -797,6 +915,10 @@ main() {
     download)
       shift
       case "${1:-}" in
+        --)
+          shift
+          cmd_download_by_name "$@"
+          ;;
         list)
           shift
           cmd_download_list "$@"
@@ -804,6 +926,14 @@ main() {
         trigger)
           shift
           cmd_download_trigger "$@"
+          ;;
+        cancel)
+          shift
+          cmd_download_cancel "$@"
+          ;;
+        remove)
+          shift
+          cmd_download_remove "$@"
           ;;
         "")
           usage >&2

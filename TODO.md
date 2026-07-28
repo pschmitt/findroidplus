@@ -442,3 +442,71 @@ needing an item UUID up front (`findroid-cli download "Rick and Morty"
 
 Status: **done** (2026-07-28) on Mi Pad 4; deployed to px5 too. Both devices
 got the release build from the same batch as this entry.
+
+**Follow-up (2026-07-28, same day)** after real usage turned up gaps:
+- [x] `search`/`library browse` were unintentionally movie/show-only (via
+      `getSearchItems`) - individual episodes never matched. Repointed
+      `search` at the unrestricted `/jellyfin/items` endpoint (already used
+      by `library browse`) and added a `--type TYPE[,TYPE...]` filter to
+      both, so e.g. `search --type episode "Salute Your Morts"` finds an
+      episode whose title isn't also a show/movie name. Removed the now-
+      redundant `/jellyfin/search` endpoint (`getSearchItems` was a strict
+      subset of what `/jellyfin/items` already does).
+- [x] `download NAME` couldn't resolve a bare episode title at all (its
+      candidate search was movie/show-only) - it now also matches episodes
+      directly, e.g. `download "Salute Your Morts"`. Ambiguous-match errors
+      for episodes/seasons now include the series name (`"Pilot" (Severance
+      S1E1)` vs. just `"Pilot"`) since a bare title alone doesn't
+      disambiguate across shows.
+- [x] `download ITEM_ID` (an id copied from `library browse`/`search`
+      output, no `trigger` keyword) now auto-detects a UUID-shaped first
+      argument and forwards to the id-based trigger, instead of searching
+      for the literal UUID string as a title and failing.
+- [x] `download -- NAME` added: forces by-name interpretation even when
+      NAME collides with a reserved subcommand word (`list`/`trigger`/
+      `cancel`/`remove`).
+- [x] `download list` only ever showed movies - `FindroidShow.sources` is
+      always empty (a show has no media source, only its episodes do), so
+      every TV download was silently invisible. Now expands each downloaded
+      show's seasons/episodes (offline DB reads, same pattern
+      `DownloadsViewModel.refreshDownloads()` already uses) into the flat
+      per-source list.
+- [x] Added real in-progress-download visibility: each source's `status`
+      ("downloading"/"completed") plus, while downloading, a live progress
+      snapshot (percent/bytes/speed/eta) via the existing
+      `Downloader.getProgressFlow()`. `download list --active`/`--completed`
+      filters either way.
+- [x] Added `download cancel DOWNLOAD_ID` (`Downloader.cancelDownload`) and
+      `download remove ITEM_ID...` (`Downloader.deleteItems`) - both already
+      existed on `Downloader` for the app's own Downloads screen, just
+      weren't exposed to the local-control API yet.
+- [x] Fixed a real correctness bug found while touching this: every
+      `downloadId` in a JSON response was a raw 64-bit `Long` number -
+      `jq`/JS-style JSON parsers only preserve ~53 bits of integer
+      precision, so an extreme id could silently corrupt on the wire and
+      break a later cancel/list-by-id call. Encoded as a string everywhere
+      instead (`triggerDownload`, `triggerDownloadByName`, `download list`).
+
+## FINDROID-51: Serve findroid-cli itself from the "Local CLI access" page
+
+Requested (2026-07-28): let a user grab `findroid-cli` directly from the
+device it's meant to control, the way Shizuku's `rish` shell client is
+downloadable/installable straight from the Shizuku app - instead of the
+current requirement to separately clone/copy the script from the
+`findroidplus` repo onto the device before it's usable.
+
+- [ ] Design how the script gets served: likely a new unauthenticated (no
+      bearer token - there's nothing to protect, it's a public script, not
+      user data) `GET /cli` on the existing loopback `LocalControlServer`,
+      returning `cli/findroid-cli`'s contents verbatim (bundled as an Android
+      asset/resource at build time, not read from a live git checkout).
+- [ ] "Local CLI access" settings screen: a visible URL/command a user can
+      `curl` from Termux (e.g. `curl http://127.0.0.1:48411/cli -o
+      findroid-cli && chmod +x findroid-cli`), or a QR code / share-intent
+      shortcut, mirroring how Shizuku's own onboarding surfaces `rish`.
+- [ ] Keep the bundled script in sync with `cli/findroid-cli` at build time
+      (copy as a build step / Gradle task) rather than hand-duplicating it -
+      two copies drifting apart would be worse than the current
+      copy-it-yourself status quo.
+
+Status: not started (2026-07-28) - added to the backlog, not implemented yet.

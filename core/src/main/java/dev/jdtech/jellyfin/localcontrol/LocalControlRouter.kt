@@ -26,8 +26,10 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -79,13 +81,14 @@ constructor(
                     method == "GET" && path == "/settings/downloads" -> getDownloadSettings()
                     method == "PATCH" && path == "/settings/downloads" ->
                         patchDownloadSettings(body)
-                    method == "GET" && path == "/downloads" -> listDownloads()
+                    method == "GET" && path == "/downloads" -> listDownloads(queryParams)
                     method == "POST" && path == "/downloads/trigger" -> triggerDownload(body)
                     method == "POST" && path == "/downloads/trigger-by-name" ->
                         triggerDownloadByName(body)
+                    method == "POST" && path == "/downloads/cancel" -> cancelDownload(body)
+                    method == "POST" && path == "/downloads/remove" -> removeDownload(body)
                     method == "GET" && path == "/jellyfin/libraries" -> getJellyfinLibraries()
                     method == "GET" && path == "/jellyfin/items" -> getJellyfinItems(queryParams)
-                    method == "GET" && path == "/jellyfin/search" -> getJellyfinSearch(queryParams)
                     method == "GET" && path == "/sonarr/series" -> getSonarrSeries()
                     method == "GET" && path == "/radarr/movies" -> getRadarrMovies()
                     method == "GET" && path == "/seerr/requests" -> getSeerrRequests(queryParams)
@@ -117,36 +120,96 @@ constructor(
         return LocalControlResponse(LocalControlStatus.OK, DownloadSettingsBridge.toJson(appPreferences))
     }
 
-    private suspend fun listDownloads(): LocalControlResponse {
-        val items = jellyfinRepository.getDownloads()
+    /** Flattens every downloaded (LOCAL) source - movies plus, unlike [JellyfinRepository.getDownloads]
+     * itself, every downloaded episode too ([FindroidShow.sources] is always empty - a show has no
+     * media source of its own, only its episodes do - so `getDownloads()` alone silently drops every
+     * TV download; expanding each show's seasons/episodes via the `offline = true` DB-backed reads
+     * mirrors what [DownloadsViewModel][dev.jdtech.jellyfin.film.presentation.downloads.DownloadsViewModel]'s
+     * own Downloads screen already does). One row per source, with a `status`
+     * ("downloading"/"completed", from the `.download` suffix [FindroidItem.isDownloading] already
+     * uses) and, for an in-progress one, a live progress snapshot. `status` query param filters to
+     * just one or the other. */
+    private suspend fun listDownloads(queryParams: Map<String, String>): LocalControlResponse {
+        val statusFilter = queryParams["status"]
+
+        val flatItems = mutableListOf<FindroidItem>()
+        jellyfinRepository.getDownloads().forEach { item ->
+            if (item is FindroidShow) {
+                jellyfinRepository.getSeasons(item.id, offline = true).forEach { season ->
+                    flatItems += jellyfinRepository.getEpisodes(item.id, season.id, offline = true)
+                }
+            } else {
+                flatItems += item
+            }
+        }
+
         val body = buildJsonArray {
-            items.forEach { item ->
-                add(
-                    buildJsonObject {
-                        put("itemId", item.id.toString())
-                        put("name", item.name)
-                        put(
-                            "sources",
-                            buildJsonArray {
-                                item.sources
-                                    .filter { it.type == FindroidSourceType.LOCAL }
-                                    .forEach { source ->
-                                        add(
-                                            buildJsonObject {
-                                                put("sourceId", source.id)
-                                                put("name", source.name)
-                                                put("sizeBytes", source.size)
-                                                source.downloadId?.let { put("downloadId", it) }
-                                            }
-                                        )
+            flatItems.forEach { item ->
+                item.sources
+                    .filter { it.type == FindroidSourceType.LOCAL }
+                    .forEach { source ->
+                        val status = if (source.path.endsWith(".download")) "downloading" else "completed"
+                        if (statusFilter != null && statusFilter != status) return@forEach
+                        add(
+                            buildJsonObject {
+                                put("itemId", item.id.toString())
+                                put("name", item.name)
+                                if (item is FindroidEpisode) {
+                                    put("seriesName", item.seriesName)
+                                    put("seasonNumber", item.parentIndexNumber)
+                                    put("episodeNumber", item.indexNumber)
+                                }
+                                put("sourceId", source.id)
+                                put("sourceName", source.name)
+                                put("sizeBytes", source.size)
+                                put("status", status)
+                                source.downloadId?.let { downloadId ->
+                                    put("downloadId", downloadId.toString())
+                                    if (status == "downloading") {
+                                        val progress = downloader.getProgressFlow(downloadId).first()
+                                        put("percent", progress.percent)
+                                        put("downloadedBytes", progress.downloadedBytes)
+                                        put("totalBytes", progress.totalBytes)
+                                        put("speedBytesPerSecond", progress.speedBytesPerSecond)
+                                        put("etaSeconds", progress.etaSeconds)
                                     }
-                            },
+                                }
+                            }
                         )
                     }
-                )
             }
         }
         return LocalControlResponse(LocalControlStatus.OK, body)
+    }
+
+    private suspend fun cancelDownload(body: JsonElement?): LocalControlResponse {
+        val downloadId =
+            body?.jsonObject?.get("downloadId")?.jsonPrimitive?.contentOrNull?.toLongOrNull()
+                ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing/invalid \"downloadId\""))
+        downloader.cancelDownload(downloadId)
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("cancelled", true) })
+    }
+
+    /** Deletes one or more already-downloaded items (body: `{"itemId": "..."}` or
+     * `{"itemIds": ["...", ...]}`) via [Downloader.deleteItems] - the same cascade the app's own
+     * Downloads screen delete action uses. Not for an in-progress download - use [cancelDownload]
+     * for that (deleting a still-downloading item isn't itself an error, but it only removes the DB
+     * bookkeeping and leaves the transfer running orphaned; cancel first). */
+    private suspend fun removeDownload(body: JsonElement?): LocalControlResponse {
+        val obj = body?.jsonObject
+        val singleId = obj?.get("itemId")?.jsonPrimitive?.contentOrNull
+        val manyIds = obj?.get("itemIds")?.let { el -> el as? JsonArray }?.mapNotNull { it.jsonPrimitive.contentOrNull }
+        val rawIds = manyIds ?: singleId?.let { listOf(it) }
+        if (rawIds.isNullOrEmpty()) {
+            return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"itemId\"/\"itemIds\""))
+        }
+        val uuids =
+            rawIds.map {
+                runCatching { UUID.fromString(it) }.getOrNull()
+                    ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Invalid item id: $it"))
+            }
+        downloader.deleteItems(uuids)
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("removed", uuids.size) })
     }
 
     private suspend fun triggerDownload(body: JsonElement?): LocalControlResponse {
@@ -169,7 +232,10 @@ constructor(
         val (downloadId, error) =
             downloader.downloadItem(item, sourceId, downloader.resolvePreferredStorageIndex())
         return if (error == null) {
-            LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("downloadId", downloadId) })
+            LocalControlResponse(
+                LocalControlStatus.OK,
+                buildJsonObject { put("downloadId", downloadId.toString()) },
+            )
         } else {
             LocalControlResponse(LocalControlStatus.CONFLICT, errorBody(error.asString(context.resources)))
         }
@@ -194,12 +260,15 @@ constructor(
 
         val candidates =
             jellyfinRepository.getItems(
-                includeTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+                includeTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.EPISODE),
                 recursive = true,
                 searchTerm = query,
             )
         if (candidates.isEmpty()) {
-            return LocalControlResponse(LocalControlStatus.NOT_FOUND, errorBody("No movie/show matching \"$query\""))
+            return LocalControlResponse(
+                LocalControlStatus.NOT_FOUND,
+                errorBody("No movie/show/episode matching \"$query\""),
+            )
         }
         val exactMatches = candidates.filter { it.name.equals(query, ignoreCase = true) }
         val match =
@@ -207,31 +276,42 @@ constructor(
                 ?: candidates.singleOrNull()
                 ?: return LocalControlResponse(
                     LocalControlStatus.CONFLICT,
-                    errorBody("Ambiguous match for \"$query\": ${candidates.joinToString(", ") { it.name }}"),
+                    errorBody(
+                        "Ambiguous match for \"$query\": " +
+                            candidates.joinToString(", ") { it.describeForAmbiguity() }
+                    ),
                 )
 
         return when (match) {
-            is FindroidMovie -> {
-                val (downloadId, error) = triggerSingle(match)
-                LocalControlResponse(
-                    if (error == null) LocalControlStatus.OK else LocalControlStatus.CONFLICT,
-                    buildJsonObject {
-                        put(
-                            "triggered",
-                            buildJsonArray {
-                                add(triggerResultJson(match.id, match.name, downloadId, error))
-                            },
-                        )
-                    },
-                )
-            }
+            is FindroidMovie -> triggerSingleAsResponse(match)
+            is FindroidEpisode -> triggerSingleAsResponse(match)
             is FindroidShow -> triggerShowDownloadByName(match, seasonQuery, episodeQuery, all)
             else ->
                 LocalControlResponse(
                     LocalControlStatus.BAD_REQUEST,
-                    errorBody("\"${match.name}\" matched but isn't a movie or show"),
+                    errorBody("\"${match.name}\" matched but isn't a movie, show, or episode"),
                 )
         }
+    }
+
+    /** Human-readable disambiguation label for an ambiguous-match error - a bare title isn't
+     * enough to tell apart e.g. two different shows' episodes both called "Pilot", so episodes
+     * (and seasons) are qualified with their series name. */
+    private fun FindroidItem.describeForAmbiguity(): String =
+        when (this) {
+            is FindroidEpisode -> "$name ($seriesName S${parentIndexNumber}E$indexNumber)"
+            is FindroidSeason -> "$name ($seriesName)"
+            else -> name
+        }
+
+    private suspend fun triggerSingleAsResponse(item: FindroidItem): LocalControlResponse {
+        val (downloadId, error) = triggerSingle(item)
+        return LocalControlResponse(
+            if (error == null) LocalControlStatus.OK else LocalControlStatus.CONFLICT,
+            buildJsonObject {
+                put("triggered", buildJsonArray { add(triggerResultJson(item.id, item.name, downloadId, error)) })
+            },
+        )
     }
 
     private suspend fun triggerShowDownloadByName(
@@ -316,7 +396,11 @@ constructor(
         buildJsonObject {
             put("itemId", itemId.toString())
             put("name", name)
-            downloadId?.let { put("downloadId", it) }
+            // Encoded as a string, not a raw JSON number - a Long can exceed the 53 bits of
+            // precision most JSON parsers (jq/JS included) actually preserve for numbers, and a
+            // silently-corrupted download id would make later cancel/list-by-id calls fail in
+            // confusing ways.
+            downloadId?.let { put("downloadId", it.toString()) }
             error?.let { put("error", it) }
         }
 
@@ -357,6 +441,7 @@ constructor(
         val items =
             jellyfinRepository.getItems(
                 parentId = parentId,
+                includeTypes = parseIncludeTypes(queryParams["type"]),
                 recursive = search != null,
                 startIndex = queryParams["startIndex"]?.toIntOrNull(),
                 limit = queryParams["limit"]?.toIntOrNull(),
@@ -365,10 +450,24 @@ constructor(
         return LocalControlResponse(LocalControlStatus.OK, buildJsonArray { items.forEach { add(findroidItemToJson(it)) } })
     }
 
-    private suspend fun getJellyfinSearch(queryParams: Map<String, String>): LocalControlResponse {
-        val query = queryParams["q"] ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"q\""))
-        val items = jellyfinRepository.getSearchItems(query)
-        return LocalControlResponse(LocalControlStatus.OK, buildJsonArray { items.forEach { add(findroidItemToJson(it)) } })
+    /** Parses a comma-separated `type` query param (e.g. "movie,episode") into the matching
+     * [BaseItemKind]s, or `null` (no filter) if it's absent/blank/matches nothing recognized -
+     * lets `/jellyfin/items` narrow a search to just episodes, just movies, etc. */
+    private fun parseIncludeTypes(raw: String?): List<BaseItemKind>? {
+        if (raw.isNullOrBlank()) return null
+        return raw.split(",")
+            .mapNotNull {
+                when (it.trim().lowercase()) {
+                    "movie" -> BaseItemKind.MOVIE
+                    "show", "series" -> BaseItemKind.SERIES
+                    "season" -> BaseItemKind.SEASON
+                    "episode" -> BaseItemKind.EPISODE
+                    "boxset" -> BaseItemKind.BOX_SET
+                    "folder" -> BaseItemKind.FOLDER
+                    else -> null
+                }
+            }
+            .ifEmpty { null }
     }
 
     private fun findroidItemToJson(item: FindroidItem): JsonObject = buildJsonObject {
