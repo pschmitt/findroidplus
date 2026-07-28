@@ -1019,6 +1019,7 @@ constructor(
                                     // folded in here since both are network-adjacent settings
                                     // rather than a separate top-level concern.
                                     PreferenceGroup(
+                                        nameStringResource = R.string.settings_group_timeouts,
                                         preferences =
                                             listOf(
                                                 PreferenceLongInput(

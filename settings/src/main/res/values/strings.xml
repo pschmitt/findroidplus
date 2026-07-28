@@ -32,6 +32,7 @@
     <string name="settings_cache_size_message">App will use this amount of MB of your disk space to store images from Jellyfin server. Larger values might be beneficial on slower networks.</string>
     <string name="settings_category_network">Network</string>
     <string name="settings_category_network_summary">Connection and request timeouts</string>
+    <string name="settings_group_timeouts">Timeouts</string>
     <string name="settings_request_timeout">Request timeout</string>
     <string name="settings_request_timeout_summary">Maximum time to wait for a server response before giving up</string>
     <string name="settings_connect_timeout">Connect timeout</string>
@@ -155,7 +156,7 @@
     <string name="download_group_storage">Storage</string>
     <string name="download_group_auto_delete">Auto-delete</string>
     <string name="download_group_auto_download">Auto-download</string>
-    <string name="download_group_new_item_notifications">New item notifications</string>
+    <string name="download_group_new_item_notifications">Notifications</string>
     <string name="new_item_notifications_enabled">Notify about new items</string>
     <string name="new_item_notifications_enabled_summary">Periodically checks your Jellyfin library for newly added movies and episodes and shows a notification, with a quick Download action when nothing will auto-download it already.</string>
     <string name="new_item_notifications_check_interval">Check interval</string>
