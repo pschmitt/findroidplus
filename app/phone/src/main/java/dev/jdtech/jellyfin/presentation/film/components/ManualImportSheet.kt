@@ -19,6 +19,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -157,6 +159,12 @@ fun ManualImportSheet(
                         if (state.isRejecting) {
                             CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
                         } else {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_trash),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                             Text(
                                 text = stringResource(CoreR.string.manual_import_reject),
                                 color = MaterialTheme.colorScheme.error,
@@ -267,7 +275,20 @@ private fun RejectReleaseDialog(
     var blocklist by remember { mutableStateOf(true) }
 
     AlertDialog(
-        title = { Text(text = stringResource(CoreR.string.pvr_queue_remove_title)) },
+        // Not AlertDialog's own `icon` slot - Material3 always renders that centered *above* the
+        // title, not inline with it. Building the title as an icon+text Row instead keeps them on
+        // the same line, matching DeleteSelectedDownloadsDialog/RemovePvrQueueItemDialog.
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = stringResource(CoreR.string.pvr_queue_remove_title))
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
                 Text(text = stringResource(CoreR.string.pvr_queue_remove_message, title))
@@ -286,6 +307,12 @@ private fun RejectReleaseDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = { onConfirm(removeFromClient, blocklist) }) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                 Text(
                     text = stringResource(CoreR.string.remove),
                     color = MaterialTheme.colorScheme.error,
@@ -293,7 +320,11 @@ private fun RejectReleaseDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
+            TextButton(onClick = onDismiss) {
+                Icon(painter = painterResource(CoreR.drawable.ic_x), contentDescription = null)
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = stringResource(CoreR.string.cancel))
+            }
         },
     )
 }

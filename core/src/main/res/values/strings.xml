@@ -477,7 +477,7 @@
     <string name="manual_import_confirm">Import %1$d selected</string>
     <string name="manual_import_release_ordinal">Copy %1$d</string>
     <string name="manual_import_release_size">Copy %1$d - %2$s</string>
-    <string name="manual_import_reject">Delete &amp; blacklist</string>
+    <string name="manual_import_reject">Remove</string>
     <string name="manual_import_completed_toast">Import started</string>
     <string name="manual_import_failed_toast">Import failed: %1$s</string>
     <string name="seerr_cancel_request">Cancel request</string>
