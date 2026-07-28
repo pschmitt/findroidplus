@@ -739,11 +739,22 @@ cmd_download_by_name() {
     print_response_json "${response}"
     return
   fi
-  check_response "${response}" || return 1
-  {
-    printf 'ITEM_ID\tNAME\tDOWNLOAD_ID\n'
-    jq -r '.body.triggered[] | [.itemId, .name, (.downloadId // .error // "-")] | @tsv' <<< "${response}"
-  } | print_table
+
+  # Some episodes in a batch can fail (e.g. no media source) while others succeed - when the
+  # response carries a per-item "triggered" array at all, show every row's own result/error
+  # regardless of the overall HTTP status, instead of check_response's blanket "unknown error".
+  if jq -e '.body.triggered' <<< "${response}" >/dev/null 2>&1
+  then
+    local status
+    status=$(jq -r '.status' <<< "${response}")
+    {
+      printf 'ITEM_ID\tNAME\tDOWNLOAD_ID\n'
+      jq -r '.body.triggered[] | [.itemId, .name, (.downloadId // .error // "-")] | @tsv' <<< "${response}"
+    } | print_table
+    [[ "${status}" -ge 200 && "${status}" -lt 300 ]]
+  else
+    check_response "${response}" || return 1
+  fi
 }
 
 # Unlike the other commands, a non-2xx response here is still useful output (e.g. Sonarr's own
