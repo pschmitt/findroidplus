@@ -35,6 +35,9 @@ constructor(
                     // rather than only after the user next flips the switch.
                     startFailed = enabledPref && !localControlServer.isRunning(),
                     token = localControlAuth.getOrCreateToken(),
+                    cliDownloadCommand =
+                        "curl http://${LocalControlServer.BIND_ADDRESS}:${LocalControlServer.PORT}" +
+                            "${LocalControlServer.CLI_PATH} -o findroid-cli && chmod +x findroid-cli",
                 )
             )
         }
@@ -46,6 +49,7 @@ constructor(
             is LocalAccessAction.RegenerateToken -> regenerateToken()
             is LocalAccessAction.OnBackClick -> Unit
             is LocalAccessAction.CopyToken -> Unit
+            is LocalAccessAction.CopyCliDownloadCommand -> Unit
         }
     }
 

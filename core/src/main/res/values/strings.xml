@@ -211,6 +211,9 @@
     <string name="local_access_regenerate_confirm_message">Any CLI already configured with the current token will stop working until you update it with the new one.</string>
     <string name="local_access_token_copied_toast">Token copied</string>
     <string name="local_access_token_regenerated_toast">Token regenerated</string>
+    <string name="local_access_cli_title">Get findroid-cli</string>
+    <string name="local_access_cli_summary">Download the CLI itself onto this device with curl - no separate clone/copy from the repo needed</string>
+    <string name="local_access_cli_copied_toast">Command copied</string>
     <string name="download_settings">Download settings</string>
     <string name="download_deleted_toast">Download deleted</string>
     <string name="delete_from_jellyfin">Delete from Jellyfin</string>

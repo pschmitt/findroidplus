@@ -63,6 +63,11 @@ fun LocalAccessScreen(navigateBack: () -> Unit, viewModel: LocalAccessViewModel 
                     Toast.makeText(context, CoreR.string.local_access_token_copied_toast, Toast.LENGTH_SHORT)
                         .show()
                 }
+                is LocalAccessAction.CopyCliDownloadCommand -> {
+                    clipboardManager.setText(AnnotatedString(state.cliDownloadCommand))
+                    Toast.makeText(context, CoreR.string.local_access_cli_copied_toast, Toast.LENGTH_SHORT)
+                        .show()
+                }
                 is LocalAccessAction.RegenerateToken -> {
                     Toast.makeText(context, CoreR.string.local_access_token_regenerated_toast, Toast.LENGTH_SHORT)
                         .show()
@@ -109,6 +114,11 @@ private fun LocalAccessScreenLayout(state: LocalAccessState, onAction: (LocalAcc
                 token = state.token,
                 onCopy = { onAction(LocalAccessAction.CopyToken) },
                 onRegenerate = { onAction(LocalAccessAction.RegenerateToken) },
+            )
+            HorizontalDivider()
+            CliDownloadSection(
+                command = state.cliDownloadCommand,
+                onCopy = { onAction(LocalAccessAction.CopyCliDownloadCommand) },
             )
         }
     }
@@ -213,12 +223,46 @@ private fun TokenSection(token: String, onCopy: () -> Unit, onRegenerate: () -> 
     }
 }
 
+@Composable
+private fun CliDownloadSection(command: String, onCopy: () -> Unit) {
+    Column(modifier = Modifier.padding(MaterialTheme.spacings.default)) {
+        Text(
+            text = stringResource(CoreR.string.local_access_cli_title),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = stringResource(CoreR.string.local_access_cli_summary),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = MaterialTheme.spacings.small),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+        ) {
+            Text(
+                text = command,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onCopy) { Text(text = stringResource(CoreR.string.copy)) }
+        }
+    }
+}
+
 @PreviewScreenSizes
 @Composable
 private fun LocalAccessScreenLayoutPreview() {
     FindroidTheme {
         LocalAccessScreenLayout(
-            state = LocalAccessState(localControlEnabled = true, token = "abcDEF123-example-token_xyz"),
+            state =
+                LocalAccessState(
+                    localControlEnabled = true,
+                    token = "abcDEF123-example-token_xyz",
+                    cliDownloadCommand =
+                        "curl http://127.0.0.1:48411/cli -o findroid-cli && chmod +x findroid-cli",
+                ),
             onAction = {},
         )
     }

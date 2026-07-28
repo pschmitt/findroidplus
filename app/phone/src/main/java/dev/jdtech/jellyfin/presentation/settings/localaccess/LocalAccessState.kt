@@ -7,6 +7,9 @@ data class LocalAccessState(
     // nothing is really listening instead of showing "enabled" while it's silently non-functional.
     val startFailed: Boolean = false,
     val token: String = "",
+    // Populated in the ViewModel from LocalControlServer's own bind address/port/CLI path
+    // constants, so this never drifts out of sync with what the server actually serves.
+    val cliDownloadCommand: String = "",
 )
 
 sealed interface LocalAccessAction {
@@ -17,4 +20,6 @@ sealed interface LocalAccessAction {
     data object RegenerateToken : LocalAccessAction
 
     data object CopyToken : LocalAccessAction
+
+    data object CopyCliDownloadCommand : LocalAccessAction
 }
