@@ -71,6 +71,7 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToServers -> navigateToServers()
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
+            is SettingsEvent.NavigateToRemoteDevices -> Unit
             is SettingsEvent.NavigateToBackupSettings -> Unit
             // QR device provisioning is phone-only (needs a camera) - nothing for TV to react to.
             is SettingsEvent.NavigateToQrExport -> Unit

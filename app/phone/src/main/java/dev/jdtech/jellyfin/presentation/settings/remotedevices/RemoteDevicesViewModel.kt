@@ -7,6 +7,7 @@ import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.RemoteConfigRepository
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.async
@@ -23,6 +24,7 @@ class RemoteDevicesViewModel
 constructor(
     private val remoteConfigRepository: RemoteConfigRepository,
     private val jellyfinRepository: JellyfinRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
     private val _state = MutableStateFlow(RemoteDevicesState())
     val state = _state.asStateFlow()
@@ -88,20 +90,37 @@ constructor(
 
     /**
      * `RemoteActiveRuleSummary` only carries a seriesId + name, not enough to render a poster -
-     * this device resolves the real [FindroidShow] itself via the same Jellyfin session every
-     * instance shares. Best-effort and concurrent: a show that fails to resolve (deleted, network
-     * hiccup) just renders without a poster rather than failing the whole screen.
+     * this device resolves the real [FindroidShow] itself via its own live [jellyfinRepository]
+     * session. That session (a process-wide singleton - see `JellyfinApi`'s kdoc) is only ever
+     * pointed at *one* server at a time: whichever `AppPreferences.currentServer` is currently
+     * active here. A rule belonging to a *different* server than the one currently active on this
+     * device can't be resolved at all - looking it up would just throw (wrong server entirely,
+     * not merely a missing item) - so those are skipped up front rather than attempted and
+     * silently swallowed. Best-effort and concurrent otherwise: a show that fails to resolve for
+     * any other reason (deleted, network hiccup) just renders without a poster, logged for
+     * diagnosis, rather than failing the whole screen.
      */
     private suspend fun resolveShowPosters(
         devices: List<RemoteDeviceInfo>
     ): Map<String, FindroidShow> = coroutineScope {
-        val seriesIds = devices.flatMap { it.activeRules }.map { it.seriesId }.distinct()
-        seriesIds
-            .map { seriesId ->
+        val currentServerId = appPreferences.getValue(appPreferences.currentServer)
+        val rules = devices.flatMap { it.activeRules }.distinctBy { it.seriesId }
+        rules
+            .map { rule ->
                 async {
+                    if (rule.serverId != currentServerId) {
+                        Timber.w(
+                            "Skipping poster for '%s': belongs to server %s, this device is on %s",
+                            rule.showName,
+                            rule.serverId,
+                            currentServerId,
+                        )
+                        return@async null
+                    }
                     try {
-                        seriesId to jellyfinRepository.getShow(UUID.fromString(seriesId))
+                        rule.seriesId to jellyfinRepository.getShow(UUID.fromString(rule.seriesId))
                     } catch (e: Exception) {
+                        Timber.w(e, "Failed to resolve poster for '%s' (%s)", rule.showName, rule.seriesId)
                         null
                     }
                 }
