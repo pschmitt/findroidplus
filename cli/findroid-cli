@@ -40,6 +40,12 @@ BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
 # control API - this has to go through Android's activity manager instead). Override for a
 # debug/staging install (applicationIdSuffix ".debug"/".staging").
 PACKAGE_NAME="${FINDROID_PACKAGE_NAME:-dev.pschmitt.findroidplus}"
+# The app's applicationId ("dev.pschmitt.findroidplus", above) was rebranded from upstream
+# Findroid independently of its actual Kotlin/manifest namespace, which is still
+# "dev.jdtech.jellyfin" (see app/phone/build.gradle.kts's "namespace", unchanged across every
+# build variant/applicationIdSuffix) - so the launcher activity's real component is always
+# "<applicationId>/dev.jdtech.jellyfin.MainActivity", not "<applicationId>/<applicationId>.MainActivity".
+MAIN_ACTIVITY="dev.jdtech.jellyfin.MainActivity"
 
 # Set from --json by main() (never `local` there, so this stays a real global).
 JSON_OUTPUT=""
@@ -898,7 +904,7 @@ cmd_start() {
     printf 'am not found - "start" needs Android'\''s activity manager, not available in this environment\n' >&2
     return 2
   fi
-  am start -n "${PACKAGE_NAME}/${PACKAGE_NAME}.MainActivity" >/dev/null
+  am start -n "${PACKAGE_NAME}/${MAIN_ACTIVITY}" >/dev/null
   printf 'Started %s\n' "${PACKAGE_NAME}"
 }
 
