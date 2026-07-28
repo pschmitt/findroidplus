@@ -1007,18 +1007,28 @@ start/stop the app."
       client would just see a dropped connection. No root needed.
 - [x] `start`: the app isn't running yet in this case, so there's nothing to
       ask over the local control API - this is the one command that doesn't
-      go through `local_request` at all. Shells out straight to `am start -n
-      "${PACKAGE_NAME}/${PACKAGE_NAME}.MainActivity"` (default package
-      `dev.pschmitt.findroidplus`, overridable via a new `FINDROID_PACKAGE_NAME`
-      env var for a debug/staging install). Works from an unprivileged
-      Termux process without root as long as Termux itself is in the
-      foreground at the moment the command runs (an active terminal session
-      counts) - Android's background-activity-start restrictions only block
-      launches from processes with no visible UI.
+      go through `local_request` at all. Shells out straight to `am start`
+      (default package `dev.pschmitt.findroidplus`, overridable via a new
+      `FINDROID_PACKAGE_NAME` env var for a debug/staging install). Works
+      without root as long as the calling shell is in the foreground at the
+      moment the command runs - Android's background-activity-start
+      restrictions only block launches from processes with no visible UI.
+      **Found and fixed a real bug during on-device verification**: the
+      launcher activity is *not* `<applicationId>.MainActivity` - this
+      app's `applicationId` (`dev.pschmitt.findroidplus`) was rebranded
+      independently of its actual Kotlin/manifest `namespace`, which is
+      still `dev.jdtech.jellyfin` (unchanged across every build variant).
+      `am start` needs `<applicationId>/dev.jdtech.jellyfin.MainActivity` -
+      confirmed via `cmd package resolve-activity` against the real
+      installed package after the original guess failed with "Activity
+      class ... does not exist" both unprivileged and as root.
 - [x] `CLI_VERSION` bumped to 1.1.0. Updated `usage()` with both new
       commands and the new `FINDROID_PACKAGE_NAME` env var.
 
-Status: implemented (2026-07-28), `shellcheck`/`bash -n` clean, remote
-`:core:compileLibreDebugKotlin`/`ktfmtCheck` clean. Not yet verified
-on-device (a real release build + `am start`/`POST /app/stop` round-trip
-from actual Termux) - next step before calling this done.
+Status: **done** (2026-07-28) - verified end-to-end on the Mi Pad 4 (real
+device, real token, real install): `am start` (corrected component) brings
+the app up; `POST /app/stop` takes it back down (confirmed `GET /info`
+stops responding); `am start` again brings it back up (confirmed `GET
+/info` responds with the real `versionName`/`versionCode`/`gitRevision`).
+Also confirmed the same-day Settings reorg (FINDROID-55) and hide-token
+toggle are both live and correct on this device along the way.
