@@ -163,6 +163,7 @@ constructor(
         viewModelScope.launch {
             ruleIds.forEach { ruleRepository.setRuleEnabled(it, enabled) }
             loadRules()
+            republishActiveRulesSummary()
         }
     }
 
@@ -188,6 +189,7 @@ constructor(
                     onlyUnwatched = onlyUnwatched,
                 )
                 loadRules()
+                republishActiveRulesSummary()
             } else {
                 val deviceName = getOtherDevices().find { it.id == targetDeviceId }?.name ?: targetDeviceId
                 remoteConfigRepository.pushRuleUpdate(
@@ -220,6 +222,23 @@ constructor(
             }
             show.ruleIds.forEach { ruleRepository.deleteRule(it) }
             loadRules()
+            republishActiveRulesSummary()
+        }
+    }
+
+    // Local rule mutations only ever touch this device's own Room database - without this, the
+    // "active rules" summary this device publishes to the shared registry (what other devices'
+    // Remote devices screens read) is only as fresh as RemoteConfigWorker's next periodic 15-minute
+    // cycle, so a rule added/edited/removed here wouldn't show up elsewhere for up to that long.
+    // Fire-and-forget, same as refresh()'s own syncNow() call: a failure here (offline, server
+    // hiccup) shouldn't block or roll back a mutation that already succeeded locally.
+    private fun republishActiveRulesSummary() {
+        viewModelScope.launch {
+            try {
+                remoteConfigRepository.syncNow()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to republish active-rules summary after a local rule change")
+            }
         }
     }
 
