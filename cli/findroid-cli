@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # findroid-cli - configure the real, running Findroid+ app on this same
-# device from Termux: read/write its actual download settings, list/
-# trigger real downloads through its own Downloader, and debug-proxy
+# device from Termux: read/write its actual download settings, browse the
+# Jellyfin/Sonarr/Radarr/Seerr libraries, trigger real downloads (by item id
+# or by show/movie name) through its own Downloader, and debug-proxy
 # requests to Jellyfin/Sonarr/Radarr/Seerr using its own already-stored
 # credentials. This CLI only ever talks to the local app - it is not a
 # standalone Jellyfin client and does not manage other devices.
@@ -43,8 +44,21 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
   token set TOKEN                            Save the token copied from Settings
   settings get                               Show the app's real download settings
   settings set KEY=VALUE [KEY=VALUE...]      Change the app's real download settings
+  library list                               List the Jellyfin libraries (Movies, TV Shows, ...)
+  library browse [PARENT_ID] [--search TERM] Browse a library/folder, or search it
+  search TERM                                Search the whole Jellyfin server
+  sonarr list                                List Sonarr series
+  radarr list                                List Radarr movies
+  seerr requests [--take N]                  List Seerr requests
+  seerr discover [trending|movies|tv] [--page N]  Browse Seerr discover
+  seerr search TERM [--page N]               Search Seerr
   download list                              List the app's real current downloads
-  download trigger ITEM_ID [SOURCE_ID]       Trigger a real download in the app's own Downloader
+  download trigger ITEM_ID [SOURCE_ID]       Trigger a real download by item id
+  download NAME [SEASON] [EPISODE] [--all]   Trigger a real download by name, e.g.
+                                              download "Rick and Morty" "Season 3"
+                                              ("list"/"trigger" are reserved - a show/movie
+                                              literally titled that needs "library browse
+                                              --search" + "download trigger ITEM_ID" instead)
   debug SERVICE METHOD PATH [BODY_JSON]      Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
 
 Config (environment variable):
@@ -104,6 +118,68 @@ print_response_json() {
   printf '%s\n' "${response}"
   status=$(jq -r '.status' <<< "${response}")
   [[ "${status}" -ge 200 && "${status}" -lt 300 ]]
+}
+
+# Builds a URL-encoded query string from KEY=VALUE pairs (e.g. "?foo=bar&q=a%20b") - pairs with an
+# empty VALUE are skipped, so callers can pass every possible param unconditionally. No non-empty
+# pairs -> empty string (no leading "?").
+build_query() {
+  local pairs=()
+  local pair key value
+
+  for pair in "$@"
+  do
+    key="${pair%%=*}"
+    value="${pair#*=}"
+    if [[ -z "${value}" ]]
+    then
+      continue
+    fi
+    pairs+=("${key}=$(jq -rn --arg v "${value}" '$v | @uri')")
+  done
+
+  if [[ ${#pairs[@]} -eq 0 ]]
+  then
+    return
+  fi
+  local IFS='&'
+  printf '?%s' "${pairs[*]}"
+}
+
+# Renders a `{status, body: [{id, name, type, ...}]}` local_request response (jellyfin/libraries,
+# jellyfin/items, jellyfin/search all share this shape) as a table.
+render_items_table() {
+  local response="$1"
+
+  {
+    printf 'ID\tNAME\tTYPE\tEXTRA\n'
+    jq -r '
+      .body[] |
+      [
+        .id,
+        .name,
+        .type,
+        (
+          if .type == "season" then "S" + (.seasonNumber | tostring)
+          elif .type == "episode" then
+            "S" + (.seasonNumber | tostring) + "E" + (.episodeNumber | tostring) + " (" + .seriesName + ")"
+          elif .tmdbId then "tmdb:" + (.tmdbId | tostring)
+          else "-"
+          end
+        )
+      ] | @tsv
+    ' <<< "${response}"
+  } | print_table
+}
+
+# Renders a Seerr `{status, body: {results: [...]}}` response (search/discover share this shape).
+render_seerr_search_table() {
+  local response="$1"
+
+  {
+    printf 'TMDB_ID\tTYPE\tTITLE\n'
+    jq -r '.body.results[] | [.id, .mediaType, (.title // .name // "-")] | @tsv' <<< "${response}"
+  } | print_table
 }
 
 cmd_token_set() {
@@ -241,6 +317,202 @@ cmd_settings_set() {
   } | print_table
 }
 
+cmd_library_list() {
+  local response
+
+  response=$(local_request "GET" "/jellyfin/libraries")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_items_table "${response}"
+}
+
+cmd_library_browse() {
+  local parent_id="" search=""
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --search)
+        search="${2:-}"
+        shift 2
+        ;;
+      *)
+        parent_id="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${parent_id}" && -z "${search}" ]]
+  then
+    printf 'library browse requires a PARENT_ID and/or --search TERM\n' >&2
+    return 2
+  fi
+
+  local response
+  response=$(local_request "GET" "/jellyfin/items$(build_query "parentId=${parent_id}" "search=${search}")")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_items_table "${response}"
+}
+
+cmd_search() {
+  local query="${1:-}"
+
+  if [[ -z "${query}" ]]
+  then
+    printf 'search requires a term\n' >&2
+    return 2
+  fi
+
+  local response
+  response=$(local_request "GET" "/jellyfin/search$(build_query "q=${query}")")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_items_table "${response}"
+}
+
+cmd_sonarr_list() {
+  local response
+
+  response=$(local_request "GET" "/sonarr/series")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  {
+    printf 'ID\tTITLE\tTVDB_ID\tTMDB_ID\n'
+    jq -r '.body[] | [.id, .title, .tvdbId, .tmdbId] | @tsv' <<< "${response}"
+  } | print_table
+}
+
+cmd_radarr_list() {
+  local response
+
+  response=$(local_request "GET" "/radarr/movies")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  {
+    printf 'ID\tTITLE\tTMDB_ID\n'
+    jq -r '.body[] | [.id, .title, .tmdbId] | @tsv' <<< "${response}"
+  } | print_table
+}
+
+cmd_seerr_requests() {
+  local take=""
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --take)
+        take="${2:-}"
+        shift 2
+        ;;
+      *)
+        printf 'Unknown option: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+  done
+
+  local response
+  response=$(local_request "GET" "/seerr/requests$(build_query "take=${take}")")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  {
+    printf 'ID\tSTATUS\tTYPE\tTMDB_ID\n'
+    jq -r '.body.results[] | [.id, .status, .type, .media.tmdbId] | @tsv' <<< "${response}"
+  } | print_table
+}
+
+cmd_seerr_discover() {
+  local path="trending" page=""
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --page)
+        page="${2:-}"
+        shift 2
+        ;;
+      trending|movies|tv)
+        path="$1"
+        shift
+        ;;
+      *)
+        printf 'Unknown discover category: %s (expected trending|movies|tv)\n' "$1" >&2
+        return 2
+        ;;
+    esac
+  done
+
+  local response
+  response=$(local_request "GET" "/seerr/discover/${path}$(build_query "page=${page}")")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_seerr_search_table "${response}"
+}
+
+cmd_seerr_search() {
+  local query="" page=""
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --page)
+        page="${2:-}"
+        shift 2
+        ;;
+      *)
+        query="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${query}" ]]
+  then
+    printf 'seerr search requires a term\n' >&2
+    return 2
+  fi
+
+  local response
+  response=$(local_request "GET" "/seerr/search$(build_query "q=${query}" "page=${page}")")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_seerr_search_table "${response}"
+}
+
 cmd_download_list() {
   local response
 
@@ -300,6 +572,59 @@ cmd_download_trigger() {
   {
     printf 'DOWNLOAD_ID\n'
     jq -r '[.body.downloadId] | @tsv' <<< "${response}"
+  } | print_table
+}
+
+# findroid-cli download NAME [SEASON] [EPISODE] [--all] - resolves a movie/show by name (and,
+# for a show, a season/episode by number or name) and triggers the matching download(s). A bare
+# show name with no season needs --all, so a typo/too-broad match can't silently kick off
+# downloading an entire series.
+cmd_download_by_name() {
+  local positional=() all="false" arg
+
+  for arg in "$@"
+  do
+    if [[ "${arg}" == "--all" ]]
+    then
+      all="true"
+    else
+      positional+=("${arg}")
+    fi
+  done
+
+  local name="${positional[0]:-}"
+  local season="${positional[1]:-}"
+  local episode="${positional[2]:-}"
+
+  if [[ -z "${name}" ]]
+  then
+    printf 'download requires a show/movie name (or "download list" / "download trigger ITEM_ID")\n' >&2
+    return 2
+  fi
+
+  local body
+  body=$(
+    jq -n \
+      --arg query "${name}" \
+      --arg season "${season}" \
+      --arg episode "${episode}" \
+      --argjson all "${all}" \
+      '{query: $query, all: $all} +
+       (if $season != "" then {season: $season} else {} end) +
+       (if $episode != "" then {episode: $episode} else {} end)'
+  )
+
+  local response
+  response=$(local_request "POST" "/downloads/trigger-by-name" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  {
+    printf 'ITEM_ID\tNAME\tDOWNLOAD_ID\n'
+    jq -r '.body.triggered[] | [.itemId, .name, (.downloadId // .error // "-")] | @tsv' <<< "${response}"
   } | print_table
 }
 
@@ -401,6 +726,74 @@ main() {
           ;;
       esac
       ;;
+    library)
+      shift
+      case "${1:-}" in
+        list)
+          shift
+          cmd_library_list "$@"
+          ;;
+        browse)
+          shift
+          cmd_library_browse "$@"
+          ;;
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
+    search)
+      shift
+      cmd_search "$@"
+      ;;
+    sonarr)
+      shift
+      case "${1:-}" in
+        list)
+          shift
+          cmd_sonarr_list "$@"
+          ;;
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
+    radarr)
+      shift
+      case "${1:-}" in
+        list)
+          shift
+          cmd_radarr_list "$@"
+          ;;
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
+    seerr)
+      shift
+      case "${1:-}" in
+        requests)
+          shift
+          cmd_seerr_requests "$@"
+          ;;
+        discover)
+          shift
+          cmd_seerr_discover "$@"
+          ;;
+        search)
+          shift
+          cmd_seerr_search "$@"
+          ;;
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
     download)
       shift
       case "${1:-}" in
@@ -412,9 +805,12 @@ main() {
           shift
           cmd_download_trigger "$@"
           ;;
-        *)
+        "")
           usage >&2
           return 2
+          ;;
+        *)
+          cmd_download_by_name "$@"
           ;;
       esac
       ;;

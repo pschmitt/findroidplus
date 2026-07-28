@@ -5,6 +5,17 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
 import dev.jdtech.jellyfin.api.pvr.PvrHttpClient
 import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.api.pvr.RadarrApi
+import dev.jdtech.jellyfin.api.pvr.SeerrApi
+import dev.jdtech.jellyfin.api.pvr.SonarrApi
+import dev.jdtech.jellyfin.models.FindroidBoxSet
+import dev.jdtech.jellyfin.models.FindroidCollection
+import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.FindroidFolder
+import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
 import dev.jdtech.jellyfin.repository.JellyfinRepository
@@ -16,13 +27,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -31,14 +45,16 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.jellyfin.sdk.model.api.BaseItemKind
 import timber.log.Timber
 
 /**
  * Dispatches an already-authenticated request (see [LocalControlServer], which verifies the
  * bearer token before ever calling this) to the actual app state it controls - real
  * [AppPreferences] download settings, the real current download list, a real
- * [Downloader]-triggered download, or a raw debug request against Jellyfin/Sonarr/Radarr/Seerr
- * using the app's own stored credentials.
+ * [Downloader]-triggered download (by id or by name/season), read-only browsing of the Jellyfin
+ * library and Sonarr/Radarr/Seerr, or a raw debug request against any of those four services using
+ * the app's own stored credentials.
  */
 @Singleton
 class LocalControlRouter
@@ -51,7 +67,12 @@ constructor(
     private val downloader: Downloader,
     private val pvrConfiguration: PvrConfiguration,
 ) {
-    suspend fun handle(method: String, path: String, body: JsonElement?): LocalControlResponse =
+    suspend fun handle(
+        method: String,
+        path: String,
+        queryParams: Map<String, String>,
+        body: JsonElement?,
+    ): LocalControlResponse =
         withContext(Dispatchers.IO) {
             try {
                 when {
@@ -60,6 +81,17 @@ constructor(
                         patchDownloadSettings(body)
                     method == "GET" && path == "/downloads" -> listDownloads()
                     method == "POST" && path == "/downloads/trigger" -> triggerDownload(body)
+                    method == "POST" && path == "/downloads/trigger-by-name" ->
+                        triggerDownloadByName(body)
+                    method == "GET" && path == "/jellyfin/libraries" -> getJellyfinLibraries()
+                    method == "GET" && path == "/jellyfin/items" -> getJellyfinItems(queryParams)
+                    method == "GET" && path == "/jellyfin/search" -> getJellyfinSearch(queryParams)
+                    method == "GET" && path == "/sonarr/series" -> getSonarrSeries()
+                    method == "GET" && path == "/radarr/movies" -> getRadarrMovies()
+                    method == "GET" && path == "/seerr/requests" -> getSeerrRequests(queryParams)
+                    method == "GET" && path.startsWith("/seerr/discover/") ->
+                        getSeerrDiscover(path.removePrefix("/seerr/discover/"), queryParams)
+                    method == "GET" && path == "/seerr/search" -> getSeerrSearch(queryParams)
                     method == "POST" && path == "/debug/proxy" -> debugProxy(body)
                     else ->
                         LocalControlResponse(
@@ -141,6 +173,300 @@ constructor(
         } else {
             LocalControlResponse(LocalControlStatus.CONFLICT, errorBody(error.asString(context.resources)))
         }
+    }
+
+    /**
+     * Resolves a movie/show by name (case-insensitive exact match, else the sole search result,
+     * else an ambiguous-match error listing every candidate) and triggers its download - for a
+     * show, resolves season/episode the same way and triggers every matching episode. A bare show
+     * name with neither `season` nor `all: true` is rejected rather than silently downloading
+     * every season, since that could be a lot of unplanned storage/bandwidth.
+     */
+    private suspend fun triggerDownloadByName(body: JsonElement?): LocalControlResponse {
+        val obj = body?.jsonObject
+        val query = obj?.get("query")?.jsonPrimitive?.contentOrNull
+        if (query.isNullOrBlank()) {
+            return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"query\""))
+        }
+        val seasonQuery = obj["season"]?.jsonPrimitive?.contentOrNull
+        val episodeQuery = obj["episode"]?.jsonPrimitive?.contentOrNull
+        val all = obj["all"]?.jsonPrimitive?.booleanOrNull ?: false
+
+        val candidates =
+            jellyfinRepository.getItems(
+                includeTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+                recursive = true,
+                searchTerm = query,
+            )
+        if (candidates.isEmpty()) {
+            return LocalControlResponse(LocalControlStatus.NOT_FOUND, errorBody("No movie/show matching \"$query\""))
+        }
+        val exactMatches = candidates.filter { it.name.equals(query, ignoreCase = true) }
+        val match =
+            exactMatches.singleOrNull()
+                ?: candidates.singleOrNull()
+                ?: return LocalControlResponse(
+                    LocalControlStatus.CONFLICT,
+                    errorBody("Ambiguous match for \"$query\": ${candidates.joinToString(", ") { it.name }}"),
+                )
+
+        return when (match) {
+            is FindroidMovie -> {
+                val (downloadId, error) = triggerSingle(match)
+                LocalControlResponse(
+                    if (error == null) LocalControlStatus.OK else LocalControlStatus.CONFLICT,
+                    buildJsonObject {
+                        put(
+                            "triggered",
+                            buildJsonArray {
+                                add(triggerResultJson(match.id, match.name, downloadId, error))
+                            },
+                        )
+                    },
+                )
+            }
+            is FindroidShow -> triggerShowDownloadByName(match, seasonQuery, episodeQuery, all)
+            else ->
+                LocalControlResponse(
+                    LocalControlStatus.BAD_REQUEST,
+                    errorBody("\"${match.name}\" matched but isn't a movie or show"),
+                )
+        }
+    }
+
+    private suspend fun triggerShowDownloadByName(
+        show: FindroidShow,
+        seasonQuery: String?,
+        episodeQuery: String?,
+        all: Boolean,
+    ): LocalControlResponse {
+        val seasons = jellyfinRepository.getSeasons(show.id)
+        if (seasons.isEmpty()) {
+            return LocalControlResponse(LocalControlStatus.NOT_FOUND, errorBody("\"${show.name}\" has no seasons"))
+        }
+
+        val targetSeasons =
+            if (seasonQuery != null) {
+                val matches = matchByNumberOrName(seasonQuery, seasons, { it.indexNumber }, { it.name })
+                when {
+                    matches.isEmpty() ->
+                        return LocalControlResponse(
+                            LocalControlStatus.NOT_FOUND,
+                            errorBody("No season matching \"$seasonQuery\" in \"${show.name}\""),
+                        )
+                    matches.size > 1 ->
+                        return LocalControlResponse(
+                            LocalControlStatus.CONFLICT,
+                            errorBody(
+                                "Ambiguous season match for \"$seasonQuery\": " +
+                                    matches.joinToString(", ") { it.name }
+                            ),
+                        )
+                    else -> matches
+                }
+            } else if (all) {
+                seasons
+            } else {
+                return LocalControlResponse(
+                    LocalControlStatus.BAD_REQUEST,
+                    errorBody(
+                        "\"${show.name}\" has ${seasons.size} season(s) - specify one, or pass " +
+                            "\"all\": true to download every season"
+                    ),
+                )
+            }
+
+        val episodes = mutableListOf<FindroidEpisode>()
+        for (season in targetSeasons) {
+            val seasonEpisodes = jellyfinRepository.getEpisodes(show.id, season.id)
+            episodes +=
+                if (episodeQuery != null) {
+                    matchByNumberOrName(episodeQuery, seasonEpisodes, { it.indexNumber }, { it.name })
+                } else {
+                    seasonEpisodes
+                }
+        }
+        if (episodes.isEmpty()) {
+            return LocalControlResponse(
+                LocalControlStatus.NOT_FOUND,
+                errorBody("No episode matching the given season/episode in \"${show.name}\""),
+            )
+        }
+
+        val triggered = buildJsonArray {
+            episodes.forEach { episode ->
+                val (downloadId, error) = triggerSingle(episode)
+                add(triggerResultJson(episode.id, episode.name, downloadId, error))
+            }
+        }
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("triggered", triggered) })
+    }
+
+    /** Triggers a single item's download exactly like [triggerDownload] (its default source),
+     * returning the download id or a human-readable error instead of a [LocalControlResponse] -
+     * shared by the single-movie and per-episode paths in [triggerDownloadByName]. */
+    private suspend fun triggerSingle(item: FindroidItem): Pair<Long?, String?> {
+        val sourceId = item.sources.firstOrNull()?.id ?: return null to "No media source"
+        val (downloadId, error) =
+            downloader.downloadItem(item, sourceId, downloader.resolvePreferredStorageIndex())
+        return if (error == null) downloadId to null else null to error.asString(context.resources)
+    }
+
+    private fun triggerResultJson(itemId: UUID, name: String, downloadId: Long?, error: String?): JsonObject =
+        buildJsonObject {
+            put("itemId", itemId.toString())
+            put("name", name)
+            downloadId?.let { put("downloadId", it) }
+            error?.let { put("error", it) }
+        }
+
+    /** Matches [query] against [items] by number first ("Season 3"/"S3"/"3" -> 3, compared via
+     * [number]), then falls back to a case-insensitive substring match of [name] - used for both
+     * season and episode resolution in [triggerShowDownloadByName]. */
+    private fun <T> matchByNumberOrName(
+        query: String,
+        items: List<T>,
+        number: (T) -> Int,
+        name: (T) -> String,
+    ): List<T> {
+        val parsedNumber =
+            Regex("""^\s*(?:season|episode|s|e)?\s*(\d+)\s*$""", RegexOption.IGNORE_CASE)
+                .find(query)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
+        val exact =
+            items.filter { name(it).equals(query, ignoreCase = true) || (parsedNumber != null && number(it) == parsedNumber) }
+        if (exact.isNotEmpty()) return exact
+        return items.filter { name(it).contains(query, ignoreCase = true) }
+    }
+
+    private suspend fun getJellyfinLibraries(): LocalControlResponse =
+        LocalControlResponse(
+            LocalControlStatus.OK,
+            buildJsonArray { jellyfinRepository.getLibraries().forEach { add(findroidItemToJson(it)) } },
+        )
+
+    private suspend fun getJellyfinItems(queryParams: Map<String, String>): LocalControlResponse {
+        val parentId =
+            queryParams["parentId"]?.let {
+                runCatching { UUID.fromString(it) }.getOrNull()
+                    ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Invalid parentId"))
+            }
+        val search = queryParams["search"]
+        val items =
+            jellyfinRepository.getItems(
+                parentId = parentId,
+                recursive = search != null,
+                startIndex = queryParams["startIndex"]?.toIntOrNull(),
+                limit = queryParams["limit"]?.toIntOrNull(),
+                searchTerm = search,
+            )
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonArray { items.forEach { add(findroidItemToJson(it)) } })
+    }
+
+    private suspend fun getJellyfinSearch(queryParams: Map<String, String>): LocalControlResponse {
+        val query = queryParams["q"] ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"q\""))
+        val items = jellyfinRepository.getSearchItems(query)
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonArray { items.forEach { add(findroidItemToJson(it)) } })
+    }
+
+    private fun findroidItemToJson(item: FindroidItem): JsonObject = buildJsonObject {
+        put("id", item.id.toString())
+        put("name", item.name)
+        put("type", findroidItemType(item))
+        when (item) {
+            is FindroidMovie -> item.tmdbId?.let { put("tmdbId", it) }
+            is FindroidShow -> item.tmdbId?.let { put("tmdbId", it) }
+            is FindroidSeason -> {
+                put("seasonNumber", item.indexNumber)
+                put("seriesId", item.seriesId.toString())
+                put("seriesName", item.seriesName)
+            }
+            is FindroidEpisode -> {
+                put("seasonNumber", item.parentIndexNumber)
+                put("episodeNumber", item.indexNumber)
+                put("seriesId", item.seriesId.toString())
+                put("seriesName", item.seriesName)
+            }
+            is FindroidCollection -> put("collectionType", item.type.type)
+            else -> Unit
+        }
+    }
+
+    private fun findroidItemType(item: FindroidItem): String =
+        when (item) {
+            is FindroidMovie -> "movie"
+            is FindroidShow -> "show"
+            is FindroidSeason -> "season"
+            is FindroidEpisode -> "episode"
+            is FindroidCollection -> "collection"
+            is FindroidBoxSet -> "boxset"
+            is FindroidFolder -> "folder"
+            else -> "unknown"
+        }
+
+    private suspend fun getSonarrSeries(): LocalControlResponse {
+        if (!pvrConfiguration.isSonarrConfigured()) {
+            return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Sonarr is not configured/enabled"))
+        }
+        val baseUrl =
+            appPreferences.getValue(appPreferences.sonarrBaseUrl)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Sonarr is not configured/enabled"))
+        val apiKey =
+            secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Sonarr is not configured/enabled"))
+        val series = SonarrApi(baseUrl, apiKey).getSeries()
+        return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(series))
+    }
+
+    private suspend fun getRadarrMovies(): LocalControlResponse {
+        if (!pvrConfiguration.isRadarrConfigured()) {
+            return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Radarr is not configured/enabled"))
+        }
+        val baseUrl =
+            appPreferences.getValue(appPreferences.radarrBaseUrl)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Radarr is not configured/enabled"))
+        val apiKey =
+            secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Radarr is not configured/enabled"))
+        val movies = RadarrApi(baseUrl, apiKey).getMovie()
+        return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(movies))
+    }
+
+    private fun resolveSeerrApi(): SeerrApi? {
+        if (!pvrConfiguration.isSeerrConfigured()) return null
+        val baseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl) ?: return null
+        val apiKey = secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY) ?: return null
+        return SeerrApi(baseUrl, apiKey)
+    }
+
+    private suspend fun getSeerrRequests(queryParams: Map<String, String>): LocalControlResponse {
+        val seerr =
+            resolveSeerrApi()
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Seerr is not configured/enabled"))
+        val take = queryParams["take"]?.toIntOrNull() ?: 20
+        val response = seerr.getRequests(take)
+        return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(response))
+    }
+
+    private suspend fun getSeerrDiscover(discoverPath: String, queryParams: Map<String, String>): LocalControlResponse {
+        val seerr =
+            resolveSeerrApi()
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Seerr is not configured/enabled"))
+        val page = queryParams["page"]?.toIntOrNull() ?: 1
+        val response = seerr.discover(discoverPath, page)
+        return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(response))
+    }
+
+    private suspend fun getSeerrSearch(queryParams: Map<String, String>): LocalControlResponse {
+        val query = queryParams["q"] ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"q\""))
+        val seerr =
+            resolveSeerrApi()
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("Seerr is not configured/enabled"))
+        val page = queryParams["page"]?.toIntOrNull() ?: 1
+        val response = seerr.search(query, page)
+        return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(response))
     }
 
     private fun debugProxy(body: JsonElement?): LocalControlResponse {
@@ -229,4 +555,8 @@ constructor(
         }
 
     private fun errorBody(message: String): JsonObject = buildJsonObject { put("error", message) }
+
+    companion object {
+        private val json = Json { ignoreUnknownKeys = true }
+    }
 }

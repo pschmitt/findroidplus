@@ -395,3 +395,44 @@ Reported (2026-07-28) after FINDROID-45's local control feature shipped:
       its wireless-debugging connection was down (device locked/asleep)
       at verification time and wasn't force-reconnected, per the standing
       rule against bypassing a lock screen.
+
+Status: **done** (2026-07-28) on Mi Pad 4; px5 re-enabled after this entry
+was written and got the release build + full CLI pass separately (see git
+log). CLI also gained `--json` and a pretty-TSV-by-default table renderer
+for every data command in a same-day follow-up.
+
+## FINDROID-50: browse Jellyfin/Sonarr/Radarr/Seerr + trigger downloads by name
+
+Requested (2026-07-28): grow `findroid-cli` toward covering most of what the
+app itself can do/configure - codified as a standing rule in `AGENTS.md`'s
+new "CLI parity" section (new app functionality with a CLI-shaped equivalent
+gets a matching local-control endpoint + CLI subcommand in the same change).
+First concrete step, per the user: a way to browse the Jellyfin/Sonarr/
+Radarr/Seerr libraries, plus triggering a download by name/season instead of
+needing an item UUID up front (`findroid-cli download "Rick and Morty"
+"Season 3"`).
+
+- [ ] `LocalControlRouter`: `GET /jellyfin/libraries`, `GET /jellyfin/items`
+      (parentId/search/pagination), `GET /jellyfin/search` - all via the
+      already-typed `JellyfinRepository` methods, no raw HTTP needed.
+- [ ] `LocalControlRouter`: `GET /sonarr/series`, `GET /radarr/movies`,
+      `GET /seerr/requests`, `GET /seerr/discover/{path}`,
+      `GET /seerr/search` - via the already-typed `SonarrApi`/`RadarrApi`/
+      `SeerrApi` clients (same ad hoc construction pattern
+      `resolveProxyClient` already uses for the debug proxy).
+- [ ] `POST /downloads/trigger-by-name`: resolve a movie/show by name
+      (exact case-insensitive match, else single-candidate, else an
+      ambiguous-match error listing candidates), then for a show resolve
+      season/episode by number or name and trigger every matching episode's
+      download. Deliberate guard rail: a bare show name with no season and
+      no explicit `all` flag is rejected rather than silently downloading
+      an entire series.
+- [ ] CLI: `library list`/`library browse`, `search`, `sonarr list`,
+      `radarr list`, `seerr requests`/`discover`/`search`, and reworking
+      `download`'s dispatch so anything past `list`/`trigger` is treated as
+      a by-name trigger.
+- [ ] On-device verification on Mi Pad 4 (real Termux, no root) per the
+      FINDROID-49-established standard, including a real by-name download
+      trigger against a real small season.
+
+Status: not started (2026-07-28).

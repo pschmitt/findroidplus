@@ -17,6 +17,21 @@ Repository instructions for AI coding agents working on Findroid.
   just a summary written after the fact.
 - Trivial one-off asks (a typo, a single-line tweak) don't need their own entry.
 
+## CLI parity
+
+- `cli/findroid-cli` (see FINDROID-45/FINDROID-49) talks to the app over its local control API
+  (`core/.../localcontrol/`) and is meant to eventually cover most of what the app itself can do
+  or configure. When adding new app functionality that has a CLI-shaped equivalent (a setting,
+  an action like triggering a download, something worth scripting or inspecting from Termux),
+  add the matching local control endpoint (`LocalControlRouter`) and CLI subcommand in the same
+  change, not as a follow-up. Skip this for things with no sensible CLI shape (e.g. purely visual
+  UI/theme changes).
+- New CLI subcommands must render both a pretty default (table via `print_table`, or plain text
+  for non-tabular results) and support `--json` (the raw `{status, body}` envelope) — see the
+  existing commands for the pattern. Verify new commands end-to-end on a real device from actual
+  Termux (not just `adb shell`), the same standard FINDROID-49 established after a root-requirement
+  bug was only caught that way.
+
 ## Dev environment
 
 - `nix develop` provides the full toolchain (JDK 21, Android SDK, `just`, `ktfmt`) and

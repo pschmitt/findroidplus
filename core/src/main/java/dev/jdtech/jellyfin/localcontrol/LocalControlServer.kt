@@ -78,7 +78,10 @@ constructor(
 
         val response =
             try {
-                runBlocking { router.handle(session.method.name, session.uri, bodyElement) }
+                // `session.parms` is already populated from the query string by the time `serve()`
+                // runs (NanoHTTPD decodes it before dispatch) - no explicit parseBody-style call
+                // needed, unlike the request body above.
+                runBlocking { router.handle(session.method.name, session.uri, session.parms, bodyElement) }
             } catch (e: Exception) {
                 Timber.e(e, "LocalControlServer.serve failed")
                 return jsonResponse(Response.Status.INTERNAL_ERROR, errorBody(e.message ?: "Internal error"))

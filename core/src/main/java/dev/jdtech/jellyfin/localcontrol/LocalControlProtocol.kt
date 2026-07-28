@@ -3,9 +3,8 @@ package dev.jdtech.jellyfin.localcontrol
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-/** Result of a [LocalControlRouter] call - [LocalControlProvider] maps this onto a `call()`
- * result `Bundle` (status as an int extra, body as a base64-encoded JSON string extra, since
- * `Bundle`/the `content call` shell tool don't handle arbitrary JSON text safely on their own). */
+/** Result of a [LocalControlRouter] call - [LocalControlServer] maps this onto an HTTP response
+ * (the JSON body verbatim, `status` as the real HTTP status code). */
 @Serializable
 data class LocalControlResponse(val status: Int, val body: JsonElement? = null)
 
