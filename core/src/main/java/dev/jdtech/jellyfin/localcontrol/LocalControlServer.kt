@@ -68,17 +68,11 @@ constructor(
         }
 
         val bodyText =
-            if (session.method == Method.POST || session.method == Method.PUT || session.method == Method.PATCH) {
-                val files = HashMap<String, String>()
-                try {
-                    session.parseBody(files)
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to parse local control request body")
-                    return jsonResponse(Response.Status.BAD_REQUEST, errorBody("Malformed request body"))
-                }
-                files["postData"]
-            } else {
-                null
+            try {
+                readBody(session)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to read local control request body")
+                return jsonResponse(Response.Status.BAD_REQUEST, errorBody("Malformed request body"))
             }
         val bodyElement = bodyText?.let { runCatching { json.parseToJsonElement(it) }.getOrNull() }
 
@@ -91,6 +85,25 @@ constructor(
             }
 
         return jsonResponse(statusFor(response.status), response.body?.toString() ?: "{}")
+    }
+
+    /** Reads the raw request body directly off the socket via `Content-Length`, rather than
+     * [IHTTPSession.parseBody] - that method only special-cases `POST` (buffers into a
+     * `"postData"` map entry) and `PUT` (streams to a temp file under `"content"`); `PATCH`
+     * matches neither case and silently yields no body at all, which broke `PATCH
+     * /settings/downloads` (always "expected a JSON object body") until this was caught during
+     * on-device verification. */
+    private fun readBody(session: IHTTPSession): String? {
+        val length = session.headers["content-length"]?.toIntOrNull() ?: return null
+        if (length <= 0) return null
+        val buffer = ByteArray(length)
+        var read = 0
+        while (read < length) {
+            val n = session.inputStream.read(buffer, read, length - read)
+            if (n < 0) break
+            read += n
+        }
+        return String(buffer, 0, read, Charsets.UTF_8)
     }
 
     private fun jsonResponse(status: Response.IStatus, body: String): Response =
