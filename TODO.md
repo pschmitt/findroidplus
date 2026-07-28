@@ -479,13 +479,37 @@ got the release build from the same batch as this entry.
 - [x] Added `download cancel DOWNLOAD_ID` (`Downloader.cancelDownload`) and
       `download remove ITEM_ID...` (`Downloader.deleteItems`) - both already
       existed on `Downloader` for the app's own Downloads screen, just
-      weren't exposed to the local-control API yet.
+      weren't exposed to the local-control API yet. `cancel` verified live
+      on Mi Pad 4 (triggered a real not-yet-downloaded episode, confirmed it
+      in `download list --active` with real percent/size, cancelled it,
+      confirmed it vanished from both `--active` and the completed list -
+      no orphaned DB rows). `remove`'s success path is unverified live -
+      the test device's Jellyfin server (`tv.brkn.lol`) became DNS-
+      unreachable mid-session (unrelated to this change; confirmed via a
+      plain `debug jellyfin` connectivity check), and its error paths
+      (missing args, both single/multi ITEM_ID forms) were checked instead.
+      Reuses `Downloader.deleteItems` verbatim (same method the app's own
+      Downloads screen delete action already calls), so this is a real but
+      low-severity gap - re-verify the success path once that device's
+      Jellyfin connectivity is back.
 - [x] Fixed a real correctness bug found while touching this: every
       `downloadId` in a JSON response was a raw 64-bit `Long` number -
       `jq`/JS-style JSON parsers only preserve ~53 bits of integer
       precision, so an extreme id could silently corrupt on the wire and
       break a later cancel/list-by-id call. Encoded as a string everywhere
-      instead (`triggerDownload`, `triggerDownloadByName`, `download list`).
+      instead (`triggerDownload`, `triggerDownloadByName`, `download list`) -
+      confirmed on-device with a real negative-valued 64-bit id (`downloadId`
+      is `UUID.randomUUID().mostSignificantBits`, which is often negative
+      as a signed `Long`) round-tripping through `download list`/`cancel`
+      exactly, with no precision loss.
+- [x] Follow-up fix: `check_response`'s blanket error text didn't reach
+      into `download NAME`'s per-episode `triggered[].error` field, so a
+      partial-batch failure (e.g. an episode with no media source) printed
+      an unhelpful "409 unknown error". Now renders every row's own
+      result/error whenever the response carries a `triggered` array,
+      regardless of overall HTTP status. Confirmed on-device (a real
+      episode with no media source now shows "No media source" in the
+      table instead of "unknown error").
 
 ## FINDROID-51: Serve findroid-cli itself from the "Local CLI access" page
 
