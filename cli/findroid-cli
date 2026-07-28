@@ -31,11 +31,15 @@ set -euo pipefail
 # worth being able to tell apart) - "findroid-cli version" reports this alongside the app's own
 # versionName/versionCode/gitRevision, so a mismatch between what a user has installed and what's
 # current is visible at a glance.
-CLI_VERSION="1.0.0"
+CLI_VERSION="1.1.0"
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
 BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
+# Only used by "start" (the app isn't running yet, so there's nothing to ask over the local
+# control API - this has to go through Android's activity manager instead). Override for a
+# debug/staging install (applicationIdSuffix ".debug"/".staging").
+PACKAGE_NAME="${FINDROID_PACKAGE_NAME:-dev.pschmitt.findroidplus}"
 
 # Set from --json by main() (never `local` there, so this stays a real global).
 JSON_OUTPUT=""
@@ -109,13 +113,24 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
                                               list" ID column)
   version                                     Show this CLI's own version and the running app's
                                               versionName/versionCode/gitRevision
+  start                                       Launch the app (via "am start" - works even if it's
+                                              not running, so there's nothing to talk to yet; no
+                                              root needed)
+  stop                                        Ask the running app to exit. No OS-level
+                                              force-stop is possible from an unprivileged Termux
+                                              process (needs a signature-only permission no
+                                              "pm grant" can hand out, even as root) - this asks
+                                              the app to exit itself instead, so no root is needed
+                                              either
 
   This CLI's local rule management (above) only ever affects THIS device, evaluated by its own
   WorkManager - distinct from the app's own cross-device "push a rule to another device" feature,
   which isn't exposed here.
 
-Config (environment variable):
-  FINDROID_LOCAL_URL  Override the local control server URL (default: ${BASE_URL})
+Config (environment variables):
+  FINDROID_LOCAL_URL     Override the local control server URL (default: ${BASE_URL})
+  FINDROID_PACKAGE_NAME  Override the app id "start" launches (default: ${PACKAGE_NAME}) -
+                         only needed for a debug/staging install
 
 Options:
   --json      Print the raw {status, body} response as JSON instead of a table
@@ -870,6 +885,41 @@ cmd_version() {
   } | print_table
 }
 
+# findroid-cli start - launches the app via "am start". There's nothing running yet to ask over
+# the local control API in this case (that's the whole point), so this is the one command that
+# doesn't go through local_request at all - it shells out to Android's own activity manager
+# directly, exactly like tapping the launcher icon would. Plain "am start" from an unprivileged
+# Termux process (no root, no adb shell) works as long as Termux itself is in the foreground at
+# the moment the command runs (an active terminal session counts) - Android's background-activity-
+# start restrictions only block launches from processes with no visible UI.
+cmd_start() {
+  if ! command -v am >/dev/null 2>&1
+  then
+    printf 'am not found - "start" needs Android'\''s activity manager, not available in this environment\n' >&2
+    return 2
+  fi
+  am start -n "${PACKAGE_NAME}/${PACKAGE_NAME}.MainActivity" >/dev/null
+  printf 'Started %s\n' "${PACKAGE_NAME}"
+}
+
+# findroid-cli stop - there's no OS-level way for an unprivileged process to force-stop another
+# app (android.permission.FORCE_STOP_PACKAGES is signature/privileged-only - confirmed even "pm
+# grant" as root refuses it, same wall the old ContentProvider transport hit for
+# ACCESS_CONTENT_PROVIDERS_EXTERNALLY). POST /app/stop instead asks the running app to exit
+# itself - no special permission needed for that, just a normal process calling Runtime.exit() on
+# its own PID.
+cmd_stop() {
+  local response
+  response=$(local_request "POST" "/app/stop")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  printf 'Stopping %s\n' "${PACKAGE_NAME}"
+}
+
 # Renders a `{status, body: [{id, seriesName, seasonNumber, ...}]}` local_request response
 # (autodownload list/add share this shape) as a table.
 render_autodownload_rules_table() {
@@ -1242,6 +1292,14 @@ main() {
     version)
       shift
       cmd_version "$@"
+      ;;
+    start)
+      shift
+      cmd_start "$@"
+      ;;
+    stop)
+      shift
+      cmd_stop "$@"
       ;;
     *)
       printf 'Unknown command: %s\n' "$1" >&2

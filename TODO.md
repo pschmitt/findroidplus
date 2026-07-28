@@ -981,3 +981,39 @@ Not yet designed/implemented. Scoped by inspection so far:
       both gone after its next sync.
 
 Status: not started (2026-07-28) - scoped only, no code written yet.
+
+## FINDROID-60: findroid-cli start/stop the app
+
+Requested (2026-07-28): "findroid-cli should have a start/stop command to
+start/stop the app."
+
+- [x] `stop`: no OS-level way for an unprivileged Termux process to
+      force-stop another app (`android.permission.FORCE_STOP_PACKAGES` is
+      signature/privileged-only - the same wall FINDROID-45's original
+      ContentProvider transport hit for
+      `ACCESS_CONTENT_PROVIDERS_EXTERNALLY`, confirmed `pm grant` refuses it
+      even as root). Sidestepped by asking the app to exit *itself* instead:
+      new authenticated `POST /app/stop` on `LocalControlRouter` that starts
+      a background thread which sleeps 300ms then calls
+      `Runtime.getRuntime().exit(0)` (same call `Activity.restartProcess()`
+      already uses elsewhere), returning its 200 immediately so NanoHTTPD
+      has time to actually write the response before the process dies -
+      killing synchronously in the handler would race that write and the
+      client would just see a dropped connection. No root needed.
+- [x] `start`: the app isn't running yet in this case, so there's nothing to
+      ask over the local control API - this is the one command that doesn't
+      go through `local_request` at all. Shells out straight to `am start -n
+      "${PACKAGE_NAME}/${PACKAGE_NAME}.MainActivity"` (default package
+      `dev.pschmitt.findroidplus`, overridable via a new `FINDROID_PACKAGE_NAME`
+      env var for a debug/staging install). Works from an unprivileged
+      Termux process without root as long as Termux itself is in the
+      foreground at the moment the command runs (an active terminal session
+      counts) - Android's background-activity-start restrictions only block
+      launches from processes with no visible UI.
+- [x] `CLI_VERSION` bumped to 1.1.0. Updated `usage()` with both new
+      commands and the new `FINDROID_PACKAGE_NAME` env var.
+
+Status: implemented (2026-07-28), `shellcheck`/`bash -n` clean, remote
+`:core:compileLibreDebugKotlin`/`ktfmtCheck` clean. Not yet verified
+on-device (a real release build + `am start`/`POST /app/stop` round-trip
+from actual Termux) - next step before calling this done.

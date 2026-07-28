@@ -106,6 +106,7 @@ constructor(
                     method == "POST" && path == "/autodownload/rules" -> addAutoDownloadRule(body)
                     method == "POST" && path == "/autodownload/rules/remove" ->
                         removeAutoDownloadRule(body)
+                    method == "POST" && path == "/app/stop" -> stopApp()
                     method == "POST" && path == "/debug/proxy" -> debugProxy(body)
                     else ->
                         LocalControlResponse(
@@ -131,6 +132,26 @@ constructor(
                 put("gitRevision", appVersionInfo.gitRevision)
             },
         )
+
+    /**
+     * `findroid-cli stop` - there's no OS-level way for a plain, unprivileged Termux process to
+     * force-stop another app (`android.permission.FORCE_STOP_PACKAGES` is signature/privileged-only
+     * - `pm grant` refuses it even as root, the same wall FINDROID-45's original ContentProvider
+     * transport hit for `ACCESS_CONTENT_PROVIDERS_EXTERNALLY`). Asking the app to exit itself
+     * sidesteps that entirely - no special permission needed, since it's just a normal process
+     * calling [Runtime.exit] on itself. The actual exit is delayed slightly on a background thread
+     * so this response has time to reach the client over the socket before the process dies -
+     * killing it synchronously here would race NanoHTTPD's own write and the client would see
+     * nothing but a dropped connection instead of a real 200.
+     */
+    private fun stopApp(): LocalControlResponse {
+        Thread {
+                Thread.sleep(300)
+                Runtime.getRuntime().exit(0)
+            }
+            .start()
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("stopping", true) })
+    }
 
     private fun getDownloadSettings(): LocalControlResponse =
         LocalControlResponse(LocalControlStatus.OK, DownloadSettingsBridge.toJson(appPreferences))
