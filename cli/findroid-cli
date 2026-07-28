@@ -31,8 +31,14 @@
 # real device (confirmed: works under permissive, EACCES under enforcing,
 # the normal state) - no app-level fix could work around that, so this
 # switched to the IPC mechanism Android's own policy is written to allow.
-# `content` ships on the OS itself - only `jq`/`base64` (both near-universal
-# in Termux already) are needed for `local` commands specifically.
+# `content` ships on the OS itself, but its command-line "external" access
+# path only works for the shell uid or root - not a regular app uid like
+# Termux's own (confirmed: even `pm grant` as root refuses to hand out the
+# permission it needs, "not a changeable permission type" - it's tied to how
+# the caller is signed/installed, not something grantable at runtime). `su`
+# runs `content call` as root the same way `adb shell` implicitly has this
+# already, so a rooted device is required for `local` commands specifically
+# - everything else in this script works on any Termux install.
 
 set -euo pipefail
 
@@ -77,7 +83,8 @@ Local (this Termux install only, no Jellyfin account needed):
   download rm FILE                           Remove a locally downloaded file
 
 Local control (configures the real Findroid+ app on this device - Settings >
-Local CLI access for the toggle + token):
+Local CLI access for the toggle + token - requires a rooted device, see
+require_local_transport's comment for why):
   local token set TOKEN                      Save the token copied from Settings
   local settings get                         Show the app's real download settings
   local settings set KEY=VALUE [KEY=VALUE...]
@@ -118,6 +125,15 @@ require_deps() {
 # make it work. `content call` is Android's own command-line tool for invoking a ContentProvider's
 # call() method over Binder - the IPC mechanism Android's policy is actually written to allow
 # between apps - and it ships on the OS itself, not something Termux needs to separately install.
+#
+# `content call`'s "external" access path (what the standalone command-line tool always uses)
+# requires android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY, a signature/privileged
+# permission normal apps can never hold (confirmed: `pm grant` refuses it even as root - "not a
+# changeable permission type"). `adb shell` has it because the special `shell` uid is granted it
+# by the platform; a real app's own uid (Termux's, here) is not, and can't be made to be. Running
+# `content call` via `su -c` (uid 0) does bypass this the same way `adb shell` does, so Termux
+# needs root for `local` commands specifically - this is a root requirement on the *calling* side,
+# not something the app itself needs.
 require_local_transport() {
   local missing=""
 
@@ -136,9 +152,19 @@ require_local_transport() {
     missing="${missing:+${missing}, }base64"
   fi
 
+  if ! command -v su >/dev/null 2>&1
+  then
+    missing="${missing:+${missing}, }su"
+  fi
+
   if [[ -n "${missing}" ]]
   then
     printf 'Missing required command(s) for "local" commands: %s\n' "${missing}" >&2
+    if [[ "${missing}" == *su* ]]
+    then
+      printf 'Root (su) is required: "content call" only works for the shell uid or root,\n' >&2
+      printf 'not a regular app uid like Termux'"'"'s own - this device needs to be rooted.\n' >&2
+    fi
     return 2
   fi
 }
@@ -474,13 +500,21 @@ local_request() {
     return 2
   fi
 
-  local extras=(--extra "token:s:${token}" --extra "method:s:${method}" --extra "path:s:${path}")
+  # `content call` only works for the shell uid or root (see require_local_transport) - `su -c`
+  # runs it as root the same way `adb shell` implicitly does. `su -c` takes a single command
+  # string, so every argument is quoted with printf %q before being appended, rather than passed
+  # as a real argv array.
+  local remote_cmd
+  remote_cmd="content call --uri $(printf '%q' "content://${LOCAL_AUTHORITY}") --method rpc"
+  remote_cmd+=" --extra $(printf '%q' "token:s:${token}")"
+  remote_cmd+=" --extra $(printf '%q' "method:s:${method}")"
+  remote_cmd+=" --extra $(printf '%q' "path:s:${path}")"
   if [[ -n "${body}" ]]
   then
-    extras+=(--extra "body:s:$(printf '%s' "${body}" | base64 -w0)")
+    remote_cmd+=" --extra $(printf '%q' "body:s:$(printf '%s' "${body}" | base64 -w0)")"
   fi
 
-  output=$(content call --uri "content://${LOCAL_AUTHORITY}" --method rpc "${extras[@]}" 2>&1)
+  output=$(su -c "${remote_cmd}" 2>&1)
   status=$(printf '%s' "${output}" | grep -oE 'status=[0-9]+' | head -1 | cut -d= -f2)
   body_b64=$(extract_bundle_value "${output}" "body")
 
