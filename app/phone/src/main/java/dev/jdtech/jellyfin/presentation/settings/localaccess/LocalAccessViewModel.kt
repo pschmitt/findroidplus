@@ -55,7 +55,6 @@ constructor(
 
     private fun setLocalControlEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            appPreferences.setValue(appPreferences.localControlEnabled, enabled)
             // Applies immediately, not just on next app start - the toggle would otherwise be
             // misleading (switched on, but nothing actually listening until a restart).
             val running =
@@ -65,8 +64,13 @@ constructor(
                     localControlServer.stop()
                     true
                 }
+            // Don't persist "enabled" if the bind just failed - a future app start's
+            // startIfEnabled() would only fail again the same way with nobody watching, and the
+            // toggle would keep showing "on" for a feature that has never actually worked.
+            val nowEnabled = enabled && running
+            appPreferences.setValue(appPreferences.localControlEnabled, nowEnabled)
             _state.emit(
-                _state.value.copy(localControlEnabled = enabled, startFailed = enabled && !running)
+                _state.value.copy(localControlEnabled = nowEnabled, startFailed = enabled && !running)
             )
         }
     }
