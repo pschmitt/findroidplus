@@ -30,6 +30,7 @@ interface RemoteConfigRepository {
         alsoFutureSeasons: Boolean,
         onlyNewEpisodes: Boolean,
         onlyUnwatched: Boolean,
+        alsoDeleteDownloads: Boolean = false,
     )
 
     /**
@@ -67,9 +68,18 @@ interface RemoteConfigRepository {
      * [pushRuleUpdate] with an empty scope, since `reconcileRules` already treats that as "delete
      * everything for this series." The management-focused counterpart to [pushRuleUpdate]: lets a
      * controller remove a rule it (or anyone else) previously pushed, without visiting the target
-     * device.
+     * device. When [alsoDeleteDownloads] is set, the *target* device also deletes its own
+     * already-downloaded episodes for [seriesId] once it applies the clear - mirrors the local
+     * "also delete downloaded episodes" checkbox, just executed on the other device instead of
+     * this one.
      */
-    suspend fun pushRemoveRule(targetDeviceId: String, serverId: String, userId: UUID, seriesId: UUID)
+    suspend fun pushRemoveRule(
+        targetDeviceId: String,
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        alsoDeleteDownloads: Boolean = false,
+    )
 
     /**
      * Commands in the shared queue that *this* device enqueued (via any of the `push*` methods

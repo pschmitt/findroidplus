@@ -189,6 +189,7 @@
     <string name="remote_devices_last_seen">Last seen %1$s</string>
     <string name="remote_devices_remove_rule_confirm_title">Remove auto-download rule?</string>
     <string name="remote_devices_remove_rule_confirm_message">This stops \"%1$s\" from auto-downloading new episodes on %2$s.</string>
+    <string name="remote_devices_also_delete_downloaded_episodes_summary">Removes every episode already downloaded because of this rule from %1$s.</string>
     <string name="remote_devices_rule_remove_sent_toast">Removal sent to %1$s</string>
     <string name="remote_devices_push_canceled_toast">Push canceled</string>
     <string name="remote_devices_command_reconcile_suffix">auto-download rule</string>

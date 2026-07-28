@@ -30,6 +30,7 @@ sealed interface RemoteDevicesAction {
         val targetDeviceId: String,
         val serverId: String,
         val seriesId: String,
+        val alsoDeleteDownloads: Boolean = false,
     ) : RemoteDevicesAction
 
     data class CancelPendingCommand(val commandId: String) : RemoteDevicesAction
