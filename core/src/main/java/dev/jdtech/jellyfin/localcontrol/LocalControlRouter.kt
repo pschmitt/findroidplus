@@ -8,6 +8,7 @@ import dev.jdtech.jellyfin.api.pvr.PvrService
 import dev.jdtech.jellyfin.api.pvr.RadarrApi
 import dev.jdtech.jellyfin.api.pvr.SeerrApi
 import dev.jdtech.jellyfin.api.pvr.SonarrApi
+import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.FindroidBoxSet
 import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidEpisode
@@ -18,7 +19,9 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.pvr.PvrConfiguration
+import dev.jdtech.jellyfin.repository.AutoDownloadRuleRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.repository.RemoteConfigRepository
 import dev.jdtech.jellyfin.security.SecureCredentialStore
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
@@ -68,6 +71,9 @@ constructor(
     private val jellyfinRepository: JellyfinRepository,
     private val downloader: Downloader,
     private val pvrConfiguration: PvrConfiguration,
+    private val autoDownloadRuleRepository: AutoDownloadRuleRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
+    private val appVersionInfo: AppVersionInfo,
 ) {
     suspend fun handle(
         method: String,
@@ -78,6 +84,7 @@ constructor(
         withContext(Dispatchers.IO) {
             try {
                 when {
+                    method == "GET" && path == "/info" -> getInfo()
                     method == "GET" && path == "/settings/downloads" -> getDownloadSettings()
                     method == "PATCH" && path == "/settings/downloads" ->
                         patchDownloadSettings(body)
@@ -95,6 +102,10 @@ constructor(
                     method == "GET" && path.startsWith("/seerr/discover/") ->
                         getSeerrDiscover(path.removePrefix("/seerr/discover/"), queryParams)
                     method == "GET" && path == "/seerr/search" -> getSeerrSearch(queryParams)
+                    method == "GET" && path == "/autodownload/rules" -> listAutoDownloadRules()
+                    method == "POST" && path == "/autodownload/rules" -> addAutoDownloadRule(body)
+                    method == "POST" && path == "/autodownload/rules/remove" ->
+                        removeAutoDownloadRule(body)
                     method == "POST" && path == "/debug/proxy" -> debugProxy(body)
                     else ->
                         LocalControlResponse(
@@ -107,6 +118,19 @@ constructor(
                 LocalControlResponse(LocalControlStatus.INTERNAL_ERROR, errorBody(e.message ?: "Internal error"))
             }
         }
+
+    /** `findroid-cli version`'s app-side half - the app's own build metadata, sourced from
+     * [AppVersionInfo] since [LocalControlRouter] (in `core`) can't reference `app/phone`'s own
+     * generated `BuildConfig` directly. */
+    private fun getInfo(): LocalControlResponse =
+        LocalControlResponse(
+            LocalControlStatus.OK,
+            buildJsonObject {
+                put("versionName", appVersionInfo.versionName)
+                put("versionCode", appVersionInfo.versionCode)
+                put("gitRevision", appVersionInfo.gitRevision)
+            },
+        )
 
     private fun getDownloadSettings(): LocalControlResponse =
         LocalControlResponse(LocalControlStatus.OK, DownloadSettingsBridge.toJson(appPreferences))
@@ -566,6 +590,269 @@ constructor(
         val page = queryParams["page"]?.toIntOrNull() ?: 1
         val response = seerr.search(query, page)
         return LocalControlResponse(LocalControlStatus.OK, json.encodeToJsonElement(response))
+    }
+
+    /**
+     * Resolves a show by direct [seriesIdParam] (a UUID string) or, failing that, by
+     * [queryParam] - case-insensitive exact match, else the sole search result, else an
+     * ambiguous-match error - scoped to [BaseItemKind.SERIES] only, since an auto-download rule
+     * only ever applies to a show. Mirrors [triggerDownloadByName]'s own by-name resolution
+     * template. Exactly one of the two should be non-blank; if both are blank this reports the
+     * missing-parameter error.
+     */
+    private suspend fun resolveSeries(
+        seriesIdParam: String?,
+        queryParam: String?,
+    ): Pair<FindroidShow?, LocalControlResponse?> {
+        if (!seriesIdParam.isNullOrBlank()) {
+            val uuid =
+                runCatching { UUID.fromString(seriesIdParam) }.getOrNull()
+                    ?: return null to
+                        LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Invalid \"seriesId\""))
+            val show =
+                runCatching { jellyfinRepository.getShow(uuid) }.getOrNull()
+                    ?: return null to LocalControlResponse(LocalControlStatus.NOT_FOUND, errorBody("Show not found"))
+            return show to null
+        }
+        if (queryParam.isNullOrBlank()) {
+            return null to
+                LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Missing \"seriesId\" or \"query\""))
+        }
+        val candidates =
+            jellyfinRepository.getItems(
+                includeTypes = listOf(BaseItemKind.SERIES),
+                recursive = true,
+                searchTerm = queryParam,
+            )
+        if (candidates.isEmpty()) {
+            return null to
+                LocalControlResponse(LocalControlStatus.NOT_FOUND, errorBody("No show matching \"$queryParam\""))
+        }
+        val exactMatches = candidates.filter { it.name.equals(queryParam, ignoreCase = true) }
+        val match =
+            exactMatches.singleOrNull()
+                ?: candidates.singleOrNull()
+                ?: return null to
+                    LocalControlResponse(
+                        LocalControlStatus.CONFLICT,
+                        errorBody(
+                            "Ambiguous match for \"$queryParam\": " +
+                                candidates.joinToString(", ") { it.describeForAmbiguity() }
+                        ),
+                    )
+        val show =
+            match as? FindroidShow
+                ?: return null to
+                    LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("\"${match.name}\" isn't a show"))
+        return show to null
+    }
+
+    /** Converts a persisted rule row to the JSON shape shared by `GET /autodownload/rules` and
+     * the `POST` add response - resolving `seriesId`/`seasonId` to a readable show name/season
+     * number so the CLI doesn't need a second lookup round-trip. [seriesNameCache] avoids
+     * re-resolving the same show for every one of its rules in a single listing. */
+    private suspend fun autoDownloadRuleToJson(
+        rule: AutoDownloadRuleDto,
+        seriesNameCache: MutableMap<UUID, String>,
+    ): JsonObject {
+        val seriesName =
+            seriesNameCache.getOrPut(rule.seriesId) {
+                runCatching { jellyfinRepository.getShow(rule.seriesId).name }.getOrDefault("Unknown")
+            }
+        val seasonNumber =
+            rule.seasonId?.let { seasonId ->
+                runCatching { jellyfinRepository.getSeason(seasonId).indexNumber }.getOrNull()
+            }
+        return buildJsonObject {
+            // String-encoded, not a raw JSON number - same reasoning as downloadId elsewhere: a
+            // Long can exceed the 53 bits of precision most JSON parsers (jq/JS included) actually
+            // preserve.
+            put("id", rule.id.toString())
+            put("seriesId", rule.seriesId.toString())
+            put("seriesName", seriesName)
+            rule.seasonId?.let { put("seasonId", it.toString()) }
+            seasonNumber?.let { put("seasonNumber", it) }
+            put("enabled", rule.enabled)
+            put("onlyNewEpisodes", rule.onlyNewEpisodes)
+            put("onlyUnwatched", rule.onlyUnwatched)
+            put("createdAt", rule.createdAt)
+        }
+    }
+
+    private suspend fun listAutoDownloadRules(): LocalControlResponse {
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("No current server"))
+        val userId = jellyfinRepository.getUserId()
+        val rules = autoDownloadRuleRepository.getRules(serverId, userId)
+        val seriesNameCache = mutableMapOf<UUID, String>()
+        return LocalControlResponse(
+            LocalControlStatus.OK,
+            buildJsonArray { rules.forEach { add(autoDownloadRuleToJson(it, seriesNameCache)) } },
+        )
+    }
+
+    /**
+     * Resolves a show (by `seriesId` or `query`) and a season scope - a specific season/list of
+     * seasons by number or name (`season`/`seasons`), `"all": true` for every existing season, or
+     * neither for a future-seasons-only rule - then persists exactly that scope via
+     * [AutoDownloadRuleRepository.reconcileRules], same as `AutoDownloadRulesScreen`'s own "add
+     * rule" dialog. Republishes the active-rules summary afterwards (see
+     * [republishActiveRulesSummary]) so other devices' "Remote devices" screens see the change
+     * promptly instead of waiting on the next periodic sync - this is purely local rule
+     * management; it never touches [RemoteConfigRepository.pushRuleUpdate]'s cross-device push
+     * path.
+     */
+    private suspend fun addAutoDownloadRule(body: JsonElement?): LocalControlResponse {
+        val obj =
+            body?.jsonObject
+                ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Expected a JSON object body"))
+
+        val (show, showError) =
+            resolveSeries(
+                obj["seriesId"]?.jsonPrimitive?.contentOrNull,
+                obj["query"]?.jsonPrimitive?.contentOrNull,
+            )
+        if (showError != null) return showError
+        val resolvedShow = show!!
+
+        val seasons = jellyfinRepository.getSeasons(resolvedShow.id)
+        val all = obj["all"]?.jsonPrimitive?.booleanOrNull ?: false
+        val seasonQueries =
+            (obj["seasons"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                ?: obj["season"]?.jsonPrimitive?.contentOrNull?.let { listOf(it) }
+                ?: emptyList()
+
+        val seasonIds: Set<UUID> =
+            when {
+                all -> seasons.map { it.id }.toSet()
+                seasonQueries.isNotEmpty() -> {
+                    val resolvedIds = mutableSetOf<UUID>()
+                    for (seasonQuery in seasonQueries) {
+                        val matches = matchByNumberOrName(seasonQuery, seasons, { it.indexNumber }, { it.name })
+                        when {
+                            matches.isEmpty() ->
+                                return LocalControlResponse(
+                                    LocalControlStatus.NOT_FOUND,
+                                    errorBody("No season matching \"$seasonQuery\" in \"${resolvedShow.name}\""),
+                                )
+                            matches.size > 1 ->
+                                return LocalControlResponse(
+                                    LocalControlStatus.CONFLICT,
+                                    errorBody(
+                                        "Ambiguous season match for \"$seasonQuery\": " +
+                                            matches.joinToString(", ") { it.name }
+                                    ),
+                                )
+                            else -> resolvedIds += matches.single().id
+                        }
+                    }
+                    resolvedIds
+                }
+                else -> emptySet()
+            }
+
+        // No explicit season scope at all (no "season"/"seasons"/"all") means "future seasons
+        // only" - the same thing the show-level "Auto-download future seasons" toggle alone
+        // represents when AutoDownloadRulesScreen's own dialog has no season selected. An
+        // explicit "alsoFutureSeasons" in the body always wins over that default.
+        val alsoFutureSeasons = obj["alsoFutureSeasons"]?.jsonPrimitive?.booleanOrNull ?: seasonIds.isEmpty()
+        val onlyNewEpisodes = obj["onlyNewEpisodes"]?.jsonPrimitive?.booleanOrNull ?: false
+        val onlyUnwatched = obj["onlyUnwatched"]?.jsonPrimitive?.booleanOrNull ?: false
+
+        if (seasonIds.isEmpty() && !alsoFutureSeasons) {
+            return LocalControlResponse(
+                LocalControlStatus.BAD_REQUEST,
+                errorBody(
+                    "Nothing to do for \"${resolvedShow.name}\" - specify \"season\"/\"seasons\", " +
+                        "\"all\": true, or \"alsoFutureSeasons\": true"
+                ),
+            )
+        }
+
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("No current server"))
+        val userId = jellyfinRepository.getUserId()
+
+        val rules =
+            autoDownloadRuleRepository.reconcileRules(
+                serverId = serverId,
+                userId = userId,
+                seriesId = resolvedShow.id,
+                seasonIds = seasonIds,
+                alsoFutureSeasons = alsoFutureSeasons,
+                onlyNewEpisodes = onlyNewEpisodes,
+                onlyUnwatched = onlyUnwatched,
+            )
+        republishActiveRulesSummary()
+
+        val seriesNameCache = mutableMapOf(resolvedShow.id to resolvedShow.name)
+        return LocalControlResponse(
+            LocalControlStatus.OK,
+            buildJsonArray { rules.forEach { add(autoDownloadRuleToJson(it, seriesNameCache)) } },
+        )
+    }
+
+    /**
+     * Removes an auto-download rule - either a single rule by numeric `id` (from `GET
+     * /autodownload/rules`), or, by show (`seriesId`/`query`), every rule for that series at once
+     * (mirroring `AutoDownloadRulesScreen`'s own delete action: `show.ruleIds.forEach {
+     * ruleRepository.deleteRule(it) }` - deleting "the rule for a show" clears every row for that
+     * series, not just one).
+     */
+    private suspend fun removeAutoDownloadRule(body: JsonElement?): LocalControlResponse {
+        val obj =
+            body?.jsonObject
+                ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Expected a JSON object body"))
+
+        val idParam = obj["id"]?.jsonPrimitive?.contentOrNull
+        if (idParam != null) {
+            val id =
+                idParam.toLongOrNull()
+                    ?: return LocalControlResponse(LocalControlStatus.BAD_REQUEST, errorBody("Invalid \"id\""))
+            autoDownloadRuleRepository.deleteRule(id)
+            republishActiveRulesSummary()
+            return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("removed", 1) })
+        }
+
+        val (show, showError) =
+            resolveSeries(
+                obj["seriesId"]?.jsonPrimitive?.contentOrNull,
+                obj["query"]?.jsonPrimitive?.contentOrNull,
+            )
+        if (showError != null) return showError
+        val resolvedShow = show!!
+
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return LocalControlResponse(LocalControlStatus.CONFLICT, errorBody("No current server"))
+        val userId = jellyfinRepository.getUserId()
+
+        val existing = autoDownloadRuleRepository.getRulesForSeries(serverId, userId, resolvedShow.id)
+        if (existing.isEmpty()) {
+            return LocalControlResponse(
+                LocalControlStatus.NOT_FOUND,
+                errorBody("No auto-download rule for \"${resolvedShow.name}\""),
+            )
+        }
+        autoDownloadRuleRepository.deleteRulesForShow(serverId, userId, resolvedShow.id)
+        republishActiveRulesSummary()
+        return LocalControlResponse(LocalControlStatus.OK, buildJsonObject { put("removed", existing.size) })
+    }
+
+    // Local rule mutations (add/remove, above) only ever touch this device's own Room database -
+    // without this, the "active rules" summary this device publishes to the shared registry (what
+    // other devices' Remote devices screens read) is only as fresh as RemoteConfigWorker's next
+    // periodic 15-minute cycle. Mirrors AutoDownloadRulesViewModel.republishActiveRulesSummary():
+    // fire-and-forget, non-fatal - a failure here (offline, server hiccup) shouldn't roll back a
+    // mutation that already succeeded locally.
+    private suspend fun republishActiveRulesSummary() {
+        try {
+            remoteConfigRepository.syncNow()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to republish active-rules summary after a findroid-cli rule change")
+        }
     }
 
     private fun debugProxy(body: JsonElement?): LocalControlResponse {
