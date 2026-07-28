@@ -943,22 +943,6 @@ constructor(
                                                         }
                                                     },
                                                 ),
-                                                PreferenceCategory(
-                                                    nameStringResource =
-                                                        R.string.remote_devices_title,
-                                                    descriptionStringRes =
-                                                        R.string.remote_devices_summary,
-                                                    iconDrawableId = R.drawable.ic_smartphone,
-                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    onClick = {
-                                                        viewModelScope.launch {
-                                                            eventsChannel.send(
-                                                                SettingsEvent
-                                                                    .NavigateToRemoteDevices
-                                                            )
-                                                        }
-                                                    },
-                                                ),
                                             ),
                                     ),
                                     PreferenceGroup(

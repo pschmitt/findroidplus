@@ -728,3 +728,98 @@ end-to-end on real hardware (Mi Pad 4) using the actual served CLI script run
 through the device's own Termux binaries, including a real Jellyfin-server
 round-trip for the immediate rule-sync republish. Second device
 (ASUS_AI2302) received the same release build but wasn't otherwise exercised.
+
+## FINDROID-54: Merge auto-download rules and remote devices screens
+
+Requested (2026-07-28): "lets merge the auto-download rules and remote
+devices views. They are more or less the same in the end." Both screens
+were fundamentally "a show + season scope + toggle/remove", just scoped to
+different devices - `AutoDownloadRulesScreen` for this device's own rules,
+`RemoteDevicesScreen` for other devices' rules and this device's pending
+pushes.
+
+- [x] Merged into one screen, one Settings entry. Both existing
+      `@HiltViewModel`s (`AutoDownloadRulesViewModel`, `RemoteDevicesViewModel`)
+      kept as-is and instantiated side by side via `hiltViewModel()` in the
+      merged `AutoDownloadRulesScreen` composable - no ViewModel merge, no
+      new cross-module DI.
+- [x] One `Scaffold`/`TopAppBar`/`PullToRefreshBox`/`LazyColumn`, top to
+      bottom: the "Allow remote management" toggle, a "This device" header
+      + this device's own show rule rows (edit/delete dialogs unchanged),
+      an other-devices' "Remote devices" header + their active-rule sections
+      (only shown when at least one other device exists - no jarring "no
+      devices" message next to this device's own rules), then a "Pending"
+      section for this device's own not-yet-applied pushes if any. A single
+      generic empty state only shows up when there's truly nothing anywhere
+      (no local rules, no other devices, no pending pushes).
+- [x] Pull-to-refresh drives both ViewModels' `refresh()` - each already
+      just launches its own `viewModelScope` coroutine and returns
+      immediately, so calling both back to back already runs their
+      `syncNow()`+reload concurrently; `isRefreshing` is the OR of both.
+      Both event/toast paths wired: `AutoDownloadRuleEvent.RuleSentToDevice`
+      via `ObserveAsEvents`, and remote-devices' `RemoveActiveRule`/
+      `CancelPendingCommand` toasts inline in the merged `onAction`.
+- [x] Navigation: collapsed `RemoteDevicesRoute` into `AutoDownloadRulesRoute`
+      in `NavigationRoot.kt`. Removed `SettingsEvent.NavigateToRemoteDevices`
+      end to end (`SettingsViewModel`'s now-deleted `remote_devices_title`
+      `PreferenceCategory` → `SettingsEvent.kt` → phone/TV `SettingsScreen.kt`/
+      `SettingsSubScreen.kt` `when` branches → `NavigationRoot.kt`'s
+      `navigateToRemoteDevices` callback), leaving one `auto_download_rules`
+      `PreferenceCategory` whose summary now reads "...on this device and
+      others". `RemoteDevicesScreen.kt` gutted down to just the reusable,
+      now-non-private `RemoteManagementToggleRow`/`DeviceSection`/
+      `PendingCommandRow` composables the merged screen imports
+      (`RemoteDevicesViewModel`/`RemoteDevicesState`/`RemoteDevicesAction`
+      untouched). Deleted now-dead strings (`remote_devices_summary`,
+      `remote_devices_empty` in core; `remote_devices_title`/
+      `remote_devices_summary` in the settings module, which had their own
+      duplicate copies) after grepping every reference first; kept
+      `remote_devices_title` (core) since it's reused as the merged screen's
+      "Remote devices" section header.
+
+- [x] On-device verification on Mi Pad 4: `just deploy --release --phone`
+      (CI-signed), then navigated Settings → Downloads → "Auto-download
+      rules" (one entry now, confirmed the old "Remote devices" entry is
+      gone). Merged screen renders exactly as designed: "Allow remote
+      management" toggle, "This device" header with both real local rules
+      (House of the Dragon, Rick and Morty - edit dialog opens with correct
+      state incl. the "Push to" device picker, delete-confirmation dialog
+      opens with correct show name, both canceled cleanly without touching
+      real data), a "Remote devices" header showing "Pixel 5"'s real active
+      rule, and no pending-commands section (correctly hidden when empty).
+      Confirmed end-to-end against real other-device data: tapped the trash
+      icon on Pixel 5's "Rick and Morty" rule, got the real confirm dialog,
+      confirmed removal - "Removal sent to Pixel 5" toast fired and a
+      "Pending" section appeared with a cancelable row; tapped its cancel (X)
+      - "Push canceled" toast fired and the pending row disappeared, rule
+      preserved on Pixel 5 (verified by re-reading the screen - the real
+      rule was left untouched, nothing destructive done to the user's
+      account). Pull-to-refresh worked (re-synced, "last seen" ticked
+      forward, no crash). Top app bar's settings-icon action still navigates
+      to Downloads settings correctly. `adb logcat` showed no
+      exceptions/crashes for the whole session.
+- [ ] On-device verification on px5 (second connected device, registered in
+      the app as "Pixel 5"): the same CI-signed release APK installed
+      successfully (`adb install -r`, no signature mismatch), but the app
+      now crashes on every launch with a pre-existing, **unrelated**
+      `javax.crypto.AEADBadTagException` inside
+      `SecureCredentialStoreModule.provideEncryptedSharedPreferences` during
+      Hilt's `BaseApplication.onCreate` - i.e. before any code this ticket
+      touched ever runs. Looks like an Android Keystore key on that specific
+      device that no longer decrypts its existing `EncryptedSharedPreferences`
+      (not caused by this change - nothing in this diff touches DI, crypto,
+      or `core`'s Kotlin source, only `app/phone`, `app/tv`, `settings`, and
+      `core`'s string resources). `AGENTS.md`'s documented fix for
+      keystore/signature trouble is uninstall+reinstall, which wipes that
+      device's Room DB, playback positions, and downloads - the same doc
+      says to confirm with the user first since it's not throwaway data, so
+      that wasn't done here. Left px5 as found (crashing, pre-existing
+      state); this needs the user's go-ahead before anyone wipes its app
+      data.
+
+Status: implemented, remote-compile-verified (`compileLibreDebugKotlin`/
+`compileDebugKotlin` for `app:phone`/`modes:film`/`settings`, `ktfmtCheck`),
+and confirmed working end-to-end on Mi Pad 4, including a real cross-device
+rule removal + cancel against "Pixel 5"'s actual data. px5 itself couldn't be
+exercised - it hit a pre-existing, unrelated keystore crash blocking app
+launch entirely, left as-is pending the user's OK to wipe its local data.

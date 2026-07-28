@@ -45,7 +45,6 @@ import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.film.AutoDownloadRulesScreen
 import dev.jdtech.jellyfin.presentation.settings.localaccess.LocalAccessScreen
-import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteDevicesScreen
 import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
 import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
@@ -97,9 +96,10 @@ import kotlinx.serialization.Serializable
 // The merged movies+shows browse view - replaces the per-library Movies/Shows tabs.
 @Serializable data object MediaRoute
 
+// Also renders what used to be the separate "Remote devices" screen - the two were merged
+// (FINDROID-54) since both are fundamentally "a show + season scope + toggle/remove" for
+// different devices.
 @Serializable data object AutoDownloadRulesRoute
-
-@Serializable data object RemoteDevicesRoute
 
 @Serializable data object LocalAccessRoute
 
@@ -585,9 +585,6 @@ fun NavigationRoot(
                     },
                 )
             }
-            composable<RemoteDevicesRoute> {
-                RemoteDevicesScreen(navigateBack = { navController.safePopBackStack() })
-            }
             composable<LocalAccessRoute> {
                 LocalAccessScreen(navigateBack = { navController.safePopBackStack() })
             }
@@ -778,9 +775,6 @@ fun NavigationRoot(
                     navigateToAbout = { navController.safeNavigate(AboutRoute) },
                     navigateToAutoDownloadRules = {
                         navController.safeNavigate(AutoDownloadRulesRoute)
-                    },
-                    navigateToRemoteDevices = {
-                        navController.safeNavigate(RemoteDevicesRoute)
                     },
                     navigateToLocalAccess = {
                         navController.safeNavigate(LocalAccessRoute)

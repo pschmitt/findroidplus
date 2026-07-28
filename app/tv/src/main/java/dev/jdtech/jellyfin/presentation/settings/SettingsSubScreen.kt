@@ -71,7 +71,6 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToServers -> navigateToServers()
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
-            is SettingsEvent.NavigateToRemoteDevices -> Unit
             // Local CLI access (findroid-cli pairing) is phone-only for this pass - nothing for
             // TV to react to.
             is SettingsEvent.NavigateToLocalAccess -> Unit
