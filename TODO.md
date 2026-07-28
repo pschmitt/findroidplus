@@ -285,3 +285,14 @@ the real app" - needs a real on-device pairing test next.
 - [ ] Redesign the onboarding screen layout
   - [ ] Make the primary button(s) vertical and bigger
   - [ ] Move the "Learn more about Jellyfin" button to the top-left corner
+
+## FINDROID-47: Automatic backups don't actually run
+
+- [ ] Investigate why scheduled auto-backups never fire - reported
+      (2026-07-28) that no automatic backup has ever run despite
+      `AppPreferences.autoBackupEnabled`/`autoBackupIntervalMinutes` being
+      configured; `AutoBackupScheduler`/the worker behind it needs a real
+      on-device check (is the periodic work actually enqueued? does it run
+      and no-op, or never fire at all?).
+  - [ ] Backup filenames should include the device name.
+  - [ ] Rename "findroid" to "findroidplus" in backup filenames.
