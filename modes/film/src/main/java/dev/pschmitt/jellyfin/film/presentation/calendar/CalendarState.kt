@@ -1,0 +1,21 @@
+package dev.pschmitt.jellyfin.film.presentation.calendar
+
+import dev.pschmitt.jellyfin.models.CalendarEntry
+import dev.pschmitt.jellyfin.models.PvrFetchError
+import java.time.LocalDate
+
+/**
+ * [groupedEntries] is [CalendarRepository][dev.pschmitt.jellyfin.repository.CalendarRepository]'s
+ * flat, date-sorted list re-grouped by date for the sticky-header UI - already sorted ascending by
+ * date (the repository's contract), so no re-sorting is needed here, just grouping consecutive
+ * same-date runs together.
+ */
+data class CalendarState(
+    val isLoading: Boolean = false,
+    val error: Exception? = null,
+    val groupedEntries: List<Pair<LocalDate, List<CalendarEntry>>> = emptyList(),
+    val serviceErrors: List<PvrFetchError> = emptyList(),
+) {
+    val isEmpty: Boolean
+        get() = groupedEntries.isEmpty()
+}

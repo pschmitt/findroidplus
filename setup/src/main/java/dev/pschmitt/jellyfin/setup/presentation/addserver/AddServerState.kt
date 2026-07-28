@@ -1,0 +1,10 @@
+package dev.pschmitt.jellyfin.setup.presentation.addserver
+
+import dev.pschmitt.jellyfin.models.DiscoveredServer
+import dev.pschmitt.jellyfin.models.UiText
+
+data class AddServerState(
+    val isLoading: Boolean = false,
+    val discoveredServers: List<DiscoveredServer> = emptyList(),
+    val error: Collection<UiText>? = null,
+)

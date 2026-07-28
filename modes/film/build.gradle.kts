@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.jdtech.jellyfin.film"
+    namespace = "dev.pschmitt.jellyfin.film"
     compileSdk = Versions.COMPILE_SDK
     buildToolsVersion = Versions.BUILD_TOOLS
 

@@ -39,4 +39,4 @@
 #    static <1>$$serializer INSTANCE;
 #}
 
--keepnames class dev.jdtech.jellyfin.models.CollectionType
+-keepnames class dev.pschmitt.jellyfin.models.CollectionType

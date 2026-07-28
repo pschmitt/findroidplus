@@ -1,0 +1,49 @@
+package dev.pschmitt.jellyfin.film.presentation.episode
+
+import dev.pschmitt.jellyfin.api.pvr.PvrRelease
+import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
+import java.util.UUID
+
+sealed interface EpisodeAction {
+    data class Play(val startFromBeginning: Boolean = false) : EpisodeAction
+
+    data object MarkAsPlayed : EpisodeAction
+
+    data object UnmarkAsPlayed : EpisodeAction
+
+    data object MarkAsFavorite : EpisodeAction
+
+    data object UnmarkAsFavorite : EpisodeAction
+
+    data class DeleteItem(val cascadeToPvr: Boolean) : EpisodeAction
+
+    data class DownloadWithScope(
+        val selection: DownloadSelection,
+        val alsoFollowNew: Boolean,
+        val onlyUnwatched: Boolean,
+        // null = this device (applies locally as today); non-null = push to that device instead.
+        val targetDeviceId: String? = null,
+    ) : EpisodeAction
+
+    data object OnBackClick : EpisodeAction
+
+    data object OnHomeClick : EpisodeAction
+
+    data object OnSettingsClick : EpisodeAction
+
+    data class NavigateToPerson(val personId: UUID) : EpisodeAction
+
+    data class NavigateToSeason(val seasonId: UUID) : EpisodeAction
+
+    data class NavigateToShow(val showId: UUID) : EpisodeAction
+
+    data object SearchEpisodeAutomatic : EpisodeAction
+
+    data object OpenReleasePicker : EpisodeAction
+
+    data class GrabRelease(val release: PvrRelease) : EpisodeAction
+
+    data object DismissReleasePicker : EpisodeAction
+
+    data object ToggleExcludeFromAutoDelete : EpisodeAction
+}

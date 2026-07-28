@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.jdtech.jellyfin"
+    namespace = "dev.pschmitt.jellyfin"
     compileSdk = Versions.COMPILE_SDK
     buildToolsVersion = Versions.BUILD_TOOLS
 

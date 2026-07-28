@@ -1,0 +1,622 @@
+package dev.pschmitt.jellyfin.presentation.film
+
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.pschmitt.jellyfin.core.R as CoreR
+import dev.pschmitt.jellyfin.core.presentation.dummy.dummyShow
+import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRuleEvent
+import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesAction
+import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesState
+import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesViewModel
+import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadShowRuleUiModel
+import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
+import dev.pschmitt.jellyfin.models.UiText
+import dev.pschmitt.jellyfin.presentation.film.components.ClearDownloadsDialog
+import dev.pschmitt.jellyfin.presentation.film.components.Direction
+import dev.pschmitt.jellyfin.presentation.film.components.ItemPoster
+import dev.pschmitt.jellyfin.presentation.film.components.LocalStorageIndicator
+import dev.pschmitt.jellyfin.presentation.film.components.RemoteDevicePicker
+import dev.pschmitt.jellyfin.presentation.film.components.ToggleOptionRow
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.DeviceSection
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.PendingCommandRow
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesAction
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesState
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesViewModel
+import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteManagementToggleRow
+import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.spacings
+import dev.pschmitt.jellyfin.utils.ObserveAsEvents
+import java.util.UUID
+
+// FINDROID-54: this screen used to be two ("Auto-download rules" for this device's own show
+// rules, "Remote devices" for other devices' rules/pending pushes) - both were fundamentally the
+// same "show + season scope + toggle/remove" UI, just scoped to different devices, so they're
+// merged here into one. Both existing ViewModels are kept as-is and instantiated side by side;
+// this composable is just the glue that combines their state/actions into a single scaffold.
+@Composable
+fun AutoDownloadRulesScreen(
+    navigateBack: () -> Unit,
+    navigateToDownloadSettings: () -> Unit,
+    autoDownloadRulesViewModel: AutoDownloadRulesViewModel = hiltViewModel(),
+    remoteDevicesViewModel: RemoteDevicesViewModel = hiltViewModel(),
+) {
+    val rulesState by autoDownloadRulesViewModel.state.collectAsStateWithLifecycle()
+    val devicesState by remoteDevicesViewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(true) {
+        autoDownloadRulesViewModel.loadRules()
+        remoteDevicesViewModel.load()
+    }
+
+    ObserveAsEvents(autoDownloadRulesViewModel.events) { event ->
+        when (event) {
+            is AutoDownloadRuleEvent.RuleSentToDevice ->
+                Toast.makeText(
+                        context,
+                        context.getString(CoreR.string.remote_config_rule_sent_toast, event.deviceName),
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
+        }
+    }
+
+    AutoDownloadRulesScreenLayout(
+        rulesState = rulesState,
+        devicesState = devicesState,
+        onNavigateToDownloadSettings = navigateToDownloadSettings,
+        getSeasons = autoDownloadRulesViewModel::getSeasons,
+        getOtherDevices = autoDownloadRulesViewModel::getOtherDevices,
+        // Each refresh() call only kicks off a coroutine in its own ViewModel's viewModelScope and
+        // returns immediately, so calling both here already runs their syncNow()+reload work
+        // concurrently rather than serially - no explicit coroutineScope/launch needed.
+        onRefresh = {
+            autoDownloadRulesViewModel.refresh()
+            remoteDevicesViewModel.refresh()
+        },
+        onBackClick = navigateBack,
+        onRulesAction = autoDownloadRulesViewModel::onAction,
+        onDevicesAction = { action ->
+            when (action) {
+                is RemoteDevicesAction.RemoveActiveRule -> {
+                    val deviceName =
+                        devicesState.devices.find { it.id == action.targetDeviceId }?.name
+                            ?: action.targetDeviceId
+                    Toast.makeText(
+                            context,
+                            context.getString(
+                                CoreR.string.remote_devices_rule_remove_sent_toast,
+                                deviceName,
+                            ),
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                }
+                is RemoteDevicesAction.CancelPendingCommand ->
+                    Toast.makeText(
+                            context,
+                            CoreR.string.remote_devices_push_canceled_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is RemoteDevicesAction.SetRemoteManagementEnabled,
+                is RemoteDevicesAction.OnBackClick -> Unit
+            }
+            remoteDevicesViewModel.onAction(action)
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AutoDownloadRulesScreenLayout(
+    rulesState: AutoDownloadRulesState,
+    devicesState: RemoteDevicesState,
+    onRulesAction: (AutoDownloadRulesAction) -> Unit,
+    onDevicesAction: (RemoteDevicesAction) -> Unit,
+    onBackClick: () -> Unit = {},
+    onNavigateToDownloadSettings: () -> Unit = {},
+    getSeasons: suspend (UUID) -> List<FindroidSeason> = { emptyList() },
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
+    onRefresh: () -> Unit = {},
+) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(CoreR.string.auto_download_rules)) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_arrow_left),
+                            contentDescription = null,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToDownloadSettings) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_settings),
+                            contentDescription = stringResource(CoreR.string.download_settings),
+                        )
+                    }
+                },
+                windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        contentWindowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
+    ) { innerPadding ->
+        // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
+        // language across the whole app instead of a screen-specific spinner. Refreshing here
+        // drives an immediate RemoteConfigRepository.syncNow() (via both ViewModels' refresh())
+        // rather than waiting out RemoteConfigWorker's periodic WorkManager floor.
+        PullToRefreshBox(
+            isRefreshing = rulesState.isRefreshing || devicesState.isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        ) {
+            val isFullyEmpty =
+                rulesState.shows.isEmpty() &&
+                    devicesState.devices.isEmpty() &&
+                    devicesState.pendingCommands.isEmpty() &&
+                    !rulesState.isLoading &&
+                    !devicesState.isLoading
+            if (isFullyEmpty) {
+                Text(
+                    text = stringResource(CoreR.string.no_auto_download_rules),
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                item {
+                    RemoteManagementToggleRow(
+                        enabled = devicesState.remoteManagementEnabled,
+                        onToggle = {
+                            onDevicesAction(RemoteDevicesAction.SetRemoteManagementEnabled(it))
+                        },
+                    )
+                    HorizontalDivider()
+                }
+                if (rulesState.shows.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_config_this_device),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = rulesState.shows, key = { "show-${it.seriesId}" }) { show ->
+                        AutoDownloadShowRuleRow(
+                            show = show,
+                            onAction = onRulesAction,
+                            getSeasons = getSeasons,
+                            getOtherDevices = getOtherDevices,
+                        )
+                    }
+                }
+                // Only shown when there's actually another device to talk about - the "no other
+                // devices" case is folded into isFullyEmpty above instead of a per-section message,
+                // so it doesn't look jarring next to this device's own rules.
+                if (devicesState.devices.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_devices_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = devicesState.devices, key = { it.id }) { device ->
+                        DeviceSection(
+                            device = device,
+                            showsBySeriesId = devicesState.showsBySeriesId,
+                            onAction = onDevicesAction,
+                        )
+                    }
+                }
+                if (devicesState.pendingCommands.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_devices_pending_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = devicesState.pendingCommands, key = { it.id }) { command ->
+                        PendingCommandRow(
+                            command = command,
+                            devices = devicesState.devices,
+                            onAction = onDevicesAction,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutoDownloadShowRuleRow(
+    show: AutoDownloadShowRuleUiModel,
+    onAction: (AutoDownloadRulesAction) -> Unit,
+    getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
+) {
+    val context = LocalContext.current
+    var deleteDialogOpen by remember { mutableStateOf(false) }
+    var editDialogOpen by remember { mutableStateOf(false) }
+
+    Column {
+        ListItem(
+            modifier = Modifier.clickable { editDialogOpen = true },
+            leadingContent = {
+                ItemPoster(
+                    item = show.show,
+                    direction = Direction.VERTICAL,
+                    modifier =
+                        Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
+                )
+            },
+            headlineContent = { Text(text = show.showName) },
+            supportingContent = {
+                Column {
+                    Text(text = show.scopeLabel.asString())
+                    if (show.seasonIds.isNotEmpty() && show.alsoFutureSeasons) {
+                        Text(
+                            text = stringResource(CoreR.string.download_scope_future_seasons),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    val samplePath = show.downloadedSamplePath
+                    if (show.downloadedSizeBytes > 0 && samplePath != null) {
+                        LocalStorageIndicator(
+                            path = samplePath,
+                            sizeBytes = show.downloadedSizeBytes,
+                        )
+                    }
+                }
+            },
+            trailingContent = {
+                Row {
+                    Switch(
+                        checked = show.enabled,
+                        onCheckedChange = { enabled ->
+                            onAction(
+                                AutoDownloadRulesAction.ToggleShowRule(show.seriesId, enabled)
+                            )
+                            Toast.makeText(
+                                    context,
+                                    if (enabled) {
+                                        CoreR.string.auto_download_rule_enabled_toast
+                                    } else {
+                                        CoreR.string.auto_download_rule_disabled_toast
+                                    },
+                                    Toast.LENGTH_SHORT,
+                                )
+                                .show()
+                        },
+                    )
+                    IconButton(onClick = { deleteDialogOpen = true }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_trash),
+                            contentDescription = null,
+                        )
+                    }
+                }
+            },
+        )
+        HorizontalDivider()
+    }
+
+    if (editDialogOpen) {
+        EditRuleDialog(
+            show = show,
+            getSeasons = getSeasons,
+            getOtherDevices = getOtherDevices,
+            onConfirm = { seasonIds, alsoFutureSeasons, onlyNewEpisodes, onlyUnwatched, targetDeviceId ->
+                onAction(
+                    AutoDownloadRulesAction.UpdateShowRule(
+                        show.seriesId,
+                        seasonIds,
+                        alsoFutureSeasons,
+                        onlyNewEpisodes,
+                        onlyUnwatched,
+                        targetDeviceId,
+                    )
+                )
+                editDialogOpen = false
+            },
+            onDismiss = { editDialogOpen = false },
+        )
+    }
+
+    if (deleteDialogOpen) {
+        ClearDownloadsDialog(
+            title = stringResource(CoreR.string.delete_auto_download_rule),
+            message = stringResource(CoreR.string.delete_auto_download_rule_message),
+            name = show.showName,
+            checkboxLabel = stringResource(CoreR.string.also_delete_downloaded_episodes),
+            checkboxSummary = stringResource(CoreR.string.also_delete_downloaded_episodes_summary),
+            checkboxDefault = false,
+            onConfirm = { alsoDeleteDownloads ->
+                onAction(
+                    AutoDownloadRulesAction.DeleteShowRule(show.seriesId, alsoDeleteDownloads)
+                )
+                Toast.makeText(
+                        context,
+                        CoreR.string.auto_download_rule_deleted_toast,
+                        Toast.LENGTH_SHORT,
+                    )
+                    .show()
+                deleteDialogOpen = false
+            },
+            onDismiss = { deleteDialogOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun EditRuleDialog(
+    show: AutoDownloadShowRuleUiModel,
+    getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
+    onConfirm:
+        (
+            seasonIds: Set<UUID>,
+            alsoFutureSeasons: Boolean,
+            onlyNewEpisodes: Boolean,
+            onlyUnwatched: Boolean,
+            targetDeviceId: String?,
+        ) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+    var otherDevices by remember { mutableStateOf<List<RemoteDeviceInfo>>(emptyList()) }
+    var selectedSeasonIds by remember { mutableStateOf(show.seasonIds) }
+    var alsoFutureSeasons by remember { mutableStateOf(show.alsoFutureSeasons) }
+    var onlyNewEpisodes by remember { mutableStateOf(show.onlyNewEpisodes) }
+    var onlyUnwatched by remember { mutableStateOf(show.onlyUnwatched) }
+    var seasonsExpanded by remember { mutableStateOf(false) }
+    var selectedDeviceId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(show.seriesId) { seasons = getSeasons(show.seriesId) }
+    LaunchedEffect(Unit) { otherDevices = getOtherDevices() }
+
+    val canConfirm = selectedSeasonIds.isNotEmpty() || alsoFutureSeasons
+
+    AlertDialog(
+        title = { Text(text = stringResource(CoreR.string.edit_auto_download_rule)) },
+        text = {
+            val currentSeasons = seasons
+            if (currentSeasons == null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                val allSeasonIds = currentSeasons.map { it.id }.toSet()
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                    if (otherDevices.isNotEmpty()) {
+                        RemoteDevicePicker(
+                            otherDevices = otherDevices,
+                            selectedDeviceId = selectedDeviceId,
+                            onSelected = { selectedDeviceId = it },
+                        )
+                        HorizontalDivider()
+                    }
+                    if (allSeasonIds.isNotEmpty()) {
+                        ToggleOptionRow(
+                            checked = selectedSeasonIds.containsAll(allSeasonIds),
+                            label = stringResource(CoreR.string.edit_rule_scope_entire_show),
+                            icon = CoreR.drawable.ic_tv,
+                            onToggle = { checked ->
+                                selectedSeasonIds = if (checked) allSeasonIds else emptySet()
+                            },
+                        )
+                    }
+                    if (currentSeasons.isNotEmpty()) {
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .clickable { seasonsExpanded = !seasonsExpanded }
+                                    .padding(vertical = MaterialTheme.spacings.small),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        CoreR.string.download_scope_seasons_header,
+                                        currentSeasons.size,
+                                    ),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (seasonsExpanded) CoreR.drawable.ic_chevron_up
+                                        else CoreR.drawable.ic_chevron_down
+                                    ),
+                                contentDescription = null,
+                                tint = LocalContentColor.current,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        if (seasonsExpanded) {
+                            currentSeasons.forEach { season ->
+                                ToggleOptionRow(
+                                    checked = season.id in selectedSeasonIds,
+                                    label =
+                                        stringResource(
+                                            CoreR.string.auto_download_rule_season,
+                                            season.indexNumber,
+                                        ),
+                                    icon = CoreR.drawable.ic_library,
+                                    onToggle = { checked ->
+                                        selectedSeasonIds =
+                                            if (checked) selectedSeasonIds + season.id
+                                            else selectedSeasonIds - season.id
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    ToggleOptionRow(
+                        checked = alsoFutureSeasons,
+                        label = stringResource(CoreR.string.download_scope_future_seasons),
+                        icon = CoreR.drawable.ic_sparkles,
+                        onToggle = { alsoFutureSeasons = it },
+                    )
+                    ToggleOptionRow(
+                        checked = onlyUnwatched,
+                        label = stringResource(CoreR.string.download_scope_only_unwatched),
+                        icon = CoreR.drawable.ic_eye_off,
+                        onToggle = { onlyUnwatched = it },
+                    )
+                    if (selectedSeasonIds.isNotEmpty()) {
+                        ToggleOptionRow(
+                            checked = onlyNewEpisodes,
+                            label = stringResource(CoreR.string.auto_download_only_new_episodes),
+                            icon = CoreR.drawable.ic_refresh_cw,
+                            onToggle = { onlyNewEpisodes = it },
+                        )
+                    }
+                }
+            }
+        },
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                enabled = seasons != null && canConfirm,
+                onClick = {
+                    onConfirm(
+                        selectedSeasonIds,
+                        alsoFutureSeasons,
+                        onlyNewEpisodes,
+                        onlyUnwatched,
+                        selectedDeviceId,
+                    )
+                },
+            ) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_check),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = stringResource(CoreR.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_x),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                Text(text = stringResource(CoreR.string.cancel))
+            }
+        },
+    )
+}
+
+@PreviewScreenSizes
+@Composable
+private fun AutoDownloadRulesScreenLayoutPreview() {
+    FindroidTheme {
+        AutoDownloadRulesScreenLayout(
+            rulesState =
+                AutoDownloadRulesState(
+                    shows =
+                        listOf(
+                            AutoDownloadShowRuleUiModel(
+                                seriesId = UUID.randomUUID(),
+                                ruleIds = listOf(1L),
+                                show = dummyShow,
+                                showName = "Example Show",
+                                enabled = true,
+                                seasonIds = emptySet(),
+                                alsoFutureSeasons = true,
+                                scopeLabel =
+                                    UiText.StringResource(CoreR.string.auto_download_rule_future_seasons),
+                                onlyNewEpisodes = false,
+                                onlyUnwatched = false,
+                            )
+                        )
+                ),
+            devicesState = RemoteDevicesState(),
+            onRulesAction = {},
+            onDevicesAction = {},
+        )
+    }
+}

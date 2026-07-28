@@ -1,0 +1,62 @@
+package dev.pschmitt.jellyfin.presentation.film.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import dev.pschmitt.jellyfin.core.R as CoreR
+import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
+import dev.pschmitt.jellyfin.models.HomeSection
+import dev.pschmitt.jellyfin.presentation.theme.spacings
+
+@Composable
+fun HomeSection(
+    section: HomeSection,
+    itemsPadding: PaddingValues,
+    onAction: (HomeAction) -> Unit,
+    modifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionServiceIcons(listOf(CoreR.drawable.ic_logo))
+                Text(
+                    text = section.name.asString(),
+                    modifier = titleModifier,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+        LazyRow(
+            contentPadding = itemsPadding,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+        ) {
+            items(section.items, key = { it.id }) { item ->
+                ItemCard(
+                    item = item,
+                    direction = Direction.HORIZONTAL,
+                    onClick = { onAction(HomeAction.OnItemClick(item)) },
+                )
+            }
+        }
+    }
+}

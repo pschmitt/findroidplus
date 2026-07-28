@@ -1,0 +1,409 @@
+package dev.pschmitt.jellyfin.database
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
+import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
+import dev.pschmitt.jellyfin.models.FindroidEpisodeDto
+import dev.pschmitt.jellyfin.models.FindroidMediaStreamDto
+import dev.pschmitt.jellyfin.models.FindroidMovieDto
+import dev.pschmitt.jellyfin.models.FindroidSeasonDto
+import dev.pschmitt.jellyfin.models.FindroidSegmentDto
+import dev.pschmitt.jellyfin.models.FindroidShowDto
+import dev.pschmitt.jellyfin.models.FindroidSourceDto
+import dev.pschmitt.jellyfin.models.FindroidTrickplayInfoDto
+import dev.pschmitt.jellyfin.models.FindroidUserDataDto
+import dev.pschmitt.jellyfin.models.PendingDownloadRequestDto
+import dev.pschmitt.jellyfin.models.Server
+import dev.pschmitt.jellyfin.models.ServerAddress
+import dev.pschmitt.jellyfin.models.ServerWithAddressAndUser
+import dev.pschmitt.jellyfin.models.ServerWithAddresses
+import dev.pschmitt.jellyfin.models.ServerWithAddressesAndUsers
+import dev.pschmitt.jellyfin.models.ServerWithUsers
+import dev.pschmitt.jellyfin.models.User
+import java.util.UUID
+import org.jellyfin.sdk.model.DateTime
+
+@Dao
+interface ServerDatabaseDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertServer(server: Server)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertServerAddress(address: ServerAddress)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertUser(user: User)
+
+    @Update fun update(server: Server)
+
+    @Query("SELECT * FROM servers WHERE id = :id") fun get(id: String): Server?
+
+    @Query("SELECT * FROM users WHERE id = :id") fun getUser(id: UUID): User?
+
+    @Transaction
+    @Query("SELECT * FROM servers WHERE id = :id")
+    fun getServerWithAddresses(id: String): ServerWithAddresses
+
+    @Query("SELECT * FROM serverAddresses WHERE id = :id") fun getAddress(id: UUID): ServerAddress
+
+    @Query("SELECT * FROM users WHERE serverId = :serverId")
+    fun getUsers(serverId: String): List<User>
+
+    @Transaction
+    @Query("SELECT * FROM servers WHERE id = :id")
+    fun getServerWithUsers(id: String): ServerWithUsers
+
+    @Transaction
+    @Query("SELECT * FROM servers WHERE id = :id")
+    fun getServerWithAddressesAndUsers(id: String): ServerWithAddressesAndUsers?
+
+    @Transaction
+    @Query("SELECT * FROM servers WHERE id = :id")
+    fun getServerWithAddressAndUser(id: String): ServerWithAddressAndUser?
+
+    @Transaction
+    @Query("SELECT * FROM servers")
+    fun getServersWithAddresses(): List<ServerWithAddresses>
+
+    @Transaction
+    @Query("SELECT * FROM servers")
+    fun getAllServersWithAddressesAndUsers(): List<ServerWithAddressesAndUsers>
+
+    @Query("SELECT * FROM autoDownloadRules") fun getAllAutoDownloadRules(): List<AutoDownloadRuleDto>
+
+    @Query("DELETE FROM servers") fun clear()
+
+    @Query("SELECT * FROM servers") fun getAllServersSync(): List<Server>
+
+    @Query("SELECT COUNT(*) FROM servers") fun getServersCount(): Int
+
+    @Query("DELETE FROM servers WHERE id = :id") fun delete(id: String)
+
+    @Query("DELETE FROM users WHERE id = :id") fun deleteUser(id: UUID)
+
+    @Query("DELETE FROM serverAddresses WHERE id = :id") fun deleteServerAddress(id: UUID)
+
+    @Query("UPDATE servers SET currentUserId = :userId WHERE id = :serverId")
+    fun updateServerCurrentUser(serverId: String, userId: UUID)
+
+    @Query(
+        "SELECT * FROM users WHERE id = (SELECT currentUserId FROM servers WHERE id = :serverId)"
+    )
+    fun getServerCurrentUser(serverId: String): User?
+
+    @Query(
+        "SELECT * FROM serverAddresses WHERE id = (SELECT currentServerAddressId FROM servers WHERE id = :serverId)"
+    )
+    fun getServerCurrentAddress(serverId: String): ServerAddress?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertMovie(movie: FindroidMovieDto)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSource(source: FindroidSourceDto)
+
+    @Query("SELECT * FROM movies WHERE id = :id") fun getMovie(id: UUID): FindroidMovieDto
+
+    @Query(
+        "SELECT * FROM movies JOIN sources ON movies.id = sources.itemId ORDER BY movies.name ASC"
+    )
+    fun getMoviesAndSources(): Map<FindroidMovieDto, List<FindroidSourceDto>>
+
+    @Query("SELECT * FROM sources WHERE itemId = :itemId")
+    fun getSources(itemId: UUID): List<FindroidSourceDto>
+
+    // Batch variant of getSources, used to avoid an N+1 query pattern when mapping a whole list of
+    // rows at once (see toFindroidMovies/toFindroidEpisodes in the models package).
+    @Query("SELECT * FROM sources WHERE itemId IN (:itemIds)")
+    fun getSourcesForItems(itemIds: List<UUID>): List<FindroidSourceDto>
+
+    @Query("SELECT * FROM sources") fun getAllSources(): List<FindroidSourceDto>
+
+    @Query("SELECT * FROM sources WHERE downloadId = :downloadId")
+    fun getSourceByDownloadId(downloadId: Long): FindroidSourceDto?
+
+    @Query("UPDATE sources SET downloadId = :downloadId WHERE id = :id")
+    fun setSourceDownloadId(id: String, downloadId: Long)
+
+    @Query("UPDATE sources SET checksum = :checksum WHERE id = :id")
+    fun setSourceChecksum(id: String, checksum: String)
+
+    @Query("UPDATE sources SET path = :path WHERE id = :id")
+    fun setSourcePath(id: String, path: String)
+
+    @Query("UPDATE sources SET pausedByBatterySaver = :paused WHERE id = :id")
+    fun setSourcePausedByBatterySaver(id: String, paused: Boolean)
+
+    @Query("UPDATE sources SET excludeFromAutoDelete = :excluded WHERE id = :id")
+    fun setSourceExcludeFromAutoDelete(id: String, excluded: Boolean)
+
+    @Query("DELETE FROM sources WHERE id = :id") fun deleteSource(id: String)
+
+    @Query("DELETE FROM movies WHERE id = :id") fun deleteMovie(id: UUID)
+
+    @Query(
+        "UPDATE userdata SET playbackPositionTicks = :playbackPositionTicks WHERE itemId = :itemId AND userid = :userId"
+    )
+    fun setPlaybackPositionTicks(itemId: UUID, userId: UUID, playbackPositionTicks: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertMediaStream(mediaStream: FindroidMediaStreamDto)
+
+    @Query("SELECT * FROM mediastreams WHERE sourceId = :sourceId")
+    fun getMediaStreamsBySourceId(sourceId: String): List<FindroidMediaStreamDto>
+
+    // Batch variant of getMediaStreamsBySourceId, see getSourcesForItems.
+    @Query("SELECT * FROM mediastreams WHERE sourceId IN (:sourceIds)")
+    fun getMediaStreamsForSources(sourceIds: List<String>): List<FindroidMediaStreamDto>
+
+    @Query("SELECT * FROM mediastreams WHERE downloadId = :downloadId")
+    fun getMediaStreamByDownloadId(downloadId: Long): FindroidMediaStreamDto?
+
+    @Query("UPDATE mediastreams SET downloadId = :downloadId WHERE id = :id")
+    fun setMediaStreamDownloadId(id: UUID, downloadId: Long)
+
+    @Query("UPDATE mediastreams SET path = :path WHERE id = :id")
+    fun setMediaStreamPath(id: UUID, path: String)
+
+    @Query("DELETE FROM mediastreams WHERE id = :id") fun deleteMediaStream(id: UUID)
+
+    @Query("DELETE FROM mediastreams WHERE sourceId = :sourceId")
+    fun deleteMediaStreamsBySourceId(sourceId: String)
+
+    @Query("UPDATE userdata SET played = :played WHERE userId = :userId AND itemId = :itemId")
+    fun setPlayed(userId: UUID, itemId: UUID, played: Boolean)
+
+    @Query(
+        "UPDATE userdata SET lastPlayedDate = :lastPlayedDate WHERE userId = :userId AND itemId = :itemId"
+    )
+    fun setLastPlayedDate(userId: UUID, itemId: UUID, lastPlayedDate: DateTime?)
+
+    @Query("UPDATE userdata SET favorite = :favorite WHERE userId = :userId AND itemId = :itemId")
+    fun setFavorite(userId: UUID, itemId: UUID, favorite: Boolean)
+
+    @Query("SELECT * FROM movies ORDER BY name ASC") fun getMovies(): List<FindroidMovieDto>
+
+    @Query("SELECT * FROM movies WHERE serverId = :serverId ORDER BY name ASC")
+    fun getMoviesByServerId(serverId: String): List<FindroidMovieDto>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertShow(show: FindroidShowDto)
+
+    @Query("SELECT * FROM shows WHERE id = :id") fun getShow(id: UUID): FindroidShowDto
+
+    @Query("SELECT * FROM shows ORDER BY name ASC") fun getShows(): List<FindroidShowDto>
+
+    @Query("SELECT * FROM shows WHERE serverId = :serverId ORDER BY name ASC")
+    fun getShowsByServerId(serverId: String): List<FindroidShowDto>
+
+    @Query("DELETE FROM shows WHERE id = :id") fun deleteShow(id: UUID)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertSeason(show: FindroidSeasonDto)
+
+    @Query("SELECT * FROM seasons WHERE id = :id") fun getSeason(id: UUID): FindroidSeasonDto
+
+    @Query("SELECT * FROM seasons WHERE seriesId = :seriesId ORDER BY indexNumber ASC")
+    fun getSeasonsByShowId(seriesId: UUID): List<FindroidSeasonDto>
+
+    @Query("DELETE FROM seasons WHERE id = :id") fun deleteSeason(id: UUID)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertEpisode(episode: FindroidEpisodeDto)
+
+    @Query("SELECT * FROM episodes WHERE id = :id") fun getEpisode(id: UUID): FindroidEpisodeDto
+
+    @Query(
+        "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC"
+    )
+    fun getEpisodesByShowId(seriesId: UUID): List<FindroidEpisodeDto>
+
+    @Query("SELECT * FROM episodes WHERE seasonId = :seasonId ORDER BY indexNumber ASC")
+    fun getEpisodesBySeasonId(seasonId: UUID): List<FindroidEpisodeDto>
+
+    @Query(
+        "SELECT * FROM episodes WHERE serverId = :serverId ORDER BY seriesName ASC, parentIndexNumber ASC, indexNumber ASC"
+    )
+    fun getEpisodesByServerId(serverId: String): List<FindroidEpisodeDto>
+
+    @Query(
+        "SELECT episodes.id, episodes.serverId, episodes.seasonId, episodes.seriesId, episodes.name, episodes.seriesName, episodes.overview, episodes.indexNumber, episodes.indexNumberEnd, episodes.parentIndexNumber, episodes.runtimeTicks, episodes.premiereDate, episodes.communityRating, episodes.chapters FROM episodes INNER JOIN userdata ON episodes.id = userdata.itemId WHERE serverId = :serverId AND playbackPositionTicks > 0 ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
+    )
+    fun getEpisodeResumeItems(serverId: String): List<FindroidEpisodeDto>
+
+    @Query("DELETE FROM episodes WHERE id = :id") fun deleteEpisode(id: UUID)
+
+    @Query("DELETE FROM episodes WHERE seasonId = :seasonId")
+    fun deleteEpisodesBySeasonId(seasonId: UUID)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSegment(segment: FindroidSegmentDto)
+
+    @Query("SELECT * FROM segments WHERE itemId = :itemId")
+    fun getSegments(itemId: UUID): List<FindroidSegmentDto>
+
+    @Query("SELECT * FROM seasons") fun getSeasons(): List<FindroidSeasonDto>
+
+    @Query("SELECT * FROM episodes") fun getEpisodes(): List<FindroidEpisodeDto>
+
+    @Query("SELECT * FROM userdata WHERE itemId = :itemId AND userId = :userId")
+    fun getUserData(itemId: UUID, userId: UUID): FindroidUserDataDto?
+
+    // Batch variant of getUserData, see getSourcesForItems.
+    @Query("SELECT * FROM userdata WHERE itemId IN (:itemIds) AND userId = :userId")
+    fun getUserDataForItems(itemIds: List<UUID>, userId: UUID): List<FindroidUserDataDto>
+
+    @Transaction
+    fun getUserDataOrCreateNew(itemId: UUID, userId: UUID): FindroidUserDataDto {
+        var userData = getUserData(itemId, userId)
+
+        // Create user data when there is none
+        if (userData == null) {
+            userData =
+                FindroidUserDataDto(
+                    userId = userId,
+                    itemId = itemId,
+                    played = false,
+                    favorite = false,
+                    playbackPositionTicks = 0L,
+                )
+            insertUserData(userData)
+        }
+
+        return userData
+    }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertUserData(userData: FindroidUserDataDto)
+
+    @Query("DELETE FROM userdata WHERE itemId = :itemId") fun deleteUserData(itemId: UUID)
+
+    @Query("SELECT * FROM userdata WHERE userId = :userId AND itemId = :itemId AND toBeSynced = 1")
+    fun getUserDataToBeSynced(userId: UUID, itemId: UUID): FindroidUserDataDto?
+
+    @Query(
+        "UPDATE userdata SET toBeSynced = :toBeSynced WHERE itemId = :itemId AND userId = :userId"
+    )
+    fun setUserDataToBeSynced(userId: UUID, itemId: UUID, toBeSynced: Boolean)
+
+    @Query("SELECT * FROM movies WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
+    fun searchMovies(serverId: String, name: String): List<FindroidMovieDto>
+
+    @Query("SELECT * FROM shows WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
+    fun searchShows(serverId: String, name: String): List<FindroidShowDto>
+
+    @Query("SELECT * FROM episodes WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
+    fun searchEpisodes(serverId: String, name: String): List<FindroidEpisodeDto>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertTrickplayInfo(trickplayInfoDto: FindroidTrickplayInfoDto)
+
+    @Query("SELECT * FROM trickplayInfos WHERE sourceId = :sourceId")
+    fun getTrickplayInfo(sourceId: String): FindroidTrickplayInfoDto?
+
+    // Batch variant of getTrickplayInfo, see getSourcesForItems.
+    @Query("SELECT * FROM trickplayInfos WHERE sourceId IN (:sourceIds)")
+    fun getTrickplayInfoForSources(sourceIds: List<String>): List<FindroidTrickplayInfoDto>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAutoDownloadRule(rule: AutoDownloadRuleDto): Long
+
+    @Update fun updateAutoDownloadRule(rule: AutoDownloadRuleDto)
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NULL"
+    )
+    fun getShowAutoDownloadRule(serverId: String, userId: UUID, seriesId: UUID): AutoDownloadRuleDto?
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId = :seasonId"
+    )
+    fun getSeasonAutoDownloadRule(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        seasonId: UUID,
+    ): AutoDownloadRuleDto?
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId ORDER BY createdAt DESC"
+    )
+    fun getAutoDownloadRules(serverId: String, userId: UUID): List<AutoDownloadRuleDto>
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId"
+    )
+    fun getAutoDownloadRulesForShow(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+    ): List<AutoDownloadRuleDto>
+
+    @Query(
+        "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND enabled = 1"
+    )
+    fun getEnabledAutoDownloadRules(serverId: String, userId: UUID): List<AutoDownloadRuleDto>
+
+    @Query("UPDATE autoDownloadRules SET enabled = :enabled WHERE id = :id")
+    fun setAutoDownloadRuleEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE autoDownloadRules SET onlyNewEpisodes = :onlyNewEpisodes WHERE id = :id")
+    fun setAutoDownloadRuleOnlyNewEpisodes(id: Long, onlyNewEpisodes: Boolean)
+
+    @Query("UPDATE autoDownloadRules SET onlyUnwatched = :onlyUnwatched WHERE id = :id")
+    fun setAutoDownloadRuleOnlyUnwatched(id: Long, onlyUnwatched: Boolean)
+
+    @Query("DELETE FROM autoDownloadRules WHERE id = :id") fun deleteAutoDownloadRule(id: Long)
+
+    @Query(
+        "DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NOT NULL"
+    )
+    fun deleteSeasonAutoDownloadRulesForShow(serverId: String, userId: UUID, seriesId: UUID)
+
+    @Query(
+        "DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId"
+    )
+    fun deleteAutoDownloadRulesForShow(serverId: String, userId: UUID, seriesId: UUID)
+
+    @Query("DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId")
+    fun deleteAllAutoDownloadRules(serverId: String, userId: UUID)
+
+    // Only touches season-specific rows - the show-level (seasonId IS NULL) "auto-download future
+    // seasons" row is managed independently and must not be dropped just because the set of
+    // explicitly-selected seasons changed.
+    @Query(
+        "DELETE FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NOT NULL AND seasonId NOT IN (:keepSeasonIds)"
+    )
+    fun deleteSeasonAutoDownloadRulesForShowExceptSeasons(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        keepSeasonIds: List<UUID>,
+    )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertPendingDownloadRequest(request: PendingDownloadRequestDto): Long
+
+    @Query("DELETE FROM pending_download_requests WHERE id = :id")
+    fun deletePendingDownloadRequest(id: Long)
+
+    // episodeNumber is nullable (null = whole-season request) - the "OR (... IS NULL AND ... IS
+    // NULL)" clause is needed because SQL's `= NULL` never matches, even when both sides are NULL.
+    @Query(
+        "SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonNumber = :seasonNumber AND (episodeNumber = :episodeNumber OR (episodeNumber IS NULL AND :episodeNumber IS NULL))"
+    )
+    fun getPendingDownloadRequest(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        seasonNumber: Int,
+        episodeNumber: Int?,
+    ): PendingDownloadRequestDto?
+
+    @Query(
+        "SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId"
+    )
+    fun getPendingDownloadRequestsForSeries(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+    ): List<PendingDownloadRequestDto>
+
+    @Query("SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId")
+    fun getPendingDownloadRequests(serverId: String, userId: UUID): List<PendingDownloadRequestDto>
+}

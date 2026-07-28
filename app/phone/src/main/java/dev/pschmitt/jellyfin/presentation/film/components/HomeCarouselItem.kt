@@ -1,0 +1,88 @@
+package dev.pschmitt.jellyfin.presentation.film.components
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
+import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
+import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.spacings
+
+/**
+ * The same hero banner shape as every detail screen (see [ItemHeader]'s static overload) - full
+ * width, 16:9, no clip/rounding/margin - so this reads as the same component, not a bespoke
+ * rounded/inset card. The title/genre overlay stays baked into the image (unlike detail screens,
+ * which render the title below the banner) since this is a multi-item carousel a user pages
+ * through without navigating - each page needs its own extra darkening gradient on top of the
+ * shared banner's subtle default one, for legible white text regardless of theme.
+ */
+@Composable
+fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
+    val colorStops =
+        arrayOf(
+            0.0f to Color.Black.copy(alpha = 0.1f),
+            0.5f to Color.Black.copy(alpha = 0.5f),
+            1f to Color.Black.copy(alpha = 0.6f),
+        )
+
+    ItemHeader(
+        item = item,
+        modifier = Modifier.clickable { onAction(HomeAction.OnItemClick(item)) },
+        content = {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(brush = Brush.verticalGradient(colorStops = colorStops))
+            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                modifier =
+                    Modifier.padding(
+                            horizontal = MaterialTheme.spacings.default,
+                            vertical = MaterialTheme.spacings.medium,
+                        )
+                        .align(Alignment.BottomStart),
+            ) {
+                val genres =
+                    when (item) {
+                        is FindroidMovie -> item.genres
+                        is FindroidShow -> item.genres
+                        else -> emptyList()
+                    }
+                Text(
+                    text = genres.joinToString(),
+                    color = Color.LightGray,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text = item.name,
+                    color = Color.White,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun HomeCarouselItemPreview() {
+    FindroidTheme { HomeCarouselItem(item = dummyMovie, onAction = {}) }
+}

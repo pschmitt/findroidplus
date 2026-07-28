@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.jdtech.jellyfin.player.local"
+    namespace = "dev.pschmitt.jellyfin.player.local"
     compileSdk = Versions.COMPILE_SDK
     buildToolsVersion = Versions.BUILD_TOOLS
 

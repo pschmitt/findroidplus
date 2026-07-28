@@ -29,11 +29,14 @@
 -dontwarn org.openjsse.javax.net.ssl.SSLSocket
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 
--keep class dev.jdtech.**
+-keep class dev.pschmitt.jellyfin.**
+# libmpv (player/local) - real external group id, unrelated to FINDROID-61's dev.jdtech -> dev.pschmitt
+# namespace rename; its JNI-called native methods need their exact (unobfuscated) names kept.
+-keep class dev.jdtech.mpv.**
 
 # TV has no About screen (unlike phone) reading this, so it's otherwise an unreferenced field R8
 # strips during minification - keep it anyway, it's embedded purely as build-provenance metadata
 # for reproducible-builds verification (see REPRODUCIBLE_BUILDS.md), not for display.
--keepclassmembers class dev.jdtech.jellyfin.BuildConfig {
+-keepclassmembers class dev.pschmitt.jellyfin.BuildConfig {
     public static final java.lang.String GIT_REVISION;
 }

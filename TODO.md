@@ -1045,34 +1045,79 @@ exactly what caused FINDROID-60's first `am start -n
 <applicationId>/<applicationId>.MainActivity` guess to fail - the real
 component is `<applicationId>/dev.jdtech.jellyfin.MainActivity`.
 
-- [ ] Not started/not scoped in detail yet - `dev.jdtech` currently appears
-      in **558 files** (`.kt`/`.xml`/`.kts`) across every module: every
-      `package dev.jdtech...` declaration and matching import, every
-      module's `namespace` in its `build.gradle.kts`, `AndroidManifest.xml`
-      references, generated Hilt/R class references, and likely test
-      resources/fixtures too. This is a large, invasive, whole-repo rename,
-      not a quick find/replace - needs real planning before starting:
-      - Confirm whether `applicationId` and `namespace` actually need to
-        match (they don't strictly have to, and Android doesn't care - the
-        motivation here is just "our own code should live under our own
-        namespace, not upstream's", not a functional requirement).
-      - Decide the plan for the rename itself (a scripted `sed`-based mass
-        rename of `package`/`import` lines is probably viable given how
-        mechanical Kotlin package renames usually are, but each module's
-        `namespace` in Gradle, `AndroidManifest.xml` component names
-        anywhere written as fully-qualified rather than relative, and any
-        string/reflection-based package name usage - e.g. anything doing
-        `packageManager.getLaunchIntentForPackage`-style lookups keyed off
-        the OLD namespace, or serialized class names in stored preferences/
-        backups - need explicit auditing, not just a blind rename).
-      - Decide whether this is one giant PR or a staged/module-by-module
-        migration, given the size.
-      - Whatever tooling reads `am start -n dev.pschmitt.findroidplus/
-        dev.jdtech.jellyfin.MainActivity` today (`findroid-cli start`,
-        FINDROID-60) would need updating in lockstep if/when this lands.
+- [x] Confirmed `applicationId` and `namespace` never need to match -
+      Android doesn't enforce it. Scoped the rename precisely instead of
+      trusting the "558 files" estimate blind: `git grep` for
+      `dev\.jdtech\.jellyfin`/`dev/jdtech/jellyfin` found 564 tracked
+      files (548 `.kt`, 9 `.kts` `namespace` declarations, 1 `AndroidManifest.xml`,
+      plus `TODO.md` itself, both `proguard-rules.pro` files,
+      `fastlane/Appfile`, and `cli/findroid-cli`) - deliberately excluding
+      `dev.jdtech.mpv`, the real external libmpv Maven group id
+      (`gradle/libs.versions.toml` + 3 imports in
+      `player/local/.../mpv/MPVPlayer.kt`), which just happens to share the
+      `dev.jdtech` prefix and must NOT be touched.
+- [x] `git mv`'d 13 `.../src/{main,test,androidTest}/java/dev/jdtech/jellyfin`
+      source roots to `dev/pschmitt/jellyfin` (one `git mv` per module/source-set,
+      cleaning up the now-empty `dev/jdtech` parent each time), then a
+      scripted `sed` pass over the exact 563 remaining files (`TODO.md`
+      excluded, to keep its own historical narrative about this rename
+      intact) replaced `dev.jdtech.jellyfin`/`dev/jdtech/jellyfin` with
+      `dev.pschmitt.jellyfin`/`dev/pschmitt/jellyfin`.
+- [x] `app/tv/src/main/AndroidManifest.xml`'s two FQN service names
+      (`VideoDownloadService`/`ResumeDownloadsJobService`) converted to
+      relative (`.work.X`), matching `app/phone`'s existing convention -
+      one less place for the org name to drift again.
+- [x] `app/tv/proguard-rules.pro`'s blanket `-keep class dev.jdtech.**`
+      covered both our own old code AND libmpv in one rule - split into an
+      explicit `-keep class dev.pschmitt.jellyfin.**` (our code, renamed)
+      plus a separate `-keep class dev.jdtech.mpv.**` (libmpv's JNI-bound
+      classes, left alone on purpose - obfuscating/stripping them would
+      break the native binding since the JVM resolves JNI methods by exact
+      name, not by any bytecode reference R8 can trace).
+- [x] `cli/findroid-cli`'s `MAIN_ACTIVITY` and its explanatory comment
+      updated; `fastlane/Appfile`'s `package_name` mechanically renamed too
+      (`dev.pschmitt.jellyfin`) - note this was already stale relative to
+      the real `applicationId` (`dev.pschmitt.findroidplus`) before this
+      change and still is after; that's FINDROID-1's pre-existing gap
+      between the two, unrelated to this rename, and out of scope here.
+      Fastlane isn't wired into any CI workflow, so nothing consumes this
+      value today.
+- [x] **Found and fixed a real bug during build verification**: Room's
+      schema-export directory name is derived from the `@Database`
+      class's fully-qualified name, not just its simple name -
+      `data/schemas/dev.jdtech.jellyfin.database.ServerDatabase/` (15
+      versioned `.json` files) needed its own `git mv` to
+      `dev.pschmitt.jellyfin.database.ServerDatabase/` too. This directory
+      uses dots as a single flat segment name rather than `dev/jdtech/jellyfin`
+      nested path components, so it was invisible to both the initial
+      `find -type d -path ".../dev/jdtech/jellyfin"` sweep and the
+      content-based `git grep` sweep (directory *names* aren't file
+      content) - only caught because `:data:kspDebugKotlin` failed outright
+      ("Schema '2.json' ... was not found ... Cannot generate auto
+      migrations") on the first real build attempt. Confirmed the JSON
+      files' content has no FQN references needing changes (just table
+      schemas/an `identityHash`), so a plain directory rename was the
+      complete fix.
+- [x] Verified with a real remote Gradle build (`just gradle rofl-13.brkn.lol
+      :app:phone:assembleLibreDebug :app:tv:assembleLibreDebug`), not just
+      `bash -n`/`shellcheck` on the CLI side - this is exactly the kind of
+      rename where "looks right" and "compiles" diverge (see the schema
+      bug above, and a second stale-incremental-build false failure on
+      `app/tv` needing a `just clean` before it would build fresh - a
+      remote-host incremental-cache artifact, not a real code issue).
+      Both `assembleLibreDebug` targets build clean from scratch; no
+      remaining `dev.jdtech` references anywhere in the tree outside the
+      one deliberately-preserved `dev.jdtech.mpv` external library id.
+      `:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest` also both
+      pass.
+      Not yet verified on a real device (Mi Pad 4) - `am start`'s
+      component name (`<applicationId>/dev.pschmitt.jellyfin.MainActivity`)
+      changed along with everything else, so `findroid-cli start` is
+      untested against a real install since this rename.
 
-Status: not started (2026-07-28) - logged as a known, deliberately
-deferred, large-scope rename; needs a real plan before any code changes.
+Status: **done** (2026-07-28) - renamed, built clean (twice, from
+scratch), not yet device-verified. `findroid-cli`'s `MAIN_ACTIVITY` was
+updated in lockstep as anticipated when this was originally scoped.
 
 ## FINDROID-62: findroid-cli self-update subcommand
 
@@ -1095,6 +1140,11 @@ server on port 48411."
       atomically `mv`s it over itself, preserving the executable bit.
       Skips with "already up to date" otherwise.
 - [x] Bump `CLI_VERSION` to 1.2.0, document `update` in `usage()`.
+- [x] Follow-up (requested same day): reworded the success message to
+      "Upgraded findroid-cli from X to Y (path)" - a real unified diff of
+      old vs. new script content was considered but not what was asked for
+      ("x and y being the versions" clarified this means the version
+      transition, not a text diff).
 
 Status: **done** (2026-07-28) - implemented and exercised against a local
 stub HTTP server on 48411 standing in for the app (not a real device):
@@ -1109,10 +1159,9 @@ Requested (2026-07-28): "when invoking the cli with --json, let's just
 return the body. status is just noise."
 
 - [x] `print_response_json` (the shared helper behind every `--json` call
-      site) now prints `.body` via `jq -c` instead of the whole
-      `{status, body}` wrapper - the HTTP status is still used internally
-      to set the exit code (2xx -> 0), same as before, just not printed
-      anymore.
+      site) now prints `.body` instead of the whole `{status, body}`
+      wrapper - the HTTP status is still used internally to set the exit
+      code (2xx -> 0), same as before, just not printed anymore.
 - [x] `cmd_debug`'s own separate `--json` branch (it doesn't go through
       `print_response_json` - a non-2xx there is proxied-service output,
       not a CLI-level failure) updated the same way: status now goes to
@@ -1120,5 +1169,13 @@ return the body. status is just noise."
       gets just `.body`.
 - [x] Updated the `--json` help text in `usage()` to match ("Print the
       response's body as JSON instead of a table").
+- [x] Follow-up (requested same day): pretty-print (indent) the printed
+      body instead of compact single-line output - both spots dropped
+      `jq`'s `-c` flag. `jq` stays a hard overall dependency
+      (`require_deps`, and every subcommand's internal JSON
+      parsing/building already needs it regardless) - this is purely
+      about the final output's formatting, not about making `jq` optional
+      tool-wide (that would be a much larger rewrite, explicitly
+      considered and declined).
 
 Status: **done** (2026-07-28).

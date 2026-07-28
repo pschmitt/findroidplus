@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.jdtech.jellyfin"
+    namespace = "dev.pschmitt.jellyfin"
     compileSdk = Versions.COMPILE_SDK
     buildToolsVersion = Versions.BUILD_TOOLS
 
@@ -25,7 +25,7 @@ android {
         val gitRevision = System.getenv("GIT_REVISION") ?: "unknown"
         buildConfigField("String", "GIT_REVISION", "\"$gitRevision\"")
 
-        testInstrumentationRunner = "dev.jdtech.jellyfin.HiltTestRunner"
+        testInstrumentationRunner = "dev.pschmitt.jellyfin.HiltTestRunner"
     }
 
     signingConfigs {

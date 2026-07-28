@@ -40,12 +40,14 @@ BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
 # control API - this has to go through Android's activity manager instead). Override for a
 # debug/staging install (applicationIdSuffix ".debug"/".staging").
 PACKAGE_NAME="${FINDROID_PACKAGE_NAME:-dev.pschmitt.findroidplus}"
-# The app's applicationId ("dev.pschmitt.findroidplus", above) was rebranded from upstream
-# Findroid independently of its actual Kotlin/manifest namespace, which is still
-# "dev.jdtech.jellyfin" (see app/phone/build.gradle.kts's "namespace", unchanged across every
-# build variant/applicationIdSuffix) - so the launcher activity's real component is always
-# "<applicationId>/dev.jdtech.jellyfin.MainActivity", not "<applicationId>/<applicationId>.MainActivity".
-MAIN_ACTIVITY="dev.jdtech.jellyfin.MainActivity"
+# The app's applicationId ("dev.pschmitt.findroidplus", above) is distinct from its Kotlin/
+# manifest namespace ("dev.pschmitt.jellyfin" - see app/phone/build.gradle.kts's "namespace",
+# unchanged across every build variant/applicationIdSuffix) - so the launcher activity's real
+# component is always "<applicationId>/dev.pschmitt.jellyfin.MainActivity", not
+# "<applicationId>/<applicationId>.MainActivity" (FINDROID-61 renamed the namespace's org from
+# upstream Findroid's "dev.jdtech" to this fork's own "dev.pschmitt", but applicationId and
+# namespace were never required to match, and still don't).
+MAIN_ACTIVITY="dev.pschmitt.jellyfin.MainActivity"
 
 # Set from --json by main() (never `local` there, so this stays a real global).
 JSON_OUTPUT=""
@@ -187,10 +189,10 @@ print_table() {
   fi
 }
 
-# --json mode: prints just $1's (a local_request response) "body" - the "status" wrapper is noise
-# once you're piping into jq (2xx/failure is already the process exit code, same as non-JSON mode)
-# - and reports its HTTP status via the return code, used instead of check_response's
-# human-readable stderr message.
+# --json mode: prints just $1's (a local_request response) "body", pretty-printed - the "status"
+# wrapper is noise once you're piping into jq (2xx/failure is already the process exit code, same
+# as non-JSON mode) - and reports its HTTP status via the return code, used instead of
+# check_response's human-readable stderr message.
 print_response_json() {
   local response="$1"
   local status
@@ -1000,7 +1002,7 @@ cmd_update() {
     jq -n --arg from "${CLI_VERSION}" --arg to "${new_version}" --arg path "${self_path}" \
       '{updated: true, from: $from, to: $to, path: $path}'
   else
-    printf 'Updated %s: %s -> %s\n' "${self_path}" "${CLI_VERSION}" "${new_version}"
+    printf 'Upgraded findroid-cli from %s to %s (%s)\n' "${CLI_VERSION}" "${new_version}" "${self_path}"
   fi
 }
 
