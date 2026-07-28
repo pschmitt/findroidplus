@@ -307,34 +307,49 @@ including finding and fixing the root-requirement blocker above.
 
 ## FINDROID-46: Onboarding screen redesign
 
-- [ ] Redesign the onboarding screen layout
-  - [ ] Make the primary button(s) vertical and bigger
-  - [ ] Move the "Learn more about Jellyfin" button to the top-left corner
+- [x] Redesign the onboarding screen layout
+  - [x] Make the primary button(s) vertical and bigger
+  - [x] Move the "Learn more about Jellyfin" button to the top-left corner
+
+Status: done (`f2933311`, 2026-07-28) - `WelcomeScreen.kt`: "Continue" is now
+a taller full-width button with larger type, "Learn more" moved to a
+corner-pinned text link out of the main action stack.
 
 ## FINDROID-47: Automatic backups don't actually run
 
-- [ ] Investigate why scheduled auto-backups never fire - reported
-      (2026-07-28) that no automatic backup has ever run despite
-      `AppPreferences.autoBackupEnabled`/`autoBackupIntervalMinutes` being
-      configured; `AutoBackupScheduler`/the worker behind it needs a real
-      on-device check (is the periodic work actually enqueued? does it run
-      and no-op, or never fire at all?).
-  - [ ] Backup filenames should include the device name.
-  - [ ] Rename "findroid" to "findroidplus" in backup filenames.
+- [x] Investigate why scheduled auto-backups never fire - root cause found:
+      enabling the toggle before picking a destination folder silently
+      cancelled/never enqueued the periodic work, with no error surfaced
+      (`autoBackupLastError` was only ever written from inside the worker's
+      own failure paths, which never got a chance to run).
+  - [x] Backup filenames should include the device name.
+  - [x] Rename "findroid" to "findroidplus" in backup filenames.
+
+Status: done (`05978a68`, 2026-07-28) - `AutoBackupScheduler` now records a
+specific error when bailing out enabled-but-no-folder (surfaced via the
+existing Backup & Restore error banner) and clears it once a folder is
+picked; filename format extracted into shared `BackupFileNaming` (device
+model + `findroidplus` prefix) used by both the scheduled and manual backup
+paths. Verified via remote compile/ktfmtCheck/unit tests on rofl-13.
 
 ## FINDROID-48: Re-group the main Settings screen
 
-- [ ] The main Settings screen currently greets the user with a long, flat
+- [x] The main Settings screen currently greets the user with a long, flat
       wall of top-level categories - re-organize into fewer, more sensibly
       grouped sections rather than a 1:1 header per existing group (an
       earlier pass just added section labels to the existing groups
       as-is; this is the follow-up restructuring). Concrete examples from
       the user (2026-07-28):
-  - [ ] "Cache" settings probably belong under "Network".
-  - [ ] "Language" might be better homed under "Player".
-  - [ ] "Offline mode" can probably go under "Downloads".
-  - [ ] General principle: fewer top-level entries, each one a coherent
+  - [x] "Cache" settings probably belong under "Network".
+  - [x] "Language" might be better homed under "Player".
+  - [x] "Offline mode" can probably go under "Downloads".
+  - [x] General principle: fewer top-level entries, each one a coherent
         theme, not a 1:1 mapping of every existing category to its own row.
+
+Status: done (`33ba5d1d`, 2026-07-28) - Settings root now shows 7 coherent
+groups instead of 10; every individual preference row preserved, only its
+top-level home changed. Verified app:phone/app:tv compile + ktfmtCheck on
+rofl-13.
 
 ## FINDROID-49: Simplify findroid-cli to local-only, drop root requirement, fix gaps
 
