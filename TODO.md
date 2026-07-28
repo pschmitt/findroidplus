@@ -412,27 +412,33 @@ Radarr/Seerr libraries, plus triggering a download by name/season instead of
 needing an item UUID up front (`findroid-cli download "Rick and Morty"
 "Season 3"`).
 
-- [ ] `LocalControlRouter`: `GET /jellyfin/libraries`, `GET /jellyfin/items`
+- [x] `LocalControlRouter`: `GET /jellyfin/libraries`, `GET /jellyfin/items`
       (parentId/search/pagination), `GET /jellyfin/search` - all via the
       already-typed `JellyfinRepository` methods, no raw HTTP needed.
-- [ ] `LocalControlRouter`: `GET /sonarr/series`, `GET /radarr/movies`,
+- [x] `LocalControlRouter`: `GET /sonarr/series`, `GET /radarr/movies`,
       `GET /seerr/requests`, `GET /seerr/discover/{path}`,
       `GET /seerr/search` - via the already-typed `SonarrApi`/`RadarrApi`/
       `SeerrApi` clients (same ad hoc construction pattern
       `resolveProxyClient` already uses for the debug proxy).
-- [ ] `POST /downloads/trigger-by-name`: resolve a movie/show by name
+- [x] `POST /downloads/trigger-by-name`: resolve a movie/show by name
       (exact case-insensitive match, else single-candidate, else an
       ambiguous-match error listing candidates), then for a show resolve
       season/episode by number or name and trigger every matching episode's
       download. Deliberate guard rail: a bare show name with no season and
       no explicit `all` flag is rejected rather than silently downloading
       an entire series.
-- [ ] CLI: `library list`/`library browse`, `search`, `sonarr list`,
+- [x] CLI: `library list`/`library browse`, `search`, `sonarr list`,
       `radarr list`, `seerr requests`/`discover`/`search`, and reworking
       `download`'s dispatch so anything past `list`/`trigger` is treated as
-      a by-name trigger.
-- [ ] On-device verification on Mi Pad 4 (real Termux, no root) per the
-      FINDROID-49-established standard, including a real by-name download
-      trigger against a real small season.
+      a by-name trigger. Also added `--json`/pretty-TSV-table output to
+      every data command (a same-day follow-up ask, see FINDROID-49).
+- [x] On-device verification on Mi Pad 4 (real Termux, no root): every new
+      command confirmed against the real library/Sonarr/Radarr/Seerr data,
+      including the by-name guard rail (bare show name rejected), the
+      exact-match-priority resolution ("Star Trek" doesn't get flagged
+      ambiguous despite several "Star Trek: ..." shows existing), a real
+      ambiguous-match error (two shows both literally named "Extras"), and
+      a real season+episode resolution + trigger attempt.
 
-Status: not started (2026-07-28).
+Status: **done** (2026-07-28) on Mi Pad 4; deployed to px5 too. Both devices
+got the release build from the same batch as this entry.
