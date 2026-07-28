@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_group_general">General</string>
     <string name="settings_group_account">Account</string>
     <string name="settings_group_data">Data</string>
     <string name="settings_category_language">Language</string>
-    <string name="settings_category_language_summary">App, audio and subtitle language preferences</string>
     <string name="settings_preferred_audio_language">Preferred audio language</string>
     <string name="settings_preferred_audio_language_summary">Automatically select this language for audio tracks when available</string>
     <string name="settings_preferred_subtitle_language">Preferred subtitle language</string>
@@ -28,7 +26,6 @@
     <string name="settings_category_home_layout">Customize home screen</string>
     <string name="settings_home_layout_summary">Change the order of Home screen sections</string>
     <string name="settings_category_cache">Cache</string>
-    <string name="settings_category_cache_summary">Image caching for faster loading</string>
     <string name="settings_use_cache_title">Cache images</string>
     <string name="settings_use_cache_summary">Cache images on disk to speed up loading times. Will take effect after app restart.</string>
     <string name="settings_cache_size">Cache size</string>

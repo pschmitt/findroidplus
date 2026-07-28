@@ -68,93 +68,6 @@ constructor(
     private val topLevelPreferences =
         listOf(
             PreferenceGroup(
-                nameStringResource = R.string.settings_group_general,
-                preferences =
-                    listOf(
-                        PreferenceSwitch(
-                            nameStringResource = R.string.offline_mode,
-                            descriptionStringRes = R.string.offline_mode_summary,
-                            iconDrawableId = R.drawable.ic_server_off,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.RestartActivity)
-                                }
-                            },
-                            backendPreference = appPreferences.offlineMode,
-                        )
-                    )
-            ),
-            PreferenceGroup(
-                nameStringResource = R.string.settings_category_language,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_language,
-                            descriptionStringRes = R.string.settings_category_language_summary,
-                            iconDrawableId = R.drawable.ic_languages,
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(
-                                        SettingsEvent.NavigateToSettings(
-                                            intArrayOf(it.nameStringResource)
-                                        )
-                                    )
-                                }
-                            },
-                            nestedPreferenceGroups =
-                                listOf(
-                                    PreferenceGroup(
-                                        preferences =
-                                            listOf(
-                                                PreferenceAppLanguage(
-                                                    nameStringResource = R.string.app_language,
-                                                    descriptionStringRes =
-                                                        R.string.app_language_summary,
-                                                    iconDrawableId = R.drawable.ic_languages,
-                                                    enabled =
-                                                        Build.VERSION.SDK_INT >=
-                                                            Build.VERSION_CODES.TIRAMISU,
-                                                )
-                                            )
-                                    ),
-                                    PreferenceGroup(
-                                        preferences =
-                                            listOf(
-                                                PreferenceSelect(
-                                                    nameStringResource =
-                                                        R.string.settings_preferred_audio_language,
-                                                    descriptionStringRes =
-                                                        R.string
-                                                            .settings_preferred_audio_language_summary,
-                                                    iconDrawableId = R.drawable.ic_speaker,
-                                                    backendPreference =
-                                                        appPreferences.preferredAudioLanguage,
-                                                    options = R.array.languages,
-                                                    optionValues = R.array.languages_values,
-                                                    optionsIncludeNull = true,
-                                                ),
-                                                PreferenceSelect(
-                                                    nameStringResource =
-                                                        R.string
-                                                            .settings_preferred_subtitle_language,
-                                                    descriptionStringRes =
-                                                        R.string
-                                                            .settings_preferred_subtitle_language_summary,
-                                                    iconDrawableId = R.drawable.ic_closed_caption,
-                                                    backendPreference =
-                                                        appPreferences.preferredSubtitleLanguage,
-                                                    options = R.array.languages,
-                                                    optionValues = R.array.languages_values,
-                                                    optionsIncludeNull = true,
-                                                ),
-                                            )
-                                    ),
-                                ),
-                        )
-                    )
-            ),
-            PreferenceGroup(
                 nameStringResource = R.string.settings_category_interface,
                 preferences =
                     listOf(
@@ -310,6 +223,56 @@ constructor(
                             },
                             nestedPreferenceGroups =
                                 listOf(
+                                    // "Language" used to be its own top-level group; folded in here
+                                    // since it's really a player-experience setting (what you hear
+                                    // and read, not a separate top-level concern).
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.settings_category_language,
+                                        preferences =
+                                            listOf(
+                                                PreferenceAppLanguage(
+                                                    nameStringResource = R.string.app_language,
+                                                    descriptionStringRes =
+                                                        R.string.app_language_summary,
+                                                    iconDrawableId = R.drawable.ic_languages,
+                                                    enabled =
+                                                        Build.VERSION.SDK_INT >=
+                                                            Build.VERSION_CODES.TIRAMISU,
+                                                )
+                                            ),
+                                    ),
+                                    PreferenceGroup(
+                                        preferences =
+                                            listOf(
+                                                PreferenceSelect(
+                                                    nameStringResource =
+                                                        R.string.settings_preferred_audio_language,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .settings_preferred_audio_language_summary,
+                                                    iconDrawableId = R.drawable.ic_speaker,
+                                                    backendPreference =
+                                                        appPreferences.preferredAudioLanguage,
+                                                    options = R.array.languages,
+                                                    optionValues = R.array.languages_values,
+                                                    optionsIncludeNull = true,
+                                                ),
+                                                PreferenceSelect(
+                                                    nameStringResource =
+                                                        R.string
+                                                            .settings_preferred_subtitle_language,
+                                                    descriptionStringRes =
+                                                        R.string
+                                                            .settings_preferred_subtitle_language_summary,
+                                                    iconDrawableId = R.drawable.ic_closed_caption,
+                                                    backendPreference =
+                                                        appPreferences.preferredSubtitleLanguage,
+                                                    options = R.array.languages,
+                                                    optionValues = R.array.languages_values,
+                                                    optionsIncludeNull = true,
+                                                ),
+                                            ),
+                                    ),
                                     PreferenceGroup(
                                         preferences =
                                             listOf(
@@ -870,6 +833,30 @@ constructor(
                             },
                             nestedPreferenceGroups =
                                 listOf(
+                                    // "Offline mode" used to be its own top-level group; folded in
+                                    // here since it's fundamentally about relying on already-
+                                    // downloaded content instead of the server, so it lives with
+                                    // downloads rather than as a separate top-level concern.
+                                    PreferenceGroup(
+                                        preferences =
+                                            listOf(
+                                                PreferenceSwitch(
+                                                    nameStringResource = R.string.offline_mode,
+                                                    descriptionStringRes =
+                                                        R.string.offline_mode_summary,
+                                                    iconDrawableId = R.drawable.ic_server_off,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    onClick = {
+                                                        viewModelScope.launch {
+                                                            eventsChannel.send(
+                                                                SettingsEvent.RestartActivity
+                                                            )
+                                                        }
+                                                    },
+                                                    backendPreference = appPreferences.offlineMode,
+                                                )
+                                            ),
+                                    ),
                                     PreferenceGroup(
                                         nameStringResource = R.string.download_group_network,
                                         preferences =
@@ -1174,31 +1161,12 @@ constructor(
                                                     suffixRes = R.string.ms,
                                                 ),
                                             )
-                                    )
-                                ),
-                        )
-                    )
-            ),
-            PreferenceGroup(
-                nameStringResource = R.string.settings_category_cache,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_cache,
-                            descriptionStringRes = R.string.settings_category_cache_summary,
-                            iconDrawableId = R.drawable.ic_hard_drive,
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(
-                                        SettingsEvent.NavigateToSettings(
-                                            intArrayOf(it.nameStringResource)
-                                        )
-                                    )
-                                }
-                            },
-                            nestedPreferenceGroups =
-                                listOf(
+                                    ),
+                                    // "Cache" used to be its own top-level group; folded in here
+                                    // since image caching is itself a network-traffic tradeoff, not
+                                    // a separate top-level concern.
                                     PreferenceGroup(
+                                        nameStringResource = R.string.settings_category_cache,
                                         preferences =
                                             listOf(
                                                 PreferenceSwitch(
@@ -1221,8 +1189,8 @@ constructor(
                                                         appPreferences.imageCacheSize,
                                                     suffixRes = R.string.mb,
                                                 ),
-                                            )
-                                    )
+                                            ),
+                                    ),
                                 ),
                         )
                     )
