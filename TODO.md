@@ -823,3 +823,161 @@ and confirmed working end-to-end on Mi Pad 4, including a real cross-device
 rule removal + cancel against "Pixel 5"'s actual data. px5 itself couldn't be
 exercised - it hit a pre-existing, unrelated keystore crash blocking app
 launch entirely, left as-is pending the user's OK to wipe its local data.
+
+**Note found along the way (2026-07-28)**: px5 (registered in-app as "Pixel
+5") crashes on every launch of this same release build with a pre-existing
+`javax.crypto.AEADBadTagException` in
+`SecureCredentialStoreModule.provideEncryptedSharedPreferences` during Hilt's
+`BaseApplication.onCreate` - before any code touched by FINDROID-53/54 ever
+runs. Looks like an Android Keystore key on that device that no longer
+decrypts its existing `EncryptedSharedPreferences`. The documented fix
+(uninstall+reinstall) wipes that device's Room DB/playback positions/
+downloads, so it needs the user's go-ahead first - not done yet.
+
+## FINDROID-55: Re-organize Settings root into fewer, more logical sections
+
+Requested (2026-07-28), several tweaks in one sitting, all landing on the
+same `topLevelPreferences` structure in `SettingsViewModel.kt`:
+
+- [x] Move "Local CLI access" out of Downloads > auto-download into the Data
+      section, alongside Backup and Provision device.
+- [x] Downloads screen: reorder so "Auto-download" comes before
+      "Auto-delete".
+- [x] Rename "Connections" to "Accounts and credentials" and move the
+      Account section to be the first entry on the Settings root.
+- [x] Fold "Player" into "Interface" (renamed "Appearance") - one combined
+      visual+playback section instead of two top-level entries. Fixed the
+      "MPV options" sub-screen's breadcrumb, which had hardcoded
+      `settings_category_player` as its parent index.
+- [x] Fold "Network" (general request/connect/socket/PVR-search timeouts,
+      plus "Cache") into Downloads, the same way Cache was already folded
+      into Network in an earlier pass.
+- [x] Move the Data section (Backup, Provision device, Local CLI access) to
+      sit just above About.
+- [x] Rename the Downloads screen's "New item notifications" section header
+      to just "Notifications".
+- [x] Add a "Timeouts" header to the (previously unnamed) request/connect/
+      socket/PVR-search timeout group folded in from Network.
+
+Final top-level order: Account, Appearance, Downloads, Data, About (was:
+Interface, Player, Account, Data, Download, Network, About). Every
+individual preference row preserved; only which top-level group it lives
+under, its label, and the overall ordering changed.
+
+Status: done (2026-07-28) - `:settings`/`:app:phone`/`:app:tv` all compile
+and `ktfmtCheck` passes on rofl-13. Not separately verified on-device beyond
+compile (a pure data/config reorganization, no new runtime logic).
+
+## FINDROID-56: Automatic backup silently fails on cloud-backed folders
+
+Reported (2026-07-28, Mi Pad 4): automatic backup failed with "Could not
+create backup file - check the backup folder is still accessible" while a
+manual backup with the same folder/params succeeded immediately after -
+user suspected the destination (Google Drive) was the cause.
+
+- [x] Confirmed: `AutoBackupScheduler`'s `WorkManager` job had no network
+      constraint at all (only `setRequiresBatteryNotLow(true)`), unlike
+      `RemoteConfigScheduler`/`QueueStatusScheduler` elsewhere in this
+      codebase, which both require `NetworkType.CONNECTED`. Manual backup
+      uses `ActivityResultContracts.CreateDocument` - an interactive
+      foreground picker, always run with the user present and therefore
+      virtually always with live connectivity. Automatic backup reuses the
+      persisted folder grant and calls `DocumentFile.createFile()`
+      non-interactively from a background job that can fire with no network
+      at all - a cloud-backed provider (Drive) genuinely needs network to
+      create/write a file, unlike a local folder, and silently returns
+      `null` (not an exception) when it can't reach the backend.
+- [x] Added `setRequiredNetworkType(NetworkType.CONNECTED)` to
+      `AutoBackupScheduler`'s constraints, matching the existing pattern.
+
+Status: done (2026-07-28) - root-caused and fixed; verified remote compile.
+Not yet re-confirmed on Mi Pad 4 that a subsequent scheduled run actually
+succeeds against the Drive-backed folder (would require waiting out a real
+backup interval) - the fix addresses the confirmed root cause, but a live
+before/after backup-success confirmation on that device hasn't been done.
+
+## FINDROID-57: Manual-import dialog polish + remote device picker polish
+
+Small UI requests (2026-07-28):
+
+- [x] Manual-import "reject" flow (`ManualImportSheet.kt`): the footer
+      button read "Delete & blacklist" even though the confirm dialog it
+      opens lets you toggle removal-from-client and blocklisting
+      independently. Renamed to "Remove" (matching the dialog's own confirm
+      button) and gave the dialog the same icon treatment as
+      `DeleteSelectedDownloadsDialog`/`RemovePvrQueueItemDialog` elsewhere on
+      the Downloads screen (icon+text title, icon+text confirm/dismiss
+      buttons) instead of plain text-only buttons.
+- [x] `RemoteDevicePicker` (shared by the auto-download rule editor and the
+      regular Download popup): moved to the very top of the rule editor's
+      `EditRuleDialog` instead of below the season/scope toggles, and
+      restyled as a tonal control (leading device icon, rounded
+      `surfaceContainerHigh` surface) instead of a plain list row, plus
+      per-row device icons and primary-color emphasis on the selected
+      device in its own picker dialog.
+
+Status: done (2026-07-28) - verified remote compile/`ktfmtCheck` for both;
+not separately re-verified on-device beyond the general release builds
+installed for other same-day work.
+
+## FINDROID-58: Seerr icon + reworded header on search's Seerr section
+
+Requested (2026-07-28): on the Home page's search, when a result isn't in
+the Jellyfin library, add a Seerr icon to the "Not in your library" header
+and reword it.
+
+- [x] `SearchBar.kt`'s Seerr-results header now uses `SectionServiceIcons`
+      (the same brand-icon-plus-title `Row` pattern `HomeDiscoverSection`
+      already uses) instead of bare text.
+- [x] Reworded `media_seerr_section` from "Not in your library — request via
+      Seerr" to "Not in your library — yet!" now that the icon itself
+      conveys "via Seerr". Shared string, so `LibraryScreen.kt`'s own Seerr
+      section picks up the new wording too (icon not added there - out of
+      scope, only the Home search header was requested).
+
+Status: done (2026-07-28) - verified remote compile/`ktfmtCheck`. Not
+separately verified on-device.
+
+## FINDROID-59: Delete downloaded files when removing a remote device's rule
+
+Requested (2026-07-28): "when we delete auto-download rules from remote
+devices we should give the user the option to also delete the already
+downloaded files, just like for local devices." Today, removing a rule for
+*this* device (`AutoDownloadRulesViewModel.deleteShowRule`) offers a "also
+delete downloaded episodes" checkbox (`ClearDownloadsDialog`); removing a
+rule shown for an *other* device (`RemoteDevicesAction.RemoveActiveRule` ->
+`RemoteConfigRepository.pushRemoveRule`) has no such option - it just queues
+a rule-clear command with no way to also ask that device to delete its
+already-downloaded files for that show.
+
+Not yet designed/implemented. Scoped by inspection so far:
+
+- [ ] `pushRemoveRule` is just `pushRuleUpdate` with an empty scope, applied
+      on the target device via `RemoteConfigRepositoryImpl.applyReconcileRules`
+      -> `AutoDownloadRuleRepository.reconcileRules(...)`. Needs a new
+      `alsoDeleteDownloads: Boolean` field on the `ReconcileRules` wire
+      command (default `false` so an old-format command from a
+      not-yet-upgraded device on the other end still decodes fine), and
+      `pushRemoveRule`/`pushRuleUpdate` need to accept and thread it through.
+- [ ] `applyReconcileRules` (on the *receiving* device) needs to, when that
+      flag is set, resolve the show's downloaded episodes
+      (`database.getEpisodesByShowId(seriesId)` + `toFindroidEpisode`,
+      mirroring `deleteShowRule`'s exact local pattern) and call the existing
+      top-level `clearDownloads(items, database, downloader)` helper
+      (`core/.../utils/DownloadCleanup.kt`) after the rule itself is
+      cleared. `RemoteConfigRepositoryImpl` already has `database`/
+      `downloader` injected, so this needs no new DI wiring.
+- [ ] UI: the "remove active rule" confirm dialog for another device's rule
+      (currently a plain `AlertDialog` in the merged `AutoDownloadRulesScreen.kt`,
+      formerly `RemoteDevicesScreen.kt`'s `ActiveRuleRow`) should become a
+      `ClearDownloadsDialog` (already used by the local delete flow) instead,
+      so it gets the same "also delete downloaded episodes" checkbox for
+      free. `RemoteDevicesAction.RemoveActiveRule` needs a new
+      `alsoDeleteDownloads: Boolean` field threaded through
+      `RemoteDevicesViewModel.removeActiveRule`.
+- [ ] Needs real cross-device on-device verification (like FINDROID-44's own
+      original testing) - push a remove-with-delete from one device, confirm
+      the other device's rule *and* its downloaded files for that show are
+      both gone after its next sync.
+
+Status: not started (2026-07-28) - scoped only, no code written yet.
