@@ -177,6 +177,15 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
         return id
     }
 
+    // Per-device opt-out: whether this device allows *other* devices on the same account to
+    // manage it (push rules/downloads to it, list it as a target, publish its active rules to the
+    // shared registry). Does not affect this device's own ability to push to others - that's this
+    // device's own action, not something done to it without consent. Defaults on to match the
+    // feature's existing default-enabled posture; RemoteConfigRepository.setRemoteManagementEnabled
+    // is what actually acts on a change (self-removal from the shared registry), not this pref
+    // alone.
+    val remoteManagementEnabled = Preference("pref_remote_management_enabled", true)
+
     inline fun <reified T> getValue(preference: Preference<T>): T {
         return try {
             @Suppress("UNCHECKED_CAST")

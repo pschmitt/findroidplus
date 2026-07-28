@@ -11,27 +11,40 @@ import kotlinx.serialization.Serializable
  * [java.util.UUID] at the repository boundary, not a persisted model. kotlinx.serialization
  * resolves the concrete subtype from a sealed hierarchy automatically (no `SerializersModule`
  * needed), so the shared queue can hold a mix of every command type below.
+ *
+ * [originDeviceId] identifies which device enqueued this - lets that same device later list and
+ * cancel its own still-pending pushes (see `RemoteConfigRepository.listPendingCommandsFromThisDevice`
+ * /`cancelPendingCommand`). [displayName] is a human-readable label (show or item name) resolved
+ * once at push time by the repository, not re-resolved by whoever renders a pending-commands list
+ * later - avoids extra Jellyfin API calls just to render management UI, and survives the
+ * referenced item being renamed/deleted server-side in the meantime.
  */
 @Serializable
 sealed interface RemoteConfigCommand {
     val id: String
     val targetDeviceId: String
+    val originDeviceId: String
     val createdAt: Long
     val serverId: String
+    val displayName: String
 
     /**
      * Persists an ongoing auto-download rule - replays [dev.jdtech.jellyfin.repository
      * .AutoDownloadRuleRepository.reconcileRules]'s own parameters verbatim on the target, rather
      * than modeling add/remove separately (reconcileRules already derives adds/removes from the
-     * full [seasonIds] set).
+     * full [seasonIds] set - an empty [seasonIds] with [alsoFutureSeasons] false clears the rule
+     * entirely, which is also how a remote "remove rule" push works -
+     * `RemoteConfigRepository.pushRemoveRule`).
      */
     @Serializable
     @SerialName("reconcile_rules")
     data class ReconcileRules(
         override val id: String,
         override val targetDeviceId: String,
+        override val originDeviceId: String,
         override val createdAt: Long,
         override val serverId: String,
+        override val displayName: String,
         val userId: String,
         val seriesId: String,
         val seasonIds: List<String>,
@@ -52,8 +65,10 @@ sealed interface RemoteConfigCommand {
     data class EvaluateNow(
         override val id: String,
         override val targetDeviceId: String,
+        override val originDeviceId: String,
         override val createdAt: Long,
         override val serverId: String,
+        override val displayName: String,
         val userId: String,
         val seriesId: String,
         val seasonIds: List<String>,
@@ -72,12 +87,29 @@ sealed interface RemoteConfigCommand {
     data class DownloadItem(
         override val id: String,
         override val targetDeviceId: String,
+        override val originDeviceId: String,
         override val createdAt: Long,
         override val serverId: String,
+        override val displayName: String,
         val itemId: String,
         val sourceId: String,
     ) : RemoteConfigCommand
 }
+
+/**
+ * A currently-active auto-download rule on the publishing device, for a "what's live on device X"
+ * management view - published as part of that device's own [RemoteDeviceInfo] heartbeat, refreshed
+ * on every `syncNow()`. [seasonCount] and [alsoFutureSeasons] mirror the same summary
+ * `AutoDownloadRuleRepository.toExistingScope()` already computes for the local rules screen.
+ */
+@Serializable
+data class RemoteActiveRuleSummary(
+    val serverId: String,
+    val seriesId: String,
+    val showName: String,
+    val seasonCount: Int,
+    val alsoFutureSeasons: Boolean,
+)
 
 /** Heartbeat entry advertising a device's presence to others sharing the same Jellyfin account. */
 @Serializable
@@ -85,4 +117,5 @@ data class RemoteDeviceInfo(
     val id: String,
     val name: String,
     val lastSeenMillis: Long,
+    val activeRules: List<RemoteActiveRuleSummary> = emptyList(),
 )

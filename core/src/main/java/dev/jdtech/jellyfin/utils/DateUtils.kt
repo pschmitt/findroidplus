@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.utils
 
+import android.text.format.DateUtils
 import dev.jdtech.jellyfin.models.FindroidShow
 import java.time.LocalDate
 import java.time.LocalTime
@@ -25,6 +26,14 @@ fun formatCalendarDate(date: LocalDate): String = date.format(calendarDateFormat
  * episode airs" banner so all three render the exact same air time consistently.
  */
 fun formatCalendarTime(time: LocalTime): String = time.format(calendarTimeFormatter)
+
+/**
+ * Formats an epoch-millis timestamp (e.g. a remote device's heartbeat `lastSeenMillis`) as a
+ * relative "5 minutes ago"/"2 days ago" string for the remote-devices management screen.
+ */
+fun formatRelativeTime(millis: Long): String =
+    DateUtils.getRelativeTimeSpanString(millis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+        .toString()
 
 fun getShowDateString(item: FindroidShow): String {
     val dateRange: MutableList<String> = mutableListOf()

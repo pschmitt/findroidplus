@@ -19,6 +19,8 @@ sealed interface SettingsEvent {
 
     data object NavigateToAutoDownloadRules : SettingsEvent
 
+    data object NavigateToRemoteDevices : SettingsEvent
+
     data class NavigateToSettings(val indexes: IntArray) : SettingsEvent
 
     data class NavigateToSettingsFileEdit(val filePath: String) : SettingsEvent

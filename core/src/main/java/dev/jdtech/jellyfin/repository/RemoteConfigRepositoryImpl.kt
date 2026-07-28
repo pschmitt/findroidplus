@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.repository
 import android.os.Build
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
+import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
 import dev.jdtech.jellyfin.models.RemoteConfigCommand
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -61,12 +62,16 @@ class RemoteConfigRepositoryImpl(
         onlyNewEpisodes: Boolean,
         onlyUnwatched: Boolean,
     ) {
+        val showName = resolveShowName(seriesId)
+        val originId = appPreferences.getOrCreateThisDeviceId()
         enqueue(
             RemoteConfigCommand.ReconcileRules(
                 id = UUID.randomUUID().toString(),
                 targetDeviceId = targetDeviceId,
+                originDeviceId = originId,
                 createdAt = System.currentTimeMillis(),
                 serverId = serverId,
+                displayName = showName,
                 userId = userId.toString(),
                 seriesId = seriesId.toString(),
                 seasonIds = seasonIds.map { it.toString() },
@@ -74,6 +79,24 @@ class RemoteConfigRepositoryImpl(
                 onlyNewEpisodes = onlyNewEpisodes,
                 onlyUnwatched = onlyUnwatched,
             )
+        )
+    }
+
+    override suspend fun pushRemoveRule(
+        targetDeviceId: String,
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+    ) {
+        pushRuleUpdate(
+            targetDeviceId = targetDeviceId,
+            serverId = serverId,
+            userId = userId,
+            seriesId = seriesId,
+            seasonIds = emptySet(),
+            alsoFutureSeasons = false,
+            onlyNewEpisodes = false,
+            onlyUnwatched = false,
         )
     }
 
@@ -90,14 +113,18 @@ class RemoteConfigRepositoryImpl(
         // Mirrors ShowViewModel/SeasonViewModel/EpisodeViewModel's local downloadWithScope: the
         // immediate "evaluate what matches right now" part and the persistent-rule part are
         // independent of each other, not alternatives - see those ViewModels' own kdoc.
+        val showName = resolveShowName(seriesId)
+        val originId = appPreferences.getOrCreateThisDeviceId()
         val now = System.currentTimeMillis()
         if (seasonIds.isNotEmpty()) {
             enqueue(
                 RemoteConfigCommand.EvaluateNow(
                     id = UUID.randomUUID().toString(),
                     targetDeviceId = targetDeviceId,
+                    originDeviceId = originId,
                     createdAt = now,
                     serverId = serverId,
+                    displayName = showName,
                     userId = userId.toString(),
                     seriesId = seriesId.toString(),
                     seasonIds = seasonIds.map { it.toString() },
@@ -110,8 +137,10 @@ class RemoteConfigRepositoryImpl(
                 RemoteConfigCommand.ReconcileRules(
                     id = UUID.randomUUID().toString(),
                     targetDeviceId = targetDeviceId,
+                    originDeviceId = originId,
                     createdAt = now,
                     serverId = serverId,
+                    displayName = showName,
                     userId = userId.toString(),
                     seriesId = seriesId.toString(),
                     seasonIds = if (alsoFollowNew) seasonIds.map { it.toString() } else emptyList(),
@@ -129,17 +158,77 @@ class RemoteConfigRepositoryImpl(
         itemId: UUID,
         sourceId: String,
     ) {
+        val itemName =
+            try {
+                jellyfinRepository.getItem(itemId)?.name ?: itemId.toString()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to resolve item name for remote download push")
+                itemId.toString()
+            }
         enqueue(
             RemoteConfigCommand.DownloadItem(
                 id = UUID.randomUUID().toString(),
                 targetDeviceId = targetDeviceId,
+                originDeviceId = appPreferences.getOrCreateThisDeviceId(),
                 createdAt = System.currentTimeMillis(),
                 serverId = serverId,
+                displayName = itemName,
                 itemId = itemId.toString(),
                 sourceId = sourceId,
             )
         )
     }
+
+    override suspend fun listPendingCommandsFromThisDevice(): List<RemoteConfigCommand> =
+        withContext(Dispatchers.IO) {
+            val thisId = appPreferences.getOrCreateThisDeviceId()
+            decodeCommands(fetchBucket().customPrefs[KEY_PENDING]).filter {
+                it.originDeviceId == thisId
+            }
+        }
+
+    override suspend fun cancelPendingCommand(commandId: String) {
+        withContext(Dispatchers.IO) {
+            writeMutex.withLock {
+                val bucket = fetchBucket()
+                val pending =
+                    decodeCommands(bucket.customPrefs[KEY_PENDING]).filterNot { it.id == commandId }
+                writeBucket(bucket, KEY_PENDING to json.encodeToString(pending))
+            }
+        }
+    }
+
+    override fun isRemoteManagementEnabled(): Boolean =
+        appPreferences.getValue(appPreferences.remoteManagementEnabled)
+
+    override suspend fun setRemoteManagementEnabled(enabled: Boolean) {
+        appPreferences.setValue(appPreferences.remoteManagementEnabled, enabled)
+        if (enabled) return
+        withContext(Dispatchers.IO) {
+            writeMutex.withLock {
+                val thisId = appPreferences.getOrCreateThisDeviceId()
+                val bucket = fetchBucket()
+                val devices = decodeDevices(bucket.customPrefs[KEY_DEVICES]).filterNot { it.id == thisId }
+                val pending =
+                    decodeCommands(bucket.customPrefs[KEY_PENDING]).filterNot {
+                        it.targetDeviceId == thisId
+                    }
+                writeBucket(
+                    bucket,
+                    KEY_DEVICES to json.encodeToString(devices),
+                    KEY_PENDING to json.encodeToString(pending),
+                )
+            }
+        }
+    }
+
+    private suspend fun resolveShowName(seriesId: UUID): String =
+        try {
+            jellyfinRepository.getShow(seriesId).name
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to resolve show name for remote push")
+            seriesId.toString()
+        }
 
     private suspend fun enqueue(command: RemoteConfigCommand) {
         withContext(Dispatchers.IO) {
@@ -154,6 +243,7 @@ class RemoteConfigRepositoryImpl(
     }
 
     override suspend fun syncNow() {
+        if (!isRemoteManagementEnabled()) return
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
                 val thisId = appPreferences.getOrCreateThisDeviceId()
@@ -170,6 +260,7 @@ class RemoteConfigRepositoryImpl(
                         allCommands = allCommands,
                         devices = devices,
                         hasServer = { serverId -> database.get(serverId) != null },
+                        thisDeviceActiveRules = currentActiveRuleSummaries(),
                     )
 
                 plan.commandsToApply.forEach { applyCommand(it) }
@@ -179,6 +270,36 @@ class RemoteConfigRepositoryImpl(
                     KEY_PENDING to json.encodeToString(plan.remainingCommands),
                     KEY_DEVICES to json.encodeToString(plan.newDevices),
                 )
+            }
+        }
+    }
+
+    /**
+     * This device's own currently-active auto-download rules, summarized per show - published on
+     * every sync so a "remote devices" management screen elsewhere can see (and remotely clear)
+     * what's live here, without needing its own query channel into this device's Room database.
+     */
+    private suspend fun currentActiveRuleSummaries(): List<RemoteActiveRuleSummary> {
+        val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return emptyList()
+        val userId =
+            try {
+                jellyfinRepository.getUserId()
+            } catch (e: Exception) {
+                return emptyList()
+            }
+        return ruleRepository.getRules(serverId, userId).groupBy { it.seriesId }.mapNotNull {
+            (seriesId, rules) ->
+            try {
+                RemoteActiveRuleSummary(
+                    serverId = serverId,
+                    seriesId = seriesId.toString(),
+                    showName = jellyfinRepository.getShow(seriesId).name,
+                    seasonCount = rules.count { it.seasonId != null && it.enabled },
+                    alsoFutureSeasons = rules.any { it.seasonId == null && it.enabled },
+                )
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to resolve show name while publishing active-rule summary")
+                null
             }
         }
     }

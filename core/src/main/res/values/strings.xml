@@ -181,6 +181,24 @@
     <string name="remote_config_target_device">Push to</string>
     <string name="remote_config_rule_sent_toast">Rule sent to %1$s</string>
     <string name="remote_config_download_sent_toast">Download sent to another device</string>
+    <string name="remote_devices_title">Remote devices</string>
+    <string name="remote_devices_summary">Manage auto-download rules and pending pushes on your other devices</string>
+    <string name="remote_devices_empty">No other devices yet</string>
+    <string name="remote_devices_no_active_rules">No active rules</string>
+    <string name="remote_devices_pending_header">Pending</string>
+    <string name="remote_devices_also_future_seasons">+ future seasons</string>
+    <string name="remote_devices_future_seasons_only">Future seasons only</string>
+    <string name="remote_devices_last_seen">Last seen %1$s</string>
+    <string name="remote_devices_remove_rule_confirm_title">Remove auto-download rule?</string>
+    <string name="remote_devices_remove_rule_confirm_message">This stops \"%1$s\" from auto-downloading new episodes on %2$s.</string>
+    <string name="remote_devices_rule_remove_sent_toast">Removal sent to %1$s</string>
+    <string name="remote_devices_push_canceled_toast">Push canceled</string>
+    <string name="remote_devices_command_reconcile_suffix">auto-download rule</string>
+    <string name="remote_devices_command_evaluate_suffix">download now</string>
+    <string name="remote_devices_command_download_suffix">episode download</string>
+    <string name="remote_devices_pending_to">%1$s → %2$s</string>
+    <string name="remote_devices_allow_management_title">Allow remote management</string>
+    <string name="remote_devices_allow_management_summary">Let your other devices push auto-download rules and downloads to this one</string>
     <string name="download_settings">Download settings</string>
     <string name="download_deleted_toast">Download deleted</string>
     <string name="delete_from_jellyfin">Delete from Jellyfin</string>
@@ -371,6 +389,10 @@
     <plurals name="aggregate_info_episode_count">
         <item quantity="one">%1$d episode</item>
         <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="remote_devices_season_count">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
     </plurals>
     <string name="aggregate_info_downloaded_size">%1$s downloaded to this device</string>
     <string name="download_scope_low_space_warning">Not enough free space (needs %1$s, %2$s available)</string>

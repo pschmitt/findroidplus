@@ -149,12 +149,45 @@ Pad 4's instance) remotely, without touching that device directly.
       use at the time and confirming would have started a real multi-GB
       background download on it without more explicit go-ahead - stopped
       short of that deliberately rather than risk it.
-- [ ] Not done: a completed push→receive round trip (queue a command from
-      one device, confirm the target actually downloads/applies it) -
-      blocked on both test devices being free/idle at the same time.
+- [x] Completed push→receive round trip (2026-07-28): pushed a single-episode
+      download from the Mi Pad 4 to px5; px5's own natural (unforced)
+      `RemoteConfigWorker` cycle picked it up a few minutes later (confirmed
+      via logcat - a real "Starting work"/"Worker result SUCCESS", not the
+      earlier forced-run deferral) and the episode landed as a completed
+      file in its downloads folder, right size and timing for the pushed
+      item. First forced-run attempts on both devices hit the same
+      before-schedule WorkManager deferral pull-to-refresh was built to
+      work around - the natural periodic cycle is what actually delivered
+      it here.
+- [x] Removal/management gap closed: previously, once a rule or download was
+      pushed, the origin device had no visibility or control over it - it'd
+      have to be undone by hand on the target. Fixed with:
+  - Each device now also publishes a summary of its own currently-active
+    auto-download rules (`RemoteActiveRuleSummary`) alongside its heartbeat,
+    refreshed every `syncNow()` - the wire format
+    (`data/.../models/AutoDownloadRemoteCommand.kt`) is now a
+    `@Serializable sealed interface RemoteConfigCommand` (`ReconcileRules`/
+    `EvaluateNow`/`DownloadItem`) carrying an `originDeviceId` (so a
+    controller can find its own still-pending pushes) and a `displayName`
+    resolved once at push time (avoids re-querying Jellyfin just to render
+    a management list, and survives the item being renamed/deleted
+    server-side afterwards).
+  - New `RemoteConfigRepository` methods: `pushRemoveRule` (just
+    `pushRuleUpdate` with an empty scope - `reconcileRules` already treats
+    that as "clear everything for this series," so no new apply-side logic
+    was needed), `listPendingCommandsFromThisDevice`/`cancelPendingCommand`
+    (retract a push before its target has even applied it).
+  - New dedicated screen: **Settings → Downloads → Remote devices**
+    (`app/phone/.../presentation/settings/remotedevices/`) - lists other
+    devices with their active rules (each removable, with a confirm
+    dialog) and this device's own still-pending pushes (each cancelable,
+    no confirm needed since it's non-destructive). Spot-verified on Mi Pad
+    4: correctly lists "Pixel 5," relative "last seen" time, and an
+    accurate empty "No active rules" state; pull-to-refresh works.
 - [ ] Not done: TV-side support - this only touches the phone module.
 
-Status: implementation done (2026-07-28), passing remote build/lint/unit
-tests, and spot-verified live against the real server on both physical test
-devices. Still needs one fully hands-off push→receive run and has no
-TV-side counterpart yet.
+Status: implementation done (2026-07-28), including cross-device rule/
+download management (remove/cancel) and a dedicated Remote devices screen.
+Passing remote build/lint/unit tests and spot-verified live against the
+real server on both physical test devices, including one full unforced
+push→receive round trip. No TV-side counterpart yet.

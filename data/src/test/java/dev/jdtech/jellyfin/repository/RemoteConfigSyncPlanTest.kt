@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.repository
 
+import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
 import dev.jdtech.jellyfin.models.RemoteConfigCommand
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import org.junit.Assert.assertEquals
@@ -17,8 +18,10 @@ class RemoteConfigSyncPlanTest {
         RemoteConfigCommand.ReconcileRules(
             id = id,
             targetDeviceId = targetDeviceId,
+            originDeviceId = "origin",
             createdAt = createdAt,
             serverId = serverId,
+            displayName = "Some Show",
             userId = "00000000-0000-0000-0000-000000000001",
             seriesId = "00000000-0000-0000-0000-000000000002",
             seasonIds = emptyList(),
@@ -36,8 +39,10 @@ class RemoteConfigSyncPlanTest {
         RemoteConfigCommand.DownloadItem(
             id = id,
             targetDeviceId = targetDeviceId,
+            originDeviceId = "origin",
             createdAt = createdAt,
             serverId = serverId,
+            displayName = "Some Episode",
             itemId = "00000000-0000-0000-0000-000000000003",
             sourceId = "source-1",
         )
@@ -180,5 +185,34 @@ class RemoteConfigSyncPlanTest {
             )
 
         assertEquals(setOf(reconcile, download), plan.commandsToApply.toSet())
+    }
+
+    @Test
+    fun `publishes this device's active rule summary on its own heartbeat entry`() {
+        val now = 500L
+        val summary =
+            listOf(
+                RemoteActiveRuleSummary(
+                    serverId = "server",
+                    seriesId = "00000000-0000-0000-0000-000000000002",
+                    showName = "Some Show",
+                    seasonCount = 2,
+                    alsoFutureSeasons = true,
+                )
+            )
+
+        val plan =
+            planRemoteConfigSync(
+                thisDeviceId = "this",
+                thisDeviceName = "Pixel",
+                now = now,
+                allCommands = emptyList(),
+                devices = emptyList(),
+                hasServer = { true },
+                thisDeviceActiveRules = summary,
+            )
+
+        val self = plan.newDevices.find { it.id == "this" }
+        assertEquals(summary, self?.activeRules)
     }
 }

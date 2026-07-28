@@ -1,0 +1,402 @@
+package dev.jdtech.jellyfin.presentation.settings.remotedevices
+
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
+import dev.jdtech.jellyfin.models.RemoteConfigCommand
+import dev.jdtech.jellyfin.models.RemoteDeviceInfo
+import dev.jdtech.jellyfin.presentation.film.components.Direction
+import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
+import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.utils.formatRelativeTime
+
+@Composable
+fun RemoteDevicesScreen(
+    navigateBack: () -> Unit,
+    viewModel: RemoteDevicesViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(true) { viewModel.load() }
+
+    RemoteDevicesScreenLayout(
+        state = state,
+        onRefresh = viewModel::refresh,
+        onAction = { action ->
+            when (action) {
+                is RemoteDevicesAction.OnBackClick -> navigateBack()
+                is RemoteDevicesAction.RemoveActiveRule -> {
+                    val deviceName =
+                        state.devices.find { it.id == action.targetDeviceId }?.name
+                            ?: action.targetDeviceId
+                    Toast.makeText(
+                            context,
+                            context.getString(
+                                CoreR.string.remote_devices_rule_remove_sent_toast,
+                                deviceName,
+                            ),
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                }
+                is RemoteDevicesAction.CancelPendingCommand ->
+                    Toast.makeText(
+                            context,
+                            CoreR.string.remote_devices_push_canceled_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is RemoteDevicesAction.SetRemoteManagementEnabled -> Unit
+            }
+            viewModel.onAction(action)
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RemoteDevicesScreenLayout(
+    state: RemoteDevicesState,
+    onAction: (RemoteDevicesAction) -> Unit,
+    onRefresh: () -> Unit = {},
+) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(CoreR.string.remote_devices_title)) },
+                navigationIcon = {
+                    IconButton(onClick = { onAction(RemoteDevicesAction.OnBackClick) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_arrow_left),
+                            contentDescription = null,
+                        )
+                    }
+                },
+                windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        contentWindowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
+    ) { innerPadding ->
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        ) {
+            if (state.devices.isEmpty() && state.pendingCommands.isEmpty() && !state.isLoading) {
+                Text(
+                    text = stringResource(CoreR.string.remote_devices_empty),
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                item {
+                    RemoteManagementToggleRow(
+                        enabled = state.remoteManagementEnabled,
+                        onToggle = { onAction(RemoteDevicesAction.SetRemoteManagementEnabled(it)) },
+                    )
+                    HorizontalDivider()
+                }
+                items(items = state.devices, key = { it.id }) { device ->
+                    DeviceSection(
+                        device = device,
+                        showsBySeriesId = state.showsBySeriesId,
+                        onAction = onAction,
+                    )
+                }
+                if (state.pendingCommands.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_devices_pending_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = state.pendingCommands, key = { it.id }) { command ->
+                        PendingCommandRow(command = command, devices = state.devices, onAction = onAction)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RemoteManagementToggleRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacings.default, vertical = MaterialTheme.spacings.small),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(CoreR.string.remote_devices_allow_management_title),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringResource(CoreR.string.remote_devices_allow_management_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onToggle)
+    }
+}
+
+@Composable
+private fun DeviceSection(
+    device: RemoteDeviceInfo,
+    showsBySeriesId: Map<String, FindroidShow>,
+    onAction: (RemoteDevicesAction) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacings.default,
+                vertical = MaterialTheme.spacings.small,
+            )
+    ) {
+        Text(text = device.name, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text =
+                stringResource(
+                    CoreR.string.remote_devices_last_seen,
+                    formatRelativeTime(device.lastSeenMillis),
+                ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (device.activeRules.isEmpty()) {
+            Text(
+                text = stringResource(CoreR.string.remote_devices_no_active_rules),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = MaterialTheme.spacings.small),
+            )
+        } else {
+            device.activeRules.forEach { rule ->
+                ActiveRuleRow(
+                    device = device,
+                    rule = rule,
+                    show = showsBySeriesId[rule.seriesId],
+                    onAction = onAction,
+                )
+            }
+        }
+        HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacings.small))
+    }
+}
+
+@Composable
+private fun ActiveRuleRow(
+    device: RemoteDeviceInfo,
+    rule: RemoteActiveRuleSummary,
+    show: FindroidShow?,
+    onAction: (RemoteDevicesAction) -> Unit,
+) {
+    var confirmOpen by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (show != null) {
+            ItemPoster(
+                item = show,
+                direction = Direction.VERTICAL,
+                modifier = Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = rule.showName, style = MaterialTheme.typography.bodyLarge)
+            val scopeParts = mutableListOf<String>()
+            if (rule.seasonCount > 0) {
+                scopeParts +=
+                    pluralStringResource(
+                        CoreR.plurals.remote_devices_season_count,
+                        rule.seasonCount,
+                        rule.seasonCount,
+                    )
+            }
+            if (rule.alsoFutureSeasons) {
+                scopeParts +=
+                    if (rule.seasonCount > 0) {
+                        stringResource(CoreR.string.remote_devices_also_future_seasons)
+                    } else {
+                        stringResource(CoreR.string.remote_devices_future_seasons_only)
+                    }
+            }
+            Text(
+                text = scopeParts.joinToString(" "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = { confirmOpen = true }) {
+            Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
+        }
+    }
+
+    if (confirmOpen) {
+        AlertDialog(
+            onDismissRequest = { confirmOpen = false },
+            title = { Text(text = stringResource(CoreR.string.remote_devices_remove_rule_confirm_title)) },
+            text = {
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.remote_devices_remove_rule_confirm_message,
+                            rule.showName,
+                            device.name,
+                        )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmOpen = false
+                        onAction(
+                            RemoteDevicesAction.RemoveActiveRule(
+                                targetDeviceId = device.id,
+                                serverId = rule.serverId,
+                                seriesId = rule.seriesId,
+                            )
+                        )
+                    }
+                ) {
+                    Text(text = stringResource(CoreR.string.download_scope_remove))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmOpen = false }) {
+                    Text(text = stringResource(CoreR.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun PendingCommandRow(
+    command: RemoteConfigCommand,
+    devices: List<RemoteDeviceInfo>,
+    onAction: (RemoteDevicesAction) -> Unit,
+) {
+    val targetName = devices.find { it.id == command.targetDeviceId }?.name ?: command.targetDeviceId
+    val suffixRes =
+        when (command) {
+            is RemoteConfigCommand.ReconcileRules -> CoreR.string.remote_devices_command_reconcile_suffix
+            is RemoteConfigCommand.EvaluateNow -> CoreR.string.remote_devices_command_evaluate_suffix
+            is RemoteConfigCommand.DownloadItem -> CoreR.string.remote_devices_command_download_suffix
+        }
+    val suffixText = stringResource(suffixRes)
+
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacings.default, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = command.displayName, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(CoreR.string.remote_devices_pending_to, suffixText, targetName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(
+            onClick = { onAction(RemoteDevicesAction.CancelPendingCommand(command.id)) }
+        ) {
+            Icon(painter = painterResource(CoreR.drawable.ic_x), contentDescription = null)
+        }
+    }
+}
+
+@PreviewScreenSizes
+@Composable
+private fun RemoteDevicesScreenLayoutPreview() {
+    FindroidTheme {
+        RemoteDevicesScreenLayout(
+            state =
+                RemoteDevicesState(
+                    devices =
+                        listOf(
+                            RemoteDeviceInfo(
+                                id = "1",
+                                name = "Mi Pad 4",
+                                lastSeenMillis = System.currentTimeMillis(),
+                                activeRules =
+                                    listOf(
+                                        RemoteActiveRuleSummary(
+                                            serverId = "server",
+                                            seriesId = "series",
+                                            showName = "Example Show",
+                                            seasonCount = 2,
+                                            alsoFutureSeasons = true,
+                                        )
+                                    ),
+                            )
+                        )
+                ),
+            onAction = {},
+        )
+    }
+}

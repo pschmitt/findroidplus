@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.repository
 
+import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
 import dev.jdtech.jellyfin.models.RemoteConfigCommand
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 
@@ -34,6 +35,7 @@ fun planRemoteConfigSync(
     allCommands: List<RemoteConfigCommand>,
     devices: List<RemoteDeviceInfo>,
     hasServer: (serverId: String) -> Boolean,
+    thisDeviceActiveRules: List<RemoteActiveRuleSummary> = emptyList(),
 ): RemoteConfigSyncPlan {
     val applied = mutableSetOf<String>()
     val toApply = mutableListOf<RemoteConfigCommand>()
@@ -66,7 +68,12 @@ fun planRemoteConfigSync(
 
     val newDevices =
         prunedDevices.filterNot { it.id == thisDeviceId } +
-            RemoteDeviceInfo(id = thisDeviceId, name = thisDeviceName, lastSeenMillis = now)
+            RemoteDeviceInfo(
+                id = thisDeviceId,
+                name = thisDeviceName,
+                lastSeenMillis = now,
+                activeRules = thisDeviceActiveRules,
+            )
 
     return RemoteConfigSyncPlan(toApply, remaining, newDevices)
 }
