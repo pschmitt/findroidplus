@@ -1032,3 +1032,44 @@ stops responding); `am start` again brings it back up (confirmed `GET
 /info` responds with the real `versionName`/`versionCode`/`gitRevision`).
 Also confirmed the same-day Settings reorg (FINDROID-55) and hide-token
 toggle are both live and correct on this device along the way.
+
+## FINDROID-61: Rename `dev.jdtech` package namespace to `dev.pschmitt`
+
+Requested (2026-07-28), found while debugging FINDROID-60's `am start`: this
+fork's `applicationId` was rebranded to `dev.pschmitt.findroidplus`
+(FINDROID-1) but the actual Kotlin/manifest package namespace across the
+whole codebase is still `dev.jdtech.jellyfin` (upstream Findroid's
+original) - `app/phone/build.gradle.kts`'s `namespace` is still
+`dev.jdtech.jellyfin`, unchanged by any `applicationIdSuffix`. This is
+exactly what caused FINDROID-60's first `am start -n
+<applicationId>/<applicationId>.MainActivity` guess to fail - the real
+component is `<applicationId>/dev.jdtech.jellyfin.MainActivity`.
+
+- [ ] Not started/not scoped in detail yet - `dev.jdtech` currently appears
+      in **558 files** (`.kt`/`.xml`/`.kts`) across every module: every
+      `package dev.jdtech...` declaration and matching import, every
+      module's `namespace` in its `build.gradle.kts`, `AndroidManifest.xml`
+      references, generated Hilt/R class references, and likely test
+      resources/fixtures too. This is a large, invasive, whole-repo rename,
+      not a quick find/replace - needs real planning before starting:
+      - Confirm whether `applicationId` and `namespace` actually need to
+        match (they don't strictly have to, and Android doesn't care - the
+        motivation here is just "our own code should live under our own
+        namespace, not upstream's", not a functional requirement).
+      - Decide the plan for the rename itself (a scripted `sed`-based mass
+        rename of `package`/`import` lines is probably viable given how
+        mechanical Kotlin package renames usually are, but each module's
+        `namespace` in Gradle, `AndroidManifest.xml` component names
+        anywhere written as fully-qualified rather than relative, and any
+        string/reflection-based package name usage - e.g. anything doing
+        `packageManager.getLaunchIntentForPackage`-style lookups keyed off
+        the OLD namespace, or serialized class names in stored preferences/
+        backups - need explicit auditing, not just a blind rename).
+      - Decide whether this is one giant PR or a staged/module-by-module
+        migration, given the size.
+      - Whatever tooling reads `am start -n dev.pschmitt.findroidplus/
+        dev.jdtech.jellyfin.MainActivity` today (`findroid-cli start`,
+        FINDROID-60) would need updating in lockstep if/when this lands.
+
+Status: not started (2026-07-28) - logged as a known, deliberately
+deferred, large-scope rename; needs a real plan before any code changes.
