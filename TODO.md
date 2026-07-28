@@ -534,18 +534,43 @@ downloadable/installable straight from the Shizuku app - instead of the
 current requirement to separately clone/copy the script from the
 `findroidplus` repo onto the device before it's usable.
 
-- [ ] Design how the script gets served: likely a new unauthenticated (no
-      bearer token - there's nothing to protect, it's a public script, not
-      user data) `GET /cli` on the existing loopback `LocalControlServer`,
-      returning `cli/findroid-cli`'s contents verbatim (bundled as an Android
-      asset/resource at build time, not read from a live git checkout).
-- [ ] "Local CLI access" settings screen: a visible URL/command a user can
-      `curl` from Termux (e.g. `curl http://127.0.0.1:48411/cli -o
-      findroid-cli && chmod +x findroid-cli`), or a QR code / share-intent
-      shortcut, mirroring how Shizuku's own onboarding surfaces `rish`.
-- [ ] Keep the bundled script in sync with `cli/findroid-cli` at build time
-      (copy as a build step / Gradle task) rather than hand-duplicating it -
-      two copies drifting apart would be worse than the current
-      copy-it-yourself status quo.
+- [x] Design how the script gets served: a new unauthenticated `GET /cli` on
+      `LocalControlServer`, routed before the bearer-token check (the one
+      deliberate exception - it's a public script, not user data), returning
+      the bundled `findroid-cli` asset verbatim with `Content-Type: text/plain;
+      charset=utf-8` and `Content-Disposition: attachment;
+      filename="findroid-cli"`.
+- [x] "Local CLI access" settings screen: added a "Get findroid-cli" section
+      (mirroring the existing token copy-to-clipboard UX) showing `curl
+      http://127.0.0.1:48411/cli -o findroid-cli && chmod +x findroid-cli`
+      with its own Copy button. QR code / share-intent considered out of
+      scope for v1 - a straight curl one-liner already covers the Termux
+      workflow the ticket asked for.
+- [x] Keep the bundled script in sync with `cli/findroid-cli` at build time:
+      `core/build.gradle.kts` registers a `CopyFindroidCliAsset` task and
+      wires it in as a generated asset directory via AGP's variant API
+      (`variant.sources.assets.addGeneratedSourceDirectory`) rather than
+      writing straight into `src/main/assets` - the naive
+      dependsOn-on-merge-tasks approach passed compile/ktfmtCheck/unit tests
+      but failed a full `assembleLibreRelease` with "Property has implicit
+      dependency" (lint-vital's model-generation task also reads
+      `src/main/assets` without an explicit dependency edge, so its ordering
+      vs. the copy was undefined). The variant-API registration fixes that by
+      letting AGP wire every consumer (merge, lint-vital, packaging) itself.
 
-Status: not started (2026-07-28) - added to the backlog, not implemented yet.
+Verified: `just gradle rofl-13.brkn.lol ":app:phone:compileLibreDebugKotlin"
+":core:compileLibreDebugKotlin" "ktfmtCheck" ":core:testLibreDebugUnitTest"
+":data:testDebugUnitTest"` -> BUILD SUCCESSFUL. A full CI-signed
+`just build-fetch --release --phone` (forced with `--rerun-tasks`) also
+succeeded end to end (`BUILD SUCCESSFUL in 3m 14s, 330 actionable tasks`);
+extracting `assets/findroid-cli` from the resulting APK and diffing it
+against `cli/findroid-cli` confirmed byte-for-byte (26021 bytes) parity.
+Installed on the Mi Pad 4 (`dev.pschmitt.findroidplus`) and confirmed live:
+`curl http://127.0.0.1:48411/cli` from Termux returns `200` with the correct
+headers and exact script body, with no `Authorization` header sent - and a
+sanity check that `GET /downloads` (an authenticated route) still returns
+`401` without a token, confirming the `/cli` exception didn't leak auth
+bypass onto any other route.
+
+Status: done (2026-07-28) - implemented, remote-build-verified, and confirmed
+end-to-end on real hardware (Mi Pad 4).

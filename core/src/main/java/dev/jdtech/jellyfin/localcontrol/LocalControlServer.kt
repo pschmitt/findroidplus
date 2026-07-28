@@ -1,7 +1,11 @@
 package dev.jdtech.jellyfin.localcontrol
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import fi.iki.elonen.NanoHTTPD
+import java.io.ByteArrayInputStream
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.runBlocking
@@ -38,6 +42,7 @@ constructor(
     private val router: LocalControlRouter,
     private val auth: LocalControlAuth,
     private val appPreferences: AppPreferences,
+    @ApplicationContext private val context: Context,
 ) : NanoHTTPD(BIND_ADDRESS, PORT) {
 
     @Synchronized
@@ -62,6 +67,15 @@ constructor(
     fun isRunning(): Boolean = isAlive
 
     override fun serve(session: IHTTPSession): Response {
+        // The one unauthenticated route: `findroid-cli` itself is a public script, not user data
+        // (same script anyone could get from the repo), so gating it behind the bearer token would
+        // only block the bootstrap step of getting the token-consuming client onto the device in
+        // the first place - checked before the token check below, same as a health-check route
+        // would be.
+        if (session.method == Method.GET && session.uri == CLI_PATH) {
+            return serveCliScript()
+        }
+
         val token = session.headers["authorization"]?.removePrefix("Bearer ")?.trim()
         if (!auth.verifyToken(token)) {
             return jsonResponse(Response.Status.UNAUTHORIZED, errorBody("Invalid or missing token"))
@@ -112,6 +126,25 @@ constructor(
     private fun jsonResponse(status: Response.IStatus, body: String): Response =
         newFixedLengthResponse(status, "application/json", body)
 
+    /** Serves the bundled `findroid-cli` script (an asset copied from `cli/findroid-cli` at build
+     * time - see `core/build.gradle.kts` - not read from a live git checkout) so a plain
+     * `curl http://127.0.0.1:48411/cli -o findroid-cli` from Termux works with zero setup, the same
+     * way Shizuku's `rish` client is downloadable straight from the Shizuku app. */
+    private fun serveCliScript(): Response =
+        try {
+            val bytes = context.assets.open(CLI_ASSET_NAME).use { it.readBytes() }
+            newFixedLengthResponse(
+                    Response.Status.OK,
+                    "text/plain; charset=utf-8",
+                    ByteArrayInputStream(bytes),
+                    bytes.size.toLong(),
+                )
+                .apply { addHeader("Content-Disposition", "attachment; filename=\"$CLI_ASSET_NAME\"") }
+        } catch (e: IOException) {
+            Timber.e(e, "Failed to read bundled findroid-cli asset")
+            jsonResponse(Response.Status.INTERNAL_ERROR, errorBody("findroid-cli asset missing"))
+        }
+
     /** NanoHTTPD's `Response.Status` is a fixed Java enum, but the debug proxy forwards whatever
      * raw HTTP status the proxied service returned (e.g. Sonarr's own 404) - not necessarily one
      * of the fixed constants. `Response.IStatus` is what [newFixedLengthResponse] actually accepts
@@ -139,6 +172,8 @@ constructor(
     companion object {
         const val BIND_ADDRESS = "127.0.0.1"
         const val PORT = 48411
+        const val CLI_PATH = "/cli"
+        const val CLI_ASSET_NAME = "findroid-cli"
         private const val SOCKET_READ_TIMEOUT = 30_000
         private val json = Json { ignoreUnknownKeys = true }
     }
