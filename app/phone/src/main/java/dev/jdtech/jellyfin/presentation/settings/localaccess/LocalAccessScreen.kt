@@ -101,6 +101,7 @@ private fun LocalAccessScreenLayout(state: LocalAccessState, onAction: (LocalAcc
                 item {
                     LocalControlToggleRow(
                         enabled = state.localControlEnabled,
+                        startFailed = state.startFailed,
                         onToggle = { onAction(LocalAccessAction.SetLocalControlEnabled(it)) },
                     )
                     HorizontalDivider()
@@ -124,25 +125,42 @@ private fun LocalAccessScreenLayout(state: LocalAccessState, onAction: (LocalAcc
 }
 
 @Composable
-private fun LocalControlToggleRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacings.default, vertical = MaterialTheme.spacings.small),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
+private fun LocalControlToggleRow(enabled: Boolean, startFailed: Boolean, onToggle: (Boolean) -> Unit) {
+    Column {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.small,
+                    ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(CoreR.string.local_access_enable_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = stringResource(CoreR.string.local_access_enable_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = enabled, onCheckedChange = onToggle)
+        }
+        if (startFailed) {
             Text(
-                text = stringResource(CoreR.string.local_access_enable_title),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = stringResource(CoreR.string.local_access_enable_summary),
+                text = stringResource(CoreR.string.local_access_start_failed),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacings.default,
+                        vertical = MaterialTheme.spacings.small,
+                    ),
             )
         }
-        Switch(checked = enabled, onCheckedChange = onToggle)
     }
 }
 

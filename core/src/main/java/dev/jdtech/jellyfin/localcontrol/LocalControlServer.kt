@@ -56,14 +56,21 @@ constructor(
     }
 
     @Synchronized
-    fun start() {
-        if (serverSocket != null) return
+    fun isRunning(): Boolean = serverSocket != null
+
+    /** `true` once the socket is actually bound and accepting connections (including if it
+     * already was) - `false` if binding just failed. The caller (currently
+     * `LocalAccessViewModel`) uses this to keep the Settings toggle honest instead of showing
+     * "enabled" while nothing is actually listening. */
+    @Synchronized
+    fun start(): Boolean {
+        if (serverSocket != null) return true
         val socket =
             try {
                 LocalServerSocket(SOCKET_NAME)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to bind local control socket")
-                return
+                return false
             }
         serverSocket = socket
         acceptJob =
@@ -79,6 +86,7 @@ constructor(
                     launch { handleConnection(client) }
                 }
             }
+        return true
     }
 
     @Synchronized

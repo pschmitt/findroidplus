@@ -24,11 +24,16 @@ constructor(
 
     fun load() {
         viewModelScope.launch {
+            val enabledPref = appPreferences.getValue(appPreferences.localControlEnabled)
             _state.emit(
                 _state.value.copy(
                     isLoading = true,
                     error = null,
-                    localControlEnabled = appPreferences.getValue(appPreferences.localControlEnabled),
+                    localControlEnabled = enabledPref,
+                    // The preference alone isn't proof anything is actually listening (e.g. a
+                    // previous start() may have silently failed to bind) - surface that mismatch
+                    // immediately rather than only after the user next flips the switch.
+                    startFailed = enabledPref && !localControlServer.isRunning(),
                 )
             )
             try {
@@ -53,8 +58,16 @@ constructor(
             appPreferences.setValue(appPreferences.localControlEnabled, enabled)
             // Applies immediately, not just on next app start - the toggle would otherwise be
             // misleading (switched on, but nothing actually listening until a restart).
-            if (enabled) localControlServer.start() else localControlServer.stop()
-            _state.emit(_state.value.copy(localControlEnabled = enabled))
+            val running =
+                if (enabled) {
+                    localControlServer.start()
+                } else {
+                    localControlServer.stop()
+                    true
+                }
+            _state.emit(
+                _state.value.copy(localControlEnabled = enabled, startFailed = enabled && !running)
+            )
         }
     }
 

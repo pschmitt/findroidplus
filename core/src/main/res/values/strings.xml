@@ -204,6 +204,7 @@
     <string name="local_access_empty">No paired clients yet</string>
     <string name="local_access_enable_title">Allow local control</string>
     <string name="local_access_enable_summary">Let a paired local CLI read/write download settings and trigger downloads on this device</string>
+    <string name="local_access_start_failed">Couldn\'t start local control - check logs, or try toggling this off and on again</string>
     <string name="local_access_paired_at">Paired %1$s</string>
     <string name="local_access_revoke_confirm_title">Revoke access?</string>
     <string name="local_access_revoke_confirm_message">\"%1$s\" will need to pair again before it can control this device.</string>
