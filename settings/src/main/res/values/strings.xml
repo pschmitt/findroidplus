@@ -7,7 +7,7 @@
     <string name="settings_preferred_audio_language_summary">Automatically select this language for audio tracks when available</string>
     <string name="settings_preferred_subtitle_language">Preferred subtitle language</string>
     <string name="settings_preferred_subtitle_language_summary">Automatically select this language for subtitles when available</string>
-    <string name="settings_category_connections">Connections</string>
+    <string name="settings_category_connections">Accounts and credentials</string>
     <string name="settings_connections_summary">Servers, users &amp; integrations</string>
     <string name="settings_category_servers">Servers</string>
     <string name="settings_category_servers_summary">Manage the Jellyfin servers connected to this app</string>
@@ -20,8 +20,8 @@
     <string name="settings_category_player_summary">Playback, gestures, seeking and media segments</string>
     <string name="settings_category_download">Downloads</string>
     <string name="settings_category_appearance">Appearance</string>
-    <string name="settings_category_interface">Interface</string>
-    <string name="settings_category_interface_summary">Appearance and home screen layout</string>
+    <string name="settings_category_interface">Appearance</string>
+    <string name="settings_category_interface_summary">Theme, home screen, playback &amp; language</string>
     <string name="settings_category_device">Device</string>
     <string name="settings_category_home_layout">Customize home screen</string>
     <string name="settings_home_layout_summary">Change the order of Home screen sections</string>

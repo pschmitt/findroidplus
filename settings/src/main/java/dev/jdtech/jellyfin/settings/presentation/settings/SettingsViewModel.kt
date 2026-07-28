@@ -68,6 +68,45 @@ constructor(
     private val topLevelPreferences =
         listOf(
             PreferenceGroup(
+                nameStringResource = R.string.settings_group_account,
+                preferences =
+                    listOf(
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_connections,
+                            descriptionStringRes = R.string.settings_connections_summary,
+                            iconDrawableId = R.drawable.ic_network,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToConnections)
+                                }
+                            },
+                        ),
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_servers,
+                            descriptionStringRes = R.string.settings_category_servers_summary,
+                            iconDrawableId = R.drawable.ic_server,
+                            supportedDeviceTypes = listOf(DeviceType.TV),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToServers)
+                                }
+                            },
+                        ),
+                        PreferenceCategory(
+                            nameStringResource = R.string.users,
+                            descriptionStringRes = R.string.users_summary,
+                            iconDrawableId = R.drawable.ic_user,
+                            supportedDeviceTypes = listOf(DeviceType.TV),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToUsers)
+                                }
+                            },
+                        ),
+                    )
+            ),
+            PreferenceGroup(
                 nameStringResource = R.string.settings_category_interface,
                 preferences =
                     listOf(
@@ -200,29 +239,10 @@ constructor(
                                                 ),
                                             ),
                                     ),
-                                ),
-                        )
-                    )
-            ),
-            PreferenceGroup(
-                nameStringResource = R.string.settings_category_player,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_player,
-                            descriptionStringRes = R.string.settings_category_player_summary,
-                            iconDrawableId = R.drawable.ic_play,
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(
-                                        SettingsEvent.NavigateToSettings(
-                                            intArrayOf(it.nameStringResource)
-                                        )
-                                    )
-                                }
-                            },
-                            nestedPreferenceGroups =
-                                listOf(
+                                    // "Player" used to be its own top-level group; folded in here
+                                    // (this category is now "Appearance") so the whole visual +
+                                    // playback experience lives in one place instead of being split
+                                    // across two top-level entries.
                                     // "Language" used to be its own top-level group; folded in here
                                     // since it's really a player-experience setting (what you hear
                                     // and read, not a separate top-level concern).
@@ -327,7 +347,7 @@ constructor(
                                                                 SettingsEvent.NavigateToSettings(
                                                                     intArrayOf(
                                                                         R.string
-                                                                            .settings_category_player,
+                                                                            .settings_category_interface,
                                                                         it.nameStringResource,
                                                                     )
                                                                 )
@@ -747,73 +767,6 @@ constructor(
                     )
             ),
             PreferenceGroup(
-                nameStringResource = R.string.settings_group_account,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_connections,
-                            descriptionStringRes = R.string.settings_connections_summary,
-                            iconDrawableId = R.drawable.ic_network,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToConnections)
-                                }
-                            },
-                        ),
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_servers,
-                            descriptionStringRes = R.string.settings_category_servers_summary,
-                            iconDrawableId = R.drawable.ic_server,
-                            supportedDeviceTypes = listOf(DeviceType.TV),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToServers)
-                                }
-                            },
-                        ),
-                        PreferenceCategory(
-                            nameStringResource = R.string.users,
-                            descriptionStringRes = R.string.users_summary,
-                            iconDrawableId = R.drawable.ic_user,
-                            supportedDeviceTypes = listOf(DeviceType.TV),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToUsers)
-                                }
-                            },
-                        ),
-                    )
-            ),
-            PreferenceGroup(
-                nameStringResource = R.string.settings_group_data,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_backup,
-                            descriptionStringRes = R.string.settings_category_backup_summary,
-                            iconDrawableId = R.drawable.ic_save,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToBackupSettings)
-                                }
-                            },
-                        ),
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_qr_export,
-                            descriptionStringRes = R.string.settings_category_qr_export_summary,
-                            iconDrawableId = R.drawable.ic_smartphone,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToQrExport)
-                                }
-                            },
-                        ),
-                    )
-            ),
-            PreferenceGroup(
                 nameStringResource = R.string.title_download,
                 preferences =
                     listOf(
@@ -955,35 +908,6 @@ constructor(
                                             ),
                                     ),
                                     PreferenceGroup(
-                                        nameStringResource = R.string.download_group_auto_delete,
-                                        preferences =
-                                            listOf(
-                                                PreferenceSwitch(
-                                                    nameStringResource =
-                                                        R.string.auto_delete_watched,
-                                                    descriptionStringRes =
-                                                        R.string.auto_delete_watched_summary,
-                                                    iconDrawableId = R.drawable.ic_trash,
-                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    backendPreference =
-                                                        appPreferences.autoDeleteWatched,
-                                                ),
-                                                PreferenceIntInput(
-                                                    nameStringResource =
-                                                        R.string.auto_delete_watched_hours,
-                                                    descriptionStringRes =
-                                                        R.string.auto_delete_watched_hours_summary,
-                                                    iconDrawableId = R.drawable.ic_timer,
-                                                    dependencies =
-                                                        listOf(appPreferences.autoDeleteWatched),
-                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    backendPreference =
-                                                        appPreferences.autoDeleteWatchedHours,
-                                                    suffixRes = R.string.hours_suffix,
-                                                ),
-                                            ),
-                                    ),
-                                    PreferenceGroup(
                                         nameStringResource = R.string.download_group_auto_download,
                                         preferences =
                                             listOf(
@@ -1035,21 +959,34 @@ constructor(
                                                         }
                                                     },
                                                 ),
-                                                PreferenceCategory(
+                                            ),
+                                    ),
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.download_group_auto_delete,
+                                        preferences =
+                                            listOf(
+                                                PreferenceSwitch(
                                                     nameStringResource =
-                                                        R.string.local_access_title,
+                                                        R.string.auto_delete_watched,
                                                     descriptionStringRes =
-                                                        R.string.local_access_summary,
-                                                    iconDrawableId = R.drawable.ic_terminal,
+                                                        R.string.auto_delete_watched_summary,
+                                                    iconDrawableId = R.drawable.ic_trash,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
-                                                    onClick = {
-                                                        viewModelScope.launch {
-                                                            eventsChannel.send(
-                                                                SettingsEvent
-                                                                    .NavigateToLocalAccess
-                                                            )
-                                                        }
-                                                    },
+                                                    backendPreference =
+                                                        appPreferences.autoDeleteWatched,
+                                                ),
+                                                PreferenceIntInput(
+                                                    nameStringResource =
+                                                        R.string.auto_delete_watched_hours,
+                                                    descriptionStringRes =
+                                                        R.string.auto_delete_watched_hours_summary,
+                                                    iconDrawableId = R.drawable.ic_timer,
+                                                    dependencies =
+                                                        listOf(appPreferences.autoDeleteWatched),
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.autoDeleteWatchedHours,
+                                                    suffixRes = R.string.hours_suffix,
                                                 ),
                                             ),
                                     ),
@@ -1093,29 +1030,10 @@ constructor(
                                                 ),
                                             ),
                                     ),
-                                ),
-                        )
-                    )
-            ),
-            PreferenceGroup(
-                nameStringResource = R.string.settings_category_network,
-                preferences =
-                    listOf(
-                        PreferenceCategory(
-                            nameStringResource = R.string.settings_category_network,
-                            descriptionStringRes = R.string.settings_category_network_summary,
-                            iconDrawableId = R.drawable.ic_network,
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(
-                                        SettingsEvent.NavigateToSettings(
-                                            intArrayOf(it.nameStringResource)
-                                        )
-                                    )
-                                }
-                            },
-                            nestedPreferenceGroups =
-                                listOf(
+                                    // "Network" used to be its own top-level group (general
+                                    // request/connect/socket/PVR-search timeouts, plus "Cache");
+                                    // folded in here since both are network-adjacent settings
+                                    // rather than a separate top-level concern.
                                     PreferenceGroup(
                                         preferences =
                                             listOf(
@@ -1193,6 +1111,45 @@ constructor(
                                     ),
                                 ),
                         )
+                    )
+            ),
+            PreferenceGroup(
+                nameStringResource = R.string.settings_group_data,
+                preferences =
+                    listOf(
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_backup,
+                            descriptionStringRes = R.string.settings_category_backup_summary,
+                            iconDrawableId = R.drawable.ic_save,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToBackupSettings)
+                                }
+                            },
+                        ),
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_qr_export,
+                            descriptionStringRes = R.string.settings_category_qr_export_summary,
+                            iconDrawableId = R.drawable.ic_smartphone,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToQrExport)
+                                }
+                            },
+                        ),
+                        PreferenceCategory(
+                            nameStringResource = R.string.local_access_title,
+                            descriptionStringRes = R.string.local_access_summary,
+                            iconDrawableId = R.drawable.ic_terminal,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(SettingsEvent.NavigateToLocalAccess)
+                                }
+                            },
+                        ),
                     )
             ),
             PreferenceGroup(
