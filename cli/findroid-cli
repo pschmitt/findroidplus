@@ -44,31 +44,39 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
   token set TOKEN                            Save the token copied from Settings
   settings get                               Show the app's real download settings
   settings set KEY=VALUE [KEY=VALUE...]      Change the app's real download settings
+                                              (alias: cfg)
   library list                               List the Jellyfin libraries (Movies, TV Shows, ...)
+                                              (alias: lib; list alias: ls)
   library browse [PARENT_ID] [--search TERM] [--type TYPE[,TYPE...]]
                                               Browse a library/folder, or search it. TYPE:
                                               movie|show|season|episode|boxset|folder
+                                              (alias: lib; browse alias: br)
   search TERM [--type TYPE[,TYPE...]]        Search the whole Jellyfin server (any item type by
                                               default - use --type to narrow it, e.g. an episode
                                               title that isn't also a show/movie name)
-  sonarr list                                List Sonarr series
-  radarr list                                List Radarr movies
-  seerr requests [--take N]                  List Seerr requests
-  seerr discover [trending|movies|tv] [--page N]  Browse Seerr discover
+  sonarr list                                List Sonarr series (list alias: ls)
+  radarr list                                List Radarr movies (list alias: ls)
+  seerr requests [--take N]                  List Seerr requests (alias: req)
+  seerr discover [trending|movies|tv] [--page N]  Browse Seerr discover (alias: disc)
   seerr search TERM [--page N]               Search Seerr
   download list [--active|--completed]       List the app's real downloads (--active: only
                                               in-progress, with live percent/speed/eta)
+                                              (download alias: dl; list alias: ls)
   download trigger ITEM_ID [SOURCE_ID]       Trigger a real download by item id
+                                              (trigger alias: trig)
   download cancel DOWNLOAD_ID                Stop an in-progress download ("download list" DOWNLOAD_ID)
+                                              (cancel alias: c)
   download remove ITEM_ID [ITEM_ID...]       Delete an already-downloaded item ("download list" ITEM_ID)
+                                              (remove aliases: rm, del)
   download NAME [SEASON] [EPISODE] [--all]   Trigger a real download by name - matches a movie,
                                               show, or a single episode's own title directly, e.g.
                                               download "Rick and Morty" "Season 3"
                                               download "Salute Your Morts"
                                               An item id (from "library browse"/"search") also
                                               works here directly, same as "download trigger ID".
-                                              ("list"/"trigger"/"cancel"/"remove" are reserved - a
-                                              show/movie/episode literally titled one of those
+                                              ("list"/"trigger"/"cancel"/"remove" and their
+                                              aliases ("ls"/"trig"/"c"/"rm"/"del") are reserved -
+                                              a show/movie/episode literally titled one of those
                                               needs "download -- NAME" to force by-name matching,
                                               or "library browse --search" + "download trigger ID")
   debug SERVICE METHOD PATH [BODY_JSON]      Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
@@ -838,7 +846,7 @@ main() {
           ;;
       esac
       ;;
-    settings)
+    settings|cfg)
       shift
       case "${1:-}" in
         get)
@@ -855,14 +863,14 @@ main() {
           ;;
       esac
       ;;
-    library)
+    library|lib)
       shift
       case "${1:-}" in
-        list)
+        list|ls)
           shift
           cmd_library_list "$@"
           ;;
-        browse)
+        browse|br)
           shift
           cmd_library_browse "$@"
           ;;
@@ -879,7 +887,7 @@ main() {
     sonarr)
       shift
       case "${1:-}" in
-        list)
+        list|ls)
           shift
           cmd_sonarr_list "$@"
           ;;
@@ -892,7 +900,7 @@ main() {
     radarr)
       shift
       case "${1:-}" in
-        list)
+        list|ls)
           shift
           cmd_radarr_list "$@"
           ;;
@@ -905,11 +913,11 @@ main() {
     seerr)
       shift
       case "${1:-}" in
-        requests)
+        requests|req)
           shift
           cmd_seerr_requests "$@"
           ;;
-        discover)
+        discover|disc)
           shift
           cmd_seerr_discover "$@"
           ;;
@@ -923,26 +931,26 @@ main() {
           ;;
       esac
       ;;
-    download)
+    download|dl)
       shift
       case "${1:-}" in
         --)
           shift
           cmd_download_by_name "$@"
           ;;
-        list)
+        list|ls)
           shift
           cmd_download_list "$@"
           ;;
-        trigger)
+        trigger|trig)
           shift
           cmd_download_trigger "$@"
           ;;
-        cancel)
+        cancel|c)
           shift
           cmd_download_cancel "$@"
           ;;
-        remove)
+        remove|rm|del)
           shift
           cmd_download_remove "$@"
           ;;

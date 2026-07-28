@@ -561,14 +561,28 @@ word every time - e.g. `dl` for `download`, `rm`/`del` alongside `remove` for
 good alias candidates (e.g. `ls` for `list`, `lib` for `library`) while
 implementing this, not just the two examples given.
 
-- [ ] Design and implement alias dispatch in `cli/findroid-cli` (top-level
+- [x] Design and implement alias dispatch in `cli/findroid-cli` (top-level
       command aliases and, where it applies, subcommand aliases like
       `download rm`/`download del` alongside the existing `download remove`).
       Keep the canonical long-form names as the ones shown in `--help`/usage
       text; aliases are just shortcuts, not replacements.
-- [ ] Update the script's usage/help text to mention the aliases.
-- [ ] shellcheck-clean, `bash -n` syntax-checked, and re-verify the aliased
+- [x] Update the script's usage/help text to mention the aliases.
+- [x] shellcheck-clean, `bash -n` syntax-checked, and re-verify the aliased
       commands behave identically to their canonical forms (ideally on a real
       device the way prior findroid-cli work was verified, per FINDROID-45/49/50).
 
-Status: not started (2026-07-28) - added to the backlog, not implemented yet.
+Status: done (2026-07-28) - **static-verified only** (`shellcheck`/`bash -n`
+clean, plus a stubbed-dispatch trace confirming every alias reaches the exact
+same `cmd_*` function with the exact same args as its canonical form), not
+re-verified on a real device like FINDROID-45/49/50 were. Aliases added:
+top-level `lib` (library), `dl` (download), `cfg` (settings); subcommand
+`ls` (list, everywhere it appears: `library`/`sonarr`/`radarr`/`download`),
+`br` (library browse), `trig` (download trigger), `c` (download cancel),
+`rm`/`del` (download remove), `req` (seerr requests), `disc` (seerr
+discover). Deliberately skipped: `token`/`debug` (already terse),
+`search`/`sonarr`/`radarr`/`seerr` top-level (already short, and a
+single-letter alias would collide across `settings`/`search`/`sonarr`/
+`seerr` all starting with `s`), `seerr search`/`settings get`/`settings set`
+(already short). The by-name reserved-word list (needing `download --
+NAME`) now also covers the new aliases (`ls`/`trig`/`c`/`rm`/`del`), noted
+in the usage text.
