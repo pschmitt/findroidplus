@@ -139,10 +139,16 @@ fun FilmSearchScreen(
             }
             if (state.seerrResults.isNotEmpty()) {
                 item(key = "seerr-search-header", span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = stringResource(CoreR.string.media_seerr_section),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SectionServiceIcons(listOf(CoreR.drawable.ic_seerr))
+                        Text(
+                            text = stringResource(CoreR.string.media_seerr_section),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                 }
                 items(
                     items = state.seerrResults,

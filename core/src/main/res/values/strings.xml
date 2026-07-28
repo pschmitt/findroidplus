@@ -456,7 +456,7 @@
     <string name="discover_status_requested">Requested</string>
     <string name="discover_type_movie">Movie</string>
     <string name="discover_type_show">Show</string>
-    <string name="media_seerr_section">Not in your library — request via Seerr</string>
+    <string name="media_seerr_section">Not in your library — yet!</string>
     <string name="pvr_queue_remove_title">Remove download</string>
     <string name="pvr_queue_remove_message">Remove “%1$s” from the queue?</string>
     <string name="pvr_queue_remove_from_client">Also remove from download client</string>
