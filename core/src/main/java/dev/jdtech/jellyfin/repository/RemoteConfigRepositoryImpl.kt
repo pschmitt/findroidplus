@@ -6,9 +6,11 @@ import dev.jdtech.jellyfin.models.AutoDownloadRuleDto
 import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
 import dev.jdtech.jellyfin.models.RemoteConfigCommand
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
+import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.AutoDownloadRuleEvaluator
 import dev.jdtech.jellyfin.utils.Downloader
+import dev.jdtech.jellyfin.utils.clearDownloads
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -61,6 +63,7 @@ class RemoteConfigRepositoryImpl(
         alsoFutureSeasons: Boolean,
         onlyNewEpisodes: Boolean,
         onlyUnwatched: Boolean,
+        alsoDeleteDownloads: Boolean,
     ) {
         val showName = resolveShowName(seriesId)
         val originId = appPreferences.getOrCreateThisDeviceId()
@@ -78,6 +81,7 @@ class RemoteConfigRepositoryImpl(
                 alsoFutureSeasons = alsoFutureSeasons,
                 onlyNewEpisodes = onlyNewEpisodes,
                 onlyUnwatched = onlyUnwatched,
+                alsoDeleteDownloads = alsoDeleteDownloads,
             )
         )
     }
@@ -87,6 +91,7 @@ class RemoteConfigRepositoryImpl(
         serverId: String,
         userId: UUID,
         seriesId: UUID,
+        alsoDeleteDownloads: Boolean,
     ) {
         pushRuleUpdate(
             targetDeviceId = targetDeviceId,
@@ -97,6 +102,7 @@ class RemoteConfigRepositoryImpl(
             alsoFutureSeasons = false,
             onlyNewEpisodes = false,
             onlyUnwatched = false,
+            alsoDeleteDownloads = alsoDeleteDownloads,
         )
     }
 
@@ -317,15 +323,26 @@ class RemoteConfigRepositoryImpl(
     }
 
     private suspend fun applyReconcileRules(command: RemoteConfigCommand.ReconcileRules) {
+        val userId = UUID.fromString(command.userId)
+        val seriesId = UUID.fromString(command.seriesId)
         ruleRepository.reconcileRules(
             serverId = command.serverId,
-            userId = UUID.fromString(command.userId),
-            seriesId = UUID.fromString(command.seriesId),
+            userId = userId,
+            seriesId = seriesId,
             seasonIds = command.seasonIds.map { UUID.fromString(it) }.toSet(),
             alsoFutureSeasons = command.alsoFutureSeasons,
             onlyNewEpisodes = command.onlyNewEpisodes,
             onlyUnwatched = command.onlyUnwatched,
         )
+        // Only makes sense once the rule is actually gone entirely (empty seasonIds and no
+        // "future seasons" catch-all left active) - a ReconcileRules that still leaves part of
+        // the show's scope active isn't a removal, so it shouldn't delete anything even if the
+        // pushing device happened to set this flag. Mirrors AutoDownloadRulesViewModel
+        // .deleteShowRule's exact local pattern, just applied here on the receiving device.
+        if (command.alsoDeleteDownloads && command.seasonIds.isEmpty() && !command.alsoFutureSeasons) {
+            val episodes = database.getEpisodesByShowId(seriesId).map { it.toFindroidEpisode(database, userId) }
+            clearDownloads(episodes, database, downloader)
+        }
     }
 
     private suspend fun applyEvaluateNow(command: RemoteConfigCommand.EvaluateNow) {

@@ -51,6 +51,12 @@ sealed interface RemoteConfigCommand {
         val alsoFutureSeasons: Boolean,
         val onlyNewEpisodes: Boolean,
         val onlyUnwatched: Boolean,
+        // FINDROID-59: only meaningful when this command clears the rule entirely (empty
+        // [seasonIds] and [alsoFutureSeasons] false) - tells the *applying* device to also delete
+        // its own already-downloaded episodes for [seriesId], mirroring the local "also delete
+        // downloaded episodes" checkbox. Defaults to false so a command already queued by (or
+        // decoded on) a not-yet-upgraded device still round-trips fine.
+        val alsoDeleteDownloads: Boolean = false,
     ) : RemoteConfigCommand
 
     /**

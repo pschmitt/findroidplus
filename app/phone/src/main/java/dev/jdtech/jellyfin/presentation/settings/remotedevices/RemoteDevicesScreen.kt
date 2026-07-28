@@ -7,14 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +30,7 @@ import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.RemoteActiveRuleSummary
 import dev.jdtech.jellyfin.models.RemoteConfigCommand
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
+import dev.jdtech.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -161,41 +160,38 @@ private fun ActiveRuleRow(
         }
     }
 
+    // FINDROID-59: reuses the same ClearDownloadsDialog the local "delete auto-download rule"
+    // flow uses (AutoDownloadRulesScreen's AutoDownloadShowRuleRow), so removing a rule pushed to
+    // another device gets the same "also delete downloaded episodes" choice - it just executes on
+    // the target device once it applies the resulting clear command, rather than on this one.
     if (confirmOpen) {
-        AlertDialog(
-            onDismissRequest = { confirmOpen = false },
-            title = { Text(text = stringResource(CoreR.string.remote_devices_remove_rule_confirm_title)) },
-            text = {
-                Text(
-                    text =
-                        stringResource(
-                            CoreR.string.remote_devices_remove_rule_confirm_message,
-                            rule.showName,
-                            device.name,
-                        )
+        ClearDownloadsDialog(
+            title = stringResource(CoreR.string.remote_devices_remove_rule_confirm_title),
+            message =
+                stringResource(
+                    CoreR.string.remote_devices_remove_rule_confirm_message,
+                    rule.showName,
+                    device.name,
+                ),
+            checkboxLabel = stringResource(CoreR.string.also_delete_downloaded_episodes),
+            checkboxSummary =
+                stringResource(
+                    CoreR.string.remote_devices_also_delete_downloaded_episodes_summary,
+                    device.name,
+                ),
+            checkboxDefault = false,
+            onConfirm = { alsoDeleteDownloads ->
+                confirmOpen = false
+                onAction(
+                    RemoteDevicesAction.RemoveActiveRule(
+                        targetDeviceId = device.id,
+                        serverId = rule.serverId,
+                        seriesId = rule.seriesId,
+                        alsoDeleteDownloads = alsoDeleteDownloads,
+                    )
                 )
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmOpen = false
-                        onAction(
-                            RemoteDevicesAction.RemoveActiveRule(
-                                targetDeviceId = device.id,
-                                serverId = rule.serverId,
-                                seriesId = rule.seriesId,
-                            )
-                        )
-                    }
-                ) {
-                    Text(text = stringResource(CoreR.string.download_scope_remove))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmOpen = false }) {
-                    Text(text = stringResource(CoreR.string.cancel))
-                }
-            },
+            onDismiss = { confirmOpen = false },
         )
     }
 }
