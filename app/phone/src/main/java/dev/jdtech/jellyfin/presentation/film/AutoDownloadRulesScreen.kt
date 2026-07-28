@@ -68,23 +68,39 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.LocalStorageIndicator
 import dev.jdtech.jellyfin.presentation.film.components.RemoteDevicePicker
 import dev.jdtech.jellyfin.presentation.film.components.ToggleOptionRow
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.DeviceSection
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.PendingCommandRow
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteDevicesAction
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteDevicesState
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteDevicesViewModel
+import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteManagementToggleRow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
 import java.util.UUID
 
+// FINDROID-54: this screen used to be two ("Auto-download rules" for this device's own show
+// rules, "Remote devices" for other devices' rules/pending pushes) - both were fundamentally the
+// same "show + season scope + toggle/remove" UI, just scoped to different devices, so they're
+// merged here into one. Both existing ViewModels are kept as-is and instantiated side by side;
+// this composable is just the glue that combines their state/actions into a single scaffold.
 @Composable
 fun AutoDownloadRulesScreen(
     navigateBack: () -> Unit,
     navigateToDownloadSettings: () -> Unit,
-    viewModel: AutoDownloadRulesViewModel = hiltViewModel(),
+    autoDownloadRulesViewModel: AutoDownloadRulesViewModel = hiltViewModel(),
+    remoteDevicesViewModel: RemoteDevicesViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val rulesState by autoDownloadRulesViewModel.state.collectAsStateWithLifecycle()
+    val devicesState by remoteDevicesViewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(true) { viewModel.loadRules() }
+    LaunchedEffect(true) {
+        autoDownloadRulesViewModel.loadRules()
+        remoteDevicesViewModel.load()
+    }
 
-    ObserveAsEvents(viewModel.events) { event ->
+    ObserveAsEvents(autoDownloadRulesViewModel.events) { event ->
         when (event) {
             is AutoDownloadRuleEvent.RuleSentToDevice ->
                 Toast.makeText(
@@ -97,17 +113,47 @@ fun AutoDownloadRulesScreen(
     }
 
     AutoDownloadRulesScreenLayout(
-        state = state,
+        rulesState = rulesState,
+        devicesState = devicesState,
         onNavigateToDownloadSettings = navigateToDownloadSettings,
-        getSeasons = viewModel::getSeasons,
-        getOtherDevices = viewModel::getOtherDevices,
-        onRefresh = viewModel::refresh,
-        onAction = { action ->
+        getSeasons = autoDownloadRulesViewModel::getSeasons,
+        getOtherDevices = autoDownloadRulesViewModel::getOtherDevices,
+        // Each refresh() call only kicks off a coroutine in its own ViewModel's viewModelScope and
+        // returns immediately, so calling both here already runs their syncNow()+reload work
+        // concurrently rather than serially - no explicit coroutineScope/launch needed.
+        onRefresh = {
+            autoDownloadRulesViewModel.refresh()
+            remoteDevicesViewModel.refresh()
+        },
+        onBackClick = navigateBack,
+        onRulesAction = autoDownloadRulesViewModel::onAction,
+        onDevicesAction = { action ->
             when (action) {
-                is AutoDownloadRulesAction.OnBackClick -> navigateBack()
-                else -> Unit
+                is RemoteDevicesAction.RemoveActiveRule -> {
+                    val deviceName =
+                        devicesState.devices.find { it.id == action.targetDeviceId }?.name
+                            ?: action.targetDeviceId
+                    Toast.makeText(
+                            context,
+                            context.getString(
+                                CoreR.string.remote_devices_rule_remove_sent_toast,
+                                deviceName,
+                            ),
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                }
+                is RemoteDevicesAction.CancelPendingCommand ->
+                    Toast.makeText(
+                            context,
+                            CoreR.string.remote_devices_push_canceled_toast,
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                is RemoteDevicesAction.SetRemoteManagementEnabled,
+                is RemoteDevicesAction.OnBackClick -> Unit
             }
-            viewModel.onAction(action)
+            remoteDevicesViewModel.onAction(action)
         },
     )
 }
@@ -115,8 +161,11 @@ fun AutoDownloadRulesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AutoDownloadRulesScreenLayout(
-    state: AutoDownloadRulesState,
-    onAction: (AutoDownloadRulesAction) -> Unit,
+    rulesState: AutoDownloadRulesState,
+    devicesState: RemoteDevicesState,
+    onRulesAction: (AutoDownloadRulesAction) -> Unit,
+    onDevicesAction: (RemoteDevicesAction) -> Unit,
+    onBackClick: () -> Unit = {},
     onNavigateToDownloadSettings: () -> Unit = {},
     getSeasons: suspend (UUID) -> List<FindroidSeason> = { emptyList() },
     getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
@@ -130,7 +179,7 @@ private fun AutoDownloadRulesScreenLayout(
             TopAppBar(
                 title = { Text(text = stringResource(CoreR.string.auto_download_rules)) },
                 navigationIcon = {
-                    IconButton(onClick = { onAction(AutoDownloadRulesAction.OnBackClick) }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_arrow_left),
                             contentDescription = null,
@@ -153,14 +202,20 @@ private fun AutoDownloadRulesScreenLayout(
     ) { innerPadding ->
         // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
         // language across the whole app instead of a screen-specific spinner. Refreshing here
-        // drives an immediate RemoteConfigRepository.syncNow() rather than waiting out
-        // RemoteConfigWorker's periodic WorkManager floor.
+        // drives an immediate RemoteConfigRepository.syncNow() (via both ViewModels' refresh())
+        // rather than waiting out RemoteConfigWorker's periodic WorkManager floor.
         PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
+            isRefreshing = rulesState.isRefreshing || devicesState.isRefreshing,
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize().padding(innerPadding),
         ) {
-            if (state.shows.isEmpty() && !state.isLoading) {
+            val isFullyEmpty =
+                rulesState.shows.isEmpty() &&
+                    devicesState.devices.isEmpty() &&
+                    devicesState.pendingCommands.isEmpty() &&
+                    !rulesState.isLoading &&
+                    !devicesState.isLoading
+            if (isFullyEmpty) {
                 Text(
                     text = stringResource(CoreR.string.no_auto_download_rules),
                     modifier = Modifier.align(Alignment.Center),
@@ -168,13 +223,78 @@ private fun AutoDownloadRulesScreenLayout(
                 )
             }
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(items = state.shows, key = { it.seriesId }) { show ->
-                    AutoDownloadShowRuleRow(
-                        show = show,
-                        onAction = onAction,
-                        getSeasons = getSeasons,
-                        getOtherDevices = getOtherDevices,
+                item {
+                    RemoteManagementToggleRow(
+                        enabled = devicesState.remoteManagementEnabled,
+                        onToggle = {
+                            onDevicesAction(RemoteDevicesAction.SetRemoteManagementEnabled(it))
+                        },
                     )
+                    HorizontalDivider()
+                }
+                if (rulesState.shows.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_config_this_device),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = rulesState.shows, key = { "show-${it.seriesId}" }) { show ->
+                        AutoDownloadShowRuleRow(
+                            show = show,
+                            onAction = onRulesAction,
+                            getSeasons = getSeasons,
+                            getOtherDevices = getOtherDevices,
+                        )
+                    }
+                }
+                // Only shown when there's actually another device to talk about - the "no other
+                // devices" case is folded into isFullyEmpty above instead of a per-section message,
+                // so it doesn't look jarring next to this device's own rules.
+                if (devicesState.devices.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_devices_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = devicesState.devices, key = { it.id }) { device ->
+                        DeviceSection(
+                            device = device,
+                            showsBySeriesId = devicesState.showsBySeriesId,
+                            onAction = onDevicesAction,
+                        )
+                    }
+                }
+                if (devicesState.pendingCommands.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(CoreR.string.remote_devices_pending_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                        )
+                    }
+                    items(items = devicesState.pendingCommands, key = { it.id }) { command ->
+                        PendingCommandRow(
+                            command = command,
+                            devices = devicesState.devices,
+                            onAction = onDevicesAction,
+                        )
+                    }
                 }
             }
         }
@@ -475,7 +595,7 @@ private fun EditRuleDialog(
 private fun AutoDownloadRulesScreenLayoutPreview() {
     FindroidTheme {
         AutoDownloadRulesScreenLayout(
-            state =
+            rulesState =
                 AutoDownloadRulesState(
                     shows =
                         listOf(
@@ -494,7 +614,9 @@ private fun AutoDownloadRulesScreenLayoutPreview() {
                             )
                         )
                 ),
-            onAction = {},
+            devicesState = RemoteDevicesState(),
+            onRulesAction = {},
+            onDevicesAction = {},
         )
     }
 }
