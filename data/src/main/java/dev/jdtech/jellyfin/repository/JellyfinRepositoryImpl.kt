@@ -577,6 +577,8 @@ class JellyfinRepositoryImpl(
 
     override fun getBaseUrl() = jellyfinApi.api.baseUrl.orEmpty()
 
+    override fun getAccessToken() = jellyfinApi.api.accessToken
+
     override suspend fun updateDeviceName(name: String) {
         withContext(Dispatchers.IO) {
             jellyfinApi.jellyfin.deviceInfo?.id?.let { id ->

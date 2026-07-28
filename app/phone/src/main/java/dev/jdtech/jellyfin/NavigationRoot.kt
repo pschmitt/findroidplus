@@ -44,6 +44,7 @@ import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.PvrSource
 import dev.jdtech.jellyfin.models.SeerrMediaType
 import dev.jdtech.jellyfin.presentation.film.AutoDownloadRulesScreen
+import dev.jdtech.jellyfin.presentation.settings.localaccess.LocalAccessScreen
 import dev.jdtech.jellyfin.presentation.settings.remotedevices.RemoteDevicesScreen
 import dev.jdtech.jellyfin.presentation.film.CalendarScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
@@ -99,6 +100,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object AutoDownloadRulesRoute
 
 @Serializable data object RemoteDevicesRoute
+
+@Serializable data object LocalAccessRoute
 
 @Serializable
 data class LibraryRoute(
@@ -585,6 +588,9 @@ fun NavigationRoot(
             composable<RemoteDevicesRoute> {
                 RemoteDevicesScreen(navigateBack = { navController.safePopBackStack() })
             }
+            composable<LocalAccessRoute> {
+                LocalAccessScreen(navigateBack = { navController.safePopBackStack() })
+            }
             composable<LibraryRoute> { backStackEntry ->
                 val route: LibraryRoute = backStackEntry.toRoute()
                 LibraryScreen(
@@ -775,6 +781,9 @@ fun NavigationRoot(
                     },
                     navigateToRemoteDevices = {
                         navController.safeNavigate(RemoteDevicesRoute)
+                    },
+                    navigateToLocalAccess = {
+                        navController.safeNavigate(LocalAccessRoute)
                     },
                     navigateToBackupSettings = {
                         navController.safeNavigate(BackupSettingsRoute)

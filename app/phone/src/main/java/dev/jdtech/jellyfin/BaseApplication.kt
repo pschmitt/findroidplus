@@ -30,6 +30,7 @@ import dev.jdtech.jellyfin.api.pvr.PvrAdvancedConfig
 import dev.jdtech.jellyfin.api.pvr.PvrAdvancedSettings
 import dev.jdtech.jellyfin.api.pvr.PvrCredentialKeys
 import dev.jdtech.jellyfin.api.pvr.PvrService
+import dev.jdtech.jellyfin.localcontrol.LocalControlServer
 import dev.jdtech.jellyfin.security.SecureCredentialStore
 import dev.jdtech.jellyfin.utils.Downloader
 import dev.jdtech.jellyfin.work.AutoBackupScheduler
@@ -61,6 +62,8 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     @Inject lateinit var downloader: Downloader
+
+    @Inject lateinit var localControlServer: LocalControlServer
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -126,6 +129,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
         QueueStatusScheduler.schedule(applicationContext, appPreferences)
         RemoteConfigScheduler.schedule(applicationContext)
+        localControlServer.startIfEnabled()
         pauseDownloadsIfBatterySaverAlreadyOn()
         ForegroundDownloadResumer(downloader).start()
     }

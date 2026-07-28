@@ -136,6 +136,12 @@ interface JellyfinRepository {
 
     fun getBaseUrl(): String
 
+    /** The current user's raw Jellyfin access token - only needed for the local control API's
+     * debug-proxy endpoint (`core/.../localcontrol/LocalControlRouter.kt`), which forwards
+     * ad hoc requests using the app's own already-stored credentials rather than exposing them
+     * to the caller. */
+    fun getAccessToken(): String?
+
     suspend fun updateDeviceName(name: String)
 
     suspend fun getUserConfiguration(): UserConfiguration?

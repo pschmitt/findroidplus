@@ -212,63 +212,70 @@ counterpart yet.
 
 ## FINDROID-45: `findroid-cli` - Termux command-line download management
 
-A standalone shell script (bash + curl + jq) for Termux, letting a user
-manage downloads without opening the app: **remote** operations reuse the
-exact same Jellyfin `DisplayPreferences` shared-bucket transport FINDROID-44
-built (list peer devices + their active rules, push/remove a rule, push a
-one-off download, list/cancel this CLI's own pending pushes) - the CLI
-participates in the same device mesh as any real Findroid+ install, just
-without a Room DB or Downloader of its own to apply commands sent *to* it.
-**Local** operations are a lightweight download-it-yourself path (resolve an
-item via the Jellyfin API, `curl` the file straight to local storage, list/
-remove what's there) - deliberately not reading the real Android app's own
-Room-backed downloads, since that data is sandboxed to the app's private
-storage and unreachable from Termux without the app itself exposing a
-control surface (a bigger, separate design question, left for later).
+A shell script (bash + curl/jq + socat) for Termux, with three distinct
+command groups:
 
-- [x] `cli/findroid-cli` implemented: config via env vars or
-      `~/.config/findroid-cli/config` (`FINDROID_SERVER`/`FINDROID_TOKEN`/
-      `FINDROID_USER_ID`), a persisted per-install device id
-      (`~/.config/findroid-cli/device_id`, mirrors
-      `AppPreferences.getOrCreateThisDeviceId()`'s lazy-generate-once
-      approach) and cached Jellyfin server GUID. Commands: `devices` (list
-      peers + their active rules), `rule push`/`rule remove`, `download
-      push` (remote one-off), `pending list`/`pending cancel`, and local
-      `download get`/`download list`/`download rm`. Every push also
-      refreshes the CLI's own heartbeat entry in the same write (folded
-      into `enqueue_command`, no extra round trip) - so it shows up as a
-      real, pushable device in the app's own Remote Devices screen too,
-      not just a one-way sender.
-  - [x] JSON command shape hand-verified byte-for-byte against the Kotlin
-        side: `RemoteConfigCommand`'s kotlinx.serialization output uses a
-        `"type"` discriminator key (its default, since
-        `RemoteConfigRepositoryImpl`'s `Json {}` doesn't override
-        `classDiscriminator`) with lowerCamelCase field names - confirmed
-        by building a command with the CLI's own `build_reconcile_command`
-        and comparing field-for-field against `AutoDownloadRemoteCommand.kt`.
-  - [x] Shellcheck-clean, `bash -n` syntax-checked, and every pure
-        function (`bool_json`, `csv_to_json_array`,
-        `decode_custom_pref_array`, `build_reconcile_command`, the
-        `cmd_devices` rendering) smoke-tested directly against fake JSON
-        fixtures (no real Jellyfin server needed for these) - all argument-
-        validation paths (missing `--target`/`--series`/`--item`, unknown
-        subcommands, missing config) return exit 2 with a message on
-        stderr as expected.
-- [ ] Not done: real end-to-end test against an actual Jellyfin server (no
-      live server credentials were available in this environment to test
-      the network calls themselves - `api_get`/`api_post_json`/
-      `fetch_bucket`/`write_bucket`/`get_server_id`/`resolve_item_name`/
-      `resolve_first_source_id` are unverified beyond code review).
-- [ ] Not done: any local control surface into the real Android app's own
-      downloads (would need the app to expose something itself - a
-      localhost server, content provider, or similar - out of scope here).
+- **Remote** (`devices`, `rule push`/`remove`, `download push`, `pending
+  list`/`cancel`): reuses the exact same Jellyfin `DisplayPreferences`
+  shared-bucket transport FINDROID-44 built - the CLI participates in the
+  same cross-device mesh as any real Findroid+ install, just without a Room
+  DB/Downloader of its own to apply commands sent *to* it.
+- **Local download** (`download get`/`list`/`rm`): a lightweight
+  download-it-yourself path - resolves an item via the Jellyfin API,
+  `curl`s the file straight to local storage. Does not touch the real
+  Android app's own downloads at all.
+- **Local control** (`local pair`, `local settings get`/`set`, `local
+  download trigger`, `local debug`): actually configures the *real running
+  Findroid+ app* on the same device - added after the user corrected the
+  original scope ("my goal is to configure findroidplus itself, and not
+  replace it"), since the two groups above only ever act as an independent
+  peer, never touching the app's real settings/Downloader/credentials.
 
-Status: implemented and shellcheck/smoke-tested (2026-07-28), but not yet
-run against a real Jellyfin server - the network-calling code paths are
-unverified beyond review and the JSON-building/parsing logic. Try it for
-real next (e.g. from the Mi Pad 4's own Termux, which AGENTS.md already
-documents as SSH-reachable) before trusting it for anything that matters.
+Local control transport: `core/.../localcontrol/LocalControlServer.kt` runs
+an `android.net.LocalServerSocket` (Linux abstract namespace - reachable
+from any process on the device, Termux included, bypassing Android's
+per-app filesystem sandboxing) named `findroidplus_control`. Every accepted
+connection's peer uid is read via `LocalSocket.peerCredentials`
+(kernel-verified, unspoofable) - this is the real authorization boundary,
+chosen over a plain loopback-TCP+token design specifically because it lets
+the app show the user the *actual* connecting package name, not a
+self-reported label. Auth is a pairing handshake (`local pair`): the CLI
+sends `{"type":"pair_request","clientId":...}` over the still-open
+connection, the app shows an Approve/Deny notification
+(`PairingNotifier`/`PairingActionReceiver`) naming the real caller, and on
+approval issues a random 256-bit token (only `SHA-256(token)` is persisted,
+via `LocalControlAuth`/`SecureCredentialStore`) that's re-validated against
+the *same peer uid* on every later call, not just the token string. Off by
+default (`AppPreferences.localControlEnabled`), toggled + paired-client
+list/revoke in a new Settings > Local CLI access screen
+(phone-only, `app/phone/.../presentation/settings/localaccess/`).
+Endpoints (`LocalControlRouter`): `GET`/`PATCH /settings/downloads` (via
+`DownloadSettingsBridge`, the 10 real download `AppPreferences`),
+`POST /downloads/trigger` (resolves the item, calls the app's own
+`Downloader.downloadItem` exactly as `RemoteConfigRepositoryImpl` does for
+a remote push), `POST /debug/proxy` (forwards to Jellyfin/Sonarr/Radarr/
+Seerr using the app's already-stored credentials, reusing
+`PvrHttpClient`/`PvrConfiguration`), `GET`/`DELETE /pair/clients`.
 
-Status: not started (2026-07-28) - design decided (remote via the existing
-shared bucket, local via direct curl downloads, shell+curl/jq runtime per
-user preference), implementation starting now.
+- [x] Remote + local-download groups implemented, shellcheck-clean,
+      `bash -n` syntax-checked, JSON wire shape hand-verified against
+      `AutoDownloadRemoteCommand.kt`'s kotlinx.serialization output.
+- [x] Local control implemented end-to-end: `LocalControlServer`/
+      `LocalControlAuth`/`LocalControlRouter`/`DownloadSettingsBridge`/
+      `PairingNotifier`/`PairingActionReceiver` (core), the `localaccess`
+      Settings screen (phone), and the CLI's `local` command group -
+      shellcheck-clean, `bash -n` syntax-checked, arg-parsing/JSON-building
+      paths smoke-tested against fake response fixtures.
+- [ ] Not done: real end-to-end test against an actual Jellyfin server for
+      the remote/local-download groups (no live server credentials were
+      available in this environment).
+- [ ] Not done: real on-device test of the pairing handshake + local
+      control endpoints (needs the actual Findroid+ app running with
+      "Local CLI access" enabled - a Linux abstract-namespace socket can't
+      be meaningfully faked in this dev sandbox, only code-reviewed).
+
+Status: remote/local-download groups implemented and smoke-tested
+(2026-07-28) but never run against a live server. Local control API
+(pairing flow) designed and implemented (2026-07-28) per the user's
+explicit pivot away from "CLI as independent peer" toward "CLI configures
+the real app" - needs a real on-device pairing test next.

@@ -13,9 +13,11 @@ import timber.log.Timber
  * (connection pool, timeouts, dispatcher) is built once and reused via [OkHttpClient.newBuilder]
  * so every [SonarrApi]/[RadarrApi] instance can be constructed cheaply per-call - only a fresh
  * `X-Api-Key` interceptor is attached per instance, since the key can change at runtime if the
- * user reconfigures the server in settings.
+ * user reconfigures the server in settings. Not `internal`: the local control API's debug-proxy
+ * endpoint (`core/.../localcontrol/LocalControlRouter.kt`) reuses [create] directly rather than
+ * duplicating this auth/logging setup for its own raw PVR calls.
  */
-internal object PvrHttpClient {
+object PvrHttpClient {
     private const val API_KEY_HEADER = "X-Api-Key"
 
     private val baseClient: OkHttpClient by lazy {

@@ -72,6 +72,7 @@ fun SettingsScreen(
     navigateToAbout: () -> Unit,
     navigateToAutoDownloadRules: () -> Unit,
     navigateToRemoteDevices: () -> Unit,
+    navigateToLocalAccess: () -> Unit,
     navigateToBackupSettings: () -> Unit,
     navigateToQrExport: () -> Unit,
     navigateToConnections: () -> Unit,
@@ -97,6 +98,7 @@ fun SettingsScreen(
             is SettingsEvent.NavigateToAbout -> navigateToAbout()
             is SettingsEvent.NavigateToAutoDownloadRules -> navigateToAutoDownloadRules()
             is SettingsEvent.NavigateToRemoteDevices -> navigateToRemoteDevices()
+            is SettingsEvent.NavigateToLocalAccess -> navigateToLocalAccess()
             is SettingsEvent.NavigateToBackupSettings -> navigateToBackupSettings()
             is SettingsEvent.NavigateToQrExport -> navigateToQrExport()
             is SettingsEvent.NavigateToConnections -> navigateToConnections()

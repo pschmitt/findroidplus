@@ -186,6 +186,14 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // alone.
     val remoteManagementEnabled = Preference("pref_remote_management_enabled", true)
 
+    // Local control API (see core/.../localcontrol/LocalControlServer) - lets a paired local CLI
+    // (e.g. findroid-cli in Termux) configure this actual running app instance: read/write real
+    // download settings, trigger real downloads, and debug-proxy to Jellyfin/Sonarr/Radarr/Seerr.
+    // Off by default - unlike remoteManagementEnabled (an existing cross-device feature getting an
+    // opt-out), this is a brand new local capability that should stay dormant until deliberately
+    // turned on.
+    val localControlEnabled = Preference("pref_local_control_enabled", false)
+
     inline fun <reified T> getValue(preference: Preference<T>): T {
         return try {
             @Suppress("UNCHECKED_CAST")

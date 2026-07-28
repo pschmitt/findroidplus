@@ -12,11 +12,21 @@
 # applied by anything (it just dead-letters after the app's own 30-day TTL,
 # the same as pushing to a device that's permanently offline).
 #
-# Local commands are a separate, simpler "download the file yourself"
-# path - they do not read the real Findroid+ Android app's own downloads,
-# which live in that app's private Room database and are not reachable
-# from Termux without the app itself exposing a control surface (a bigger,
-# separate feature - see TODO.md FINDROID-45).
+# "Local" download commands (download get/list/rm) are a separate, simpler
+# "download the file yourself" path - they do not read or write the real
+# Findroid+ Android app's own downloads, which live in that app's private
+# Room database.
+#
+# The "local" command group is different: it talks to a small control
+# socket the Findroid+ app itself exposes (Settings > Local CLI access),
+# and actually configures *that running app* - its real download settings,
+# a real download triggered through its own Downloader, and a debug proxy
+# to Jellyfin/Sonarr/Radarr/Seerr using its own already-stored credentials.
+# Auth is a one-time pairing handshake (`local pair`): the app shows an
+# Approve/Deny notification, and a long-lived token is issued on approval.
+# Requires `socat` (the app's socket is a Linux abstract-namespace unix
+# socket, which plain curl can't address) - only for `local` commands,
+# everything else in this script is unaffected.
 
 set -euo pipefail
 
@@ -26,6 +36,9 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 CONFIG_FILE="${CONFIG_DIR}/config"
 DEVICE_ID_FILE="${CONFIG_DIR}/device_id"
 SERVER_ID_CACHE_FILE="${CONFIG_DIR}/server_id"
+LOCAL_SOCKET_NAME="findroidplus_control"
+LOCAL_CLIENT_ID_FILE="${CONFIG_DIR}/local_client_id"
+LOCAL_TOKEN_FILE="${CONFIG_DIR}/local_token"
 
 usage() {
   cat <<EOF
@@ -52,11 +65,21 @@ Remote (cross-device, via the shared Jellyfin account):
   pending list                               List this CLI's own not-yet-applied pushes
   pending cancel ID                          Cancel a still-pending push
 
-Local (this Termux install only):
+Local (this Termux install only, no Jellyfin account needed):
   download get --item ID [--source ID] [--output DIR]
                                               Download an item straight to local storage
   download list                              List locally downloaded files
   download rm FILE                           Remove a locally downloaded file
+
+Local control (configures the real Findroid+ app on this device, via its
+local control socket - Settings > Local CLI access - requires socat):
+  local pair                                 Pair with the app (approve in its notification)
+  local settings get                         Show the app's real download settings
+  local settings set KEY=VALUE [KEY=VALUE...]
+                                              Change the app's real download settings
+  local download trigger ITEM_ID [SOURCE_ID] Trigger a real download in the app's own Downloader
+  local debug SERVICE METHOD PATH [BODY_JSON]
+                                              Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
 
 Options:
   -h, --help  Show this help
@@ -79,6 +102,24 @@ require_deps() {
   if [[ -n "${missing}" ]]
   then
     printf 'Missing required command(s): %s\n' "${missing}" >&2
+    return 2
+  fi
+}
+
+# Only "local" commands need this - the app's control socket is a Linux abstract-namespace unix
+# socket (android.net.LocalSocket), which plain curl can't address, so those commands go through
+# socat instead. Nothing else in this script needs it.
+require_socat() {
+  if ! command -v jq >/dev/null 2>&1
+  then
+    printf 'Missing required command: jq\n' >&2
+    return 2
+  fi
+
+  if ! command -v socat >/dev/null 2>&1
+  then
+    printf 'Missing required command: socat (needed for "local" commands)\n' >&2
+    printf 'Install it with: pkg install socat\n' >&2
     return 2
   fi
 }
@@ -362,6 +403,224 @@ csv_to_json_array() {
 
 download_dir() {
   printf '%s' "${FINDROID_DOWNLOAD_DIR:-${HOME}/findroid-downloads}"
+}
+
+get_or_create_local_client_id() {
+  mkdir -p "${CONFIG_DIR}"
+
+  if [[ -f "${LOCAL_CLIENT_ID_FILE}" ]]
+  then
+    cat "${LOCAL_CLIENT_ID_FILE}"
+    return 0
+  fi
+
+  local id
+  id=$(new_uuid)
+  printf '%s' "${id}" > "${LOCAL_CLIENT_ID_FILE}"
+  printf '%s' "${id}"
+}
+
+get_local_token() {
+  if [[ -f "${LOCAL_TOKEN_FILE}" ]]
+  then
+    cat "${LOCAL_TOKEN_FILE}"
+  fi
+}
+
+# Sends one JSON request line to the app's local control socket and reads one JSON response line
+# back. $1 = request JSON, $2 = socat timeout in seconds (default 10 - pairing passes its own
+# longer timeout since it blocks until the user taps Approve/Deny in the app).
+local_rpc() {
+  local request_json="$1"
+  local timeout="${2:-10}"
+
+  printf '%s\n' "${request_json}" | socat -t "${timeout}" - "UNIX-CONNECT:@${LOCAL_SOCKET_NAME}"
+}
+
+# Builds and sends an authenticated request. $1 = method, $2 = path, $3 = body JSON (default null).
+local_request() {
+  local method="$1"
+  local path="$2"
+  local body="${3:-null}"
+  local token request
+
+  token=$(get_local_token)
+  if [[ -z "${token}" ]]
+  then
+    printf 'Not paired yet. Run: %s local pair\n' "$(basename "$0")" >&2
+    return 2
+  fi
+
+  request=$(
+    jq -n \
+      --arg method "${method}" \
+      --arg path "${path}" \
+      --arg auth "${token}" \
+      --argjson body "${body}" \
+      '{type: "request", method: $method, path: $path, auth: $auth, body: $body}'
+  )
+  local_rpc "${request}"
+}
+
+# Prints an error and fails if $1 (a local control response) is empty or a non-2xx status -
+# shared by every "local" command except `local debug`, which wants to show non-2xx proxied
+# responses too rather than treating them as a CLI-level failure.
+check_local_response() {
+  local response="$1"
+  local status
+
+  if [[ -z "${response}" ]]
+  then
+    printf 'No response from Findroid+ (is local control enabled in Settings > Local CLI access?)\n' >&2
+    return 1
+  fi
+
+  status=$(jq -r '.status' <<< "${response}")
+  if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]
+  then
+    printf 'Request failed (HTTP %s): %s\n' \
+      "${status}" "$(jq -r '.body.error // "unknown error"' <<< "${response}")" >&2
+    return 1
+  fi
+}
+
+cmd_local_pair() {
+  local client_id request response status token
+
+  client_id=$(get_or_create_local_client_id)
+  request=$(jq -n --arg clientId "${client_id}" '{type: "pair_request", clientId: $clientId}')
+
+  printf 'Waiting for approval in the Findroid+ app (up to 2 minutes)...\n'
+  response=$(local_rpc "${request}" 130)
+  if [[ -z "${response}" ]]
+  then
+    printf 'No response - is local control enabled in Findroid+ > Settings > Local CLI access?\n' >&2
+    return 1
+  fi
+
+  status=$(jq -r '.status' <<< "${response}")
+  if [[ "${status}" != "200" ]]
+  then
+    printf 'Pairing denied or timed out.\n' >&2
+    return 1
+  fi
+
+  token=$(jq -r '.body.token // empty' <<< "${response}")
+  if [[ -z "${token}" ]]
+  then
+    printf 'Pairing succeeded but no token was returned.\n' >&2
+    return 1
+  fi
+
+  mkdir -p "${CONFIG_DIR}"
+  printf '%s' "${token}" > "${LOCAL_TOKEN_FILE}"
+  chmod 600 "${LOCAL_TOKEN_FILE}"
+  printf 'Paired. Token saved to %s\n' "${LOCAL_TOKEN_FILE}"
+}
+
+cmd_local_settings_get() {
+  local response
+
+  response=$(local_request "GET" "/settings/downloads")
+  check_local_response "${response}" || return 1
+  jq '.body' <<< "${response}"
+}
+
+# Each KEY=VALUE's value is type-inferred (true/false -> boolean, digits -> number, else string) -
+# the app resolves unknown keys as no-ops rather than failing the whole patch, so a newer CLI
+# talking to an older app degrades gracefully.
+cmd_local_settings_set() {
+  if [[ $# -eq 0 ]]
+  then
+    printf 'settings set requires at least one KEY=VALUE pair\n' >&2
+    return 2
+  fi
+
+  local patch="{}"
+  local pair key value
+  for pair in "$@"
+  do
+    key="${pair%%=*}"
+    value="${pair#*=}"
+    patch=$(
+      jq -c --arg k "${key}" --arg v "${value}" '
+        .[$k] = (
+          if $v == "true" then true
+          elif $v == "false" then false
+          elif ($v | test("^-?[0-9]+$")) then ($v | tonumber)
+          else $v
+          end
+        )
+      ' <<< "${patch}"
+    )
+  done
+
+  local response
+  response=$(local_request "PATCH" "/settings/downloads" "${patch}")
+  check_local_response "${response}" || return 1
+  jq '.body' <<< "${response}"
+}
+
+cmd_local_download_trigger() {
+  local item_id="${1:-}"
+  local source_id="${2:-}"
+
+  if [[ -z "${item_id}" ]]
+  then
+    printf 'local download trigger requires an item id\n' >&2
+    return 2
+  fi
+
+  local body
+  if [[ -n "${source_id}" ]]
+  then
+    body=$(jq -n --arg itemId "${item_id}" --arg sourceId "${source_id}" '{itemId: $itemId, sourceId: $sourceId}')
+  else
+    body=$(jq -n --arg itemId "${item_id}" '{itemId: $itemId}')
+  fi
+
+  local response
+  response=$(local_request "POST" "/downloads/trigger" "${body}")
+  check_local_response "${response}" || return 1
+  printf 'Download triggered (id: %s)\n' "$(jq -r '.body.downloadId' <<< "${response}")"
+}
+
+# Unlike the other local commands, a non-2xx response here is still useful output (e.g. Sonarr's
+# own 404) rather than a CLI-level failure, so this prints the status and whatever body came back
+# instead of calling check_local_response.
+cmd_local_debug() {
+  local service="${1:-}"
+  local method="${2:-GET}"
+  local path="${3:-}"
+  local body_json="${4:-null}"
+
+  if [[ -z "${service}" || -z "${path}" ]]
+  then
+    printf 'local debug requires SERVICE and PATH (jellyfin|sonarr|radarr|seerr)\n' >&2
+    return 2
+  fi
+
+  local body
+  body=$(
+    jq -n \
+      --arg service "${service}" \
+      --arg method "${method}" \
+      --arg path "${path}" \
+      --argjson requestBody "${body_json}" \
+      '{service: $service, method: $method, path: $path, body: $requestBody}'
+  )
+
+  local response status
+  response=$(local_request "POST" "/debug/proxy" "${body}")
+  if [[ -z "${response}" ]]
+  then
+    printf 'No response from Findroid+\n' >&2
+    return 1
+  fi
+
+  status=$(jq -r '.status' <<< "${response}")
+  printf 'HTTP %s\n' "${status}" >&2
+  jq -r '.body.body // .body.error // empty' <<< "${response}"
 }
 
 cmd_devices() {
@@ -688,6 +947,60 @@ main() {
       return 0
       ;;
   esac
+
+  # "local" commands talk only to the app's own control socket - no Jellyfin account needed, so
+  # they skip require_deps/load_config entirely (they need jq + socat instead - require_socat
+  # checks both).
+  if [[ "$1" == "local" ]]
+  then
+    require_socat
+    shift
+    case "${1:-}" in
+      pair)
+        shift
+        cmd_local_pair "$@"
+        ;;
+      settings)
+        shift
+        case "${1:-}" in
+          get)
+            shift
+            cmd_local_settings_get "$@"
+            ;;
+          set)
+            shift
+            cmd_local_settings_set "$@"
+            ;;
+          *)
+            usage >&2
+            return 2
+            ;;
+        esac
+        ;;
+      download)
+        shift
+        case "${1:-}" in
+          trigger)
+            shift
+            cmd_local_download_trigger "$@"
+            ;;
+          *)
+            usage >&2
+            return 2
+            ;;
+        esac
+        ;;
+      debug)
+        shift
+        cmd_local_debug "$@"
+        ;;
+      *)
+        usage >&2
+        return 2
+        ;;
+    esac
+    return
+  fi
 
   require_deps
   load_config

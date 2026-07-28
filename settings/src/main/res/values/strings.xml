@@ -96,6 +96,8 @@
     <string name="auto_download_rules_summary">Manage rules for automatically downloading new episodes</string>
     <string name="remote_devices_title">Remote devices</string>
     <string name="remote_devices_summary">Manage auto-download rules and pending pushes on your other devices</string>
+    <string name="local_access_title">Local CLI access</string>
+    <string name="local_access_summary">Let a local CLI (e.g. findroid-cli in Termux) configure downloads on this device</string>
     <string name="about">About</string>
     <string name="about_summary">App version, licenses and other information</string>
     <string name="about_revision">Revision %1$s</string>

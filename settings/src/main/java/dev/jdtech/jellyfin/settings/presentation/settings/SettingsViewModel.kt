@@ -1041,6 +1041,22 @@ constructor(
                                                         }
                                                     },
                                                 ),
+                                                PreferenceCategory(
+                                                    nameStringResource =
+                                                        R.string.local_access_title,
+                                                    descriptionStringRes =
+                                                        R.string.local_access_summary,
+                                                    iconDrawableId = R.drawable.ic_terminal,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    onClick = {
+                                                        viewModelScope.launch {
+                                                            eventsChannel.send(
+                                                                SettingsEvent
+                                                                    .NavigateToLocalAccess
+                                                            )
+                                                        }
+                                                    },
+                                                ),
                                             ),
                                     ),
                                     PreferenceGroup(

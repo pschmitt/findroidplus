@@ -72,6 +72,9 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
             is SettingsEvent.NavigateToRemoteDevices -> Unit
+            // Local CLI access (findroid-cli pairing) is phone-only for this pass - nothing for
+            // TV to react to.
+            is SettingsEvent.NavigateToLocalAccess -> Unit
             is SettingsEvent.NavigateToBackupSettings -> Unit
             // QR device provisioning is phone-only (needs a camera) - nothing for TV to react to.
             is SettingsEvent.NavigateToQrExport -> Unit
