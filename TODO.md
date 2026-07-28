@@ -1073,3 +1073,52 @@ component is `<applicationId>/dev.jdtech.jellyfin.MainActivity`.
 
 Status: not started (2026-07-28) - logged as a known, deliberately
 deferred, large-scope rename; needs a real plan before any code changes.
+
+## FINDROID-62: findroid-cli self-update subcommand
+
+Requested (2026-07-28): "I want a self-update subcmd for the findroid-cli!
+it should well, update itself by fetching the 'new' bin via the local tcp
+server on port 48411."
+
+- [x] The app already serves the exact bundled `cli/findroid-cli` script,
+      unauthenticated, at `GET /cli` (`LocalControlServer.CLI_PATH`, added
+      for the bootstrap-download use case - "the same way Shizuku's `rish`
+      client is downloadable straight from the Shizuku app"). No new
+      app-side work needed - this is a CLI-only change.
+- [x] New `update` command: `curl`s `${BASE_URL}/cli` directly (bypasses
+      `local_request`, same as `start` - no token needed, no JSON), checks
+      the response looks like a real script (shebang + a `CLI_VERSION=`
+      line) before trusting it, compares that version against this
+      process's own `CLI_VERSION`, and - if different (or `--force`) -
+      writes it to a temp file next to the resolved self path
+      (`readlink -f "$0"`, to follow a PATH symlink to the real file) and
+      atomically `mv`s it over itself, preserving the executable bit.
+      Skips with "already up to date" otherwise.
+- [x] Bump `CLI_VERSION` to 1.2.0, document `update` in `usage()`.
+
+Status: **done** (2026-07-28) - implemented and exercised against a local
+stub HTTP server on 48411 standing in for the app (not a real device):
+verified a real update (version bump + content replaced + executable bit
+preserved), the "already up to date" skip, `--json` output, and both
+failure guards (server unreachable, response that doesn't look like a
+script). Not yet verified against the real running app on a device.
+
+## FINDROID-63: findroid-cli --json should print just the response body
+
+Requested (2026-07-28): "when invoking the cli with --json, let's just
+return the body. status is just noise."
+
+- [x] `print_response_json` (the shared helper behind every `--json` call
+      site) now prints `.body` via `jq -c` instead of the whole
+      `{status, body}` wrapper - the HTTP status is still used internally
+      to set the exit code (2xx -> 0), same as before, just not printed
+      anymore.
+- [x] `cmd_debug`'s own separate `--json` branch (it doesn't go through
+      `print_response_json` - a non-2xx there is proxied-service output,
+      not a CLI-level failure) updated the same way: status now goes to
+      stderr (`HTTP %s`, same as its non-JSON path already did) and stdout
+      gets just `.body`.
+- [x] Updated the `--json` help text in `usage()` to match ("Print the
+      response's body as JSON instead of a table").
+
+Status: **done** (2026-07-28).

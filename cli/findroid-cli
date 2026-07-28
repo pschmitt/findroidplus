@@ -31,7 +31,7 @@ set -euo pipefail
 # worth being able to tell apart) - "findroid-cli version" reports this alongside the app's own
 # versionName/versionCode/gitRevision, so a mismatch between what a user has installed and what's
 # current is visible at a glance.
-CLI_VERSION="1.1.0"
+CLI_VERSION="1.2.0"
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
@@ -128,6 +128,10 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
                                               "pm grant" can hand out, even as root) - this asks
                                               the app to exit itself instead, so no root is needed
                                               either
+  update [--force]                            Self-update: fetch the app's bundled findroid-cli
+                                              script (GET /cli, no token needed) and replace this
+                                              installed copy with it in place. Skips if already
+                                              current; --force re-fetches/rewrites anyway
 
   This CLI's local rule management (above) only ever affects THIS device, evaluated by its own
   WorkManager - distinct from the app's own cross-device "push a rule to another device" feature,
@@ -139,7 +143,7 @@ Config (environment variables):
                          only needed for a debug/staging install
 
 Options:
-  --json      Print the raw {status, body} response as JSON instead of a table
+  --json      Print the response's body as JSON instead of a table
   -h, --help  Show this help
 EOF
 }
@@ -183,13 +187,15 @@ print_table() {
   fi
 }
 
-# --json mode: prints $1 (a local_request response) verbatim and reports its HTTP status via the
-# return code - used instead of check_response's human-readable stderr message.
+# --json mode: prints just $1's (a local_request response) "body" - the "status" wrapper is noise
+# once you're piping into jq (2xx/failure is already the process exit code, same as non-JSON mode)
+# - and reports its HTTP status via the return code, used instead of check_response's
+# human-readable stderr message.
 print_response_json() {
   local response="$1"
   local status
 
-  printf '%s\n' "${response}"
+  jq -c '.body' <<< "${response}"
   status=$(jq -r '.status' <<< "${response}")
   [[ "${status}" -ge 200 && "${status}" -lt 300 ]]
 }
@@ -846,12 +852,15 @@ cmd_debug() {
 
   local response status
   response=$(local_request "POST" "/debug/proxy" "${body}")
+  status=$(jq -r '.status' <<< "${response}")
   if [[ -n "${JSON_OUTPUT}" ]]
   then
-    printf '%s\n' "${response}"
+    # Status still goes to stderr here (unlike print_response_json) - for "debug" it's the
+    # proxied service's own HTTP code (e.g. Sonarr's real 404), not local-control noise.
+    printf 'HTTP %s\n' "${status}" >&2
+    jq -c '.body' <<< "${response}"
     return
   fi
-  status=$(jq -r '.status' <<< "${response}")
   printf 'HTTP %s\n' "${status}" >&2
   jq -r '.body.body // .body.error // empty' <<< "${response}"
 }
@@ -924,6 +933,75 @@ cmd_stop() {
   fi
   check_response "${response}" || return 1
   printf 'Stopping %s\n' "${PACKAGE_NAME}"
+}
+
+# findroid-cli update - self-update by fetching the app's own bundled findroid-cli script over
+# the local control server's one unauthenticated route (GET /cli - LocalControlServer.CLI_PATH,
+# the exact asset "curl .../cli -o findroid-cli" bootstraps from, copied from this very file at
+# build time). Like "start", this bypasses local_request entirely - no token needed, and the
+# response is a plain script, not JSON. Trusted only after it looks like a real script (shebang +
+# a CLI_VERSION= line), and skipped entirely if that version already matches this process's own
+# CLI_VERSION (--force bypasses the skip, e.g. to recover from a corrupted install).
+cmd_update() {
+  local force=""
+  case "${1:-}" in
+    --force) force=1 ;;
+  esac
+
+  local response http_status body
+  if ! response=$(curl -sS -w '\n%{http_code}' "${BASE_URL}/cli")
+  then
+    printf 'No response from Findroid+ local control (is it enabled? URL: %s/cli)\n' "${BASE_URL}" >&2
+    return 1
+  fi
+  http_status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+
+  if [[ "${http_status}" -lt 200 || "${http_status}" -ge 300 ]]
+  then
+    printf 'Update failed (HTTP %s)\n' "${http_status}" >&2
+    return 1
+  fi
+
+  if [[ "${body}" != '#!'* ]] || ! grep -q '^CLI_VERSION=' <<< "${body}"
+  then
+    printf 'Update failed: response from %s/cli does not look like findroid-cli\n' "${BASE_URL}" >&2
+    return 1
+  fi
+
+  local new_version
+  new_version=$(grep -m1 '^CLI_VERSION=' <<< "${body}" | cut -d'"' -f2)
+
+  if [[ "${new_version}" == "${CLI_VERSION}" && -z "${force}" ]]
+  then
+    if [[ -n "${JSON_OUTPUT}" ]]
+    then
+      jq -n --arg v "${CLI_VERSION}" '{updated: false, version: $v}'
+    else
+      printf 'Already up to date (%s)\n' "${CLI_VERSION}"
+    fi
+    return 0
+  fi
+
+  # Resolves through a PATH symlink to the real file, so the actual installed copy gets
+  # overwritten rather than a symlink replaced with a plain file. Written to a temp file in the
+  # same directory first (guarantees the final `mv` is same-filesystem, so it's atomic) rather
+  # than writing self_path directly, which would truncate a running/about-to-run script.
+  local self_path tmp_path
+  self_path=$(readlink -f "$0" 2>/dev/null) || self_path="$0"
+  tmp_path="${self_path}.new.$$"
+
+  printf '%s' "${body}" > "${tmp_path}"
+  chmod +x "${tmp_path}"
+  mv "${tmp_path}" "${self_path}"
+
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    jq -n --arg from "${CLI_VERSION}" --arg to "${new_version}" --arg path "${self_path}" \
+      '{updated: true, from: $from, to: $to, path: $path}'
+  else
+    printf 'Updated %s: %s -> %s\n' "${self_path}" "${CLI_VERSION}" "${new_version}"
+  fi
 }
 
 # Renders a `{status, body: [{id, seriesName, seasonNumber, ...}]}` local_request response
@@ -1306,6 +1384,10 @@ main() {
     stop)
       shift
       cmd_stop "$@"
+      ;;
+    update)
+      shift
+      cmd_update "$@"
       ;;
     *)
       printf 'Unknown command: %s\n' "$1" >&2
