@@ -950,37 +950,42 @@ rule shown for an *other* device (`RemoteDevicesAction.RemoveActiveRule` ->
 a rule-clear command with no way to also ask that device to delete its
 already-downloaded files for that show.
 
-Not yet designed/implemented. Scoped by inspection so far:
-
-- [ ] `pushRemoveRule` is just `pushRuleUpdate` with an empty scope, applied
+- [x] `pushRemoveRule` is just `pushRuleUpdate` with an empty scope, applied
       on the target device via `RemoteConfigRepositoryImpl.applyReconcileRules`
-      -> `AutoDownloadRuleRepository.reconcileRules(...)`. Needs a new
-      `alsoDeleteDownloads: Boolean` field on the `ReconcileRules` wire
-      command (default `false` so an old-format command from a
-      not-yet-upgraded device on the other end still decodes fine), and
-      `pushRemoveRule`/`pushRuleUpdate` need to accept and thread it through.
-- [ ] `applyReconcileRules` (on the *receiving* device) needs to, when that
-      flag is set, resolve the show's downloaded episodes
+      -> `AutoDownloadRuleRepository.reconcileRules(...)`. Added
+      `alsoDeleteDownloads: Boolean = false` to the `ReconcileRules` wire
+      command (defaulted so an old-format command from a not-yet-upgraded
+      device still decodes fine), threaded through `pushRemoveRule`/
+      `pushRuleUpdate`.
+- [x] `applyReconcileRules` (on the *receiving* device), when that flag is
+      set, resolves the show's downloaded episodes
       (`database.getEpisodesByShowId(seriesId)` + `toFindroidEpisode`,
-      mirroring `deleteShowRule`'s exact local pattern) and call the existing
-      top-level `clearDownloads(items, database, downloader)` helper
-      (`core/.../utils/DownloadCleanup.kt`) after the rule itself is
-      cleared. `RemoteConfigRepositoryImpl` already has `database`/
-      `downloader` injected, so this needs no new DI wiring.
-- [ ] UI: the "remove active rule" confirm dialog for another device's rule
-      (currently a plain `AlertDialog` in the merged `AutoDownloadRulesScreen.kt`,
-      formerly `RemoteDevicesScreen.kt`'s `ActiveRuleRow`) should become a
-      `ClearDownloadsDialog` (already used by the local delete flow) instead,
-      so it gets the same "also delete downloaded episodes" checkbox for
-      free. `RemoteDevicesAction.RemoveActiveRule` needs a new
-      `alsoDeleteDownloads: Boolean` field threaded through
-      `RemoteDevicesViewModel.removeActiveRule`.
-- [ ] Needs real cross-device on-device verification (like FINDROID-44's own
+      mirroring `deleteShowRule`'s exact local pattern) and calls the
+      existing top-level `clearDownloads(items, database, downloader)`
+      helper after the rule itself is cleared - gated on the command
+      actually being a full clear (`seasonIds` empty and `alsoFutureSeasons`
+      false), not merely carrying the flag, so a `ReconcileRules` that still
+      leaves part of the show's scope active never deletes anything
+      regardless of what the pushing device set. `RemoteConfigRepositoryImpl`
+      already had `database`/`downloader` injected - no new DI wiring
+      needed.
+- [x] UI: `RemoteDevicesScreen.kt`'s `ActiveRuleRow` confirm dialog now
+      reuses `ClearDownloadsDialog` (same component the local delete flow
+      already uses) instead of a plain `AlertDialog`, so it gets the same
+      "also delete downloaded episodes" checkbox for free.
+      `RemoteDevicesAction.RemoveActiveRule`/`RemoteDevicesViewModel` thread
+      the new `alsoDeleteDownloads` flag through to `pushRemoveRule`.
+- [ ] Real cross-device on-device verification (like FINDROID-44's own
       original testing) - push a remove-with-delete from one device, confirm
       the other device's rule *and* its downloaded files for that show are
-      both gone after its next sync.
+      both gone after its next sync - not done yet.
 
-Status: not started (2026-07-28) - scoped only, no code written yet.
+Status: implemented (2026-07-28) - remote compile
+(`:data:compileDebugKotlin`/`:core:compileLibreDebugKotlin`/
+`:app:phone:compileLibreDebugKotlin`), `ktfmtCheck`, and
+`:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest` all clean. Not yet
+verified on a real device - no live cross-device push-with-delete round
+trip confirmed yet.
 
 ## FINDROID-60: findroid-cli start/stop the app
 
