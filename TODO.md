@@ -279,3 +279,9 @@ Status: remote/local-download groups implemented and smoke-tested
 (pairing flow) designed and implemented (2026-07-28) per the user's
 explicit pivot away from "CLI as independent peer" toward "CLI configures
 the real app" - needs a real on-device pairing test next.
+
+## FINDROID-46: Onboarding screen redesign
+
+- [ ] Redesign the onboarding screen layout
+  - [ ] Make the primary button(s) vertical and bigger
+  - [ ] Move the "Learn more about Jellyfin" button to the top-left corner
