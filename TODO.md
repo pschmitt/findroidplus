@@ -611,3 +611,120 @@ single-letter alias would collide across `settings`/`search`/`sonarr`/
 (already short). The by-name reserved-word list (needing `download --
 NAME`) now also covers the new aliases (`ls`/`trig`/`c`/`rm`/`del`), noted
 in the usage text.
+
+## FINDROID-53: findroid-cli version subcommand + auto-download rule management
+
+Requested (2026-07-28): two additions to `findroid-cli`/the local control API -
+a `version` subcommand reporting both the CLI's own version and the running
+app's build info, and a new `autodownload` command group to manage this
+device's own local auto-download rules (add/list/remove) without opening the
+app UI. Distinct from FINDROID-44's cross-device rule-push mechanism
+(`RemoteConfigCommand`/`pushRuleUpdate`) - this is purely local rule
+management, evaluated by this device's own WorkManager.
+
+- [x] Added `CLI_VERSION="1.0.0"` to `cli/findroid-cli` (first time the script
+      tracks its own version), with a comment to bump it on meaningful future
+      changes.
+- [x] New authenticated `GET /info` on `LocalControlRouter` returning
+      `{"versionName", "versionCode", "gitRevision"}`. Since `core` can't
+      reference `app/phone`'s own generated `BuildConfig` directly (and
+      `app/tv` has a separate one it doesn't use for local control), added a
+      small `AppVersionInfo` interface in `core` and bound it from
+      `app/phone`'s `AppModule` (`@Provides` reading
+      `dev.jdtech.jellyfin.BuildConfig.VERSION_NAME/VERSION_CODE/GIT_REVISION`),
+      injected into `LocalControlRouter` alongside its other dependencies.
+- [x] `findroid-cli version`: always prints the CLI's own version (works even
+      with no token configured/app unreachable); additionally calls `GET
+      /info` and prints the app's versionName/versionCode/gitRevision via the
+      same `--json`/table conventions as `settings get` when reachable - a
+      failed app request is non-fatal (still exits 0).
+- [x] New auto-download rule management endpoints on `LocalControlRouter`,
+      scoped to the current server+user (`AppPreferences.currentServer` /
+      `JellyfinRepository.getUserId()`), backed by the existing
+      `AutoDownloadRuleRepository` (`reconcileRules`/`deleteRule`/
+      `deleteRulesForShow`/`getRules`/`getRulesForSeries`) - no new
+      persistence, no touching FINDROID-44's push path:
+      - `GET /autodownload/rules` - every rule for this device, with each
+        `seriesId`/`seasonId` resolved to a show name/season number so the
+        CLI doesn't need a second lookup.
+      - `POST /autodownload/rules` - resolves a show by `seriesId` or `query`
+        (case-insensitive exact match / sole search result / ambiguous-match
+        error, scoped to `BaseItemKind.SERIES` only - reusing
+        `triggerDownloadByName`'s resolution template), a season scope
+        (`season`/`seasons` by number or name via the existing
+        `matchByNumberOrName` helper, `"all": true` for every existing
+        season, or neither for a future-seasons-only rule), then calls
+        `reconcileRules(...)`.
+      - `POST /autodownload/rules/remove` - by `id` (a single rule row) or by
+        show (`seriesId`/`query`, clearing every rule for that series at
+        once via `deleteRulesForShow` - mirrors
+        `AutoDownloadRulesScreen.kt`'s own delete action).
+      - Every mutation calls `RemoteConfigRepository.syncNow()` afterwards
+        (mirroring `AutoDownloadRulesViewModel.republishActiveRulesSummary()`
+        from the same-day `6335e38c` fix), non-fatal on failure, so the
+        change is republished to the shared device registry immediately
+        instead of waiting on the next periodic WorkManager sync.
+- [x] `findroid-cli autodownload` command group (alias: `auto`):
+      - `list`/`ls` - table of `ID/SHOW/SCOPE/ENABLED/ONLY_NEW/ONLY_UNWATCHED`.
+      - `add`/`a` `NAME_OR_ID [--season S[,S...]] [--all-seasons]
+        [--future-seasons] [--only-new] [--only-unwatched]` - resolves
+        `NAME_OR_ID` exactly like `download NAME` (a UUID-shaped argument
+        routes straight to `seriesId`).
+      - `remove`/`rm`/`del` `NAME_OR_ID` - clears every rule for a show.
+      - `remove-id RULE_ID` - clears a single rule row.
+      - Updated `usage()` with the new `version` and `autodownload` entries
+        and their aliases.
+
+Verified remotely: `just gradle rofl-13.brkn.lol
+":core:compileLibreDebugKotlin" ":app:phone:compileLibreDebugKotlin"
+"ktfmtCheck" ":core:testLibreDebugUnitTest" ":data:testDebugUnitTest"` ->
+BUILD SUCCESSFUL in 1m 25s, 117 actionable tasks executed, no warnings in the
+touched files. `shellcheck cli/findroid-cli` and `bash -n cli/findroid-cli`
+both clean. Locally stubbed `local_request` to trace `cmd_version`,
+`cmd_autodownload_add` (season list, UUID+all-seasons, future-only-by-default,
+season+future-seasons combined), `cmd_autodownload_remove`(-`_id`), and
+`cmd_autodownload_list`'s table rendering - every request body/response
+rendering matched the router's expected shape, and every alias/dispatch path
+reached the correct function.
+
+A full CI-signed `just deploy --release --phone` build installed successfully
+on the Mi Pad 4 (`Performing Streamed Install` -> `Success`). On-device,
+enabled/located the already-configured "Local CLI access" token via
+`uiautomator`-driven navigation (Settings > Downloads > Local CLI access),
+then ran the *real* served `GET /cli` script through the device's actual
+Termux installation (its own `bash`/`curl`/`jq`, invoked via root since the
+device is Magisk-rooted, rather than a host-side simulation):
+- `findroid-cli version` -> printed `findroid-cli: 1.0.0` plus the real
+  running app's `versionName 2.11.0` / `versionCode 47` / `gitRevision
+  v2.11.0-2-g6335e38c51c0-dirty`.
+- `findroid-cli autodownload list` (alias `auto ls`) correctly listed this
+  device's 4 pre-existing real rules (Rick and Morty S9 + future seasons,
+  House of the Dragon S3 + future seasons) with show names/season numbers
+  resolved.
+- `findroid-cli autodownload add "Mushoku Tensei: Jobless Reincarnation"
+  --season 1 --only-new --only-unwatched` (resolved by name via a real
+  Jellyfin search) created exactly the requested season-1 rule; a second add
+  with no season flags correctly fell back to a future-seasons-only rule,
+  and confirmed the *existing* `AutoDownloadRuleRepository.reconcileRules`
+  invariant holds through this new path too - the future-seasons row came
+  back `onlyNewEpisodes: true` even though `--only-new` wasn't passed for
+  that call, since a future rule is always only-new by definition.
+- `logcat` confirmed each add/remove triggered a real `GET`+`POST
+  .../DisplayPreferences/findroidplus-remoteconfig` round-trip against the
+  live Jellyfin server (`tv.brkn.lol`) immediately after the mutation -
+  `syncNow()` republishing verified end-to-end, not just called.
+- `findroid-cli autodownload remove "Mushoku Tensei: ..."` and, separately,
+  `autodownload remove-id RULE_ID` (targeting just the newly-added rule's own
+  numeric id) both worked, leaving the device's original 4 rules untouched
+  throughout.
+- Also installed the same signed release build on a second connected device
+  (`R6AIB700W850L7G`, ASUS_AI2302) - install succeeded, but "Local CLI
+  access" had never been enabled on that device before and enabling it was
+  out of scope for this pass, so no CLI verification was done there; not a
+  blocker per the ticket's own guidance.
+
+Status: done (2026-07-28) - implemented, remote-build-verified, and confirmed
+end-to-end on real hardware (Mi Pad 4) using the actual served CLI script run
+through the device's own Termux binaries, including a real Jellyfin-server
+round-trip for the immediate rule-sync republish. Second device
+(ASUS_AI2302) received the same release build but wasn't otherwise exercised.

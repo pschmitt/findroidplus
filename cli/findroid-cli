@@ -27,6 +27,12 @@
 
 set -euo pipefail
 
+# Bump on every meaningful change to this script (new command, changed flag/behavior, bugfix
+# worth being able to tell apart) - "findroid-cli version" reports this alongside the app's own
+# versionName/versionCode/gitRevision, so a mismatch between what a user has installed and what's
+# current is visible at a glance.
+CLI_VERSION="1.0.0"
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
 BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
@@ -80,6 +86,33 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
                                               needs "download -- NAME" to force by-name matching,
                                               or "library browse --search" + "download trigger ID")
   debug SERVICE METHOD PATH [BODY_JSON]      Debug request via the app (SERVICE: jellyfin|sonarr|radarr|seerr)
+  autodownload list                          List this device's local auto-download rules
+                                              (alias: auto; list alias: ls)
+  autodownload add NAME_OR_ID [--season S[,S...]] [--all-seasons] [--future-seasons]
+                              [--only-new] [--only-unwatched]
+                                              Add/replace this device's local auto-download rule
+                                              for a show - by name or id ("library browse"/
+                                              "search"). --season/--all-seasons pick which
+                                              existing seasons are covered (--season accepts a
+                                              comma-separated list of numbers/names, e.g. --season
+                                              "1,3" or --season "Season 2"); --future-seasons also
+                                              tracks not-yet-released seasons and can combine with
+                                              either, or stand alone/be omitted entirely for a
+                                              future-seasons-only rule
+                                              (alias: a)
+  autodownload remove NAME_OR_ID              Remove every local auto-download rule for a show, by
+                                              name or id (mirrors the app's own delete action -
+                                              clears every season/future-seasons rule for that
+                                              show at once)
+                                              (remove aliases: rm, del)
+  autodownload remove-id RULE_ID              Remove a single rule by numeric id ("autodownload
+                                              list" ID column)
+  version                                     Show this CLI's own version and the running app's
+                                              versionName/versionCode/gitRevision
+
+  This CLI's local rule management (above) only ever affects THIS device, evaluated by its own
+  WorkManager - distinct from the app's own cross-device "push a rule to another device" feature,
+  which isn't exposed here.
 
 Config (environment variable):
   FINDROID_LOCAL_URL  Override the local control server URL (default: ${BASE_URL})
@@ -802,6 +835,220 @@ cmd_debug() {
   jq -r '.body.body // .body.error // empty' <<< "${response}"
 }
 
+# findroid-cli version - always shows this script's own CLI_VERSION, even with no token
+# configured or the app unreachable (useful on its own for "am I up to date" checks), then
+# attempts GET /info for the running app's own versionName/versionCode/gitRevision. Reaching the
+# app failing (no token, app not running/local control disabled) is reported on stderr by
+# local_request/check_response themselves, same as every other command - not a hard failure here,
+# so the command still exits 0 having shown at least the CLI's own version.
+cmd_version() {
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    jq -n --arg cliVersion "${CLI_VERSION}" '{cliVersion: $cliVersion}'
+    local response
+    if response=$(local_request "GET" "/info")
+    then
+      print_response_json "${response}"
+    fi
+    return 0
+  fi
+
+  printf 'findroid-cli: %s\n' "${CLI_VERSION}"
+
+  local response
+  if ! response=$(local_request "GET" "/info")
+  then
+    return 0
+  fi
+  if ! check_response "${response}"
+  then
+    return 0
+  fi
+  {
+    printf 'KEY\tVALUE\n'
+    jq -r '.body | to_entries[] | [.key, .value] | @tsv' <<< "${response}"
+  } | print_table
+}
+
+# Renders a `{status, body: [{id, seriesName, seasonNumber, ...}]}` local_request response
+# (autodownload list/add share this shape) as a table.
+render_autodownload_rules_table() {
+  local response="$1"
+
+  {
+    printf 'ID\tSHOW\tSCOPE\tENABLED\tONLY_NEW\tONLY_UNWATCHED\n'
+    jq -r '
+      .body[] |
+      [
+        .id,
+        .seriesName,
+        (if .seasonNumber then "S" + (.seasonNumber | tostring) else "future seasons" end),
+        .enabled,
+        .onlyNewEpisodes,
+        .onlyUnwatched
+      ] | @tsv
+    ' <<< "${response}"
+  } | print_table
+}
+
+# findroid-cli autodownload list - this device's own local auto-download rules (evaluated by its
+# own WorkManager), not the app's separate cross-device rule-push feature.
+cmd_autodownload_list() {
+  local response
+  response=$(local_request "GET" "/autodownload/rules")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_autodownload_rules_table "${response}"
+}
+
+# findroid-cli autodownload add NAME_OR_ID [--season S[,S...]|--all-seasons|--future-seasons]
+#                                [--only-new] [--only-unwatched]
+# Adds/replaces this device's local auto-download rule for a show - resolves NAME_OR_ID exactly
+# like "download NAME" (a UUID-shaped argument routes straight to seriesId instead of a name
+# search). Exactly one of --season/--all-seasons picks which existing seasons are covered;
+# --future-seasons additionally (or, with none of the others, exclusively) tracks seasons not
+# released yet. Giving none of the three still creates a rule - a future-seasons-only one, same as
+# leaving every season unchecked in the app's own "add rule" dialog.
+cmd_autodownload_add() {
+  local positional=() season="" all_seasons="false" future_seasons="false"
+  local only_new="false" only_unwatched="false"
+
+  while [[ -n "${1:-}" ]]
+  do
+    case "$1" in
+      --season)
+        season="${2:-}"
+        shift 2
+        ;;
+      --all-seasons)
+        all_seasons="true"
+        shift
+        ;;
+      --future-seasons)
+        future_seasons="true"
+        shift
+        ;;
+      --only-new)
+        only_new="true"
+        shift
+        ;;
+      --only-unwatched)
+        only_unwatched="true"
+        shift
+        ;;
+      *)
+        positional+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  local name="${positional[0]:-}"
+  if [[ -z "${name}" ]]
+  then
+    printf 'autodownload add requires a show name or item id ("library browse"/"search")\n' >&2
+    return 2
+  fi
+
+  local id_field="query"
+  if [[ "${name}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]
+  then
+    id_field="seriesId"
+  fi
+
+  local seasons_json="null"
+  if [[ -n "${season}" ]]
+  then
+    seasons_json=$(jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))' <<< "${season}")
+  fi
+
+  local body
+  body=$(
+    jq -n \
+      --arg idField "${id_field}" \
+      --arg idValue "${name}" \
+      --argjson seasons "${seasons_json}" \
+      --argjson all "${all_seasons}" \
+      --argjson alsoFutureSeasons "${future_seasons}" \
+      --argjson onlyNewEpisodes "${only_new}" \
+      --argjson onlyUnwatched "${only_unwatched}" \
+      '{($idField): $idValue, all: $all, onlyNewEpisodes: $onlyNewEpisodes, onlyUnwatched: $onlyUnwatched} +
+       (if $seasons != null then {seasons: $seasons} else {} end) +
+       (if $alsoFutureSeasons then {alsoFutureSeasons: true} else {} end)'
+  )
+
+  local response
+  response=$(local_request "POST" "/autodownload/rules" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  render_autodownload_rules_table "${response}"
+}
+
+# findroid-cli autodownload remove NAME_OR_ID - removes every local auto-download rule for a show
+# at once (mirrors the app's own delete action: clears every season/future-seasons row for that
+# show, not just one). Use "autodownload remove-id" instead to remove just a single rule row.
+cmd_autodownload_remove() {
+  local name="${1:-}"
+
+  if [[ -z "${name}" ]]
+  then
+    printf 'autodownload remove requires a show name or item id ("autodownload list"/"search")\n' >&2
+    return 2
+  fi
+
+  local id_field="query"
+  if [[ "${name}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]
+  then
+    id_field="seriesId"
+  fi
+
+  local body
+  body=$(jq -n --arg idField "${id_field}" --arg idValue "${name}" '{($idField): $idValue}')
+
+  local response
+  response=$(local_request "POST" "/autodownload/rules/remove" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  printf 'Removed %s rule(s)\n' "$(jq -r '.body.removed' <<< "${response}")"
+}
+
+# findroid-cli autodownload remove-id RULE_ID - removes a single rule row by numeric id (from
+# "autodownload list"'s ID column), rather than every rule for its show.
+cmd_autodownload_remove_id() {
+  local rule_id="${1:-}"
+
+  if [[ -z "${rule_id}" ]]
+  then
+    printf 'autodownload remove-id requires a RULE_ID (from "autodownload list")\n' >&2
+    return 2
+  fi
+
+  local body
+  body=$(jq -n --arg id "${rule_id}" '{id: $id}')
+
+  local response
+  response=$(local_request "POST" "/autodownload/rules/remove" "${body}")
+  if [[ -n "${JSON_OUTPUT}" ]]
+  then
+    print_response_json "${response}"
+    return
+  fi
+  check_response "${response}" || return 1
+  printf 'Removed rule %s\n' "${rule_id}"
+}
+
 main() {
   local args=()
   local arg
@@ -966,6 +1213,35 @@ main() {
     debug)
       shift
       cmd_debug "$@"
+      ;;
+    autodownload|auto)
+      shift
+      case "${1:-}" in
+        list|ls)
+          shift
+          cmd_autodownload_list "$@"
+          ;;
+        add|a)
+          shift
+          cmd_autodownload_add "$@"
+          ;;
+        remove|rm|del)
+          shift
+          cmd_autodownload_remove "$@"
+          ;;
+        remove-id)
+          shift
+          cmd_autodownload_remove_id "$@"
+          ;;
+        *)
+          usage >&2
+          return 2
+          ;;
+      esac
+      ;;
+    version)
+      shift
+      cmd_version "$@"
       ;;
     *)
       printf 'Unknown command: %s\n' "$1" >&2
