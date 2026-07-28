@@ -1110,13 +1110,25 @@ component is `<applicationId>/dev.jdtech.jellyfin.MainActivity`.
       one deliberately-preserved `dev.jdtech.mpv` external library id.
       `:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest` also both
       pass.
-      Not yet verified on a real device (Mi Pad 4) - `am start`'s
-      component name (`<applicationId>/dev.pschmitt.jellyfin.MainActivity`)
-      changed along with everything else, so `findroid-cli start` is
-      untested against a real install since this rename.
+- [x] Device-verified (2026-07-28): built `:app:phone:assembleLibreRelease`
+      with the CI signing keystore via `just deploy --release`
+      (SHA-256 cert `310ba5d5...`, matching both devices' existing
+      install), installed on both the Mi Pad 4 and "px5" (Pixel 5).
+      `am start -n dev.pschmitt.findroidplus/dev.pschmitt.jellyfin.MainActivity`
+      resolves and launches on both. Confirmed the OLD `findroid-cli`
+      (1.1.0, predating this rename) fails exactly as expected against the
+      renamed install (`Activity class ... dev.jdtech.jellyfin.MainActivity
+      ... does not exist`) - real-world proof the rename actually changed
+      the component apps launch by. Bootstrapped the Mi Pad's installed CLI
+      to 1.2.0 via `curl .../cli` (the documented fallback, since the old
+      CLI predates FINDROID-62's `update` command), then exercised the new
+      CLI for real: `update` correctly reports "already up to date",
+      `--json version` pretty-prints just the body (FINDROID-63), and
+      `stop`/`start` round-trips correctly using the renamed
+      `MAIN_ACTIVITY`.
 
 Status: **done** (2026-07-28) - renamed, built clean (twice, from
-scratch), not yet device-verified. `findroid-cli`'s `MAIN_ACTIVITY` was
+scratch), device-verified on both the Mi Pad 4 and px5. `findroid-cli`'s `MAIN_ACTIVITY` was
 updated in lockstep as anticipated when this was originally scoped.
 
 ## FINDROID-62: findroid-cli self-update subcommand
@@ -1151,7 +1163,11 @@ stub HTTP server on 48411 standing in for the app (not a real device):
 verified a real update (version bump + content replaced + executable bit
 preserved), the "already up to date" skip, `--json` output, and both
 failure guards (server unreachable, response that doesn't look like a
-script). Not yet verified against the real running app on a device.
+script). Also device-verified (2026-07-28, alongside FINDROID-61):
+bootstrapped the Mi Pad 4's stale 1.1.0 install to 1.2.0 via `curl
+.../cli` (the documented fallback for a CLI that predates this very
+command), then confirmed the new `update` command itself correctly
+reports "already up to date" against the real running app.
 
 ## FINDROID-63: findroid-cli --json should print just the response body
 
