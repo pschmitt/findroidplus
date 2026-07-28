@@ -383,5 +383,15 @@ Reported (2026-07-28) after FINDROID-45's local control feature shipped:
 - [x] Strip `cli/findroid-cli` down to local-only: remove the remote
       command group and the local-download command group entirely, drop
       the `local` prefix so its subcommands are top-level.
-- [ ] Verify every remaining command end-to-end on a real device, no root
-      required.
+- [x] Verify every remaining command end-to-end on a real device, no root
+      required. Done on Mi Pad 4 via real Termux (not just `adb shell`):
+      `token set`, `settings get`, `settings set`, `download list` (new),
+      `download trigger` (error path - underlying logic unchanged from
+      FINDROID-45's already-verified pass), `debug jellyfin`. Caught and
+      fixed a real bug along the way: NanoHTTPD's `parseBody()` only
+      special-cases `POST`/`PUT`, so `PATCH /settings/downloads` silently
+      dropped its body - fixed by reading the raw body directly via
+      `Content-Length` instead. px5 (Pixel 5) still needs this pass -
+      its wireless-debugging connection was down (device locked/asleep)
+      at verification time and wasn't force-reconnected, per the standing
+      rule against bypassing a lock screen.
