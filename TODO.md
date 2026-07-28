@@ -296,3 +296,17 @@ the real app" - needs a real on-device pairing test next.
       and no-op, or never fire at all?).
   - [ ] Backup filenames should include the device name.
   - [ ] Rename "findroid" to "findroidplus" in backup filenames.
+
+## FINDROID-48: Re-group the main Settings screen
+
+- [ ] The main Settings screen currently greets the user with a long, flat
+      wall of top-level categories - re-organize into fewer, more sensibly
+      grouped sections rather than a 1:1 header per existing group (an
+      earlier pass just added section labels to the existing groups
+      as-is; this is the follow-up restructuring). Concrete examples from
+      the user (2026-07-28):
+  - [ ] "Cache" settings probably belong under "Network".
+  - [ ] "Language" might be better homed under "Player".
+  - [ ] "Offline mode" can probably go under "Downloads".
+  - [ ] General principle: fewer top-level entries, each one a coherent
+        theme, not a 1:1 mapping of every existing category to its own row.
