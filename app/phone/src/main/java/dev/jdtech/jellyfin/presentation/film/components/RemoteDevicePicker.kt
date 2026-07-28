@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,13 +26,18 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.models.RemoteDeviceInfo
 import dev.jdtech.jellyfin.presentation.components.BaseDialog
+import dev.jdtech.jellyfin.presentation.theme.spacings
 
 /**
  * Row + dialog for picking which device a rule/download should apply to (FINDROID-44) - `null` =
  * this device (local, today's default behavior), or one of [otherDevices] to push to instead.
  * Shared between the auto-download rule editor (`AutoDownloadRulesScreen`) and the regular
- * download popup (`DownloadScopeDialog`), modeled 1:1 on `JellyfinServerUserPicker` from the QR
- * export screen (clickable summary row + `BaseDialog` + radio-button list).
+ * download popup (`DownloadScopeDialog`). Loosely modeled on `JellyfinServerUserPicker` from the
+ * QR export screen (clickable summary row + `BaseDialog` + radio-button list), but styled as a
+ * standalone tonal control (device icon, rounded surface) rather than a plain list row - unlike
+ * that one-off account picker, this choice materially changes what a rule/download does (push
+ * elsewhere vs. apply locally), so it's meant to stand out rather than blend into the
+ * surrounding settings-style rows.
  */
 @Composable
 fun RemoteDevicePicker(
@@ -42,18 +49,40 @@ fun RemoteDevicePicker(
     val thisDeviceLabel = stringResource(CoreR.string.remote_config_this_device)
     val selectedLabel = otherDevices.find { it.id == selectedDeviceId }?.name ?: thisDeviceLabel
 
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { showDialog = true },
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        onClick = { showDialog = true },
+        shape = RoundedCornerShape(MaterialTheme.spacings.medium),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(CoreR.string.remote_config_target_device),
-                style = MaterialTheme.typography.bodyLarge,
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = MaterialTheme.spacings.medium,
+                        vertical = MaterialTheme.spacings.small,
+                    ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_smartphone),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
             )
-            Text(text = selectedLabel, style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.width(MaterialTheme.spacings.medium))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(CoreR.string.remote_config_target_device),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = selectedLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Icon(painter = painterResource(CoreR.drawable.ic_chevron_down), contentDescription = null)
         }
-        Icon(painter = painterResource(CoreR.drawable.ic_chevron_down), contentDescription = null)
     }
 
     if (showDialog) {
@@ -74,9 +103,24 @@ fun RemoteDevicePicker(
                                     onSelected(deviceId)
                                     showDialog = false
                                 }
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = MaterialTheme.spacings.extraSmall),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_smartphone),
+                            contentDescription = null,
+                            tint =
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                        Text(
+                            text = label,
+                            modifier = Modifier.weight(1f),
+                            color =
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                        )
                         RadioButton(
                             selected = isSelected,
                             onClick = {
@@ -84,8 +128,6 @@ fun RemoteDevicePicker(
                                 showDialog = false
                             },
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = label)
                     }
                 }
             }

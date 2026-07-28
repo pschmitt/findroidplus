@@ -344,6 +344,14 @@ private fun EditRuleDialog(
             } else {
                 val allSeasonIds = currentSeasons.map { it.id }.toSet()
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                    if (otherDevices.isNotEmpty()) {
+                        RemoteDevicePicker(
+                            otherDevices = otherDevices,
+                            selectedDeviceId = selectedDeviceId,
+                            onSelected = { selectedDeviceId = it },
+                        )
+                        HorizontalDivider()
+                    }
                     if (allSeasonIds.isNotEmpty()) {
                         ToggleOptionRow(
                             checked = selectedSeasonIds.containsAll(allSeasonIds),
@@ -420,14 +428,6 @@ private fun EditRuleDialog(
                             label = stringResource(CoreR.string.auto_download_only_new_episodes),
                             icon = CoreR.drawable.ic_refresh_cw,
                             onToggle = { onlyNewEpisodes = it },
-                        )
-                    }
-                    if (otherDevices.isNotEmpty()) {
-                        HorizontalDivider()
-                        RemoteDevicePicker(
-                            otherDevices = otherDevices,
-                            selectedDeviceId = selectedDeviceId,
-                            onSelected = { selectedDeviceId = it },
                         )
                     }
                 }
