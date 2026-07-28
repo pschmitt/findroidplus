@@ -68,6 +68,7 @@ constructor(
     private val topLevelPreferences =
         listOf(
             PreferenceGroup(
+                nameStringResource = R.string.settings_group_general,
                 preferences =
                     listOf(
                         PreferenceSwitch(
@@ -85,6 +86,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_category_language,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -153,6 +155,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_category_interface,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -289,6 +292,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_category_player,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -780,6 +784,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_group_account,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -818,6 +823,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_group_data,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -845,6 +851,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.title_download,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -1104,6 +1111,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_category_network,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -1172,6 +1180,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.settings_category_cache,
                 preferences =
                     listOf(
                         PreferenceCategory(
@@ -1219,6 +1228,7 @@ constructor(
                     )
             ),
             PreferenceGroup(
+                nameStringResource = R.string.about,
                 preferences =
                     listOf(
                         PreferenceCategory(

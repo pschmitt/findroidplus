@@ -24,9 +24,11 @@
 # to Jellyfin/Sonarr/Radarr/Seerr using its own already-stored credentials.
 # Auth is a one-time pairing handshake (`local pair`): the app shows an
 # Approve/Deny notification, and a long-lived token is issued on approval.
-# Requires `socat` (the app's socket is a Linux abstract-namespace unix
-# socket, which plain curl can't address) - only for `local` commands,
-# everything else in this script is unaffected.
+# Requires `socat` or `python3` (the app's socket is a Linux abstract-
+# namespace unix socket, which plain curl/nc/ncat can't address - only
+# tools that build that address themselves, like socat or a language's own
+# socket module, can reach it) - only for `local` commands, everything else
+# in this script is unaffected.
 
 set -euo pipefail
 
@@ -72,7 +74,7 @@ Local (this Termux install only, no Jellyfin account needed):
   download rm FILE                           Remove a locally downloaded file
 
 Local control (configures the real Findroid+ app on this device, via its
-local control socket - Settings > Local CLI access - requires socat):
+local control socket - Settings > Local CLI access - requires socat or python3):
   local pair                                 Pair with the app (approve in its notification)
   local settings get                         Show the app's real download settings
   local settings set KEY=VALUE [KEY=VALUE...]
@@ -106,22 +108,37 @@ require_deps() {
   fi
 }
 
-# Only "local" commands need this - the app's control socket is a Linux abstract-namespace unix
-# socket (android.net.LocalSocket), which plain curl can't address, so those commands go through
-# socat instead. Nothing else in this script needs it.
-require_socat() {
+# Only "local" commands need this. The app's control socket is a Linux abstract-namespace unix
+# socket (android.net.LocalSocket) - its real address has a leading NUL byte, which can't be
+# expressed as a plain shell command-line argument (argv strings are NUL-terminated), so plain
+# `nc`/`ncat` simply can't address it no matter which flags are used - that's a hard limitation,
+# not a missing feature to work around. `socat` and Python's `socket` module both have their own
+# internal ways to build that address, so either works; this picks whichever is installed
+# (preferring socat) and sets LOCAL_RPC_TOOL for local_rpc() to dispatch on.
+LOCAL_RPC_TOOL=""
+
+require_local_transport() {
   if ! command -v jq >/dev/null 2>&1
   then
     printf 'Missing required command: jq\n' >&2
     return 2
   fi
 
-  if ! command -v socat >/dev/null 2>&1
+  if command -v socat >/dev/null 2>&1
   then
-    printf 'Missing required command: socat (needed for "local" commands)\n' >&2
-    printf 'Install it with: pkg install socat\n' >&2
-    return 2
+    LOCAL_RPC_TOOL="socat"
+    return 0
   fi
+
+  if command -v python3 >/dev/null 2>&1
+  then
+    LOCAL_RPC_TOOL="python3"
+    return 0
+  fi
+
+  printf 'Missing a required command for "local" commands: socat or python3\n' >&2
+  printf 'Install one with: pkg install socat   (or: pkg install python)\n' >&2
+  return 2
 }
 
 load_config() {
@@ -428,13 +445,53 @@ get_local_token() {
 }
 
 # Sends one JSON request line to the app's local control socket and reads one JSON response line
-# back. $1 = request JSON, $2 = socat timeout in seconds (default 10 - pairing passes its own
-# longer timeout since it blocks until the user taps Approve/Deny in the app).
+# back, via whichever tool require_local_transport() found ($LOCAL_RPC_TOOL). $1 = request JSON,
+# $2 = timeout in seconds (default 10 - pairing passes its own longer timeout since it blocks
+# until the user taps Approve/Deny in the app).
 local_rpc() {
   local request_json="$1"
   local timeout="${2:-10}"
 
-  printf '%s\n' "${request_json}" | socat -t "${timeout}" - "UNIX-CONNECT:@${LOCAL_SOCKET_NAME}"
+  case "${LOCAL_RPC_TOOL}" in
+    python3)
+      local_rpc_python3 "${request_json}" "${timeout}"
+      ;;
+    *)
+      printf '%s\n' "${request_json}" | socat -t "${timeout}" - "UNIX-CONNECT:@${LOCAL_SOCKET_NAME}"
+      ;;
+  esac
+}
+
+# Python's socket module can embed the abstract-namespace address's leading NUL byte directly (no
+# shell argv involved for the address itself), unlike a plain nc/ncat command-line invocation.
+local_rpc_python3() {
+  local request_json="$1"
+  local timeout="$2"
+
+  python3 - "${LOCAL_SOCKET_NAME}" "${request_json}" "${timeout}" <<'PYEOF'
+import socket
+import sys
+
+socket_name, request, timeout = sys.argv[1], sys.argv[2], float(sys.argv[3])
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(timeout)
+try:
+    s.connect("\0" + socket_name)
+    s.sendall((request + "\n").encode())
+    s.shutdown(socket.SHUT_WR)
+    buf = b""
+    while True:
+        chunk = s.recv(4096)
+        if not chunk:
+            break
+        buf += chunk
+    sys.stdout.write(buf.decode(errors="replace"))
+except OSError as e:
+    sys.stderr.write(f"{e}\n")
+    sys.exit(1)
+finally:
+    s.close()
+PYEOF
 }
 
 # Builds and sends an authenticated request. $1 = method, $2 = path, $3 = body JSON (default null).
@@ -949,11 +1006,11 @@ main() {
   esac
 
   # "local" commands talk only to the app's own control socket - no Jellyfin account needed, so
-  # they skip require_deps/load_config entirely (they need jq + socat instead - require_socat
-  # checks both).
+  # they skip require_deps/load_config entirely (they need jq + socat/python3 instead -
+  # require_local_transport checks for jq and picks whichever of socat/python3 is available).
   if [[ "$1" == "local" ]]
   then
-    require_socat
+    require_local_transport
     shift
     case "${1:-}" in
       pair)
