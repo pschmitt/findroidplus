@@ -8,11 +8,9 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import dev.jdtech.jellyfin.backup.BackupFileNaming
 import dev.jdtech.jellyfin.backup.BackupManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -59,14 +57,7 @@ constructor(
                     }
 
             try {
-                // Human-friendly local timestamp with UTC offset, e.g.
-                // "findroid-backup-2026-07-17T08:58:03+02:00.frb". SAF/Drive accept ':' in
-                // display names, so the offset can stay in its readable form.
-                val timestamp =
-                    ZonedDateTime.now()
-                        .truncatedTo(ChronoUnit.SECONDS)
-                        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-                val fileName = "findroid-backup-$timestamp.frb"
+                val fileName = BackupFileNaming.fileName()
                 val file =
                     folder.createFile("application/octet-stream", fileName)
                         ?: run {

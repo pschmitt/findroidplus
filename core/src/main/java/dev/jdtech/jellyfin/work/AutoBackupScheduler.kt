@@ -16,17 +16,36 @@ import java.util.concurrent.TimeUnit
 object AutoBackupScheduler {
     private const val UNIQUE_WORK_NAME = "autoBackup"
 
+    // Root cause of FINDROID-47 ("auto-backup never runs"): enabling the toggle before picking a
+    // folder looked "configured" in Settings (enabled + an interval chosen) but this gate silently
+    // cancelled/never enqueued any work - autoBackupLastError was only ever written from inside
+    // AutoBackupWorker.doWork(), which never got a chance to run, so nothing ever explained why no
+    // backup showed up.
+    private const val NO_FOLDER_ERROR = "Auto-backup is enabled but no backup folder is set"
+
     fun schedule(context: Context, appPreferences: AppPreferences) {
         val workManager = WorkManager.getInstance(context)
 
+        val enabled = appPreferences.getValue(appPreferences.autoBackupEnabled)
+        val folderConfigured =
+            !appPreferences.getValue(appPreferences.autoBackupFolderUri).isNullOrEmpty()
+
         // Only keep this scheduled while enabled and a destination folder has actually been
         // chosen - matches scheduleAutoDeleteWatched's gate-and-cancel pattern.
-        if (
-            !appPreferences.getValue(appPreferences.autoBackupEnabled) ||
-                appPreferences.getValue(appPreferences.autoBackupFolderUri).isNullOrEmpty()
-        ) {
+        if (!enabled || !folderConfigured) {
             workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
+            if (enabled && !folderConfigured) {
+                appPreferences.setValue(appPreferences.autoBackupLastError, NO_FOLDER_ERROR)
+            }
             return
+        }
+
+        // Conditions are satisfied again - clear a stale NO_FOLDER_ERROR left over from a previous
+        // bail-out above, so the Settings screen's error banner doesn't linger after the user
+        // picks a folder. Any other error (a real doWork() failure) is left alone; it's still
+        // accurate until the next run resolves it.
+        if (appPreferences.getValue(appPreferences.autoBackupLastError) == NO_FOLDER_ERROR) {
+            appPreferences.setValue(appPreferences.autoBackupLastError, null)
         }
 
         val intervalMinutes =

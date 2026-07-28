@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.jdtech.jellyfin.backup.BackupFileNaming
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.components.BaseDialog
 import dev.jdtech.jellyfin.presentation.components.MessageDetailsDialog
@@ -66,9 +67,6 @@ import dev.jdtech.jellyfin.setup.presentation.backup.BackupSettingsEvent
 import dev.jdtech.jellyfin.setup.presentation.backup.BackupSettingsState
 import dev.jdtech.jellyfin.setup.presentation.backup.BackupSettingsViewModel
 import dev.jdtech.jellyfin.utils.ObserveAsEvents
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Date
 import kotlinx.coroutines.launch
 
@@ -167,14 +165,8 @@ fun BackupSettingsScreen(
                     onClick = {
                         showPasswordDialog = false
                         pendingPassword = if (password.isEmpty()) null else password
-                        // Same human-friendly timestamp format as AutoBackupWorker's filenames.
-                        createBackupLauncher.launch(
-                            "findroid-backup-${
-                                ZonedDateTime.now()
-                                    .truncatedTo(ChronoUnit.SECONDS)
-                                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-                            }.frb"
-                        )
+                        // Same naming scheme as AutoBackupWorker's scheduled exports.
+                        createBackupLauncher.launch(BackupFileNaming.fileName())
                     }
                 ) {
                     Text(text = stringResource(CoreR.string.backup_now))
