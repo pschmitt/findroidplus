@@ -13,10 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
@@ -61,13 +60,10 @@ fun ServerSelectionItem(
                                 else Color.Transparent
                             )
                 ) {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_server),
+                    Image(
+                        painter = painterResource(CoreR.drawable.ic_jellyfin_logo),
                         contentDescription = null,
-                        modifier = Modifier.align(Alignment.Center),
-                        tint =
-                            if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                            else LocalContentColor.current,
+                        modifier = Modifier.align(Alignment.Center).size(28.dp),
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.spacings.medium))

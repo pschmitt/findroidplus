@@ -410,8 +410,8 @@ class RemoteConfigRepositoryImpl(
     }
 
     private companion object {
-        const val BUCKET_ID = "findroidplus-remoteconfig"
-        const val CLIENT = "FindroidPlusRemoteConfig"
+        const val BUCKET_ID = "jollyfin-remoteconfig"
+        const val CLIENT = "JollyFinRemoteConfig"
         const val KEY_PENDING = "pending"
         const val KEY_DEVICES = "devices"
     }

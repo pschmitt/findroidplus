@@ -1,6 +1,6 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "findroidplus"
+rootProject.name = "jollyfin"
 
 include(":app:phone")
 include(":app:tv")

@@ -1,0 +1,6 @@
+New:
+- Replaced the launcher icon, TV banner, and in-app logo with an original mark ("Scout") instead of Jellyfin's own logo.
+- The real Jellyfin logo now marks server entries (the header's server switcher and Settings > Accounts) instead of a generic server icon.
+
+Fixes:
+- "Accounts and credentials" in Settings is now just "Accounts".

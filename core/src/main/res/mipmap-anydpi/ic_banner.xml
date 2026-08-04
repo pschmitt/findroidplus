@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_banner_background"/>
-    <foreground android:drawable="@drawable/ic_banner_foreground"/>
-</adaptive-icon>
+<!-- Plain raster banner, not an adaptive-icon layered foreground/background - the wordmark is
+     baked directly into the PNG (drawable-nodpi/ic_banner_foreground.png) since it can't be
+     hand-traced as vector path data like the old Findroid+ lettering was. See TODO.md
+     FINDROID-68. -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_banner_foreground" />

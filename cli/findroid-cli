@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# findroid-cli - configure the real, running Findroid+ app on this same
+# findroid-cli - configure the real, running JollyFin app on this same
 # device from Termux: read/write its actual download settings, browse the
 # Jellyfin/Sonarr/Radarr/Seerr libraries, trigger real downloads (by item id
 # or by show/movie name) through its own Downloader, and debug-proxy
@@ -35,12 +35,24 @@ CLI_VERSION="1.2.0"
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
-BASE_URL="${FINDROID_LOCAL_URL:-http://127.0.0.1:48411}"
-# Only used by "start" (the app isn't running yet, so there's nothing to ask over the local
-# control API - this has to go through Android's activity manager instead). Override for a
-# debug/staging install (applicationIdSuffix ".debug"/".staging").
-PACKAGE_NAME="${FINDROID_PACKAGE_NAME:-dev.pschmitt.findroidplus}"
-# The app's applicationId ("dev.pschmitt.findroidplus", above) is distinct from its Kotlin/
+# Used by "start" (the app isn't running yet, so there's nothing to ask over the local control
+# API - this has to go through Android's activity manager instead), and now also to pick the
+# right default port below. Override for a debug/staging install (applicationIdSuffix
+# ".debug"/".staging").
+PACKAGE_NAME="${JOLLYFIN_PACKAGE_NAME:-dev.pschmitt.jollyfin}"
+# Debug/staging installs bind their own port (BASE_PORT+1/+2 - see
+# LocalControlServer.portFor()) so they can run side by side with a release install without one
+# variant's server failing to bind because another already grabbed the port. Derived from
+# PACKAGE_NAME's suffix so setting JOLLYFIN_PACKAGE_NAME alone is enough to target a debug/
+# staging install - JOLLYFIN_LOCAL_URL still wins outright if set, for anything unusual (a
+# forwarded port, a non-default install, etc).
+case "${PACKAGE_NAME}" in
+  *.debug) DEFAULT_LOCAL_PORT=48412 ;;
+  *.staging) DEFAULT_LOCAL_PORT=48413 ;;
+  *) DEFAULT_LOCAL_PORT=48411 ;;
+esac
+BASE_URL="${JOLLYFIN_LOCAL_URL:-http://127.0.0.1:${DEFAULT_LOCAL_PORT}}"
+# The app's applicationId ("dev.pschmitt.jollyfin", above) is distinct from its Kotlin/
 # manifest namespace ("dev.pschmitt.jellyfin" - see app/phone/build.gradle.kts's "namespace",
 # unchanged across every build variant/applicationIdSuffix) - so the launcher activity's real
 # component is always "<applicationId>/dev.pschmitt.jellyfin.MainActivity", not
@@ -56,7 +68,7 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--json] COMMAND [OPTIONS]
 
-Configure the real Findroid+ app running on this device, from Termux.
+Configure the real JollyFin app running on this device, from Termux.
 Enable it in the app first: Settings > Downloads > Local CLI access.
 
   token set TOKEN                            Save the token copied from Settings
@@ -140,9 +152,12 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
   which isn't exposed here.
 
 Config (environment variables):
-  FINDROID_LOCAL_URL     Override the local control server URL (default: ${BASE_URL})
-  FINDROID_PACKAGE_NAME  Override the app id "start" launches (default: ${PACKAGE_NAME}) -
-                         only needed for a debug/staging install
+  JOLLYFIN_LOCAL_URL     Override the local control server URL (default: ${BASE_URL}) - takes
+                         priority over the port JOLLYFIN_PACKAGE_NAME would otherwise pick
+  JOLLYFIN_PACKAGE_NAME  Override the app id "start" launches, and which port is assumed
+                         (default: ${PACKAGE_NAME}, port ${DEFAULT_LOCAL_PORT}) - set this to
+                         a debug/staging install (".debug"/".staging" suffix) and the right
+                         port is picked automatically, since each variant binds its own
 
 Options:
   --json      Print the response's body as JSON instead of a table
@@ -297,7 +312,7 @@ local_request() {
   if [[ -z "${token}" ]]
   then
     printf 'No local control token configured.\n' >&2
-    printf 'Copy it from Findroid+ > Settings > Local CLI access, then:\n' >&2
+    printf 'Copy it from JollyFin > Settings > Local CLI access, then:\n' >&2
     printf '  %s token set YOUR_TOKEN\n' "$(basename "$0")" >&2
     return 2
   fi
@@ -310,7 +325,7 @@ local_request() {
 
   if ! response=$(curl "${curl_args[@]}" "${BASE_URL}${path}")
   then
-    printf 'No response from Findroid+ local control (is it enabled? URL: %s)\n' "${BASE_URL}${path}" >&2
+    printf 'No response from JollyFin local control (is it enabled? URL: %s)\n' "${BASE_URL}${path}" >&2
     return 1
   fi
   http_status="${response##*$'\n'}"
@@ -953,7 +968,7 @@ cmd_update() {
   local response http_status body
   if ! response=$(curl -sS -w '\n%{http_code}' "${BASE_URL}/cli")
   then
-    printf 'No response from Findroid+ local control (is it enabled? URL: %s/cli)\n' "${BASE_URL}" >&2
+    printf 'No response from JollyFin local control (is it enabled? URL: %s/cli)\n' "${BASE_URL}" >&2
     return 1
   fi
   http_status="${response##*$'\n'}"

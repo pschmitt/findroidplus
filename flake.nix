@@ -1,5 +1,5 @@
 {
-  description = "Findroid Android development environment";
+  description = "JollyFin Android development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -73,7 +73,7 @@
           ];
 
           shellHook = pre-commit-check.shellHook + ''
-            echo "🤖 Findroid development environment"
+            echo "🤖 JollyFin development environment"
 
             # Set JAVA_HOME for Gradle
             export JAVA_HOME=${pkgs.jdk21}/lib/openjdk

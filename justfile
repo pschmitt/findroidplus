@@ -1,4 +1,4 @@
-# Findroid task runner.
+# JollyFin task runner.
 #
 # Gradle must never run on this machine directly - it's a heavy multi-module Android
 # project, so every build/test/lint recipe here shells out to a remote host
@@ -6,15 +6,15 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-remote_host := env_var_or_default("FINDROID_REMOTE_HOST", "rofl-13.brkn.lol")
+remote_host := env_var_or_default("JOLLYFIN_REMOTE_HOST", "rofl-13.brkn.lol")
 
 # Empty for the main checkout; "-<worktree-dirname>" when run from a linked git worktree (e.g.
 # one of Claude's isolated agent worktrees under .claude/worktrees/). Keeps parallel worktree
 # agents from clobbering each other's remote sync directory mid-build - see AGENTS.md.
 worktree_suffix := `gd=$(git rev-parse --git-dir); gcd=$(git rev-parse --git-common-dir); if [ "$gd" != "$gcd" ]; then basename "$(git rev-parse --show-toplevel)" | sed 's/^/-/'; fi`
 
-remote_path := env_var_or_default("FINDROID_REMOTE_PATH", "~/devel/private/pschmitt/findroid-verify" + worktree_suffix)
-local_dist := env_var_or_default("FINDROID_DIST_DIR", "./dist")
+remote_path := env_var_or_default("JOLLYFIN_REMOTE_PATH", "~/devel/private/pschmitt/jollyfin-verify" + worktree_suffix)
+local_dist := env_var_or_default("JOLLYFIN_DIST_DIR", "./dist")
 
 mipad_host := env_var_or_default("MIPAD_HOST", "mi-pad-4.lan")
 mipad_ssh_port := env_var_or_default("MIPAD_SSH_PORT", "8022")
@@ -80,7 +80,7 @@ build *flags:
       set +a
       export CI_KEYSTORE_PATH=\$HOME/.findroid-ci-tmp/findroid-ci.jks
       export GIT_REVISION='$git_revision'
-      cd {{remote_path}} && nix develop --command ./gradlew ':app:${variant}:assembleLibre${flavor^}' --rerun-tasks 2>&1 | tee ~/findroid-release-build.log
+      cd {{remote_path}} && nix develop --command ./gradlew ':app:${variant}:assembleLibre${flavor^}' --rerun-tasks 2>&1 | tee ~/jollyfin-release-build.log
       rc=\$?
       if [[ \$rc -eq 0 && (! -f \"\$artifact\" || \$(stat -c %Y \"\$artifact\") -le \$previous_mtime) ]]
       then

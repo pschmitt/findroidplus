@@ -28,7 +28,7 @@ object BackupCrypto {
 
     class PasswordRequiredException : Exception("This backup is password-protected")
 
-    class CorruptBackupException : Exception("Not a valid Findroid backup file")
+    class CorruptBackupException : Exception("Not a valid JollyFin backup file")
 
     fun encode(data: ByteArray, password: String?): ByteArray {
         if (password.isNullOrEmpty()) {

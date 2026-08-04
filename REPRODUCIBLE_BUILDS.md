@@ -1,6 +1,6 @@
 # Reproducible builds
 
-This documents what's currently in place to let a third party verify a released Findroid+ APK
+This documents what's currently in place to let a third party verify a released JollyFin APK
 was actually built from the source at the commit it claims, and what's still missing. It's an
 ongoing effort, not a finished guarantee — see "Known gaps" below.
 
@@ -39,7 +39,7 @@ because these test builds intentionally didn't use the shared private key.
   check this in the app under **Settings → About**, or directly from the APK:
 
   ```sh
-  unzip -p findroid-plus-latest-arm64-v8a-release.apk 'classes*.dex' | strings | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+'
+  unzip -p phone-libre-arm64-v8a-release.apk 'classes*.dex' | strings | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+'
   ```
 
   CI ([`.github/workflows/release.yaml`](.github/workflows/release.yaml)) verifies this landed
@@ -51,8 +51,8 @@ because these test builds intentionally didn't use the shared private key.
 ## Rebuilding a release yourself
 
 ```sh
-git clone https://github.com/pschmitt/findroidplus
-cd findroidplus
+git clone https://github.com/pschmitt/jollyfin
+cd jollyfin
 git checkout <commit-or-tag>
 nix develop --command ./gradlew :app:phone:assembleLibreRelease
 ```

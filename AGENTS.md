@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Repository instructions for AI coding agents working on Findroid.
+Repository instructions for AI coding agents working on JollyFin.
 
 ## Task tracking
 
@@ -57,11 +57,11 @@ Repository instructions for AI coding agents working on Findroid.
   `rofl-14.brkn.lol` instead. The `justfile` automates this:
   - `just sync [host]` — rsync the working tree to the remote build host (excludes
     `.git`, `build/`, `.gradle/`). The remote destination directory is namespaced per git
-    worktree (`findroid-verify-<worktree-dirname>` when run from a linked worktree, e.g. one
-    of Claude's isolated agent worktrees under `.claude/worktrees/`; plain `findroid-verify`
+    worktree (`jollyfin-verify-<worktree-dirname>` when run from a linked worktree, e.g. one
+    of Claude's isolated agent worktrees under `.claude/worktrees/`; plain `jollyfin-verify`
     from the main checkout) so parallel agents each building/testing in their own worktree
     don't clobber each other's remote sync directory mid-build. Override with
-    `FINDROID_REMOTE_PATH` if you need a specific shared path instead.
+    `JOLLYFIN_REMOTE_PATH` if you need a specific shared path instead.
   - `just gradle [host] <tasks...>` — sync, then run arbitrary Gradle tasks remotely via
     `nix develop --command ./gradlew <tasks>`.
   - `just build [flags]` — build the libre-flavor APK remotely. Flags: `--tv`/`--phone`
@@ -76,8 +76,8 @@ Repository instructions for AI coding agents working on Findroid.
     `.just-parse-flags.sh` (not a real just recipe — plain bash, invoked by those recipes
     since just has no native flag/option parser).
   - Manually, the equivalent is:
-    1. `rsync -az --delete --exclude='.git' --exclude='**/build/' --exclude='.gradle/' --exclude='**/.gradle/' ./ rofl-13.brkn.lol:~/devel/private/pschmitt/findroid-verify/`
-    2. `ssh rofl-13.brkn.lol 'cd ~/devel/private/pschmitt/findroid-verify && nix develop --command ./gradlew <tasks>'`
+    1. `rsync -az --delete --exclude='.git' --exclude='**/build/' --exclude='.gradle/' --exclude='**/.gradle/' ./ rofl-13.brkn.lol:~/devel/private/pschmitt/jollyfin-verify/`
+    2. `ssh rofl-13.brkn.lol 'cd ~/devel/private/pschmitt/jollyfin-verify && nix develop --command ./gradlew <tasks>'`
     3. Re-run the rsync after every local edit before rebuilding remotely — there is no
        watch/sync daemon, it's a one-shot copy each time.
   - Plain Nix derivation builds (non-Gradle) already offload to rofl-13/rofl-14 via

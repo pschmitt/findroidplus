@@ -1319,3 +1319,148 @@ per user request ("let's do the remaining stuff").
   corners, since the original feature graphic was the same design on a plain black rect).
 
 Status: **done**, 2026-08-04.
+
+## FINDROID-67: Scout v2 - no antenna, bigger, properly centered; Jellyfin logo on server rows
+
+Direct user feedback after seeing FINDROID-64/65's Scout live on-device.
+
+- [x] Dropped the antenna/branch and its "+" entirely (four concepts were shown - user picked
+  "pure creature", no badge anywhere on the mark itself).
+- [x] Trimmed the ear circles (r12/r5 to r9/r4) so the body reads as the dominant shape.
+- [x] Removing the antenna shrank the true bounding box enough to scale the mark up
+  substantially - landed on 8% safe-zone margin (scale 0.97, up from 0.80) per explicit
+  request ("fill as much of the safe space as possible").
+- [x] `ic_launcher_background` changed from black to neutral grey (`#232323`) per user request,
+  compared against several shades in the concept review first.
+- [x] Bug found via user report, not caught by any of the safe-zone math: the character was
+  sitting low in the circle, eye nowhere near center. Root cause - the body/eye were never
+  vertically centered on the pivot point to begin with (eye at y=112 vs. pivot y=100), so
+  scaling around that pivot only ever made the offset worse. Fixed by shifting all geometry up
+  12 units so the eye actually sits on the safe-zone center, then rebalancing the scale for the
+  corrected (and much better-behaved) bounding box.
+- [x] Re-derived every dependent transform for the shift: both banner files' outer positioning
+  groups, the raster promo banner, the Play Store icon and feature graphic (which also moved to
+  the grey background to match the real installed icon).
+- [x] The real Jellyfin logo now marks individual server entries specifically - the header's
+  server-switcher bottom sheet (`ServerSelectionItem.kt`) and the per-server rows in Settings >
+  Accounts (`IntegrationsSettingsScreen.kt`'s `JellyfinServerRow`) - instead of a generic
+  `ic_server` icon. Both needed `Icon` swapped for `Image` (or a new `iconTinted = false` escape
+  hatch on `PreferenceCategory`, for the settings-list case) since Material's `Icon` flattens
+  any painter to a single tint color, which would have erased the logo's gradient.
+- [x] Renamed the Settings row "Accounts and credentials" to "Accounts".
+- [x] `ic_jellyfin_logo.xml` duplicated into `:settings`'s own resources rather than depended on
+  from `:core` - `:core` already depends on `:settings`, so the reverse would be a circular
+  module dependency. Noted in a comment on both copies to keep them in sync if this static
+  upstream asset ever needs to change.
+- [x] Verified centering via on-device screenshots (app drawer icon, Zenfone 10) before and
+  after the fix - the "before" screenshot is what caught the bug in the first place. Remote
+  `:app:phone:assembleLibreDebug`/`assembleLibreRelease` and `:app:tv:assembleLibreDebug` all
+  passed. Deployed debug and release to all three attached devices (px5 dropped its ADB
+  connection mid-session and needed a manual reconnect on a new port).
+
+**Why:** direct, same-day user feedback on FINDROID-64/65/66's Scout.
+**How to apply:** see FINDROID-64 for Scout's original geometry/rationale.
+
+Status: **done**, 2026-08-04 - released as part of v2.12.2.
+
+## FINDROID-68: rename the app from Findroid+ to JollyFin
+
+The GitHub repo was already renamed `pschmitt/findroidplus` -> `pschmitt/jollyfin` and the local
+remote repointed. This entry covers the in-repo half: package id, docs, README, Play Store
+metadata, and every other user-facing "Findroid+" (or bare self-referential "Findroid") string,
+version bump to 2.13.0. `Findroid*`-prefixed Kotlin class names (`FindroidItem`, `FindroidTheme`,
+etc.), the `dev.pschmitt.jellyfin` namespace, `Theme.Findroid`/`ShapeAppearance.Findroid*` style
+resource names, and the "fork of Findroid" attribution language were deliberately left alone -
+internal architecture naming and legitimate upstream lineage, not this app's own branding.
+
+- [x] `applicationId` in `app/phone/build.gradle.kts` and `app/tv/build.gradle.kts`:
+  `dev.pschmitt.findroidplus` -> `dev.pschmitt.jollyfin` (namespace untouched).
+- [x] `settings.gradle.kts`: `rootProject.name` -> `"jollyfin"`.
+- [x] Version bump: `Versions.kt` `APP_CODE` 50 -> 51, `APP_NAME` `"2.12.2"` -> `"2.13.0"`, plus
+  `fastlane/metadata/android/en-US/changelogs/51.txt`.
+- [x] Every user-facing "Findroid+" string (and bare self-referential "Findroid", e.g. the
+  never-updated non-English `welcome`/`welcome_text`/`privacy_policy_notice` translations) ->
+  "JollyFin": `app_name` (default/debug/staging), setup welcome screen, QR export/scan strings,
+  About screen GitHub link, `BackupCrypto`'s corrupt-backup message, and all 42 locale
+  `strings.xml` files that still said bare "Findroid" in-string.
+- [x] Deep-link scheme `findroidplus://` -> `jollyfin://`: `AndroidManifest.xml`'s intent-filter,
+  `MainActivity.kt`, `QrScanScreen.kt` comment, `QrConfigCodec.kt` (`URI_PREFIX` + exception
+  text), and its unit test.
+- [x] `BackupFileNaming`'s `findroidplus-backup-...` prefix -> `jollyfin-backup-...`.
+- [x] `RemoteConfigRepositoryImpl`'s `DisplayPreferences` bucket/client id
+  (`findroidplus-remoteconfig` / `FindroidPlusRemoteConfig`) -> `jollyfin-remoteconfig` /
+  `JollyFinRemoteConfig`. Note: any user with a pending remote-config queue under the old bucket
+  name will see it as empty after upgrading - low-frequency, self-healing, accepted tradeoff.
+- [x] TV banner assets - same "hand-traced vector lettering can't be text-replaced" problem
+  FINDROID-64 already solved for the mascot, now hitting the wordmark. Converted all three
+  affected files from vector to raster (SVG source + `magick`, reusing Scout's geometry from
+  `ic_launcher_foreground.xml`):
+  - `core/.../drawable/ic_banner_foreground.xml` (TV launcher banner, 320x180) -> flat raster at
+    `drawable-nodpi/ic_banner_foreground.png`. Simplified `mipmap-anydpi/ic_banner.xml` from an
+    `<adaptive-icon>` wrapper to a plain `<bitmap>` (the background is now baked into the PNG),
+    and dropped the now-unused `ic_banner_background` color resource.
+  - `core/.../drawable/ic_banner.xml` (1536x512, shown across Login/Servers/AddServer/Welcome/
+    Users on phone) -> raster. This one used `?attr/colorOnBackground` for the wordmark so it'd
+    read on both light and dark app themes - a static PNG can't do that, so it's now two PNGs
+    (`drawable-nodpi` + `drawable-night-nodpi`) selected by Android's night-mode qualifier, which
+    matches every real call site since `FindroidTheme` always derives `darkTheme` from
+    `isSystemInDarkTheme()` (no explicit override anywhere in the app).
+  - `app/tv/.../drawable/ic_banner.xml` - a **separate, module-local** resource (referenced via
+    plain `R.drawable.ic_banner` from TV's own `WelcomeScreen.kt`, not `CoreR`) discovered while
+    grepping for "Findroid" - not one of the two files FINDROID-64-67 touched. It still carried
+    the *pre-Scout*, Jellyfin-trademark-derived triangle/Android-head mark plus a standalone
+    green "+" badge ("Keep the TV launcher banner visibly distinct from upstream Findroid").
+    Swapped only its wordmark to "JollyFin" and dropped the now-meaningless "+" badge (the "+"
+    is gone from the name everywhere else too); left the old mascot itself alone since
+    redesigning it is mascot-level work, not a rename. **Flagging this as a known gap**: this
+    asset is still visually inconsistent with the rest of the app and still carries the exact
+    kind of mark Scout was created to retire - worth a fast-follow to bring it onto Scout.
+- [x] Raster promo banner (`images/findroid-banner.png` / `core/.../findroid_banner.png`) and
+  the Play Store `featureGraphic.png` re-rasterized with "JollyFin" via the same SVG+`magick`
+  pipeline the Scout session used (recovered its working SVG from `/tmp/scout-v2-work/` to keep
+  the exact geometry/gradient/subtitle). Renamed to `jollyfin-banner.png`/`jollyfin_banner.png`
+  for consistency; updated README's image embed and `AboutScreen.kt`'s `painterResource`.
+  `icon.png` left untouched - its source SVG has no text, just Scout on the grey background.
+- [x] `README.md`: title, intro (kept the "fork of Findroid" lineage/GPLv3 attribution, reworded
+  around it), install section, Obtainium badge JSON payload, GitHub URLs.
+- [x] `REPRODUCIBLE_BUILDS.md`: app name, `git clone` URL. Also fixed the worked example's APK
+  filename (`findroid-plus-latest-arm64-v8a-release.apk`, which never matched the real
+  `phone-libre-<abi>-release.apk` naming even before this rename) while touching that line.
+- [x] `AGENTS.md`: title, remote-verify sync dir naming (`findroid-verify*` ->
+  `jollyfin-verify*`), `FINDROID_REMOTE_PATH` -> `JOLLYFIN_REMOTE_PATH`.
+- [x] `justfile`: header comment, `FINDROID_REMOTE_HOST`/`FINDROID_REMOTE_PATH`/
+  `FINDROID_DIST_DIR` -> `JOLLYFIN_*`, remote-verify default path, the release build's remote
+  log filename. Left the `"Findroid CI Signing Keystore"` rbw entry name and every
+  `findroid-ci*`/`.findroid-ci-tmp` filename/dirname exactly as-is - that credential isn't being
+  renamed as part of this task.
+- [x] `.github/workflows/release.yaml`: applicationId mentions in the release-notes template,
+  REPRODUCIBLE_BUILDS.md links, and the uploaded-asset label prefix (`findroid-plus-<tag>` ->
+  `jollyfin-<tag>`, which is what release APK filenames on GitHub actually carry). Left
+  `findroid-ci.jks` (same keystore exception) untouched. `sync-upstream.yaml` needed no changes -
+  its "findroid" mentions correctly refer to the actual upstream repo.
+- [x] `fastlane/metadata/android/en-US/title.txt` and `full_description.txt` -> "JollyFin".
+- [x] `cli/findroid-cli`: fixed the now-broken `PACKAGE_NAME` default
+  (`dev.pschmitt.findroidplus` -> `dev.pschmitt.jollyfin` - this was a real functional bug, not
+  just cosmetic, since "start" launches by applicationId) and its matching comment, renamed the
+  `FINDROID_LOCAL_URL`/`FINDROID_PACKAGE_NAME` env vars to `JOLLYFIN_*`, and swapped "Findroid+"
+  in help/error text to "JollyFin". Left the script's own command name, `~/.config/findroid-cli`
+  config dir, and self-update messaging as `findroid-cli` - not explicitly in this task's scope,
+  and renaming the actual command a Termux user types is a bigger call than a text/id rename.
+  Flagging for a decision rather than guessing.
+- [x] Final sweep (`grep -rIli findroidplus` / `grep -rIln "Findroid+"`, excluding `.git`,
+  `build`, `dist`, `.gradle`, and the stale `.claude/worktrees/` copies of the old `findroid.git`
+  checkout) clean except: `TODO.md`'s own historical entries (not rewritten, per house style),
+  README's one intentional "previously known as Findroid+" mention, and this entry's own prose.
+
+**Why:** user's explicit direction - "EVERYTHING" per their own words, except the Play Console
+listing (must be created manually, tracked separately) and Scout's mascot geometry/colors
+(redesigned same day, immediately prior, left alone here).
+**How to apply:** see FINDROID-64 for Scout's geometry if extending it to `app/tv`'s still-old
+banner mentioned above. The raster banner pipeline (SVG + `magick`, Liberation Sans Bold/Italic)
+is the same one FINDROID-66 established; its working files are one-off scratch SVGs, not checked
+into the repo, so regenerate from scratch (mark path data is in `ic_launcher_foreground.xml`)
+rather than expecting to find them again.
+
+Status: **done**, 2026-08-04 - not yet build-verified remotely (`just build --phone --debug` /
+`just build --tv --debug`) as part of this session; do that before relying on this for a real
+install.

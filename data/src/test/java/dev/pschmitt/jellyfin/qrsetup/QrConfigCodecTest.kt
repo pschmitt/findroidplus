@@ -49,9 +49,9 @@ class QrConfigCodecTest {
         )
 
     @Test
-    fun `encoded payload is a recognizable findroidplus URI`() {
+    fun `encoded payload is a recognizable jollyfin URI`() {
         val payload = QrConfigCodec.encodePayload(sampleEnvelope, password = null)
-        assertTrue(payload.startsWith("findroidplus://setup?p="))
+        assertTrue(payload.startsWith("jollyfin://setup?p="))
         assertTrue(QrConfigCodec.looksLikeQrConfigUri(payload))
     }
 

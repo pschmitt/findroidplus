@@ -1,0 +1,4 @@
+New:
+- Renamed from Findroid+ to JollyFin: new package id (dev.pschmitt.jollyfin), new deep-link
+  scheme, new identity throughout the app and its setup/backup/QR-provisioning flows. Builds on
+  the Scout icon/branding work from the previous release.

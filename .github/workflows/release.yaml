@@ -114,7 +114,7 @@ jobs:
       - name: Collect and rename APKs
         id: apks
         run: |
-          label="findroid-plus-${{ steps.params.outputs.tag_name }}"
+          label="jollyfin-${{ steps.params.outputs.tag_name }}"
           dir="/tmp/$label"
           mkdir -p "$dir"
 
@@ -179,12 +179,12 @@ jobs:
             Automated build of the latest main (${{ github.sha }}), built ${{ steps.date.outputs.date }}. Not a stable release.
 
             Two variants are provided, both signed with the same CI key so upgrades between them work:
-            - `*-debug.apk` — debuggable, uses the `dev.pschmitt.findroidplus.debug` applicationId so it installs side by side with a release install for testing.
-            - `*-release.apk` — minified/optimized like a real release build, uses the same `dev.pschmitt.findroidplus` applicationId as every tagged release, so it upgrades cleanly over (or is upgraded by) any of them.
+            - `*-debug.apk` — debuggable, uses the `dev.pschmitt.jollyfin.debug` applicationId so it installs side by side with a release install for testing.
+            - `*-release.apk` — minified/optimized like a real release build, uses the same `dev.pschmitt.jollyfin` applicationId as every tagged release, so it upgrades cleanly over (or is upgraded by) any of them.
 
             `SHA256SUMS` covers every APK above. Each APK also embeds this exact commit
             (`${{ github.sha }}`) as `BuildConfig.GIT_REVISION`, checkable via `About` in the app
-            or by grepping the APK's dex - see [REPRODUCIBLE_BUILDS.md](https://github.com/pschmitt/findroidplus/blob/main/REPRODUCIBLE_BUILDS.md)
+            or by grepping the APK's dex - see [REPRODUCIBLE_BUILDS.md](https://github.com/pschmitt/jollyfin/blob/main/REPRODUCIBLE_BUILDS.md)
             for how to rebuild and verify this release yourself.
           files: ${{ steps.apks.outputs.dir }}/*
           prerelease: true
@@ -198,12 +198,12 @@ jobs:
           name: ${{ steps.params.outputs.release_name }}
           body: |
             Signed with the same CI key as every other build here - upgrades cleanly over an
-            existing `dev.pschmitt.findroidplus` install (the `latest` prerelease, an older tagged
+            existing `dev.pschmitt.jollyfin` install (the `latest` prerelease, an older tagged
             release, or this one reinstalled).
 
             `SHA256SUMS` covers every APK above. Each APK also embeds this exact commit
             (`${{ github.sha }}`) as `BuildConfig.GIT_REVISION`, checkable via `About` in the app
-            or by grepping the APK's dex - see [REPRODUCIBLE_BUILDS.md](https://github.com/pschmitt/findroidplus/blob/main/REPRODUCIBLE_BUILDS.md)
+            or by grepping the APK's dex - see [REPRODUCIBLE_BUILDS.md](https://github.com/pschmitt/jollyfin/blob/main/REPRODUCIBLE_BUILDS.md)
             for how to rebuild and verify this release yourself.
           files: ${{ steps.apks.outputs.dir }}/*
           prerelease: false

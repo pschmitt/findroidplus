@@ -1,32 +1,34 @@
-![Findroid banner](images/findroid-banner.png)
+![JollyFin banner](images/jollyfin-banner.png)
 
-# Findroid+
+# JollyFin
 
-Findroid+ is [pschmitt](https://github.com/pschmitt)'s fork of
+JollyFin is [pschmitt](https://github.com/pschmitt)'s fork of
 [Findroid](https://github.com/jarnedemeulemeester/findroid), a third-party native Android/Android
-TV client for Jellyfin — with added features such as Sonarr/Radarr integration.
+TV client for Jellyfin — with added features such as Sonarr/Radarr integration. It was
+previously known as Findroid+; the app was renamed (new package id, new identity) but the fork
+lineage and GPLv3 license carry over unchanged.
 
 **This project is in its early stages so expect bugs.**
 
 ## Installation
 
-Findroid+ isn't published on Google Play, Amazon Appstore, F-Droid, or IzzyOnDroid — those
+JollyFin isn't published on Google Play, Amazon Appstore, F-Droid, or IzzyOnDroid — those
 listings are for the upstream Findroid project, under a different package name, and installing
 from them will **not** give you this fork.
 
-Instead, install and auto-update Findroid+ via [Obtainium](https://obtainium.imranr.dev/)
+Instead, install and auto-update JollyFin via [Obtainium](https://obtainium.imranr.dev/)
 pointed at this repository, or grab an APK directly from the
-[Releases page](https://github.com/pschmitt/findroidplus/releases).
+[Releases page](https://github.com/pschmitt/jollyfin/releases).
 
 [<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60">][obtainium-link]
 
-The badge tracks the `phone`/`release` APK (applicationId `dev.pschmitt.findroidplus`, no
-`.debug` suffix, arch auto-selected) from the ["latest"](https://github.com/pschmitt/findroidplus/releases/tag/latest)
+The badge tracks the `phone`/`release` APK (applicationId `dev.pschmitt.jollyfin`, no
+`.debug` suffix, arch auto-selected) from the ["latest"](https://github.com/pschmitt/jollyfin/releases/tag/latest)
 pre-release build. Want the TV build or a debuggable variant instead? Add the app normally in
 Obtainium via this repo's URL and adjust the APK filter regex/prerelease settings, or just grab
-the specific APK from the [Releases page](https://github.com/pschmitt/findroidplus/releases).
+the specific APK from the [Releases page](https://github.com/pschmitt/jollyfin/releases).
 
-[obtainium-link]: https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22dev.pschmitt.findroidplus%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fpschmitt%2Ffindroidplus%22%2C%22author%22%3A%22pschmitt%22%2C%22name%22%3A%22Findroid%2B%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22phone-.*-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22trackOnly%5C%22%3Afalse%7D%22%7D
+[obtainium-link]: https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22dev.pschmitt.jollyfin%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fpschmitt%2Fjollyfin%22%2C%22author%22%3A%22pschmitt%22%2C%22name%22%3A%22JollyFin%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22phone-.*-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22trackOnly%5C%22%3Afalse%7D%22%7D
 
 ## Features
 - Native interface for phone and Android TV, browsing movies, series, seasons, and

@@ -116,7 +116,7 @@ fun AboutScreen(navigateBack: () -> Unit) {
                         ) {
                             Spacer(Modifier.height(MaterialTheme.spacings.small))
                             Image(
-                                painter = painterResource(CoreR.drawable.findroid_banner),
+                                painter = painterResource(CoreR.drawable.jollyfin_banner),
                                 contentDescription = null,
                                 modifier = Modifier.width(240.dp),
                             )
@@ -145,7 +145,7 @@ fun AboutScreen(navigateBack: () -> Unit) {
                                     onClick = {
                                         try {
                                             uriHandler.openUri(
-                                                "https://github.com/pschmitt/findroidplus"
+                                                "https://github.com/pschmitt/jollyfin"
                                             )
                                         } catch (e: IllegalArgumentException) {
                                             Toast.makeText(

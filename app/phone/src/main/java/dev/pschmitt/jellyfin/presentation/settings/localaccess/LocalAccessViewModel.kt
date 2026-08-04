@@ -36,7 +36,7 @@ constructor(
                     startFailed = enabledPref && !localControlServer.isRunning(),
                     token = localControlAuth.getOrCreateToken(),
                     cliDownloadCommand =
-                        "curl http://${LocalControlServer.BIND_ADDRESS}:${LocalControlServer.PORT}" +
+                        "curl http://${LocalControlServer.BIND_ADDRESS}:${localControlServer.port}" +
                             "${LocalControlServer.CLI_PATH} -o findroid-cli && chmod +x findroid-cli",
                 )
             )

@@ -15,7 +15,7 @@ android {
     buildToolsVersion = Versions.BUILD_TOOLS
 
     defaultConfig {
-        applicationId = "dev.pschmitt.findroidplus"
+        applicationId = "dev.pschmitt.jollyfin"
         minSdk = Versions.MIN_SDK
         targetSdk = Versions.TARGET_SDK
 

@@ -43,7 +43,10 @@ constructor(
     private val auth: LocalControlAuth,
     private val appPreferences: AppPreferences,
     @ApplicationContext private val context: Context,
-) : NanoHTTPD(BIND_ADDRESS, PORT) {
+) : NanoHTTPD(BIND_ADDRESS, portFor(context.packageName)) {
+
+    /** The port this instance actually bound to - see [portFor]. */
+    val port: Int = portFor(context.packageName)
 
     @Synchronized
     fun startIfEnabled() {
@@ -128,8 +131,10 @@ constructor(
 
     /** Serves the bundled `findroid-cli` script (an asset copied from `cli/findroid-cli` at build
      * time - see `core/build.gradle.kts` - not read from a live git checkout) so a plain
-     * `curl http://127.0.0.1:48411/cli -o findroid-cli` from Termux works with zero setup, the same
-     * way Shizuku's `rish` client is downloadable straight from the Shizuku app. */
+     * `curl http://127.0.0.1:<port>/cli -o findroid-cli` from Termux works with zero setup, the
+     * same way Shizuku's `rish` client is downloadable straight from the Shizuku app. `<port>` is
+     * [BASE_PORT] for a release install, [portFor] for debug/staging - see the Settings > Local
+     * CLI access screen for the exact command for whichever variant is actually installed. */
     private fun serveCliScript(): Response =
         try {
             val bytes = context.assets.open(CLI_ASSET_NAME).use { it.readBytes() }
@@ -171,10 +176,33 @@ constructor(
 
     companion object {
         const val BIND_ADDRESS = "127.0.0.1"
-        const val PORT = 48411
+        const val BASE_PORT = 48411
         const val CLI_PATH = "/cli"
         const val CLI_ASSET_NAME = "findroid-cli"
         private const val SOCKET_READ_TIMEOUT = 30_000
         private val json = Json { ignoreUnknownKeys = true }
+
+        /**
+         * Debug/staging installs get their own port, offset from [BASE_PORT], so they can run
+         * side by side with a release install (or each other) - e.g. verifying a rename on a
+         * debug build without force-stopping an already-installed release, or the CI/local
+         * signature-mismatch workflow in AGENTS.md - without one variant's `startIfEnabled()`
+         * failing to bind because another variant already grabbed the port. Found the hard way:
+         * a debug build launched right after a release build was still running crashed at
+         * `BaseApplication.onCreate()` with `BindException: EADDRINUSE` on the shared port -
+         * see TODO.md FINDROID-68's follow-up.
+         *
+         * Keyed off the actual runtime `applicationId` suffix (".debug"/".staging"), not a
+         * Gradle `BuildConfig` flag - `core` has no per-flavor `BuildConfig` of its own, and this
+         * needs no plumbing through both `app/phone` and `app/tv`'s separate flavor setups.
+         * `findroid-cli`'s `JOLLYFIN_LOCAL_URL` override exists for exactly this: point it at
+         * whichever of these three ports the variant you're scripting against actually bound.
+         */
+        fun portFor(packageName: String): Int =
+            when {
+                packageName.endsWith(".debug") -> BASE_PORT + 1
+                packageName.endsWith(".staging") -> BASE_PORT + 2
+                else -> BASE_PORT
+            }
     }
 }

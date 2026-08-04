@@ -7,7 +7,7 @@
     <string name="settings_preferred_audio_language_summary">Automatically select this language for audio tracks when available</string>
     <string name="settings_preferred_subtitle_language">Preferred subtitle language</string>
     <string name="settings_preferred_subtitle_language_summary">Automatically select this language for subtitles when available</string>
-    <string name="settings_category_connections">Accounts and credentials</string>
+    <string name="settings_category_connections">Accounts</string>
     <string name="settings_connections_summary">Servers, users &amp; integrations</string>
     <string name="settings_category_servers">Servers</string>
     <string name="settings_category_servers_summary">Manage the Jellyfin servers connected to this app</string>

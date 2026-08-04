@@ -8,52 +8,34 @@
   <group
       android:pivotX="100"
       android:pivotY="100"
-      android:scaleX="0.80"
-      android:scaleY="0.80">
+      android:scaleX="0.97"
+      android:scaleY="0.97">
 
-    <path
-        android:pathData="M100,68 Q114,54 114,42"
-        android:strokeColor="#8A4DFF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"/>
-    <path
-        android:pathData="M114,42 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0"
-        android:strokeColor="#8A4DFF"
-        android:strokeWidth="2.5"
-        android:fillColor="#00000000"/>
-    <path
-        android:pathData="M114,36 L114,48 M108,42 L120,42"
-        android:strokeColor="#F4F1FF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"/>
-
-    <path android:pathData="M100,66 A48,48 0 0 1 148,114 L148,116 A48,48 0 0 1 100,164 A48,48 0 0 1 52,116 L52,114 A48,48 0 0 1 100,66 Z">
+    <path android:pathData="M100,54 A48,48 0 0 1 148,102 L148,104 A48,48 0 0 1 100,152 A48,48 0 0 1 52,104 L52,102 A48,48 0 0 1 100,54 Z">
       <aapt:attr name="android:fillColor">
         <gradient
             android:type="linear"
-            android:startX="100" android:startY="66"
-            android:endX="100" android:endY="164"
+            android:startX="100" android:startY="54"
+            android:endX="100" android:endY="152"
             android:startColor="@color/logo_primary"
             android:endColor="@color/logo_secondary"/>
       </aapt:attr>
     </path>
 
-    <path android:pathData="M52,104 m-12,0 a12,12 0,1 0,24 0 a12,12 0,1 0,-24 0" android:fillColor="#4457E8"/>
-    <path android:pathData="M52,104 m-5,0 a5,5 0,1 0,10 0 a5,5 0,1 0,-10 0" android:fillColor="#241B4E"/>
-    <path android:pathData="M148,104 m-12,0 a12,12 0,1 0,24 0 a12,12 0,1 0,-24 0" android:fillColor="#4457E8"/>
-    <path android:pathData="M148,104 m-5,0 a5,5 0,1 0,10 0 a5,5 0,1 0,-10 0" android:fillColor="#241B4E"/>
+    <path android:pathData="M52,92 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0" android:fillColor="#4457E8"/>
+    <path android:pathData="M52,92 m-4,0 a4,4 0,1 0,8 0 a4,4 0,1 0,-8 0" android:fillColor="#241B4E"/>
+    <path android:pathData="M148,92 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0" android:fillColor="#4457E8"/>
+    <path android:pathData="M148,92 m-4,0 a4,4 0,1 0,8 0 a4,4 0,1 0,-8 0" android:fillColor="#241B4E"/>
 
-    <path android:pathData="M100,112 m-36,0 a36,36 0,1 0,72 0 a36,36 0,1 0,-72 0" android:fillColor="#F4F1FF"/>
-    <path android:pathData="M100,112 m-22,0 a22,22 0,1 0,44 0 a22,22 0,1 0,-44 0" android:fillColor="#241B4E"/>
+    <path android:pathData="M100,100 m-36,0 a36,36 0,1 0,72 0 a36,36 0,1 0,-72 0" android:fillColor="#F4F1FF"/>
+    <path android:pathData="M100,100 m-22,0 a22,22 0,1 0,44 0 a22,22 0,1 0,-44 0" android:fillColor="#241B4E"/>
     <path
-        android:pathData="M100,112 m-22,0 a22,22 0,1 0,44 0 a22,22 0,1 0,-44 0"
+        android:pathData="M100,100 m-22,0 a22,22 0,1 0,44 0 a22,22 0,1 0,-44 0"
         android:strokeColor="#8A4DFF"
         android:strokeWidth="2"
         android:strokeAlpha="0.6"
         android:fillColor="#00000000"/>
-    <path android:pathData="M91,102 m-6,0 a6,6 0,1 0,12 0 a6,6 0,1 0,-12 0" android:fillColor="#FFFFFF" android:fillAlpha="0.9"/>
+    <path android:pathData="M91,90 m-6,0 a6,6 0,1 0,12 0 a6,6 0,1 0,-12 0" android:fillColor="#FFFFFF" android:fillAlpha="0.9"/>
 
   </group>
 </vector>

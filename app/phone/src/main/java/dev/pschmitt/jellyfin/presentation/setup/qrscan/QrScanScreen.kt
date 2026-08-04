@@ -74,7 +74,7 @@ fun QrScanScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Arrived via the findroidplus:// deep link (e.g. tapped from a different scanner app) -
+    // Arrived via the jollyfin:// deep link (e.g. tapped from a different scanner app) -
     // the payload's already in hand, so apply it straight away instead of opening the camera.
     LaunchedEffect(initialRaw) {
         initialRaw?.let { viewModel.onAction(QrScanAction.OnCodeScanned(it)) }

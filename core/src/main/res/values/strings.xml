@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Findroid+</string>
+    <string name="app_name" translatable="false">JollyFin</string>
     <string name="app_description">Third-party native Jellyfin app</string>
     <string name="jellyfin_banner">Jellyfin banner</string>
     <string name="remove">Remove</string>
@@ -140,7 +140,7 @@
     <string name="delete_download_with_size">Delete download (%1$s)</string>
     <string name="delete_download_message">Are you sure you want to delete this download from you device?</string>
     <string name="stop_download">Stop download</string>
-    <string name="privacy_policy_notice">By using Findroid+ you agree with the <a href='https://raw.githubusercontent.com/jarnedemeulemeester/findroid/main/PRIVACY'>Privacy Policy</a> which states that we do not collect any data</string>
+    <string name="privacy_policy_notice">By using JollyFin you agree with the <a href='https://raw.githubusercontent.com/jarnedemeulemeester/findroid/main/PRIVACY'>Privacy Policy</a> which states that we do not collect any data</string>
     <string name="live_tv">Live TV</string>
     <string name="play">Play</string>
     <string name="watch_trailer">Watch trailer</string>
@@ -304,7 +304,7 @@
     <string name="restore_backup_redownload_no">No</string>
     <string name="restore_backup_continue">Continue</string>
     <string name="qr_export_title">Provision device</string>
-    <string name="qr_export_summary">Generate a QR code to set up a new Findroid+ install with this device\'s Jellyfin login and Sonarr/Radarr/Seerr configuration.</string>
+    <string name="qr_export_summary">Generate a QR code to set up a new JollyFin install with this device\'s Jellyfin login and Sonarr/Radarr/Seerr configuration.</string>
     <string name="qr_export_include_jellyfin">Jellyfin</string>
     <string name="qr_export_include_jellyfin_summary">Server address and this session\'s login</string>
     <string name="qr_export_include_sonarr">Sonarr</string>
@@ -328,14 +328,14 @@
     <string name="qr_export_biometric_subtitle">This code contains your login and service credentials</string>
     <string name="qr_export_biometric_failed">Authentication is required to view this code</string>
     <string name="qr_scan_title">Scan QR code</string>
-    <string name="qr_scan_summary">Point the camera at a Findroid+ setup code</string>
+    <string name="qr_scan_summary">Point the camera at a JollyFin setup code</string>
     <string name="qr_scan_permission_rationale">Camera access is needed to scan a setup code</string>
     <string name="qr_scan_permission_denied">Camera permission denied. Enable it in system settings to scan a code.</string>
     <string name="qr_scan_open_settings">Open settings</string>
     <string name="qr_scan_password_title">Password required</string>
     <string name="qr_scan_wrong_password">Incorrect password</string>
-    <string name="qr_scan_invalid">This isn\'t a valid Findroid+ setup code</string>
-    <string name="qr_scan_unsupported_version">This code was created by a newer version of Findroid+. Update the app and try again.</string>
+    <string name="qr_scan_invalid">This isn\'t a valid JollyFin setup code</string>
+    <string name="qr_scan_unsupported_version">This code was created by a newer version of JollyFin. Update the app and try again.</string>
     <string name="qr_scan_error">Couldn\'t apply this code: %1$s</string>
     <string name="qr_scan_success">Setup applied - restarting…</string>
     <string name="password">Password</string>

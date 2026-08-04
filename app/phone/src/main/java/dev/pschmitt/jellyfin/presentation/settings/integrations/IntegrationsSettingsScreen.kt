@@ -366,7 +366,7 @@ private fun JellyfinConnectionSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
-                painter = painterResource(CoreR.drawable.ic_logo),
+                painter = painterResource(CoreR.drawable.ic_jellyfin_logo),
                 contentDescription = null,
                 modifier = Modifier.size(28.dp),
             )
@@ -680,7 +680,11 @@ private fun JellyfinServerRow(
                     .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(painter = painterResource(CoreR.drawable.ic_server), contentDescription = null)
+            Image(
+                painter = painterResource(CoreR.drawable.ic_jellyfin_logo),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = server.server.name, style = MaterialTheme.typography.titleSmall)
