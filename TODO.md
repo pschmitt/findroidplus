@@ -1461,6 +1461,74 @@ is the same one FINDROID-66 established; its working files are one-off scratch S
 into the repo, so regenerate from scratch (mark path data is in `ic_launcher_foreground.xml`)
 rather than expecting to find them again.
 
-Status: **done**, 2026-08-04 - not yet build-verified remotely (`just build --phone --debug` /
-`just build --tv --debug`) as part of this session; do that before relying on this for a real
-install.
+- [x] Build-verified remotely: `assembleLibreDebug`/`assembleLibreRelease` for both
+  `:app:phone`/`:app:tv` all passed on rofl-13. Installed and screenshot-checked on real devices
+  (Mi Pad 4, px5) - Welcome screen, banner, and About screen all render correctly as "JollyFin"
+  with no leftover "Findroid+"/"Findroid" text, and no white-corner artifact from the transparency
+  bug caught and fixed along the way (see below).
+- [x] Found and fixed a real rasterization bug via the on-device check above: the hero/TV banner
+  PNGs came out with an opaque white background baked in instead of transparent (ImageMagick's
+  `-background none` flag only takes effect when placed *before* the SVG input on the command
+  line - it was after, so it silently no-op'd and the MSVG delegate's default opaque-white canvas
+  won instead). Invisible in a Read-tool preview against a light backdrop, but showed as an ugly
+  white box behind the mark on the app's actual dark Welcome screen. Re-rasterized all three
+  affected PNGs (`core/.../drawable-nodpi/ic_banner.png`, `core/.../drawable-night-nodpi/
+  ic_banner.png`, `app/tv/.../drawable-nodpi/ic_banner.png`) plus the promo banner's rounded
+  corners (same root cause, `images/jollyfin-banner.png` /`core/.../jollyfin_banner.png`) with
+  `-background none` placed correctly and `PNG32:` forced for a real alpha channel. Verify with
+  `magick <file>.png -format "%[pixel:p{0,0}]" info:` before trusting any future re-rasterize of
+  these three assets - it should read `srgba(0,0,0,0)`, not opaque white.
+- [x] Found and fixed a second real bug via live device testing (backup/restore round-trip,
+  requested by user): `LocalControlServer.PORT` was a single hardcoded `48411` shared by every
+  build variant. Installing/running a debug build alongside an already-running release build
+  (exactly what happened testing restore with both on px5) crashed the second one to start at
+  `BaseApplication.onCreate()` with `BindException: EADDRINUSE` - confirmed via `adb logcat -d`,
+  **not** a restore-logic bug (`RestoreBackupViewModel.loadBackup()` already catches broadly and
+  surfaces errors in-UI rather than crashing; the actual crash came from the process-restart-after-
+  restore flow (`Activity.restartProcess()`) relaunching into a still-EADDRINUSE port). Fix:
+  `LocalControlServer.portFor(packageName)` now offsets by build-variant suffix (`.debug` ->
+  `BASE_PORT+1`, `.staging` -> `+2`, release stays `BASE_PORT`); `cli/findroid-cli` derives the
+  matching default port from `JOLLYFIN_PACKAGE_NAME` automatically so `JOLLYFIN_LOCAL_URL` only
+  needs setting for something unusual (forwarded port, etc). Touched: `LocalControlServer.kt`,
+  `LocalAccessViewModel.kt` (now reads the instance `port` property, not a removed `PORT`
+  const), `cli/findroid-cli`.
+
+**Handoff - not yet done, for whoever picks this up next:**
+- [ ] **The port fix (previous item) was committed but never rebuilt/re-verified on-device** -
+  the session ended right after writing it. Re-sync (`.claude/worktrees/` is 700MB+ of stale
+  prunable agent worktrees left over from before this repo's rename from `findroid.git` -
+  exclude it manually with `--exclude='.claude/worktrees/'` on top of the justfile's own sync
+  excludes, or `just sync`/`just build` will try to rsync all of it and either take a very long
+  time or throw spurious "no such file" errors on deeply-nested paths mid-transfer), then
+  `just build --phone --debug`, install alongside an already-running release build (or just
+  `just build --phone --release` too and run both), and confirm neither crashes on launch and
+  Settings > Local CLI access shows the right port for each.
+- [ ] **Fastlane Play Store screenshots** (`fastlane/metadata/android/en-US/images/
+  {phone,sevenInch,tenInch}Screenshots/*.png`, 15 files) were never audited for leftover
+  "Findroid+" branding. Spot-checked `phoneScreenshots/1_en-US.png` only - it happens to show
+  server-selector chrome ("Stable Demo") and media rows with no app-identity text, so it's fine
+  as-is, but the other 14 weren't opened. If any show the launcher icon, an app title, or a
+  Settings/About screen with the old name, they need retaking (there's no running/logged-in
+  Jellyfin demo session set up in this environment to retake them against - that's real device/
+  server work, not just an asset regen) or at least flagging to the user as stale.
+  `full_description.txt`/`title.txt`/`short_description.txt`/`icon.png`/`featureGraphic.png`
+  are already done (see the FINDROID-68 checklist above).
+- [ ] No Play Console listing exists yet for `dev.pschmitt.jollyfin` - out of scope for an agent
+  either way (Google doesn't allow programmatic app-listing creation), the user has to do this
+  part manually. Once it exists, the fastlane metadata directory here is what would get pushed
+  to it (screenshots caveat above notwithstanding).
+- [ ] `app/tv/src/main/res/drawable-nodpi/ic_banner.png` (TV app's own separate Welcome-screen
+  banner, discovered mid-task, see the checklist above) still carries the *pre-Scout*,
+  Jellyfin-trademark-derived mascot - only its wordmark was swapped to "JollyFin". Bringing it
+  onto Scout is a real follow-up, deliberately not done here (mascot-level redesign, not a
+  rename).
+- [ ] Backup format versioning/migration metadata (embed the app version/package id that wrote a
+  `.frb` file, so a future format change can detect and migrate an old backup instead of just
+  trying to deserialize it and erroring) - user explicitly asked for this to be considered but
+  said not to spend time on it this session. Not started.
+- [ ] `git tag` deliberately not run (explicitly out of scope per original instructions - more
+  testing needed first).
+
+Status: **mostly done**, 2026-08-05 - committed and pushed to `origin/main` as `b16d9ba5`
+(rename + both bugfixes above), but see "Handoff" - the port fix specifically still needs a
+rebuild + on-device re-verification, and a few smaller items are explicitly left open above.
