@@ -2,24 +2,26 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="100dp"
     android:height="100dp"
-    android:viewportWidth="100"
-    android:viewportHeight="100">
-  <path
-      android:pathData="m59.96,54.04 l3.38,-5.85c0.47,-0.81 -0.75,-1.52 -1.22,-0.7l-3.42,5.93c-2.62,-1.19 -5.56,-1.86 -8.69,-1.86 -3.14,0 -6.08,0.67 -8.69,1.86l-3.42,-5.93c-0.47,-0.81 -1.69,-0.11 -1.22,0.7l3.38,5.86c-5.8,3.16 -9.78,9.03 -10.36,15.98l40.62,0c-0.58,-6.94 -4.55,-12.82 -10.36,-15.98m-9.95,-54.04c-13.24,0 -55.83,77.23 -49.34,90.28 6.49,13.04 92.25,12.89 98.68,0 6.43,-12.89 -36.1,-90.28 -49.34,-90.28zM82.35,78.97c-4.21,8.45 -60.41,8.55 -64.66,0 -4.25,-8.55 23.66,-59.16 32.32,-59.16 8.66,0 36.55,50.69 32.34,59.16z"
-      android:strokeWidth="0.03">
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+  <!-- "Scout Mini" - every remaining call site for this drawable renders at 28-32dp
+       (TopBarTitle, the TV main-screen tab row, the integrations settings row), where the full
+       launcher-icon Scout (ears, antenna, iris ring, glint) compresses into an unreadable blob.
+       Just the body and the eye survive at that size, so that's all this keeps - the full
+       character lives on in ic_launcher_foreground.xml and the banners. -->
+
+  <path android:pathData="M100,21.6 A76.8,76.8 0 0 1 176.8,98.4 L176.8,101.6 A76.8,76.8 0 0 1 100,178.4 A76.8,76.8 0 0 1 23.2,101.6 L23.2,98.4 A76.8,76.8 0 0 1 100,21.6 Z">
     <aapt:attr name="android:fillColor">
       <gradient
-          android:startX="30.22"
-          android:startY="45.71"
-          android:endX="81.6"
-          android:endY="75.38"
-          android:type="linear">
-        <item android:offset="0" android:color="@color/logo_primary"/>
-        <item android:offset="1" android:color="@color/logo_secondary"/>
-      </gradient>
+          android:type="linear"
+          android:startX="100" android:startY="21.6"
+          android:endX="100" android:endY="178.4"
+          android:startColor="@color/logo_primary"
+          android:endColor="@color/logo_secondary"/>
     </aapt:attr>
   </path>
-  <path
-      android:pathData="M77.8,1 L88.2,1 L88.2,9.8 L97,9.8 L97,20.2 L88.2,20.2 L88.2,29 L77.8,29 L77.8,20.2 L69,20.2 L69,9.8 L77.8,9.8 Z"
-      android:fillColor="@color/logo_primary"/>
+
+  <path android:pathData="M100,95.2 m-57.6,0 a57.6,57.6 0,1 0,115.2 0 a57.6,57.6 0,1 0,-115.2 0" android:fillColor="#F4F1FF"/>
+  <path android:pathData="M100,95.2 m-35.2,0 a35.2,35.2 0,1 0,70.4 0 a35.2,35.2 0,1 0,-70.4 0" android:fillColor="#241B4E"/>
 </vector>

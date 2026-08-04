@@ -1195,3 +1195,127 @@ return the body. status is just noise."
       considered and declined).
 
 Status: **done** (2026-07-28).
+
+## FINDROID-64: replace the Jellyfin-derived mark with an original one ("Scout")
+
+The launcher icon, TV banner (both the adaptive `ic_banner_foreground.xml` and the flat
+`ic_banner.xml` shown across five phone setup screens), and in-app header logo
+(`ic_logo.xml`) all traced Jellyfin's actual logo path (the triangular play-badge with an
+Android-robot-head cutout), tinted Android's own green fading into Jellyfin's own blue. Real
+trademark exposure for a fork with its own listing, not just a hobby-repo nicety.
+
+- [x] Design an original mark ("Scout" - a small scanner-droid: satellite-dish ears, a
+  camera-lens eye, an antenna capped with the "+" that marks this as the "+" fork) and confirm
+  the direction before implementing.
+- [x] Replace `ic_launcher_foreground.xml` (phone + TV launcher icon).
+- [x] Replace `ic_logo.xml` (in-app header logo - Home, top bar, integrations screen, TV main
+  screen).
+- [x] Replace the bird portion of `ic_banner_foreground.xml` (TV banner), keeping the
+  "Findroid" wordmark glyphs untouched, and drop the standalone "+" badge that used to sit next
+  to the wordmark now that Scout's antenna carries the "+" itself.
+- [x] Same treatment for `ic_banner.xml`, the larger flat banner actually shown across Login,
+  Servers, AddServer, Welcome, and Users setup screens (higher real visibility than the
+  TV-only adaptive banner).
+- [x] Update `logo_primary`/`logo_secondary` in `core/src/main/res/values/colors.xml` from
+  Android green/Jellyfin blue to Scout's own indigo/violet, while leaving the `debug`/`staging`
+  flavor overrides (red/blue build-variant tinting) untouched - all four files reference
+  `@color/logo_primary`/`logo_secondary` rather than hardcoded hex, so that tinting still works.
+- [x] Verify with remote `:app:phone:assembleLibreDebug` and `:app:tv:assembleLibreDebug`, then
+  install the phone build on every attached device.
+
+**Why:** user's explicit direction, following the same fix already applied to Nyetbox's
+NetBox-derived icon the same day.
+**How to apply:** Scout is authored in a 200x200 viewport (`M100,68 Q120,52 120,34` antenna,
+`M100,66 A48,48...Z` pill body, etc.) wrapped in a `pivotX="100" pivotY="100" scaleX="0.72"
+scaleY="0.72"` group for the icon/logo surfaces. For the two banners, that same pivot-scaled
+group (or the raw paths, for `ic_banner.xml`'s larger canvas) is nested inside an outer
+positioning `<group translateX=... translateY=... scaleX=... scaleY=...>` to land it in the
+banner's existing left-hand mark area without disturbing the wordmark's own transform chain -
+`ic_banner_foreground.xml` reuses its pre-existing outer `0.6666667`/`53.333332,30` wrapper
+(math: `outer_local = (final - translate) / scale`), `ic_banner.xml` has no such wrapper so its
+group transform was derived directly.
+
+Status: **done**, 2026-08-04 - remote `:app:phone:assembleLibreDebug` and
+`:app:tv:assembleLibreDebug` both passed; phone build installed on Zenfone 10, Mi Pad 4, and
+Pixel 5. Not yet done: the raster promotional banner (`images/findroid-banner.png` /
+`core/src/main/res/drawable/findroid_banner.png`, shown in the About screen and the README) and
+the Play Store `fastlane` icon/feature-graphic images still carry the old mark - no Play Console
+listing exists for this fork to push those to, but the raster banner is a real follow-up.
+
+## FINDROID-65: Scout follow-up - contrast, size, header, and the real Jellyfin logo
+
+Direct user feedback on FINDROID-64's Scout mark, applied the same day.
+
+- [x] Antenna stalk was `#241B4E` (near-black navy) floating directly on the adaptive icon's
+  pure-black `ic_launcher_background` - nearly invisible. Recolored to `#8A4DFF`, matching the
+  antenna ring, across all four surfaces (`ic_launcher_foreground.xml`, `ic_logo.xml`,
+  `ic_banner_foreground.xml`, `ic_banner.xml`).
+- [x] "Still looks small" - shortened the antenna curve (`Q120,52 120,34` to `Q114,54 114,42`,
+  ring/badge moved from `(120,34)` to `(114,42)`), which trims Scout's own bounding height and
+  lets the pivot-scale group go from 0.72 to 0.80 while staying inside the adaptive-icon safe
+  zone - a visibly bigger mark without redrawing anything else. Both banner files' outer
+  positioning transforms were re-derived for the new bounding box
+  (`ic_banner_foreground.xml`: translate `-156,-74` scale `1.66`; `ic_banner.xml`: translate
+  `-80,-69` scale `3.3`).
+- [x] Bug found via on-device screenshot, not caught by the build: `ic_banner.xml` (the banner
+  actually shown across Login/Servers/AddServer/Welcome/Users) still had its own standalone
+  "+" badge circle left over from before FINDROID-64 - `ic_banner_foreground.xml`'s copy had
+  already been removed, this one was missed. Showed as a stray red circle (debug-flavor
+  `logo_primary` tint) sitting on Scout's body. Removed.
+- [x] `TopBarTitle`'s icon was pinned to a flat 24dp regardless of context - enlarged to 32dp.
+- [x] Added the *real*, unmodified official Jellyfin logo (`ic_jellyfin_logo.xml`, sourced from
+  `jellyfin/jellyfin-ux`'s `logos/SVG` - the color-on-dark/color-on-light variants are
+  pixel-identical in color, so one drawable covers both) and swapped it in for the three
+  per-section "which service is this from" icons on the home feed (`HomeSection.kt`,
+  `HomeCarousel.kt`, `HomeView.kt`'s `SectionServiceIcons` calls) - explicitly *not* in
+  `TopBarTitle`/`HomeHeader.kt`, which keeps Scout. This is normal nominative use (crediting the
+  actual upstream service you're browsing), the opposite situation from FINDROID-64's problem
+  of using Jellyfin's mark *as this fork's own* identity.
+- [x] Verified via on-device screenshots on Zenfone 10 (caught the leftover badge bug this way),
+  then remote `:app:phone:assembleLibreDebug`/`assembleLibreRelease` and
+  `:app:tv:assembleLibreDebug`, then deployed debug and a freshly signed release build to all
+  three attached devices (Zenfone 10, Mi Pad 4, Pixel 5) - user asked specifically to keep the
+  production/release install current, not just debug.
+
+**Why:** user's direct, same-day feedback on FINDROID-64; the Jellyfin-logo addition was a
+separate explicit request once Scout's own identity was settled.
+**How to apply:** see FINDROID-64 for Scout's base geometry/rationale; this entry only covers
+what changed on top of it.
+
+Status: **done**, 2026-08-04.
+
+## FINDROID-66: rebuild the promo banner and shrink the logo for its small call sites
+
+The two remaining pieces flagged as follow-up in FINDROID-65.
+
+- [x] Rebuilt `images/findroid-banner.png` / `core/src/main/res/drawable/findroid_banner.png`
+  (identical files, README hero + About screen) from scratch - same layout as the original
+  (black rounded card, mark on the left, "Findroid+" / "For Jellyfin" wordmark on the right),
+  Scout in place of the Jellyfin-derived mark. Built as an SVG (real gradient, real text) and
+  rasterized with `magick` - no `rsvg-convert` on this machine, but ImageMagick's built-in MSVG
+  fallback handles gradients and text fine at this level of complexity.
+- [x] `ic_logo.xml` (the icon shared by `TopBarTitle`/Home's header, the TV tab row, and the
+  integrations settings row) rewritten as "Scout Mini": every one of its remaining call sites
+  renders at 28-32dp, where the full character's ears/antenna/iris-ring/glint compress into
+  noise. Mini keeps only the gradient body and the plain eye (2 shapes instead of 9) and is
+  scaled to fill more of its own viewport now that it isn't sharing geometry with the launcher
+  icon. The full character is untouched everywhere it's actually rendered big (launcher icon,
+  both banners).
+- [x] Verified the banner change on-device (Welcome screen screenshot, Zenfone 10) and the Mini
+  geometry via a standalone SVG render at 32px/28px before trusting it in the app, since the
+  device wasn't logged into a Jellyfin server to reach the small-icon call sites directly.
+  Remote `:app:phone:assembleLibreDebug`/`assembleLibreRelease` and `:app:tv:assembleLibreDebug`
+  all passed; debug and a fresh signed release build installed on Zenfone 10, Mi Pad 4, and
+  Pixel 5.
+
+**Why:** the two items explicitly deferred at the end of FINDROID-65, picked back up same day
+per user request ("let's do the remaining stuff").
+
+- [x] Follow-up (same day): the Play Store `fastlane` images still carried the old mark, flagged
+  as low-priority since no listing exists to push them to - user asked for these too (told to
+  hold off on the phone/tablet screenshots for now). Rebuilt `fastlane/metadata/android/en-US/
+  images/icon.png` (512x512, Scout filling the frame on black, matching the real launcher icon)
+  and `featureGraphic.png` (1024x500, reusing the promo banner's layout minus its rounded
+  corners, since the original feature graphic was the same design on a plain black rect).
+
+Status: **done**, 2026-08-04.

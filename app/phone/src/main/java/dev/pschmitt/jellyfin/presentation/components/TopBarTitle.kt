@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Top-app-bar title with an optional leading icon identifying the view. The icon is pinned to a
- * standard 24dp regardless of the drawable's own intrinsic size - `ic_logo` (Home's icon) is a
+ * standard 32dp regardless of the drawable's own intrinsic size - `ic_logo` (Home's icon) is a
  * 100dp asset meant for a launcher/splash context, so without this it rendered at that full size
  * instead of a normal title icon. [iconTint] defaults to the surrounding text color like any other
  * single-color icon, but Home passes `Color.Unspecified` for `ic_logo` so its own brand gradient
@@ -38,7 +38,7 @@ fun TopBarTitle(
             Icon(
                 painter = painterResource(it),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(32.dp),
                 tint = iconTint,
             )
         }

@@ -82,7 +82,7 @@ fun HomeCarousel(
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SectionServiceIcons(listOf(CoreR.drawable.ic_logo))
+                SectionServiceIcons(listOf(CoreR.drawable.ic_jellyfin_logo))
                 Text(
                     text = stringResource(FilmR.string.home_section_suggestions),
                     modifier = titleModifier,
