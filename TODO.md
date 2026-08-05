@@ -1493,42 +1493,109 @@ rather than expecting to find them again.
   `LocalAccessViewModel.kt` (now reads the instance `port` property, not a removed `PORT`
   const), `cli/findroid-cli`.
 
-**Handoff - not yet done, for whoever picks this up next:**
-- [ ] **The port fix (previous item) was committed but never rebuilt/re-verified on-device** -
-  the session ended right after writing it. Re-sync (`.claude/worktrees/` is 700MB+ of stale
-  prunable agent worktrees left over from before this repo's rename from `findroid.git` -
-  exclude it manually with `--exclude='.claude/worktrees/'` on top of the justfile's own sync
-  excludes, or `just sync`/`just build` will try to rsync all of it and either take a very long
-  time or throw spurious "no such file" errors on deeply-nested paths mid-transfer), then
-  `just build --phone --debug`, install alongside an already-running release build (or just
-  `just build --phone --release` too and run both), and confirm neither crashes on launch and
-  Settings > Local CLI access shows the right port for each.
-- [ ] **Fastlane Play Store screenshots** (`fastlane/metadata/android/en-US/images/
-  {phone,sevenInch,tenInch}Screenshots/*.png`, 15 files) were never audited for leftover
-  "Findroid+" branding. Spot-checked `phoneScreenshots/1_en-US.png` only - it happens to show
-  server-selector chrome ("Stable Demo") and media rows with no app-identity text, so it's fine
-  as-is, but the other 14 weren't opened. If any show the launcher icon, an app title, or a
-  Settings/About screen with the old name, they need retaking (there's no running/logged-in
-  Jellyfin demo session set up in this environment to retake them against - that's real device/
-  server work, not just an asset regen) or at least flagging to the user as stale.
-  `full_description.txt`/`title.txt`/`short_description.txt`/`icon.png`/`featureGraphic.png`
-  are already done (see the FINDROID-68 checklist above).
-- [ ] No Play Console listing exists yet for `dev.pschmitt.jollyfin` - out of scope for an agent
-  either way (Google doesn't allow programmatic app-listing creation), the user has to do this
-  part manually. Once it exists, the fastlane metadata directory here is what would get pushed
-  to it (screenshots caveat above notwithstanding).
-- [ ] `app/tv/src/main/res/drawable-nodpi/ic_banner.png` (TV app's own separate Welcome-screen
-  banner, discovered mid-task, see the checklist above) still carries the *pre-Scout*,
-  Jellyfin-trademark-derived mascot - only its wordmark was swapped to "JollyFin". Bringing it
-  onto Scout is a real follow-up, deliberately not done here (mascot-level redesign, not a
-  rename).
-- [ ] Backup format versioning/migration metadata (embed the app version/package id that wrote a
-  `.frb` file, so a future format change can detect and migrate an old backup instead of just
-  trying to deserialize it and erroring) - user explicitly asked for this to be considered but
-  said not to spend time on it this session. Not started.
-- [ ] `git tag` deliberately not run (explicitly out of scope per original instructions - more
-  testing needed first).
+**Handoff - resolved in the 2026-08-05 follow-up session:**
+- [x] **Port fix rebuilt and re-verified on-device.** Built `assembleLibreDebug` +
+  `assembleLibreRelease` remotely (see "Concurrency gotcha" below for why rofl-14 was used
+  instead of rofl-13), installed both on the Mi Pad 4 alongside each other, force-stopped and
+  relaunched together. Confirmed via `/proc/net/tcp6` (NanoHTTPD binds `127.0.0.1` as an
+  IPv4-mapped IPv6 socket, so plain `/proc/net/tcp` shows nothing - check `tcp6`) that release
+  listens on 48411 and debug on 48412 simultaneously, plus `curl http://127.0.0.1:<port>/cli`
+  returned `200` on both. No `EADDRINUSE`/crash in either. One false alarm along the way: a
+  first attempt crashed release with the exact `EADDRINUSE` the fix targets - root cause was the
+  device's stale **pre-rename** `dev.pschmitt.findroidplus`/`.debug` installs (old code, still
+  hardcoded to port 48411 unconditionally) running in the background and holding the port, not a
+  flaw in the fix. Uninstalled both stale packages (confirmed throwaway - literally the
+  pre-rename version of the same app this whole ticket replaces) and the conflict was gone.
+- [x] **Fastlane Play Store screenshots** - all 15 audited (`phone`x5, `sevenInch`x5,
+  `tenInch`x5). All clean: every screenshot shows either the "Stable Demo" server-selector chrome
+  or an in-content screen (movie details, episode list) with no app name, launcher icon, or
+  Settings/About text anywhere. No retakes needed.
+- [x] Play Console listing for `dev.pschmitt.jollyfin` now exists (user confirmed) - the "doesn't
+  exist yet" gap noted originally is stale, no action needed from the fastlane metadata side.
 
-Status: **mostly done**, 2026-08-05 - committed and pushed to `origin/main` as `b16d9ba5`
-(rename + both bugfixes above), but see "Handoff" - the port fix specifically still needs a
-rebuild + on-device re-verification, and a few smaller items are explicitly left open above.
+**Handoff - corrected finding, 2026-08-05:** `app/tv/src/main/res/drawable-nodpi/ic_banner.png`
+(flagged above as still carrying the pre-Scout mascot) turned out to be **dead code, not a live
+bug**. Verified two ways: (1) `app/tv`'s `WelcomeScreen.kt` imports `dev.pschmitt.jellyfin.core.R`
+explicitly and its `R.drawable.ic_banner` reference resolves through that import to **core's**
+already-Scout-ified `ic_banner.png` (with day/night variants) - not this module-local file, since
+`app/tv` (`namespace = "dev.pschmitt.jellyfin"`) and `core` (`namespace =
+"dev.pschmitt.jellyfin.core"`) get separate, non-merging R classes. (2) The Android TV launcher
+tile (`AndroidManifest.xml`'s `android:banner="@mipmap/ic_banner"`) resolves to core's
+`mipmap-anydpi/ic_banner.xml` too, since `app/tv` never defines its own `mipmap/ic_banner`
+override. Confirmed conclusively via `app:tv:assembleLibreRelease`'s R8 resource-shrinker report
+(`app/tv/build/outputs/mapping/libreRelease/resources.txt`): the only `ic_banner`-named resources
+listed as *reachable* are core's (`dev.pschmitt.jellyfin.core.R$drawable.ic_banner` from the
+`WelcomeScreen.kt` reference, and the manifest's mipmap reference) - the `app/tv`-local file never
+appears as reachable from anywhere, meaning R8 already silently strips it from real release
+builds. **Both the actual Welcome screen and TV launcher tile have shown Scout correctly since the
+main FINDROID-68 pass** - there was never a live pre-Scout mascot on screen; the earlier note
+mistook an orphaned, shadowed file for the live asset. Deleted the dead file (`git rm`) rather than
+redesigning something nothing displays; rebuilt `assembleLibreDebug` for both `:app:phone`/
+`:app:tv` remotely to confirm the removal doesn't break anything.
+
+**Handoff - still open:**
+- [ ] `git tag` deliberately still not run - the original "more testing needed first" condition
+  is now satisfied (port fix is rebuilt and on-device verified above). User confirmed 2026-08-05
+  they want this tagged now - see below for the actual tag/push.
+
+**Concurrency gotcha found this session:** the remote build directory
+(`~/devel/private/pschmitt/jollyfin-verify` on rofl-13/rofl-14) is only namespaced per
+*worktree* - two sessions both building from the plain main checkout land in the identical
+remote path and can corrupt each other's in-flight build (this session's first release-build
+attempt on rofl-13 failed 3m33s in with "keystore file doesn't exist" after a concurrent,
+unrelated `compileDebugAndroidTestKotlin` invocation showed up in the same directory mid-build).
+Switching to rofl-14 side-stepped it cleanly. Worth remembering if a release build fails with a
+file-existence error partway through for no obvious reason - check `ps` on the build host for a
+second Gradle invocation in the same path before assuming the build itself is broken.
+
+Status: **done**, 2026-08-05 - every FINDROID-68 handoff item from the prior session is resolved:
+port fix rebuilt/verified, screenshots audited, Play Console listing confirmed to already exist,
+and the TV banner "still pre-Scout" note turned out to be a dead-code false alarm (deleted, see
+above) rather than a live bug. Tagged as `v2.13.0` per explicit user confirmation. Backup format
+migration metadata is tracked separately as FINDROID-69.
+
+## FINDROID-69: backup format versioning/migration metadata
+
+Flagged as a "consider it, but don't spend time on it" aside during FINDROID-68 (rename); picked
+up as a small follow-up since it was still open. `BackupEnvelope` already carried a `version: Int`
+field, but nothing ever read it, and there was no record of which app build actually wrote a given
+`.frb` file - so a future format change would have nothing to detect and migrate from except a raw
+`SerializationException` on a hard schema mismatch.
+
+- [x] `BackupEnvelope` (`data/.../backup/BackupData.kt`): added `appVersionName: String = ""`,
+  `appVersionCode: Long = 0`, `packageId: String = ""`, all defaulted so backups written before
+  these fields existed still decode unchanged.
+- [x] `BackupManager.buildBackup()`: populates the three new fields from
+  `context.packageManager.getPackageInfo(context.packageName, 0)` - reads `context` directly
+  (already a constructor field) rather than the app/phone-only `AppVersionInfo` interface, since
+  `BackupManager` lives in `data` and must also work for `app/tv` (which never binds
+  `AppVersionInfo` - see `core/di/AppModule.kt`).
+- [x] `BackupManager.readBackup()`: added a version guard - a backup with `version` higher than
+  this build's `CURRENT_VERSION` (currently `1`, matching the field's own default - there's only
+  ever been one format so far, nothing to migrate yet) now throws the new
+  `UnsupportedBackupVersionException` with a clear "created by a newer version" message instead of
+  falling through to whatever raw deserialize error would otherwise surface.
+  `RestoreBackupViewModel.loadBackup()`'s existing broad `catch (e: Exception)` already surfaces
+  `e.message` in-UI, so no new UI wiring was needed.
+- [x] `BackupManager`'s `Json {}` instance: added `ignoreUnknownKeys = true` (every other `Json{}`
+  in the repo already sets this; this one had been the sole exception) - lets a future field
+  addition decode gracefully on an app version that predates it, instead of hard-failing on the
+  unrecognized key.
+- [ ] Not implemented (deliberately, per FINDROID-68's own reasoning): actual migration *logic*
+  between format versions. There's only ever been one format, so there's nothing to migrate yet -
+  this entry only adds the metadata + guard rail a future format change would need, not
+  speculative handling for a version bump that doesn't exist.
+
+**Why:** explicit ask during FINDROID-68, deferred there to keep that session scoped to the
+rename; picked up once the rename's own handoff items were otherwise clear.
+**How to apply:** when a real format change happens, bump `BackupEnvelope.version` and
+`BackupManager.CURRENT_VERSION` together, and add the actual field-mapping/migration logic in
+`restore()` gated on `envelope.version` - the guard added here only rejects backups *newer* than
+what this build understands, it doesn't yet handle migrating an *older* envelope shape forward.
+
+Status: **mostly done**, 2026-08-05 - implemented and build-verified remotely (`:data`/`:core`
+unit tests, `ktfmtCheck`, and `assembleLibreDebug` for both `:app:phone`/`:app:tv` all pass on
+rofl-14). Not yet verified on a real device (a genuine backup/restore round-trip, and the new
+`UnsupportedBackupVersionException` message actually surfacing in the restore UI) - no new
+automated test was written for the version-guard path either, since `data/src/test` has no
+existing backup test file to extend.

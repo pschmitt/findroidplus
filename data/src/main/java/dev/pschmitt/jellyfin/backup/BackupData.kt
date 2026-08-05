@@ -30,6 +30,13 @@ data class BackupEnvelope(
     // separate encrypted store dumpPreferences() never touches. Defaults to empty so backups
     // written before this field existed still decode.
     val secrets: Map<String, String> = emptyMap(),
+    // Which app build wrote this file - not read by restore() today, but lets a future format
+    // change (bumping [version]) tell an old backup apart from a merely-old app instead of
+    // guessing from a bare deserialize failure. Defaults let pre-existing backups (written before
+    // these fields existed) still decode.
+    val appVersionName: String = "",
+    val appVersionCode: Long = 0,
+    val packageId: String = "",
 )
 
 /**

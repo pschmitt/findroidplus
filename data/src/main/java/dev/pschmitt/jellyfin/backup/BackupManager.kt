@@ -28,7 +28,13 @@ class BackupManager(
     private val getSecret: (key: String) -> String? = { null },
     private val putSecret: (key: String, value: String) -> Unit = { _, _ -> },
 ) {
-    private val json = Json { prettyPrint = false }
+    // ignoreUnknownKeys - so a future field addition (e.g. from a newer app version's backup)
+    // doesn't hard-fail decoding on this app version; matches every other Json{} instance in the
+    // repo, which already sets this (this one had been the one exception).
+    private val json = Json {
+        prettyPrint = false
+        ignoreUnknownKeys = true
+    }
 
     suspend fun buildBackup(): BackupEnvelope =
         withContext(Dispatchers.IO) {
@@ -36,6 +42,7 @@ class BackupManager(
                 database.getAllServersWithAddressesAndUsers().map {
                     BackupServer(server = it.server, addresses = it.addresses, users = it.users)
                 }
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             BackupEnvelope(
                 createdAt = System.currentTimeMillis(),
                 servers = servers,
@@ -43,6 +50,9 @@ class BackupManager(
                 preferences = dumpPreferences(),
                 downloadedItems = buildDownloadedItemsManifest(),
                 secrets = dumpSecrets(),
+                appVersionName = packageInfo.versionName ?: "",
+                appVersionCode = packageInfo.longVersionCode,
+                packageId = context.packageName,
             )
         }
 
@@ -55,14 +65,21 @@ class BackupManager(
         }
     }
 
-    /** @throws BackupCrypto.PasswordRequiredException, BackupCrypto.WrongPasswordException */
+    /**
+     * @throws BackupCrypto.PasswordRequiredException, BackupCrypto.WrongPasswordException,
+     *   UnsupportedBackupVersionException
+     */
     suspend fun readBackup(uri: Uri, password: String?): BackupEnvelope =
         withContext(Dispatchers.IO) {
             val bytes =
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: error("Could not open $uri for reading")
             val plainBytes = BackupCrypto.decode(bytes, password)
-            json.decodeFromString(BackupEnvelope.serializer(), String(plainBytes))
+            val envelope = json.decodeFromString(BackupEnvelope.serializer(), String(plainBytes))
+            if (envelope.version > CURRENT_VERSION) {
+                throw UnsupportedBackupVersionException(envelope.version, envelope.appVersionName)
+            }
+            envelope
         }
 
     fun isBackupEncrypted(uri: Uri): Boolean {
@@ -176,6 +193,11 @@ class BackupManager(
     }
 
     private companion object {
+        // The highest BackupEnvelope.version this build of the app knows how to restore. Bump
+        // this (and add the actual migration logic in restore()) the day a real format change
+        // happens - there's only ever been one format so far, so there's nothing to migrate yet.
+        const val CURRENT_VERSION = 1
+
         val SECRET_KEYS =
             listOf(
                 PvrCredentialKeys.SONARR_API_KEY,
@@ -184,3 +206,15 @@ class BackupManager(
             )
     }
 }
+
+/** Thrown by [BackupManager.readBackup] for a backup written by a newer app version whose
+ * format this build doesn't understand yet - a clear message instead of a raw deserialize
+ * crash. [writtenByAppVersion] is blank for backups from before this field existed (impossible
+ * in practice, since old backups can only ever have [BackupEnvelope.version] <= the version
+ * this build already knows). */
+class UnsupportedBackupVersionException(backupVersion: Int, writtenByAppVersion: String) :
+    Exception(
+        "This backup was created by a newer version of the app" +
+            (writtenByAppVersion.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "") +
+            " and can't be restored here (backup format $backupVersion)"
+    )
