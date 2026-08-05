@@ -1533,10 +1533,10 @@ mistook an orphaned, shadowed file for the live asset. Deleted the dead file (`g
 redesigning something nothing displays; rebuilt `assembleLibreDebug` for both `:app:phone`/
 `:app:tv` remotely to confirm the removal doesn't break anything.
 
-**Handoff - still open:**
-- [ ] `git tag` deliberately still not run - the original "more testing needed first" condition
-  is now satisfied (port fix is rebuilt and on-device verified above). User confirmed 2026-08-05
-  they want this tagged now - see below for the actual tag/push.
+**Handoff - resolved:**
+- [x] `git tag v2.13.0` created (annotated) and pushed to `origin` - the original "more testing
+  needed first" condition is satisfied by the port-fix re-verification above, and the user
+  explicitly confirmed 2026-08-05 they wanted this tagged now.
 
 **Concurrency gotcha found this session:** the remote build directory
 (`~/devel/private/pschmitt/jollyfin-verify` on rofl-13/rofl-14) is only namespaced per
