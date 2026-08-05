@@ -155,8 +155,20 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # GITHUB_TOKEN can never push a branch whose commit range touches .github/workflows/* -
+      # main's own history (including this workflow file's own past fix-up commits) always will,
+      # so every branch built from it trips that restriction regardless of what this job's own
+      # commit changes (confirmed via a real run: "refusing to allow a GitHub App to create or
+      # update workflow ... without `workflows` permission" - not a scope grantable via the
+      # `permissions:` key above, actionlint itself doesn't even recognize "workflows" as a valid
+      # permission name). Needs a fine-grained PAT (scoped to just this repo: Contents +
+      # Pull requests + Workflows, all read & write) in the WORKFLOW_PUSH_TOKEN repo secret -
+      # falls back to the default token when that secret isn't set, which reproduces the same
+      # failure so it's obvious what's missing rather than silently no-op-ing.
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
 
       - name: Download phone screenshots
         uses: actions/download-artifact@v8
@@ -206,7 +218,7 @@ jobs:
       - name: Commit, force-push, and open/update the PR
         if: ${{ steps.diff.outputs.changed == 'true' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.WORKFLOW_PUSH_TOKEN || github.token }}
         run: |
           branch="screenshots/update"
           git config user.name "github-actions[bot]"
