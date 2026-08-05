@@ -169,4 +169,15 @@ dependencies {
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.navigation.compose)
+
+    // Play Store screenshot capture (FINDROID-71) - see ci/jellyfin/README.md and
+    // StoreScreenshotTest.kt. Not used by any other test in this module.
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.fastlane.screengrab)
+    kspAndroidTest(libs.hilt.compiler)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

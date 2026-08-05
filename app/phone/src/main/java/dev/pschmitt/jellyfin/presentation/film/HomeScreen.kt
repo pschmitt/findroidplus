@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -153,7 +154,10 @@ private fun HomeScreenLayout(
     // content below it - same "top bar isn't a transparent overlay" fix as ItemDetailScaffold on
     // every detail screen, so Home's header has a solid backdrop instead of showing whatever
     // section is currently scrolled behind it.
-    Column(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
+    Column(
+        modifier =
+            Modifier.fillMaxSize().semantics { isTraversalGroup = true }.testTag("e2e-home-screen")
+    ) {
         if (searchExpanded) {
             // A plain in-place screen, not a floating overlay - it fully replaces Home's content
             // rather than sitting on top of it, so there's no popup/dialog to reconcile with the

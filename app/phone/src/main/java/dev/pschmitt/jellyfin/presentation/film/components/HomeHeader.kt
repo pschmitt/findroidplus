@@ -15,6 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
@@ -88,7 +89,7 @@ fun HomeHeader(
                 }
             }
 
-            IconButton(onClick = onUserClick) {
+            IconButton(onClick = onUserClick, modifier = Modifier.testTag("e2e-settings-button")) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_settings),
                     contentDescription = null,

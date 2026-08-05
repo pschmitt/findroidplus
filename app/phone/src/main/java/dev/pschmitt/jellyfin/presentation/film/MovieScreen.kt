@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -277,6 +278,7 @@ private fun MovieScreenLayout(
                             overflow = TextOverflow.Ellipsis,
                             maxLines = 3,
                             style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.testTag("e2e-movie-title"),
                         )
                         movie.originalTitle?.let { originalTitle ->
                             if (originalTitle != movie.name) {

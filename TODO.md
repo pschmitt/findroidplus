@@ -1736,26 +1736,43 @@ time. Baking once and shipping the result sidesteps both.
   Jellyfin's runtime writes - SQLite WAL, scheduled-task state - out of the git-tracked fixture
   entirely, in CI's ephemeral checkout and for local use alike). `just jellyfin-fixture-up`/
   `-down` wrap it for local testing.
-- [ ] Add `testTag()`s to the phone Compose screens needed for automation - `app/phone` currently
-  has **zero** existing `testTag()` usage anywhere, unlike Nyetbox's `e2e-*` tag convention this
-  is modeled on. Add the minimum needed for a reliable login + Home + a movie/show detail screen
-  journey, not a sweep of the whole UI.
-- [ ] `app/phone/src/androidTest/.../StoreScreenshotTest.kt` (new `androidTest` source set -
-  doesn't exist yet either): Compose UI test + fastlane `screengrab`, following Nyetbox's
-  documented gotchas closely (wait on screen-unique facts not generic titles; a separate raw
-  failure-screenshot helper since screengrab drops all captures on test failure; watch for
-  Compose clicks silently not landing on off-screen/occluded nodes; settle delays around
-  snackbar/transition animations). Scope: Home + one movie (or show) detail screen, light + dark,
-  phone/7in/10in via the matrix - no PVR/Sonarr/Radarr/Seerr screens per explicit instruction.
-- [ ] `.github/workflows/screenshots.yaml`: `workflow_dispatch` with an `open_pr` boolean input,
+- [x] Added `testTag()`s to the phone Compose screens needed for automation - `app/phone` had
+  **zero** existing `testTag()` usage before this, unlike Nyetbox's `e2e-*` convention this is
+  modeled on. Tagged the minimum needed for the full first-run journey (Welcome has no tag, it's
+  reached via `onNodeWithText("Continue")` instead - see below): `e2e-server-url`/
+  `e2e-connect-button` (AddServerScreen), `e2e-username`/`e2e-password`/`e2e-login-button`
+  (LoginScreen), `e2e-home-screen` (HomeScreen root), `e2e-item-card` (ItemCard, reused by every
+  Home row), `e2e-movie-title` (MovieScreen), `e2e-settings-button` (HomeHeader's gear
+  `IconButton` - its `Icon` has `contentDescription = null`, so unlike Nyetbox's equivalent
+  settings action this needed a tag rather than a content-description wait target).
+- [x] `app/phone/src/androidTest/java/dev/pschmitt/jellyfin/StoreScreenshotTest.kt` (new
+  `androidTest` source set, plus `AnrDismissRule.kt`/`E2eScreenshot.kt` helpers ported from
+  Nyetbox) + `fastlane/Screengrabfile`. Walks the **full** first-run setup flow every fresh
+  install requires - Welcome → Servers (empty, "Add server" FAB) → AddServer → Users (empty,
+  "Add user" FAB) → Login → Home (see `NavigationRoot.kt`; there is no way to jump straight to
+  AddServer/Login) - then Home → tap an `e2e-item-card` → movie detail (waits on the
+  `e2e-movie-title` tag and the "Play" content-description), then back to Home. For the dark
+  variant: Home → `e2e-settings-button` → the "Appearance" category → "Theme" → "Dark" in the
+  resulting dialog (a plain `SettingsSelectDialog` `LazyColumn` of clickable rows - not a
+  `DropdownMenu` like Nyetbox's color-scheme picker, so no UiAutomator-fallback click was needed
+  here), two system back-presses back to Home, repeat the Home/detail capture with a `_dark`
+  suffix. Compiles clean (`:app:phone:assembleLibreDebugAndroidTest` built successfully on
+  rofl-13), but **not yet run on an emulator** - the wait/click sequence is source-verified, not
+  execution-verified; treat first CI/local runs as the real test of the click choreography, same
+  as Nyetbox's own POC needed a few iterations to get flake-free.
+- [x] `.github/workflows/screenshots.yaml`: `workflow_dispatch` with an `open_pr` boolean input,
   matrix over phone/sevenInch/tenInch (`pixel_2`/`Nexus 7`/`medium_tablet`, API 34
-  `google_apis`), `docker compose up` the baked fixture, build debug + androidTest APKs *before*
-  booting the emulator (building while it's up starves it of CPU - confirmed the hard way in
-  Nyetbox's own build-out), grant KVM access, run `screengrab`, upload artifacts, tear the
-  fixture down unconditionally. Second `open-pr` job (gated on `inputs.open_pr` and the matrix
-  job succeeding) flattens the three artifacts into the real fastlane directories and opens/
-  updates a PR on a stable branch name for human review before merge - screenshots never get
-  pushed straight to the live Play Console listing by this workflow itself.
+  `google_apis`), fetches fixture media then `docker compose up` the baked fixture, builds debug +
+  androidTest APKs *before* booting the emulator (building while it's up starves it of CPU -
+  confirmed the hard way in Nyetbox's own build-out) via `:app:phone:assembleLibreDebug
+  :app:phone:assembleLibreDebugAndroidTest` (output paths confirmed via a real remote build:
+  `phone-libre-x86_64-debug.apk` and `phone-libre-debug-androidTest.apk`, the latter has no ABI
+  suffix), grants KVM access, `adb reverse tcp:8096 tcp:8096` so the emulator can reach the
+  host-published fixture, runs `screengrab`, uploads artifacts, tears the fixture down
+  unconditionally. Second `open-pr` job (gated on `inputs.open_pr` and the matrix job succeeding)
+  flattens the three artifacts into the real fastlane directories and opens/updates a PR on a
+  stable branch name for human review before merge - screenshots never get pushed straight to the
+  live Play Console listing by this workflow itself. `actionlint` reports no issues.
 
 **Why:** direct user request, explicitly modeled on Nyetbox's own proven implementation.
 **How to apply:** see Nyetbox's `docs/screenshots.md` for the full rationale/gotchas write-up this
@@ -1763,4 +1780,9 @@ entry summarizes - read it before touching the workflow/test file, it documents 
 non-obvious failure modes (ANR dialogs landing in captures, Compose clicks silently missing
 occluded nodes, artifact-download nesting, etc.) already hit and fixed once there.
 
-Status: not started, 2026-08-05.
+Status: implementation complete, 2026-08-05. Not yet verified end-to-end on a real emulator/CI
+run (no local Gradle/emulator per this repo's remote-build split) - dispatch the workflow (or run
+`StoreScreenshotTest` against `just jellyfin-fixture-up` some other way) before trusting the
+captures blind. If the click choreography needs fixes, `docs/screenshots.md`-style debugging
+(readable failure-screenshot pulls, `waitFor*` on screen-unique facts) is already wired in via
+`captureE2eScreenshot`/the workflow's failure-screenshot pull step.

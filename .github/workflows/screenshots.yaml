@@ -1,0 +1,216 @@
+name: Play Store screenshots
+
+# Screenshot capture is intentionally manual. It uses the disposable, pre-baked Jellyfin fixture
+# (ci/jellyfin/) and the same emulator action as other Android CI in this org, then uploads the
+# captured images as a build artifact (or, with open_pr, opens a PR with them committed instead).
+# Jellyfin-only for now (see TODO.md FINDROID-71) - no PVR/Sonarr/Radarr/Seerr screens, and
+# app/tv isn't covered by this pass either.
+on:
+  workflow_dispatch:
+    inputs:
+      open_pr:
+        description: Open a PR with the captured screenshots committed, instead of only uploading a build artifact
+        type: boolean
+        default: false
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device_type: phone
+            profile: pixel_2
+            folder: phoneScreenshots
+          - device_type: sevenInch
+            profile: Nexus 7
+            folder: sevenInchScreenshots
+          - device_type: tenInch
+            profile: medium_tablet
+            folder: tenInchScreenshots
+    name: Capture ${{ matrix.device_type }} screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21.0.11'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Ruby and fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.6'
+      - name: Install fastlane
+        run: gem install fastlane --no-document
+
+      - name: Fetch fixture media
+        run: ./ci/jellyfin/fetch-media.sh
+
+      - name: Start disposable Jellyfin
+        run: docker compose -f ci/jellyfin/docker-compose.yml up --detach --wait --wait-timeout 90
+
+      # Build before the emulator starts, not while it's running: screengrab only installs/drives
+      # prebuilt APKs over adb (see fastlane/Screengrabfile), and compiling concurrently with a
+      # booted emulator starves it of CPU until it drops off adb entirely - confirmed the hard way
+      # in the sibling netbox-and-chill project's own screenshot CI.
+      - name: Build the debug and androidTest APKs
+        run: |
+          ./gradlew :app:phone:assembleLibreDebug :app:phone:assembleLibreDebugAndroidTest --stacktrace
+          mkdir -p dist
+          cp app/phone/build/outputs/apk/libre/debug/phone-libre-x86_64-debug.apk dist/
+          cp app/phone/build/outputs/apk/androidTest/libre/debug/phone-libre-debug-androidTest.apk dist/
+
+      # GitHub-hosted runners ship /dev/kvm but don't grant the job user access to it, so the
+      # emulator silently falls back to software-only emulation and takes ~15+ minutes to boot.
+      # This grants real KVM access.
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture screenshots in a ${{ matrix.device_type }} emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          target: google_apis
+          force-avd-creation: true
+          emulator-boot-timeout: 1800
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          # android-emulator-runner runs each line of this script as its own separate `sh -c`
+          # process, so a shell variable set on one line is gone by the next - the serial capture,
+          # install, and the fastlane invocation that needs the serial must all stay on one line.
+          # `install -g` grants every runtime permission declared in the manifest
+          # (POST_NOTIFICATIONS, ...) at install time, so it can't pop a system dialog on top of
+          # the app and block the Compose test from finding any hierarchy. `adb reverse` makes the
+          # host's disposable Jellyfin fixture (127.0.0.1:8096) reachable from inside the emulator
+          # at the same address, matching StoreScreenshotTest's default e2e_base_url.
+          # screengrab skips pulling any Screengrab.screenshot() captures at all once the test
+          # class reports a failure, so a failed run leaves fastlane/.../<device>Screenshots/ empty
+          # even for the steps that succeeded before the failure. The `; rc=$?; ... ; exit $rc`
+          # tail always attempts to pull StoreScreenshotTest's independent failure screenshot
+          # (captureE2eScreenshot, written straight to the app's external files dir) while still
+          # preserving the real exit code of the capture itself.
+          script: |
+            adb reverse tcp:8096 tcp:8096
+            serial="$(adb devices | awk '$2 == "device" { print $1; exit }')" && test -n "$serial" && adb -s "$serial" install -r -g -t dist/phone-libre-x86_64-debug.apk && SCREENGRAB_DEVICE_TYPE=${{ matrix.device_type }} SCREENGRAB_SPECIFIC_DEVICE="$serial" fastlane screengrab; rc=$?; mkdir -p dist/failure-screenshots; adb -s "$serial" pull /sdcard/Android/data/dev.pschmitt.jollyfin.debug/files/e2e-screenshots dist/failure-screenshots >/dev/null 2>&1 || true; exit $rc
+
+      - name: Upload screenshot artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: jollyfin-${{ matrix.device_type }}-screenshots-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            fastlane/metadata/android/en-US/images/${{ matrix.folder }}/
+            app/phone/build/reports/androidTests/
+            dist/failure-screenshots/
+
+      - name: Capture fixture diagnostics
+        if: ${{ failure() }}
+        run: docker compose -f ci/jellyfin/docker-compose.yml logs --no-color > screenshot-jellyfin.log || true
+
+      - name: Upload fixture diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: jollyfin-${{ matrix.device_type }}-screenshot-diagnostics-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: screenshot-jellyfin.log
+
+      - name: Tear down disposable Jellyfin
+        if: ${{ always() }}
+        run: docker compose -f ci/jellyfin/docker-compose.yml down --volumes --remove-orphans
+
+  open-pr:
+    name: Open PR with updated screenshots
+    needs: capture
+    if: ${{ !cancelled() && !failure() && inputs.open_pr }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download phone screenshots
+        uses: actions/download-artifact@v8
+        with:
+          name: jollyfin-phone-screenshots-${{ github.run_id }}
+          path: fastlane/metadata/android/en-US/images/phoneScreenshots
+
+      - name: Download sevenInch screenshots
+        uses: actions/download-artifact@v8
+        with:
+          name: jollyfin-sevenInch-screenshots-${{ github.run_id }}
+          path: fastlane/metadata/android/en-US/images/sevenInchScreenshots
+
+      - name: Download tenInch screenshots
+        uses: actions/download-artifact@v8
+        with:
+          name: jollyfin-tenInch-screenshots-${{ github.run_id }}
+          path: fastlane/metadata/android/en-US/images/tenInchScreenshots
+
+      # Each device-type artifact was uploaded alongside app/phone/build/reports/androidTests/ and
+      # dist/failure-screenshots/ (see the capture job), so it unpacks with the actual .pngs
+      # nested some levels deep rather than directly in the download path. Find them regardless of
+      # exact depth and drop everything else before committing. This only adds the two
+      # StoreScreenshotTest captures (Home + movie detail, light/dark) into each bucket alongside
+      # whatever hand-captured images already exist there - it doesn't attempt to replace or
+      # renumber the existing gallery.
+      - name: Flatten downloaded artifacts to just the screenshots
+        run: |
+          for device_type in phone sevenInch tenInch; do
+            dir="fastlane/metadata/android/en-US/images/${device_type}Screenshots"
+            find "$dir" -mindepth 2 -iname '*.png' -exec mv {} "$dir/" \;
+            find "$dir" -mindepth 1 -type d -exec rm -rf {} +
+          done
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git add fastlane/metadata/android/en-US/images
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A stable branch name (not keyed by run_id) plus a force-push means repeated dispatches
+      # update the same PR in place instead of piling up a new one per run.
+      - name: Commit, force-push, and open/update the PR
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="screenshots/update"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git commit -m "chore: update Play Store screenshots (phone, 7in, 10in tablet)"
+          git push --force origin "$branch"
+          existing_pr="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing_pr" ]; then
+            gh pr comment "$existing_pr" --body "Updated with fresh screenshots from run ${{ github.run_id }}."
+          else
+            gh pr create --title "Update Play Store screenshots" --body "Automated screenshot refresh from the \`Play Store screenshots\` workflow (run ${{ github.run_id }}). Review the images before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one." --head "$branch" --base "${{ github.ref_name }}"
+          fi

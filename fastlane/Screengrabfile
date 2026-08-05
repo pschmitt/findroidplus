@@ -1,0 +1,27 @@
+# Play Store screenshot capture (FINDROID-71). Scope: en-US only for now.
+locales(["en-US"])
+
+app_package_name("dev.pschmitt.jollyfin.debug")
+tests_package_name("dev.pschmitt.jollyfin.debug.test")
+use_tests_in_classes(["dev.pschmitt.jellyfin.StoreScreenshotTest"])
+
+# Built remotely (see justfile/AGENTS.md - Gradle never runs on this machine) for the x86_64
+# emulator ABI; screengrab only installs/drives the prebuilt APKs over adb.
+app_apk_path("dist/phone-libre-x86_64-debug.apk")
+tests_apk_path("dist/phone-libre-debug-androidTest.apk")
+
+output_directory("fastlane/metadata/android")
+
+# "phone" by default; the workflow's sevenInch/tenInch matrix entries override this so their
+# captures land in a separate Play Console bucket instead of overwriting the phone screenshots.
+device_type(ENV.fetch("SCREENGRAB_DEVICE_TYPE", "phone"))
+
+# Points StoreScreenshotTest at the disposable Jellyfin fixture (ci/jellyfin/docker-compose.yml)
+# instead of a real server - never hardcode a real Jellyfin URL here.
+launch_arguments(["e2e_base_url #{ENV.fetch('E2E_BASE_URL', 'http://127.0.0.1:8096')}"])
+
+# Kept false (screengrab's default): the workflow already installs the app with `adb install -g`
+# so POST_NOTIFICATIONS (requested by MainActivity at startup on API 33+) is pre-granted -
+# reinstalling here would lose that grant and risk an unhandled permission dialog mid-journey.
+reinstall_app(false)
+skip_open_summary(true)

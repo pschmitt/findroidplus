@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,6 +51,7 @@ fun ItemCard(
                 .width(width.dp)
                 .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = { onClick(item) })
+                .testTag("e2e-item-card")
     ) {
         Surface(shape = MaterialTheme.shapes.small) {
             Box {
