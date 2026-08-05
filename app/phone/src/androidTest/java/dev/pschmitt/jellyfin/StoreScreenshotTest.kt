@@ -1,6 +1,7 @@
 package dev.pschmitt.jellyfin
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -169,10 +170,22 @@ class StoreScreenshotTest {
      * isn't a reliable wait target here. 30s wasn't enough for the tenInch emulator profile to get
      * from login to Home rendering at all (confirmed via a real CI run - a plain
      * ComposeTimeoutException, not a real bug), so both waits here are generous.
+     *
+     * A rendered item card isn't necessarily an on-screen one though: the first real CI run's own
+     * "01_home" capture showed only the "Pending downloads" section (still mid-load/collapse) with
+     * no movie rows at all, even though the item card the test went on to click was already present
+     * in the tree - it just hadn't scrolled into the loaded viewport yet. The later "01_home_dark"
+     * capture in that same run, past that same code path a second time, correctly showed the
+     * library. Wait for the card to actually be displayed, not merely present, before treating Home
+     * as ready to screenshot.
      */
     private fun waitForHomeLoaded() {
         waitForTag("e2e-home-screen", 60_000)
         waitForTag("e2e-item-card", 60_000)
+        composeRule.waitUntil(30_000) {
+            runCatching { composeRule.onAllNodesWithTag("e2e-item-card").onFirst().isDisplayed() }
+                .getOrDefault(false)
+        }
     }
 
     private fun captureScreenshot(name: String) {
