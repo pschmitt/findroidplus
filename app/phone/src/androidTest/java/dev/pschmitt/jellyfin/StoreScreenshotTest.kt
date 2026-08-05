@@ -91,6 +91,15 @@ class StoreScreenshotTest {
         clickWithRetry { composeRule.onNodeWithTag("e2e-add-server-fab") }
 
         composeRule.onNodeWithTag("e2e-server-url").performTextInput(baseUrl)
+        // performTextInput leaves the field focused, raising the on-screen keyboard - the IME is
+        // a system overlay that sits on top of the app and intercepts touches for whatever screen
+        // area it now covers, so a button pushed underneath it (visually or via resize) never
+        // actually receives the click even though Compose reports it as having "succeeded" (no
+        // exception). Confirmed via a real CI run's failure screenshot: stuck on Login with both
+        // fields correctly filled in and the keyboard still open, having "clicked" e2e-login-button
+        // with no effect. A back-press with the IME visible only dismisses the keyboard (standard
+        // Android behavior), it doesn't navigate away from the screen.
+        device.pressBack()
         clickWithRetry { composeRule.onNodeWithTag("e2e-connect-button") }
 
         waitForTag("e2e-add-user-fab", 30_000)
@@ -99,6 +108,7 @@ class StoreScreenshotTest {
         waitForTag("e2e-username", 30_000)
         composeRule.onNodeWithTag("e2e-username").performTextInput(username)
         composeRule.onNodeWithTag("e2e-password").performTextInput(password)
+        device.pressBack()
         clickWithRetry { composeRule.onNodeWithTag("e2e-login-button") }
 
         waitForHomeLoaded()
@@ -160,24 +170,39 @@ class StoreScreenshotTest {
     }
 
     /**
-     * `AssertionError: Failed to inject touch input` showed up twice in real CI runs, both times on
-     * this test's very first click (right after MainActivity's window is created) - neither
-     * android-emulator-runner's own emulator-ready wait nor this repo's `ci/android-e2e-wait.sh`
-     * (full `boot_completed`/`device_provisioned`/package-service readiness) eliminated it, which
-     * points to a transient window-focus race rather than something a longer upfront wait reliably
-     * avoids. Retry the click itself instead - re-querying the node each attempt, since a
+     * `AssertionError: Failed to inject touch input` showed up in real CI runs, both times right
+     * after a window/screen was freshly created - neither android-emulator-runner's own
+     * emulator-ready wait nor this repo's `ci/android-e2e-wait.sh` (full
+     * `boot_completed`/`device_provisioned`/package-service readiness) eliminated it, which points
+     * to a transient window-focus race rather than something a longer upfront wait reliably avoids.
+     * Retry the click itself instead - re-querying the node each attempt, since a
      * `SemanticsNodeInteraction` can go stale across recompositions.
      */
     private fun clickWithRetry(attempts: Int = 5, node: () -> SemanticsNodeInteraction) {
         repeat(attempts - 1) {
             try {
                 node().performClick()
+                settleAfterClick()
                 return
             } catch (e: AssertionError) {
                 Thread.sleep(1_000)
             }
         }
         node().performClick()
+        settleAfterClick()
+    }
+
+    /**
+     * `NavigationRoot.kt`'s `NavHost` crossfades every destination change over 300ms
+     * (`fadeIn(tween(300))`/`fadeOut(tween(300))`). A click that successfully found its target node
+     * has still, in a real CI run, gone on to have that exact node vanish again moments later (a
+     * fresh `waitForText` immediately followed by a `ComposeTimeoutException`-free but
+     * node-not-found click) - querying the destination screen before the crossfade actually
+     * finishes can land in that gap. A short settle after every click is cheaper than chasing that
+     * race at each individual call site.
+     */
+    private fun settleAfterClick() {
+        Thread.sleep(350)
     }
 
     private fun waitForText(text: String, timeoutMillis: Long) {
