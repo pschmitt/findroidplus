@@ -171,7 +171,7 @@ jobs:
       # writing the two bodies out in plain YAML.
       - name: Publish release (latest)
         if: steps.params.outputs.tag_name == 'latest'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: latest
           name: "Latest build"
@@ -192,7 +192,7 @@ jobs:
 
       - name: Publish release (tag)
         if: steps.params.outputs.tag_name != 'latest'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.params.outputs.tag_name }}
           name: ${{ steps.params.outputs.release_name }}
