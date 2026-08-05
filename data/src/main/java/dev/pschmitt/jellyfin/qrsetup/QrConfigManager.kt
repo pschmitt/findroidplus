@@ -106,15 +106,18 @@ class QrConfigManager(
 
     /**
      * Currently-stored base URL, to pre-fill the export screen's editable field. The API key is
-     * deliberately not exposed here - like `jellyfinPassword`, its export-screen field starts
-     * blank and only the export's [putPvrFields] falls back to the stored secret. Empty string if
-     * not configured.
+     * deliberately not exposed here - like `jellyfinPassword`, its export-screen field starts blank
+     * and only the export's [putPvrFields] falls back to the stored secret. Empty string if not
+     * configured.
      */
-    fun currentSonarrBaseUrl(): String = appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty()
+    fun currentSonarrBaseUrl(): String =
+        appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty()
 
-    fun currentRadarrBaseUrl(): String = appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty()
+    fun currentRadarrBaseUrl(): String =
+        appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty()
 
-    fun currentSeerrBaseUrl(): String = appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty()
+    fun currentSeerrBaseUrl(): String =
+        appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty()
 
     suspend fun applyEnvelope(envelope: QrConfigEnvelope): QrImportSummary =
         withContext(Dispatchers.IO) {

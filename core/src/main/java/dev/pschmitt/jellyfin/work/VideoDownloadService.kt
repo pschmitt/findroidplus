@@ -38,10 +38,10 @@ import timber.log.Timber
  * This service calls [startForeground] exactly once, only from moments guaranteed to be
  * foreground-eligible (see [dev.pschmitt.jellyfin.utils.DownloaderImpl] call sites and
  * [ForegroundDownloadResumer]), then stays alive and foreground for as long as
- * [DownloadQueueRepository] has work queued. A transient transfer failure becomes an internal
- * retry loop *inside this already-running instance* - never a fresh `startForegroundService()`
- * call - so `ForegroundServiceStartNotAllowedException` has nothing to trigger on in the common
- * case (start while foreground, keep running through backgrounding).
+ * [DownloadQueueRepository] has work queued. A transient transfer failure becomes an internal retry
+ * loop *inside this already-running instance* - never a fresh `startForegroundService()` call - so
+ * `ForegroundServiceStartNotAllowedException` has nothing to trigger on in the common case (start
+ * while foreground, keep running through backgrounding).
  */
 @AndroidEntryPoint
 class VideoDownloadService : Service() {
@@ -122,9 +122,19 @@ class VideoDownloadService : Service() {
             val maxParallel = appPreferences.getValue(appPreferences.maxParallelDownloads)
             DownloadSlotLimiter.acquire(sourceId, maxParallel)
             try {
-                downloadQueueRepository.updateProgress(sourceId, DownloadProgress(status = android.app.DownloadManager.STATUS_RUNNING))
+                downloadQueueRepository.updateProgress(
+                    sourceId,
+                    DownloadProgress(status = android.app.DownloadManager.STATUS_RUNNING),
+                )
                 reportProgress(sourceId, downloadId, itemName, 0, 0L, 0L, 0L)
-                downloadToFile(sourceUrl, destinationPath, expectedSize, sourceId, downloadId, itemName)
+                downloadToFile(
+                    sourceUrl,
+                    destinationPath,
+                    expectedSize,
+                    sourceId,
+                    downloadId,
+                    itemName,
+                )
             } finally {
                 withContext(NonCancellable) { DownloadSlotLimiter.release() }
             }
@@ -182,7 +192,15 @@ class VideoDownloadService : Service() {
                     etaSeconds = etaSeconds,
                 ),
             )
-            reportProgress(sourceId, downloadId, itemName, percent, downloadedBytes, totalBytes, speedBytesPerSecond)
+            reportProgress(
+                sourceId,
+                downloadId,
+                itemName,
+                percent,
+                downloadedBytes,
+                totalBytes,
+                speedBytesPerSecond,
+            )
         }
     }
 
@@ -200,9 +218,16 @@ class VideoDownloadService : Service() {
         reportVerifying(sourceId, downloadId, itemName, 0)
         downloadQueueRepository.updateProgress(
             sourceId,
-            DownloadProgress(status = DownloadProgress.STATUS_VERIFYING, downloadedBytes = 0L, totalBytes = file.length()),
+            DownloadProgress(
+                status = DownloadProgress.STATUS_VERIFYING,
+                downloadedBytes = 0L,
+                totalBytes = file.length(),
+            ),
         )
-        return transferEngine.verifyAndHash(file, PROGRESS_INTERVAL_MS) { hashedBytes, totalBytes, percent ->
+        return transferEngine.verifyAndHash(file, PROGRESS_INTERVAL_MS) {
+            hashedBytes,
+            totalBytes,
+            percent ->
             downloadQueueRepository.updateProgress(
                 sourceId,
                 DownloadProgress(
@@ -220,11 +245,20 @@ class VideoDownloadService : Service() {
         DownloadNotificationCoordinator.update(
             applicationContext,
             sourceId,
-            DownloadNotificationCoordinator.Entry(itemName = itemName, downloadId = downloadId, queued = true),
+            DownloadNotificationCoordinator.Entry(
+                itemName = itemName,
+                downloadId = downloadId,
+                queued = true,
+            ),
         )
     }
 
-    private fun reportVerifying(sourceId: String, downloadId: Long, itemName: String, percent: Int) {
+    private fun reportVerifying(
+        sourceId: String,
+        downloadId: Long,
+        itemName: String,
+        percent: Int,
+    ) {
         DownloadNotificationCoordinator.update(
             applicationContext,
             sourceId,

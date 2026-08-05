@@ -1,10 +1,10 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrImage
+import dev.pschmitt.jellyfin.api.pvr.PvrStatusMessage
 import dev.pschmitt.jellyfin.api.pvr.RadarrManualImportItem
 import dev.pschmitt.jellyfin.api.pvr.RadarrMovie
 import dev.pschmitt.jellyfin.api.pvr.RadarrQueueItem
-import dev.pschmitt.jellyfin.api.pvr.PvrImage
-import dev.pschmitt.jellyfin.api.pvr.PvrStatusMessage
 import dev.pschmitt.jellyfin.api.pvr.SonarrManualImportItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrQueueItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrSeries
@@ -24,8 +24,8 @@ import java.util.UUID
  * a [PvrQueueEntry]; a lookup that fails along the way (unknown provider id, orphaned queue
  * reference, episode not yet synced into Jellyfin's library, a torrent added manually on the PVR
  * side, ...) yields an unmatched entry (`item = null`) titled from the PVR side's own metadata
- * instead of being dropped - this must never throw, since a single bad PVR-side reference
- * shouldn't take down the whole match.
+ * instead of being dropped - this must never throw, since a single bad PVR-side reference shouldn't
+ * take down the whole match.
  */
 
 /** Sonarr's `series.tvdbId`/`movie.tmdbId` default to 0 when the field is absent from the DTO. */
@@ -100,31 +100,32 @@ fun matchRadarr(
 
 /**
  * Collapses queue entries into the per-item status map used for badges. Unmatched entries have no
- * item id to key by and are left out. If two queue entries resolve to the same Jellyfin item
- * (e.g. a retried download that shows up as two queue rows before Sonarr/Radarr cleans up the old
- * one), the later entry wins - [toMap] keeps the last occurrence of a duplicate key.
+ * item id to key by and are left out. If two queue entries resolve to the same Jellyfin item (e.g.
+ * a retried download that shows up as two queue rows before Sonarr/Radarr cleans up the old one),
+ * the later entry wins - [toMap] keeps the last occurrence of a duplicate key.
  */
-fun List<PvrQueueEntry>.toQueueStatusMap(): Map<UUID, QueueStatus> =
-    mapNotNull { entry ->
-        entry.item?.let { it.id to entry.status.copy(queueItemId = entry.queueItemId) }
-    }
-        .toMap()
+fun List<PvrQueueEntry>.toQueueStatusMap(): Map<UUID, QueueStatus> = mapNotNull { entry ->
+    entry.item?.let { it.id to entry.status.copy(queueItemId = entry.queueItemId) }
+}
+    .toMap()
 
-fun List<PvrQueueEntry>.toRadarrQueueStatusMap(): Map<Int, QueueStatus> =
-    filter { it.status.source == PvrSource.RADARR }
-        .mapNotNull { entry -> entry.tmdbId?.let { it to entry.status } }
-        .toMap()
+fun List<PvrQueueEntry>.toRadarrQueueStatusMap(): Map<Int, QueueStatus> = filter {
+    it.status.source == PvrSource.RADARR
+}
+    .mapNotNull { entry -> entry.tmdbId?.let { it to entry.status } }
+    .toMap()
 
-fun List<PvrQueueEntry>.toSonarrQueueStatusMap(): Map<Int, QueueStatus> =
-    filter { it.status.source == PvrSource.SONARR }
-        .mapNotNull { entry -> entry.sonarrEpisodeId?.let { it to entry.status } }
-        .toMap()
+fun List<PvrQueueEntry>.toSonarrQueueStatusMap(): Map<Int, QueueStatus> = filter {
+    it.status.source == PvrSource.SONARR
+}
+    .mapNotNull { entry -> entry.sonarrEpisodeId?.let { it to entry.status } }
+    .toMap()
 
 /**
  * The key two [PvrQueueEntry]s share when they're actually duplicates of the same underlying
  * release (e.g. two competing grabs of the same episode/movie still both awaiting manual import).
- * Deliberately not [PvrQueueEntry.item]'s id - that's *derived* from these same provider ids plus
- * a Jellyfin-side lookup, and can come back null on one entry but not the other if that lookup is
+ * Deliberately not [PvrQueueEntry.item]'s id - that's *derived* from these same provider ids plus a
+ * Jellyfin-side lookup, and can come back null on one entry but not the other if that lookup is
  * incomplete on just one side. [tmdbId]/[sonarrEpisodeId] come straight from the raw Sonarr/Radarr
  * queue row, independent of Jellyfin matching, so they're the reliable key. `null` when neither id
  * is present - nothing safe to group by, so the entry stays its own singleton.
@@ -151,8 +152,8 @@ fun List<PvrQueueEntry>.groupDuplicates(): List<List<PvrQueueEntry>> {
 }
 
 /**
- * "Series - S1E5" when the episode is identified, "Series - Season 1" for season-pack grabs
- * (no per-episode number), falling back to the release title Sonarr reports for the download.
+ * "Series - S1E5" when the episode is identified, "Series - Season 1" for season-pack grabs (no
+ * per-episode number), falling back to the release title Sonarr reports for the download.
  */
 private fun sonarrQueueTitle(
     series: SonarrSeries?,
@@ -163,7 +164,8 @@ private fun sonarrQueueTitle(
     return when {
         seriesTitle != null && episodeNumber != null ->
             "$seriesTitle - S${item.seasonNumber}E$episodeNumber"
-        seriesTitle != null && item.seasonNumber != 0 -> "$seriesTitle - Season ${item.seasonNumber}"
+        seriesTitle != null && item.seasonNumber != 0 ->
+            "$seriesTitle - Season ${item.seasonNumber}"
         seriesTitle != null -> seriesTitle
         else -> item.title ?: UNKNOWN_TITLE
     }
@@ -171,8 +173,10 @@ private fun sonarrQueueTitle(
 
 private const val UNKNOWN_TITLE = "Unknown"
 
-private fun List<PvrImage>.posterUrl(): String? =
-    firstOrNull { it.coverType.equals("poster", ignoreCase = true) }?.let { it.remoteUrl ?: it.url }
+private fun List<PvrImage>.posterUrl(): String? = firstOrNull {
+    it.coverType.equals("poster", ignoreCase = true)
+}
+    ?.let { it.remoteUrl ?: it.url }
 
 private fun SonarrQueueItem.toQueueStatus(): QueueStatus =
     buildQueueStatus(
@@ -202,13 +206,16 @@ private fun RadarrQueueItem.toQueueStatus(): QueueStatus =
 
 /**
  * Sonarr/Radarr's `statusMessages` mixes bare top-level reasons (e.g. "One or more episodes
- * expected in this release were not imported or missing from the release", `messages` empty)
- * with per-file import diagnostics (`title` = filename, `messages` = details for that file).
- * The bare reasons are what's worth surfacing as the queue item's status text; the per-file
- * breakdown is too verbose for a one-line summary and is only used as a fallback.
+ * expected in this release were not imported or missing from the release", `messages` empty) with
+ * per-file import diagnostics (`title` = filename, `messages` = details for that file). The bare
+ * reasons are what's worth surfacing as the queue item's status text; the per-file breakdown is too
+ * verbose for a one-line summary and is only used as a fallback.
  */
 private fun List<PvrStatusMessage>.toDisplayText(): String? {
-    val reasons = filter { it.messages.isEmpty() }.mapNotNull { it.title?.takeIf(String::isNotBlank) }
+    val reasons = filter {
+        it.messages.isEmpty()
+    }
+        .mapNotNull { it.title?.takeIf(String::isNotBlank) }
     if (reasons.isNotEmpty()) return reasons.joinToString("; ")
     val first = firstOrNull() ?: return null
     return listOfNotNull(first.title?.takeIf(String::isNotBlank), first.messages.firstOrNull())
@@ -282,17 +289,19 @@ private val FAILED_STATES = setOf("failed", "failedpending")
 private val IMPORTING_STATES = setOf("importpending", "importing", "imported")
 
 /**
- * Sonarr's guess for which episode(s) a manual-import candidate file belongs to, formatted like
- * the rest of the app ("S1E6"); multi-episode files (a double-length special, say) join their
- * episode numbers ("S1E6E7"). Null when Sonarr couldn't determine any episode for the file at all
+ * Sonarr's guess for which episode(s) a manual-import candidate file belongs to, formatted like the
+ * rest of the app ("S1E6"); multi-episode files (a double-length special, say) join their episode
+ * numbers ("S1E6E7"). Null when Sonarr couldn't determine any episode for the file at all
  * - see [ManualImportCandidate.canImport].
  */
 internal fun SonarrManualImportItem.toCandidate(): ManualImportCandidate {
     val episodeLabel =
-        episodes.takeIf { it.isNotEmpty() }?.let { eps ->
-            val seasonPrefix = seasonNumber?.let { "S$it" }.orEmpty()
-            seasonPrefix + eps.joinToString(separator = "") { "E${it.episodeNumber}" }
-        }
+        episodes
+            .takeIf { it.isNotEmpty() }
+            ?.let { eps ->
+                val seasonPrefix = seasonNumber?.let { "S$it" }.orEmpty()
+                seasonPrefix + eps.joinToString(separator = "") { "E${it.episodeNumber}" }
+            }
     return ManualImportCandidate(
         id = id,
         name = name ?: path?.substringAfterLast('/') ?: UNKNOWN_TITLE,
@@ -319,7 +328,8 @@ internal fun RadarrManualImportItem.toCandidate(): ManualImportCandidate =
 internal fun parseTimeleftSeconds(timeleft: String?): Long {
     if (timeleft.isNullOrBlank()) return -1L
     val dayAndRest = timeleft.split(".", limit = 2)
-    val (days, clock) = if (dayAndRest.size == 2) dayAndRest[0] to dayAndRest[1] else "0" to dayAndRest[0]
+    val (days, clock) =
+        if (dayAndRest.size == 2) dayAndRest[0] to dayAndRest[1] else "0" to dayAndRest[0]
     val parts = clock.split(":").mapNotNull { it.toLongOrNull() }
     if (parts.size != 3) return -1L
     val daysLong = days.toLongOrNull() ?: 0L

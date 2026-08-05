@@ -59,9 +59,9 @@ import dev.pschmitt.jellyfin.presentation.film.components.ItemHeader
 import dev.pschmitt.jellyfin.presentation.film.components.ItemMetaRow
 import dev.pschmitt.jellyfin.presentation.film.components.ManualImportSheet
 import dev.pschmitt.jellyfin.presentation.film.components.OverviewText
+import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.pschmitt.jellyfin.presentation.film.components.PvrSearchButton
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
-import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.pschmitt.jellyfin.presentation.film.components.SeerrStatusChip
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
@@ -74,8 +74,8 @@ import java.time.LocalTime
 import java.util.UUID
 
 /**
- * Detail view for a Seerr search result that is not (fully) in the library yet - metadata plus
- * the request/unrequest actions. Identified by TMDB id instead of a Jellyfin item id.
+ * Detail view for a Seerr search result that is not (fully) in the library yet - metadata plus the
+ * request/unrequest actions. Identified by TMDB id instead of a Jellyfin item id.
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +102,15 @@ fun SeerrMediaScreen(
     var lastActionWasCancel by remember { mutableStateOf(false) }
 
     LaunchedEffect(tmdbId, mediaType, seasonNumber, episodeNumber, sonarrEpisodeId) {
-        viewModel.loadDetail(tmdbId, mediaType, seasonNumber, episodeNumber, sonarrEpisodeId, airDate, airTime)
+        viewModel.loadDetail(
+            tmdbId,
+            mediaType,
+            seasonNumber,
+            episodeNumber,
+            sonarrEpisodeId,
+            airDate,
+            airTime,
+        )
     }
 
     ObserveAsEvents(viewModel.events) { event ->
@@ -226,7 +234,8 @@ private fun SeerrMediaScreenLayout(
                         detail.episode?.let { episode ->
                             Text(
                                 text = detail.title,
-                                modifier = Modifier.clickable { navigateToShow(state.jellyfinShowId) },
+                                modifier =
+                                    Modifier.clickable { navigateToShow(state.jellyfinShowId) },
                                 maxLines = 1,
                                 style = MaterialTheme.typography.labelLarge,
                             )
@@ -234,19 +243,24 @@ private fun SeerrMediaScreenLayout(
                                 text = detail.season?.title ?: "Season ${episode.seasonNumber}",
                                 modifier =
                                     Modifier.clickable {
-                                        navigateToSeason(episode.seasonNumber, state.jellyfinSeasonId)
+                                        navigateToSeason(
+                                            episode.seasonNumber,
+                                            state.jellyfinSeasonId,
+                                        )
                                     },
                                 maxLines = 1,
                                 style = MaterialTheme.typography.labelLarge,
                             )
-                        } ?: detail.season?.let {
-                            Text(
-                                text = detail.title,
-                                modifier = Modifier.clickable { navigateToShow(state.jellyfinShowId) },
-                                maxLines = 1,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
                         }
+                            ?: detail.season?.let {
+                                Text(
+                                    text = detail.title,
+                                    modifier =
+                                        Modifier.clickable { navigateToShow(state.jellyfinShowId) },
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                            }
                         Spacer(Modifier.height(MaterialTheme.spacings.medium))
                         // Seerr only tracks request/availability status at the season/show level,
                         // so AVAILABLE/PARTIALLY_AVAILABLE don't mean anything precise for a
@@ -270,7 +284,8 @@ private fun SeerrMediaScreenLayout(
                                 (displayStatus != SeerrMediaStatus.NOT_REQUESTED ||
                                     detail.cancellableRequestIds.isNotEmpty())
                         ItemMetaRow(
-                            dateText = seerrDateText(detail, state.knownAirDate, state.knownAirTime),
+                            dateText =
+                                seerrDateText(detail, state.knownAirDate, state.knownAirTime),
                             runtimeTicks = (detail.runtimeMinutes ?: 0) * 600_000_000L,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -292,9 +307,9 @@ private fun SeerrMediaScreenLayout(
                         (detail.episode?.overview ?: detail.season?.overview ?: detail.overview)
                             ?.takeIf { it.isNotBlank() }
                             ?.let { overview ->
-                            Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                            OverviewText(text = overview, maxCollapsedLines = 5)
-                        }
+                                Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                                OverviewText(text = overview, maxCollapsedLines = 5)
+                            }
                         Spacer(Modifier.height(MaterialTheme.spacings.medium))
                         // Same tile shell as ItemButtonsBar's action row (Movie/Episode/Show/
                         // Season) - a wrapping FlowRow of uniform icon-above-label tiles - even
@@ -302,8 +317,10 @@ private fun SeerrMediaScreenLayout(
                         // Download/overflow) is distinct enough that reusing ItemButtonsBar itself
                         // isn't a fit.
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            verticalArrangement =
+                                Arrangement.spacedBy(MaterialTheme.spacings.small),
                         ) {
                             if (
                                 detail.status == SeerrMediaStatus.NOT_REQUESTED &&
@@ -324,7 +341,8 @@ private fun SeerrMediaScreenLayout(
                                             }
                                         ),
                                     onClick = {
-                                        if (!state.isSubmitting) onAction(SeerrMediaAction.OnRequest)
+                                        if (!state.isSubmitting)
+                                            onAction(SeerrMediaAction.OnRequest)
                                     },
                                 )
                             }
@@ -348,7 +366,12 @@ private fun SeerrMediaScreenLayout(
                                         try {
                                             uriHandler.openUri(trailerUrl)
                                         } catch (e: IllegalArgumentException) {
-                                            Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                    context,
+                                                    e.localizedMessage,
+                                                    Toast.LENGTH_SHORT,
+                                                )
+                                                .show()
                                         }
                                     },
                                 )
@@ -364,7 +387,9 @@ private fun SeerrMediaScreenLayout(
                                     onAutomaticSearch = {
                                         onAction(SeerrMediaAction.OnAutomaticSearchInPvr)
                                     },
-                                    onManualSearch = { onAction(SeerrMediaAction.OnOpenReleasePicker) },
+                                    onManualSearch = {
+                                        onAction(SeerrMediaAction.OnOpenReleasePicker)
+                                    },
                                     label = stringResource(CoreR.string.search),
                                 )
                             }
@@ -373,34 +398,44 @@ private fun SeerrMediaScreenLayout(
                         // season, so there's nothing to list. This is the only way to reach a
                         // season-scoped Seerr view directly from the show (the other path is via
                         // an episode's "back to season" link, further downstream).
-                        if (detail.mediaType == SeerrMediaType.TV && detail.season == null && detail.episode == null) {
-                            detail.numberOfSeasons?.takeIf { it > 0 }?.let { numberOfSeasons ->
-                                Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                                Text(
-                                    text = stringResource(CoreR.string.seasons),
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                Spacer(Modifier.height(MaterialTheme.spacings.small))
-                                Column {
-                                    for (seasonNumber in 1..numberOfSeasons) {
-                                        val seasonStatus =
-                                            detail.seasons
-                                                .firstOrNull { it.seasonNumber == seasonNumber }
-                                                ?.status
-                                        SeerrSeasonRow(
-                                            seasonNumber = seasonNumber,
-                                            status = seasonStatus,
-                                            // No per-row Jellyfin season id is resolved here (the
-                                            // show-level view only resolves one show/season pair
-                                            // total, not all seasons at once) - always route
-                                            // through a fresh season-scoped SeerrMediaRoute load,
-                                            // same as navigateToSeason already does when it has no
-                                            // Jellyfin season id to jump to directly.
-                                            onClick = { navigateToSeason(seasonNumber, null) },
-                                        )
+                        if (
+                            detail.mediaType == SeerrMediaType.TV &&
+                                detail.season == null &&
+                                detail.episode == null
+                        ) {
+                            detail.numberOfSeasons
+                                ?.takeIf { it > 0 }
+                                ?.let { numberOfSeasons ->
+                                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                                    Text(
+                                        text = stringResource(CoreR.string.seasons),
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Spacer(Modifier.height(MaterialTheme.spacings.small))
+                                    Column {
+                                        for (seasonNumber in 1..numberOfSeasons) {
+                                            val seasonStatus =
+                                                detail.seasons
+                                                    .firstOrNull { it.seasonNumber == seasonNumber }
+                                                    ?.status
+                                            SeerrSeasonRow(
+                                                seasonNumber = seasonNumber,
+                                                status = seasonStatus,
+                                                // No per-row Jellyfin season id is resolved here
+                                                // (the
+                                                // show-level view only resolves one show/season
+                                                // pair
+                                                // total, not all seasons at once) - always route
+                                                // through a fresh season-scoped SeerrMediaRoute
+                                                // load,
+                                                // same as navigateToSeason already does when it has
+                                                // no
+                                                // Jellyfin season id to jump to directly.
+                                                onClick = { navigateToSeason(seasonNumber, null) },
+                                            )
+                                        }
                                     }
                                 }
-                            }
                         }
                     }
                     Spacer(Modifier.height(paddingBottom))
@@ -486,10 +521,10 @@ private fun SeerrMediaScreenLayout(
 }
 
 /**
- * One row in the show-level season list: "Season N" plus its status chip (omitted when the
- * season has never been touched - matching how the rest of this screen only shows a chip once
- * there's an actual request/status to report, see the show-level chip above). Tapping always
- * navigates into a season-scoped Seerr view, letting that screen resolve the Jellyfin ids itself.
+ * One row in the show-level season list: "Season N" plus its status chip (omitted when the season
+ * has never been touched - matching how the rest of this screen only shows a chip once there's an
+ * actual request/status to report, see the show-level chip above). Tapping always navigates into a
+ * season-scoped Seerr view, letting that screen resolve the Jellyfin ids itself.
  */
 @Composable
 private fun SeerrSeasonRow(seasonNumber: Int, status: SeerrMediaStatus?, onClick: () -> Unit) {
@@ -511,11 +546,11 @@ private fun SeerrSeasonRow(seasonNumber: Int, status: SeerrMediaStatus?, onClick
 }
 
 /**
- * The single date-ish segment [ItemMetaRow] shows - mirrors what MovieScreen/EpisodeScreen pass
- * as their own `dateText` (a premiere/air date), rather than the old bespoke meta line's full
- * "title · S03E06 · date" or "year · type · runtime · genres" strings, which don't fit
- * [ItemMetaRow]'s shape (it only ever shows one date-like segment, runtime, rating, and community
- * rating - see MovieScreen/EpisodeScreen's own calls for the pattern this now matches).
+ * The single date-ish segment [ItemMetaRow] shows - mirrors what MovieScreen/EpisodeScreen pass as
+ * their own `dateText` (a premiere/air date), rather than the old bespoke meta line's full "title ·
+ * S03E06 · date" or "year · type · runtime · genres" strings, which don't fit [ItemMetaRow]'s shape
+ * (it only ever shows one date-like segment, runtime, rating, and community rating - see
+ * MovieScreen/EpisodeScreen's own calls for the pattern this now matches).
  */
 @Composable
 private fun seerrDateText(

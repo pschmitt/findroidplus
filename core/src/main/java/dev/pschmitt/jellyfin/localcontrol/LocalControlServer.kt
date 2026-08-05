@@ -13,9 +13,9 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 /**
- * The local control API's transport - a plain loopback HTTP server (127.0.0.1 only, never
- * 0.0.0.0), so `curl`/any HTTP client works directly from Termux with zero extra tooling. This is
- * the third transport tried for this feature, in order:
+ * The local control API's transport - a plain loopback HTTP server (127.0.0.1 only, never 0.0.0.0),
+ * so `curl`/any HTTP client works directly from Termux with zero extra tooling. This is the third
+ * transport tried for this feature, in order:
  * 1. `android.net.LocalServerSocket` (Linux abstract-namespace unix socket) - SELinux blocks
  *    arbitrary app-to-app connections outright on a real device (confirmed: `EACCES` under
  *    enforcing, works under permissive). No app-level fix could work around that.
@@ -23,17 +23,17 @@ import timber.log.Timber
  *    works, but that command's *external*-access path requires
  *    `android.permission.ACCESS_CONTENT_PROVIDERS_EXTERNALLY`, a signature-level permission only
  *    the `shell`/root uid holds (confirmed: `pm grant` refuses it even as root - "not a changeable
- *    permission type"). A real app's own uid (Termux's) can never hold it, so `local` commands
- *    only worked with root.
- * 3. **This one**: loopback TCP is ordinary BSD socket I/O, gated only by the `INTERNET`
- *    permission the app already has - no SELinux domain-separation wall, no signature permission,
- *    no root. [LocalControlAuth]'s bearer token (unchanged since design 2) is the entire auth
- *    boundary, same as before - loopback TCP is reachable by any process on the device, same
- *    caveat as design 2's Binder call, so there was never any caller-identity check to lose here.
+ *    permission type"). A real app's own uid (Termux's) can never hold it, so `local` commands only
+ *    worked with root.
+ * 3. **This one**: loopback TCP is ordinary BSD socket I/O, gated only by the `INTERNET` permission
+ *    the app already has - no SELinux domain-separation wall, no signature permission, no root.
+ *    [LocalControlAuth]'s bearer token (unchanged since design 2) is the entire auth boundary, same
+ *    as before - loopback TCP is reachable by any process on the device, same caveat as design 2's
+ *    Binder call, so there was never any caller-identity check to lose here.
  *
- * NanoHTTPD ([fi.iki.elonen.NanoHTTPD]) was already a dependency (`androidTestImplementation`,
- * used by `core/src/androidTest/.../LargeFileHttpServer.kt`) - promoted to a real
- * `implementation` dependency rather than hand-rolling HTTP request parsing.
+ * NanoHTTPD ([fi.iki.elonen.NanoHTTPD]) was already a dependency (`androidTestImplementation`, used
+ * by `core/src/androidTest/.../LargeFileHttpServer.kt`) - promoted to a real `implementation`
+ * dependency rather than hand-rolling HTTP request parsing.
  */
 @Singleton
 class LocalControlServer
@@ -53,9 +53,11 @@ constructor(
         if (appPreferences.getValue(appPreferences.localControlEnabled)) start()
     }
 
-    /** `true` once actually listening (including if it already was) - `false` if binding failed
-     * (e.g. the port is somehow already in use). Lets the Settings toggle stay honest about
-     * whether anything is really listening instead of just claiming success. */
+    /**
+     * `true` once actually listening (including if it already was) - `false` if binding failed
+     * (e.g. the port is somehow already in use). Lets the Settings toggle stay honest about whether
+     * anything is really listening instead of just claiming success.
+     */
     fun startSafely(): Boolean {
         if (isAlive) return true
         return try {
@@ -89,7 +91,10 @@ constructor(
                 readBody(session)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to read local control request body")
-                return jsonResponse(Response.Status.BAD_REQUEST, errorBody("Malformed request body"))
+                return jsonResponse(
+                    Response.Status.BAD_REQUEST,
+                    errorBody("Malformed request body"),
+                )
             }
         val bodyElement = bodyText?.let { runCatching { json.parseToJsonElement(it) }.getOrNull() }
 
@@ -98,21 +103,27 @@ constructor(
                 // `session.parms` is already populated from the query string by the time `serve()`
                 // runs (NanoHTTPD decodes it before dispatch) - no explicit parseBody-style call
                 // needed, unlike the request body above.
-                runBlocking { router.handle(session.method.name, session.uri, session.parms, bodyElement) }
+                runBlocking {
+                    router.handle(session.method.name, session.uri, session.parms, bodyElement)
+                }
             } catch (e: Exception) {
                 Timber.e(e, "LocalControlServer.serve failed")
-                return jsonResponse(Response.Status.INTERNAL_ERROR, errorBody(e.message ?: "Internal error"))
+                return jsonResponse(
+                    Response.Status.INTERNAL_ERROR,
+                    errorBody(e.message ?: "Internal error"),
+                )
             }
 
         return jsonResponse(statusFor(response.status), response.body?.toString() ?: "{}")
     }
 
-    /** Reads the raw request body directly off the socket via `Content-Length`, rather than
-     * [IHTTPSession.parseBody] - that method only special-cases `POST` (buffers into a
-     * `"postData"` map entry) and `PUT` (streams to a temp file under `"content"`); `PATCH`
-     * matches neither case and silently yields no body at all, which broke `PATCH
-     * /settings/downloads` (always "expected a JSON object body") until this was caught during
-     * on-device verification. */
+    /**
+     * Reads the raw request body directly off the socket via `Content-Length`, rather than
+     * [IHTTPSession.parseBody] - that method only special-cases `POST` (buffers into a `"postData"`
+     * map entry) and `PUT` (streams to a temp file under `"content"`); `PATCH` matches neither case
+     * and silently yields no body at all, which broke `PATCH /settings/downloads` (always "expected
+     * a JSON object body") until this was caught during on-device verification.
+     */
     private fun readBody(session: IHTTPSession): String? {
         val length = session.headers["content-length"]?.toIntOrNull() ?: return null
         if (length <= 0) return null
@@ -129,12 +140,14 @@ constructor(
     private fun jsonResponse(status: Response.IStatus, body: String): Response =
         newFixedLengthResponse(status, "application/json", body)
 
-    /** Serves the bundled `findroid-cli` script (an asset copied from `cli/findroid-cli` at build
-     * time - see `core/build.gradle.kts` - not read from a live git checkout) so a plain
-     * `curl http://127.0.0.1:<port>/cli -o findroid-cli` from Termux works with zero setup, the
-     * same way Shizuku's `rish` client is downloadable straight from the Shizuku app. `<port>` is
-     * [BASE_PORT] for a release install, [portFor] for debug/staging - see the Settings > Local
-     * CLI access screen for the exact command for whichever variant is actually installed. */
+    /**
+     * Serves the bundled `findroid-cli` script (an asset copied from `cli/findroid-cli` at build
+     * time - see `core/build.gradle.kts` - not read from a live git checkout) so a plain `curl
+     * http://127.0.0.1:<port>/cli -o findroid-cli` from Termux works with zero setup, the same way
+     * Shizuku's `rish` client is downloadable straight from the Shizuku app. `<port>` is
+     * [BASE_PORT] for a release install, [portFor] for debug/staging - see the Settings > Local CLI
+     * access screen for the exact command for whichever variant is actually installed.
+     */
     private fun serveCliScript(): Response =
         try {
             val bytes = context.assets.open(CLI_ASSET_NAME).use { it.readBytes() }
@@ -144,17 +157,21 @@ constructor(
                     ByteArrayInputStream(bytes),
                     bytes.size.toLong(),
                 )
-                .apply { addHeader("Content-Disposition", "attachment; filename=\"$CLI_ASSET_NAME\"") }
+                .apply {
+                    addHeader("Content-Disposition", "attachment; filename=\"$CLI_ASSET_NAME\"")
+                }
         } catch (e: IOException) {
             Timber.e(e, "Failed to read bundled findroid-cli asset")
             jsonResponse(Response.Status.INTERNAL_ERROR, errorBody("findroid-cli asset missing"))
         }
 
-    /** NanoHTTPD's `Response.Status` is a fixed Java enum, but the debug proxy forwards whatever
-     * raw HTTP status the proxied service returned (e.g. Sonarr's own 404) - not necessarily one
-     * of the fixed constants. `Response.IStatus` is what [newFixedLengthResponse] actually accepts
+    /**
+     * NanoHTTPD's `Response.Status` is a fixed Java enum, but the debug proxy forwards whatever raw
+     * HTTP status the proxied service returned (e.g. Sonarr's own 404) - not necessarily one of the
+     * fixed constants. `Response.IStatus` is what [newFixedLengthResponse] actually accepts
      * (`Response.Status` is just its built-in implementation), so an arbitrary code that doesn't
-     * match one of ours below is passed through as-is via a minimal custom implementation. */
+     * match one of ours below is passed through as-is via a minimal custom implementation.
+     */
     private fun statusFor(code: Int): Response.IStatus =
         when (code) {
             LocalControlStatus.OK -> Response.Status.OK
@@ -183,20 +200,20 @@ constructor(
         private val json = Json { ignoreUnknownKeys = true }
 
         /**
-         * Debug/staging installs get their own port, offset from [BASE_PORT], so they can run
-         * side by side with a release install (or each other) - e.g. verifying a rename on a
-         * debug build without force-stopping an already-installed release, or the CI/local
-         * signature-mismatch workflow in AGENTS.md - without one variant's `startIfEnabled()`
-         * failing to bind because another variant already grabbed the port. Found the hard way:
-         * a debug build launched right after a release build was still running crashed at
-         * `BaseApplication.onCreate()` with `BindException: EADDRINUSE` on the shared port -
-         * see TODO.md FINDROID-68's follow-up.
+         * Debug/staging installs get their own port, offset from [BASE_PORT], so they can run side
+         * by side with a release install (or each other) - e.g. verifying a rename on a debug build
+         * without force-stopping an already-installed release, or the CI/local signature-mismatch
+         * workflow in AGENTS.md - without one variant's `startIfEnabled()` failing to bind because
+         * another variant already grabbed the port. Found the hard way: a debug build launched
+         * right after a release build was still running crashed at `BaseApplication.onCreate()`
+         * with `BindException: EADDRINUSE` on the shared port - see TODO.md FINDROID-68's
+         * follow-up.
          *
-         * Keyed off the actual runtime `applicationId` suffix (".debug"/".staging"), not a
-         * Gradle `BuildConfig` flag - `core` has no per-flavor `BuildConfig` of its own, and this
-         * needs no plumbing through both `app/phone` and `app/tv`'s separate flavor setups.
-         * `findroid-cli`'s `JOLLYFIN_LOCAL_URL` override exists for exactly this: point it at
-         * whichever of these three ports the variant you're scripting against actually bound.
+         * Keyed off the actual runtime `applicationId` suffix (".debug"/".staging"), not a Gradle
+         * `BuildConfig` flag - `core` has no per-flavor `BuildConfig` of its own, and this needs no
+         * plumbing through both `app/phone` and `app/tv`'s separate flavor setups. `findroid-cli`'s
+         * `JOLLYFIN_LOCAL_URL` override exists for exactly this: point it at whichever of these
+         * three ports the variant you're scripting against actually bound.
          */
         fun portFor(packageName: String): Int =
             when {

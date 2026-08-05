@@ -28,27 +28,28 @@ class SeerrApiTest {
     @Test
     fun `getTvSeason returns episode details from the season endpoint`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                {
-                    "id": 1,
-                    "name": "Season 2",
-                    "seasonNumber": 2,
-                    "episodes": [
-                        {
-                            "id": 33,
-                            "name": "A New Episode",
-                            "seasonNumber": 2,
-                            "episodeNumber": 4,
-                            "airDate": "2026-08-01",
-                            "overview": "Episode overview",
-                            "stillPath": "/still.jpg"
-                        }
-                    ]
-                }
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    {
+                        "id": 1,
+                        "name": "Season 2",
+                        "seasonNumber": 2,
+                        "episodes": [
+                            {
+                                "id": 33,
+                                "name": "A New Episode",
+                                "seasonNumber": 2,
+                                "episodeNumber": 4,
+                                "airDate": "2026-08-01",
+                                "overview": "Episode overview",
+                                "stillPath": "/still.jpg"
+                            }
+                        ]
+                    }
+                    """
+                        .trimIndent()
+                )
         )
 
         val season = api.getTvSeason(tmdbId = 123, seasonNumber = 2)
@@ -65,24 +66,25 @@ class SeerrApiTest {
     @Test
     fun `getTvDetails parses per-season media info`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                {
-                    "id": 1,
-                    "name": "Some Show",
-                    "numberOfSeasons": 3,
-                    "mediaInfo": {
-                        "status": 4,
-                        "requests": [],
-                        "seasons": [
-                            { "seasonNumber": 1, "status": 5 },
-                            { "seasonNumber": 2, "status": 2 }
-                        ]
+            MockResponse()
+                .setBody(
+                    """
+                    {
+                        "id": 1,
+                        "name": "Some Show",
+                        "numberOfSeasons": 3,
+                        "mediaInfo": {
+                            "status": 4,
+                            "requests": [],
+                            "seasons": [
+                                { "seasonNumber": 1, "status": 5 },
+                                { "seasonNumber": 2, "status": 2 }
+                            ]
+                        }
                     }
-                }
-                """
-                    .trimIndent()
-            )
+                    """
+                        .trimIndent()
+                )
         )
 
         val details = api.getTvDetails(tmdbId = 1)
@@ -102,16 +104,17 @@ class SeerrApiTest {
     @Test
     fun `getTvDetails defaults seasons to empty when mediaInfo is absent`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                {
-                    "id": 1,
-                    "name": "Never Requested Show",
-                    "numberOfSeasons": 2
-                }
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    {
+                        "id": 1,
+                        "name": "Never Requested Show",
+                        "numberOfSeasons": 2
+                    }
+                    """
+                        .trimIndent()
+                )
         )
 
         val details = api.getTvDetails(tmdbId = 1)

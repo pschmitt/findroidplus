@@ -119,9 +119,7 @@ class MainActivity : AppCompatActivity() {
         intent.data?.let { deepLinkViewModel.resolve(it) }
         // jollyfin://setup?p=... - a QR provisioning code opened via some other scanner app
         // (see QrConfigCodec/AndroidManifest's intent-filter), not through this app's own camera.
-        intent.data
-            ?.takeIf { it.scheme == "jollyfin" }
-            ?.let { pendingQrPayload = it.toString() }
+        intent.data?.takeIf { it.scheme == "jollyfin" }?.let { pendingQrPayload = it.toString() }
         if (intent.getBooleanExtra(EXTRA_OPEN_DOWNLOADS, false)) {
             openDownloadsRequested = true
         }

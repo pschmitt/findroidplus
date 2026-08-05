@@ -29,19 +29,20 @@ class RadarrApiTest {
     @Test
     fun `getMovie decodes only the fields we need and ignores the rest`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                [
-                    {
-                        "id": 7,
-                        "tmdbId": 98765,
-                        "title": "Some Movie",
-                        "someUnknownField": {"nested": true}
-                    }
-                ]
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    [
+                        {
+                            "id": 7,
+                            "tmdbId": 98765,
+                            "title": "Some Movie",
+                            "someUnknownField": {"nested": true}
+                        }
+                    ]
+                    """
+                        .trimIndent()
+                )
         )
 
         val movies = api.getMovie()
@@ -56,25 +57,26 @@ class RadarrApiTest {
     fun `getQueue unwraps the paginated records list, keyed by movieId, and requests a large page size`() =
         runTest {
             server.enqueue(
-                MockResponse().setBody(
-                    """
-                    {
-                        "page": 1,
-                        "pageSize": 250,
-                        "totalRecords": 1,
-                        "records": [
-                            {
-                                "id": 99,
-                                "movieId": 7,
-                                "status": "downloading",
-                                "size": 2000,
-                                "sizeleft": 500
-                            }
-                        ]
-                    }
-                    """
-                        .trimIndent()
-                )
+                MockResponse()
+                    .setBody(
+                        """
+                        {
+                            "page": 1,
+                            "pageSize": 250,
+                            "totalRecords": 1,
+                            "records": [
+                                {
+                                    "id": 99,
+                                    "movieId": 7,
+                                    "status": "downloading",
+                                    "size": 2000,
+                                    "sizeleft": 500
+                                }
+                            ]
+                        }
+                        """
+                            .trimIndent()
+                    )
             )
 
             val queue = api.getQueue()
@@ -93,21 +95,22 @@ class RadarrApiTest {
     fun `getCalendar decodes a flat array and requests start and end, with no includeSeries param`() =
         runTest {
             server.enqueue(
-                MockResponse().setBody(
-                    """
-                    [
-                        {
-                            "id": 21,
-                            "tmdbId": 98765,
-                            "title": "Some Movie",
-                            "hasFile": false,
-                            "monitored": true,
-                            "digitalRelease": "2024-07-24T00:00:00Z"
-                        }
-                    ]
-                    """
-                        .trimIndent()
-                )
+                MockResponse()
+                    .setBody(
+                        """
+                        [
+                            {
+                                "id": 21,
+                                "tmdbId": 98765,
+                                "title": "Some Movie",
+                                "hasFile": false,
+                                "monitored": true,
+                                "digitalRelease": "2024-07-24T00:00:00Z"
+                            }
+                        ]
+                        """
+                            .trimIndent()
+                    )
             )
 
             val entries = api.getCalendar(LocalDate.of(2024, 7, 21), LocalDate.of(2024, 8, 20))

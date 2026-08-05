@@ -3,24 +3,24 @@ package dev.pschmitt.jellyfin.film.presentation.seerr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.SeerrMediaType
-import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.api.pvr.PvrRelease
 import dev.pschmitt.jellyfin.core.presentation.search.ReleasePickerState
 import dev.pschmitt.jellyfin.film.presentation.downloads.ManualImportController
 import dev.pschmitt.jellyfin.film.presentation.downloads.PendingImportRef
+import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.QueueItemStatus
+import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
-import dev.pschmitt.jellyfin.repository.RadarrSearchRepository
-import dev.pschmitt.jellyfin.repository.QueueStatusRepository
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
+import dev.pschmitt.jellyfin.repository.QueueStatusRepository
+import dev.pschmitt.jellyfin.repository.RadarrSearchRepository
 import dev.pschmitt.jellyfin.repository.SeerrRepository
 import dev.pschmitt.jellyfin.repository.SonarrSearchRepository
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -75,11 +75,14 @@ constructor(
     /** Opens the manage-import sheet for this item's own PVR queue entry, if it has one. */
     fun openManualImportForCurrentItem() {
         val status = _state.value.queueStatus ?: return
-        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED)
+            return
         val title = _state.value.detail?.title ?: return
         val refs =
             _state.value.queueEntries.mapNotNull { entry ->
-                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+                entry.status.downloadId?.let {
+                    PendingImportRef(entry.status.source, it, entry.queueItemId)
+                }
             }
         if (refs.isEmpty()) return
         manualImport.open(title, refs)
@@ -137,7 +140,10 @@ constructor(
                     },
                     onFailure = { e ->
                         _state.value =
-                            _state.value.copy(isLoading = false, error = e as? Exception ?: Exception(e))
+                            _state.value.copy(
+                                isLoading = false,
+                                error = e as? Exception ?: Exception(e),
+                            )
                     },
                 )
         }
@@ -155,12 +161,12 @@ constructor(
                         .firstOrNull { it.tmdbId == detail.tmdbId.toString() }
                         ?: return@runCatching Triple(null, null, null)
                 val seasonNumber = detail.episode?.seasonNumber ?: detail.season?.seasonNumber
-                val seasonId =
-                    seasonNumber?.let {
-                        jellyfinRepository.getSeasons(show.id).firstOrNull { season ->
-                            season.indexNumber == it
-                        }?.id
-                    }
+                val seasonId = seasonNumber?.let {
+                    jellyfinRepository
+                        .getSeasons(show.id)
+                        .firstOrNull { season -> season.indexNumber == it }
+                        ?.id
+                }
                 val episode = detail.episode
                 val episodeId =
                     if (episode != null && seasonId != null) {
@@ -182,37 +188,39 @@ constructor(
         sonarrEpisodeId: Int?,
     ) {
         queueStatusJob?.cancel()
-        queueStatusJob =
-            viewModelScope.launch {
-                when (mediaType) {
-                    SeerrMediaType.MOVIE ->
-                        queueStatusRepository.getRadarrQueueStatusFlow().collect { statuses ->
-                            _state.value = _state.value.copy(queueStatus = statuses[tmdbId])
-                        }
-                    SeerrMediaType.TV ->
-                        queueStatusRepository.getSonarrQueueStatusFlow().collect { statuses ->
-                            _state.value =
-                                _state.value.copy(
-                                    queueStatus = sonarrEpisodeId?.let { statuses[it] }
-                                )
-                        }
-                }
+        queueStatusJob = viewModelScope.launch {
+            when (mediaType) {
+                SeerrMediaType.MOVIE ->
+                    queueStatusRepository.getRadarrQueueStatusFlow().collect { statuses ->
+                        _state.value = _state.value.copy(queueStatus = statuses[tmdbId])
+                    }
+                SeerrMediaType.TV ->
+                    queueStatusRepository.getSonarrQueueStatusFlow().collect { statuses ->
+                        _state.value =
+                            _state.value.copy(queueStatus = sonarrEpisodeId?.let { statuses[it] })
+                    }
             }
+        }
         // Only the id that's actually meaningful at this scope - passing the show-level tmdbId
         // for a Sonarr/episode lookup would match every episode of the same show, not just this
         // one, since matchSonarr sets PvrQueueEntry.tmdbId from the series, not the episode.
         queueEntriesJob?.cancel()
-        queueEntriesJob =
-            viewModelScope.launch {
-                val entriesFlow =
-                    when (mediaType) {
-                        SeerrMediaType.MOVIE ->
-                            queueStatusRepository.getQueueEntriesFlow(PvrSource.RADARR, tmdbId, null)
-                        SeerrMediaType.TV ->
-                            queueStatusRepository.getQueueEntriesFlow(PvrSource.SONARR, null, sonarrEpisodeId)
-                    }
-                entriesFlow.collect { entries -> _state.value = _state.value.copy(queueEntries = entries) }
+        queueEntriesJob = viewModelScope.launch {
+            val entriesFlow =
+                when (mediaType) {
+                    SeerrMediaType.MOVIE ->
+                        queueStatusRepository.getQueueEntriesFlow(PvrSource.RADARR, tmdbId, null)
+                    SeerrMediaType.TV ->
+                        queueStatusRepository.getQueueEntriesFlow(
+                            PvrSource.SONARR,
+                            null,
+                            sonarrEpisodeId,
+                        )
+                }
+            entriesFlow.collect { entries ->
+                _state.value = _state.value.copy(queueEntries = entries)
             }
+        }
     }
 
     fun onAction(action: SeerrMediaAction) {
@@ -244,12 +252,14 @@ constructor(
             _state.value = _state.value.copy(isSubmitting = true)
             val result =
                 when (detail.mediaType) {
-                    SeerrMediaType.MOVIE -> radarrSearchRepository.searchMovieByTmdbId(detail.tmdbId)
+                    SeerrMediaType.MOVIE ->
+                        radarrSearchRepository.searchMovieByTmdbId(detail.tmdbId)
                     SeerrMediaType.TV ->
                         sonarrEpisodeId?.let { sonarrSearchRepository.searchEpisode(it) }
                             ?: sonarrSearchRepository.searchSeriesByTmdbId(detail.tmdbId)
                 }
-            val source = if (detail.mediaType == SeerrMediaType.TV) PvrSource.SONARR else PvrSource.RADARR
+            val source =
+                if (detail.mediaType == SeerrMediaType.TV) PvrSource.SONARR else PvrSource.RADARR
             eventsChannel.send(
                 result.fold(
                     { SeerrMediaEvent.SearchTriggered(source) },
@@ -264,13 +274,17 @@ constructor(
         val detail = _state.value.detail ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(releasePicker = ReleasePickerState())
-            val source = if (detail.mediaType == SeerrMediaType.TV) PvrSource.SONARR else PvrSource.RADARR
+            val source =
+                if (detail.mediaType == SeerrMediaType.TV) PvrSource.SONARR else PvrSource.RADARR
             val result: Result<List<PvrRelease>> =
                 when (detail.mediaType) {
                     SeerrMediaType.MOVIE -> {
-                        val movieId = radarrSearchRepository.resolveMovieId(detail.tmdbId.toString())
+                        val movieId =
+                            radarrSearchRepository.resolveMovieId(detail.tmdbId.toString())
                         if (movieId == null) {
-                            Result.failure(IllegalStateException("Could not find this movie in Radarr"))
+                            Result.failure(
+                                IllegalStateException("Could not find this movie in Radarr")
+                            )
                         } else {
                             radarrSearchRepository.getReleases(movieId)
                         }
@@ -278,7 +292,9 @@ constructor(
                     SeerrMediaType.TV -> {
                         val episodeId = sonarrEpisodeId
                         if (episodeId == null) {
-                            Result.failure(IllegalStateException("Could not find this episode in Sonarr"))
+                            Result.failure(
+                                IllegalStateException("Could not find this episode in Sonarr")
+                            )
                         } else {
                             sonarrSearchRepository.getReleases(episodeId)
                         }
@@ -287,9 +303,14 @@ constructor(
             releasePickerSource = source
             _state.value =
                 _state.value.copy(
-                    releasePicker = result.getOrNull()?.let { ReleasePickerState(isLoading = false, releases = it) }
+                    releasePicker =
+                        result.getOrNull()?.let {
+                            ReleasePickerState(isLoading = false, releases = it)
+                        }
                 )
-            result.onFailure { eventsChannel.send(SeerrMediaEvent.SearchFailed(source, it.message)) }
+            result.onFailure {
+                eventsChannel.send(SeerrMediaEvent.SearchFailed(source, it.message))
+            }
         }
     }
 
@@ -302,7 +323,15 @@ constructor(
                 }
             _state.value = _state.value.copy(releasePicker = null)
             eventsChannel.send(
-                result.fold({ SeerrMediaEvent.ReleaseGrabbed }, { SeerrMediaEvent.SearchFailed(releasePickerSource ?: PvrSource.SONARR, it.message) })
+                result.fold(
+                    { SeerrMediaEvent.ReleaseGrabbed },
+                    {
+                        SeerrMediaEvent.SearchFailed(
+                            releasePickerSource ?: PvrSource.SONARR,
+                            it.message,
+                        )
+                    },
+                )
             )
         }
     }

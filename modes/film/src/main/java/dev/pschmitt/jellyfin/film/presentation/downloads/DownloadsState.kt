@@ -104,8 +104,8 @@ data class PvrQueueGroup(val source: PvrSource, val items: List<PvrQueueUiItem>)
 
 /**
  * One underlying queue entry's manage-import state inside [ManualImportSheetState] - normally
- * there's exactly one, but a duplicate cluster (see PvrQueueEntry.duplicateGroupKey) seeds one
- * per entry so the user can pick which release to actually import from.
+ * there's exactly one, but a duplicate cluster (see PvrQueueEntry.duplicateGroupKey) seeds one per
+ * entry so the user can pick which release to actually import from.
  */
 data class ManualImportEntry(
     val source: PvrSource,
@@ -123,12 +123,12 @@ data class ManualImportEntry(
 )
 
 /**
- * Drives the "manage imports" bottom sheet. [entries] holds one [ManualImportEntry] per
- * underlying queue row in the cluster - size 1 in the overwhelmingly common case (nothing to pick
- * between), 2+ when duplicate grabs of the same release are both still awaiting import.
- * [selectedEntryIndex] is which one the user is currently reviewing/importing from; confirming
- * imports from that entry only and then removes every other entry in [entries] as a losing
- * duplicate - see ManualImportController.confirm.
+ * Drives the "manage imports" bottom sheet. [entries] holds one [ManualImportEntry] per underlying
+ * queue row in the cluster - size 1 in the overwhelmingly common case (nothing to pick between), 2+
+ * when duplicate grabs of the same release are both still awaiting import. [selectedEntryIndex] is
+ * which one the user is currently reviewing/importing from; confirming imports from that entry only
+ * and then removes every other entry in [entries] as a losing duplicate - see
+ * ManualImportController.confirm.
  */
 data class ManualImportSheetState(
     val title: String,

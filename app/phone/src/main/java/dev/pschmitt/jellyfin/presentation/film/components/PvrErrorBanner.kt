@@ -32,11 +32,11 @@ import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
- * Inline per-service fetch-failure banner for PVR-backed surfaces (Calendar, the Downloads
- * screen's queue section) - an unreachable Sonarr/Radarr should say so instead of masquerading as
- * an empty list. The messages already name the failing service (see `mapPvrSearchError`). Tapping
- * a message opens the full text in a copyable dialog - some of these (an HTTP error body) run
- * longer than fits on one or two lines here.
+ * Inline per-service fetch-failure banner for PVR-backed surfaces (Calendar, the Downloads screen's
+ * queue section) - an unreachable Sonarr/Radarr should say so instead of masquerading as an empty
+ * list. The messages already name the failing service (see `mapPvrSearchError`). Tapping a message
+ * opens the full text in a copyable dialog - some of these (an HTTP error body) run longer than
+ * fits on one or two lines here.
  */
 @Composable
 fun PvrErrorBanner(errors: List<PvrFetchError>, modifier: Modifier = Modifier) {

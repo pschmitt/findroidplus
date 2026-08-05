@@ -19,7 +19,8 @@ interface Downloader {
     suspend fun cancelDownload(downloadId: Long)
 
     // "Pausing" is just cancelling the transfer without running deleteItem() - the partial
-    // .download file and the sources DB row are left in place, so VideoDownloadService's Range-based
+    // .download file and the sources DB row are left in place, so VideoDownloadService's
+    // Range-based
     // resume logic picks the file back up the next time this source is enqueued.
     suspend fun pauseDownload(downloadId: Long)
 

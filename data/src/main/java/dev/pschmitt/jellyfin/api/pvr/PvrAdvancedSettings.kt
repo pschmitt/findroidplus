@@ -15,15 +15,12 @@ data class PvrAdvancedConfig(
 ) {
     companion object {
         fun parseHeaders(value: String?): List<Pair<String, String>> =
-            value
-                .orEmpty()
-                .lines()
-                .mapNotNull { line ->
-                    val separator = line.indexOf(':')
-                    if (separator <= 0) return@mapNotNull null
-                    val name = line.take(separator).trim()
-                    if (name.isEmpty()) null else name to line.drop(separator + 1).trim()
-                }
+            value.orEmpty().lines().mapNotNull { line ->
+                val separator = line.indexOf(':')
+                if (separator <= 0) return@mapNotNull null
+                val name = line.take(separator).trim()
+                if (name.isEmpty()) null else name to line.drop(separator + 1).trim()
+            }
     }
 }
 

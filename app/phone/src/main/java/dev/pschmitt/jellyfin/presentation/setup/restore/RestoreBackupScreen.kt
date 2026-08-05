@@ -172,7 +172,10 @@ private fun RestoreBackupScreenLayout(
                 }
                 state.error != null -> {
                     Text(text = stringResource(CoreR.string.restore_backup_error, state.error!!))
-                    OutlinedButton(onClick = onChooseFileClick, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onChooseFileClick,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(text = stringResource(CoreR.string.restore_backup_choose_file))
                     }
                     TextButton(onClick = { onAction(RestoreBackupAction.OnBackClick) }) {
@@ -180,7 +183,10 @@ private fun RestoreBackupScreenLayout(
                     }
                 }
                 pickedOnce -> {
-                    OutlinedButton(onClick = onChooseFileClick, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onChooseFileClick,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(text = stringResource(CoreR.string.restore_backup_choose_file))
                     }
                     TextButton(onClick = { onAction(RestoreBackupAction.OnBackClick) }) {
@@ -200,7 +206,9 @@ private fun RestoreBackupScreenLayout(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(text = stringResource(CoreR.string.restore_backup_password_hint)) },
+                    label = {
+                        Text(text = stringResource(CoreR.string.restore_backup_password_hint))
+                    },
                     isError = state.wrongPassword,
                     supportingText = {
                         if (state.wrongPassword) {
@@ -229,9 +237,7 @@ private fun RestoreBackupScreenLayout(
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = { onAction(RestoreBackupAction.OnPasswordSubmit(password)) }
-                ) {
+                TextButton(onClick = { onAction(RestoreBackupAction.OnPasswordSubmit(password)) }) {
                     Text(text = stringResource(CoreR.string.restore_backup_continue))
                 }
             },

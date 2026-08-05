@@ -1,7 +1,6 @@
 package dev.pschmitt.jellyfin.presentation.film
 
 import android.app.Activity
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,8 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,8 +59,8 @@ import dev.pschmitt.jellyfin.film.presentation.search.SearchState
 import dev.pschmitt.jellyfin.film.presentation.search.SearchViewModel
 import dev.pschmitt.jellyfin.models.FindroidCollection
 import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.SeerrSearchItem
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
+import dev.pschmitt.jellyfin.models.SeerrSearchItem
 import dev.pschmitt.jellyfin.presentation.film.components.FilmSearchScreen
 import dev.pschmitt.jellyfin.presentation.film.components.HomeCarousel
 import dev.pschmitt.jellyfin.presentation.film.components.HomeDiscoverSection
@@ -165,169 +164,194 @@ private fun HomeScreenLayout(
                 onBackClick = { searchExpanded = false },
             )
         } else {
-        HomeHeader(
-            serverName = state.server?.name ?: "",
-            isLoading = state.isLoading,
-            isError = state.error != null,
-            onServerClick = { showServerSelectionBottomSheet = true },
-            onErrorClick = { showErrorDialog = true },
-            onRetryClick = { onAction(HomeAction.OnRetryClick) },
-            onSearchClick = { searchExpanded = true },
-            onUserClick = { onAction(HomeAction.OnSettingsClick) },
-        )
-        Box(modifier = Modifier.fillMaxSize()) {
-        // Default Material3 indicator - same loading feedback as Downloads/Library, instead of
-        // a separate spinner living in HomeHeader too.
-        PullToRefreshBox(isRefreshing = state.isLoading, onRefresh = { onAction(HomeAction.OnRetryClick) }) {
-            val lazyListState = rememberLazyListState()
-            val reorderableState =
-                rememberReorderableLazyListState(lazyListState) { from, to ->
-                    onAction(HomeAction.OnReorderSections(from.index, to.index))
-                }
+            HomeHeader(
+                serverName = state.server?.name ?: "",
+                isLoading = state.isLoading,
+                isError = state.error != null,
+                onServerClick = { showServerSelectionBottomSheet = true },
+                onErrorClick = { showErrorDialog = true },
+                onRetryClick = { onAction(HomeAction.OnRetryClick) },
+                onSearchClick = { searchExpanded = true },
+                onUserClick = { onAction(HomeAction.OnSettingsClick) },
+            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Default Material3 indicator - same loading feedback as Downloads/Library, instead
+                // of
+                // a separate spinner living in HomeHeader too.
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = { onAction(HomeAction.OnRetryClick) },
+                ) {
+                    val lazyListState = rememberLazyListState()
+                    val reorderableState =
+                        rememberReorderableLazyListState(lazyListState) { from, to ->
+                            onAction(HomeAction.OnReorderSections(from.index, to.index))
+                        }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
-                state = lazyListState,
-                contentPadding =
-                    PaddingValues(top = MaterialTheme.spacings.small, bottom = paddingBottom),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
-            ) {
-                items(state.sectionOrder, key = { it }) { key ->
-                    ReorderableItem(reorderableState, key = key) { isDragging ->
-                        // Long-press the section's own title to start dragging it, rather than a
-                        // persistent handle shown at all times - Suggestions is itself a swipeable
-                        // pager, so wrapping the whole item in a drag-anywhere modifier would fight
-                        // that nested gesture. Each section composable applies `titleModifier` to
-                        // just its title Text, leaving the rest of its content (posters, the
-                        // "view all" arrow, etc.) clickable/scrollable as normal.
-                        val titleModifier = Modifier.longPressDraggableHandle()
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
+                        state = lazyListState,
+                        contentPadding =
+                            PaddingValues(
+                                top = MaterialTheme.spacings.small,
+                                bottom = paddingBottom,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+                    ) {
+                        items(state.sectionOrder, key = { it }) { key ->
+                            ReorderableItem(reorderableState, key = key) { isDragging ->
+                                // Long-press the section's own title to start dragging it, rather
+                                // than a
+                                // persistent handle shown at all times - Suggestions is itself a
+                                // swipeable
+                                // pager, so wrapping the whole item in a drag-anywhere modifier
+                                // would fight
+                                // that nested gesture. Each section composable applies
+                                // `titleModifier` to
+                                // just its title Text, leaving the rest of its content (posters,
+                                // the
+                                // "view all" arrow, etc.) clickable/scrollable as normal.
+                                val titleModifier = Modifier.longPressDraggableHandle()
 
-                        // Subtle "picked up" feedback while dragging - a slight scale/elevation
-                        // lift plus a faint tint, so entering reorder mode reads as a distinct
-                        // state rather than the section just silently moving on its own.
-                        val scale by
-                            animateFloatAsState(
-                                targetValue = if (isDragging) 1.02f else 1f,
-                                label = "sectionDragScale",
-                            )
-                        val elevation by
-                            animateDpAsState(
-                                targetValue = if (isDragging) 6.dp else 0.dp,
-                                label = "sectionDragElevation",
-                            )
-                        val tint by
-                            animateColorAsState(
-                                targetValue =
-                                    if (isDragging) {
-                                        MaterialTheme.colorScheme.surfaceContainerHigh
-                                    } else {
-                                        Color.Transparent
-                                    },
-                                label = "sectionDragTint",
-                            )
+                                // Subtle "picked up" feedback while dragging - a slight
+                                // scale/elevation
+                                // lift plus a faint tint, so entering reorder mode reads as a
+                                // distinct
+                                // state rather than the section just silently moving on its own.
+                                val scale by
+                                    animateFloatAsState(
+                                        targetValue = if (isDragging) 1.02f else 1f,
+                                        label = "sectionDragScale",
+                                    )
+                                val elevation by
+                                    animateDpAsState(
+                                        targetValue = if (isDragging) 6.dp else 0.dp,
+                                        label = "sectionDragElevation",
+                                    )
+                                val tint by
+                                    animateColorAsState(
+                                        targetValue =
+                                            if (isDragging) {
+                                                MaterialTheme.colorScheme.surfaceContainerHigh
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                        label = "sectionDragTint",
+                                    )
 
-                        Box(
-                            modifier =
-                                Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-                                    .shadow(elevation, shape = MaterialTheme.shapes.medium)
-                                    .background(tint, shape = MaterialTheme.shapes.medium)
-                        ) {
-                            when {
-                            key == HomeSectionKeys.SUGGESTIONS ->
-                                state.suggestionsSection?.let { section ->
-                                    HomeCarousel(
-                                        items = section.items,
-                                        itemsPadding = itemsPadding,
-                                        onAction = onAction,
-                                        titleModifier = titleModifier,
-                                    )
-                                }
-                            key == HomeSectionKeys.CONTINUE_WATCHING ->
-                                state.resumeSection?.let { section ->
-                                    HomeSection(
-                                        section = section.homeSection,
-                                        itemsPadding = itemsPadding,
-                                        onAction = onAction,
-                                        titleModifier = titleModifier,
-                                    )
-                                }
-                            key == HomeSectionKeys.NEXT_UP ->
-                                state.nextUpSection?.let { section ->
-                                    HomeSection(
-                                        section = section.homeSection,
-                                        itemsPadding = itemsPadding,
-                                        onAction = onAction,
-                                        titleModifier = titleModifier,
-                                    )
-                                }
-                            key == HomeSectionKeys.FAVORITES ->
-                                state.favoritesSection?.let { section ->
-                                    HomeSection(
-                                        section = section.homeSection,
-                                        itemsPadding = itemsPadding,
-                                        onAction = onAction,
-                                        titleModifier = titleModifier,
-                                    )
-                                }
-                            key == HomeSectionKeys.ACTIVE_DOWNLOADS ->
-                                HomeDownloadProgress(
-                                    entries = state.activeDownloads,
-                                    modifier = Modifier.padding(itemsPadding),
-                                    titleModifier = titleModifier,
-                                    serviceIcons = state.pvrServiceIcons,
-                                )
-                            key.startsWith("view:") ->
-                                state.views
-                                    .firstOrNull { HomeSectionKeys.view(it.view.id) == key }
-                                    ?.let { view ->
-                                        HomeView(
-                                            view = view,
-                                            itemsPadding = itemsPadding,
-                                            onAction = onAction,
-                                            titleModifier = titleModifier,
-                                        )
+                                Box(
+                                    modifier =
+                                        Modifier.graphicsLayer {
+                                                scaleX = scale
+                                                scaleY = scale
+                                            }
+                                            .shadow(elevation, shape = MaterialTheme.shapes.medium)
+                                            .background(tint, shape = MaterialTheme.shapes.medium)
+                                ) {
+                                    when {
+                                        key == HomeSectionKeys.SUGGESTIONS ->
+                                            state.suggestionsSection?.let { section ->
+                                                HomeCarousel(
+                                                    items = section.items,
+                                                    itemsPadding = itemsPadding,
+                                                    onAction = onAction,
+                                                    titleModifier = titleModifier,
+                                                )
+                                            }
+                                        key == HomeSectionKeys.CONTINUE_WATCHING ->
+                                            state.resumeSection?.let { section ->
+                                                HomeSection(
+                                                    section = section.homeSection,
+                                                    itemsPadding = itemsPadding,
+                                                    onAction = onAction,
+                                                    titleModifier = titleModifier,
+                                                )
+                                            }
+                                        key == HomeSectionKeys.NEXT_UP ->
+                                            state.nextUpSection?.let { section ->
+                                                HomeSection(
+                                                    section = section.homeSection,
+                                                    itemsPadding = itemsPadding,
+                                                    onAction = onAction,
+                                                    titleModifier = titleModifier,
+                                                )
+                                            }
+                                        key == HomeSectionKeys.FAVORITES ->
+                                            state.favoritesSection?.let { section ->
+                                                HomeSection(
+                                                    section = section.homeSection,
+                                                    itemsPadding = itemsPadding,
+                                                    onAction = onAction,
+                                                    titleModifier = titleModifier,
+                                                )
+                                            }
+                                        key == HomeSectionKeys.ACTIVE_DOWNLOADS ->
+                                            HomeDownloadProgress(
+                                                entries = state.activeDownloads,
+                                                modifier = Modifier.padding(itemsPadding),
+                                                titleModifier = titleModifier,
+                                                serviceIcons = state.pvrServiceIcons,
+                                            )
+                                        key.startsWith("view:") ->
+                                            state.views
+                                                .firstOrNull {
+                                                    HomeSectionKeys.view(it.view.id) == key
+                                                }
+                                                ?.let { view ->
+                                                    HomeView(
+                                                        view = view,
+                                                        itemsPadding = itemsPadding,
+                                                        onAction = onAction,
+                                                        titleModifier = titleModifier,
+                                                    )
+                                                }
+                                        key.startsWith("discover:") ->
+                                            state.discoverSections
+                                                .firstOrNull {
+                                                    HomeSectionKeys.discover(it.titleRes) == key
+                                                }
+                                                ?.let { section ->
+                                                    HomeDiscoverSection(
+                                                        section = section,
+                                                        itemsPadding = itemsPadding,
+                                                        onAction = onAction,
+                                                        titleModifier = titleModifier,
+                                                    )
+                                                }
                                     }
-                            key.startsWith("discover:") ->
-                                state.discoverSections
-                                    .firstOrNull { HomeSectionKeys.discover(it.titleRes) == key }
-                                    ?.let { section ->
-                                        HomeDiscoverSection(
-                                            section = section,
-                                            itemsPadding = itemsPadding,
-                                            onAction = onAction,
-                                            titleModifier = titleModifier,
-                                        )
-                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
 
-        if (state.error != null && showErrorDialog) {
-            AlertDialog(
-                onDismissRequest = { showErrorDialog = false },
-                title = { Text(stringResource(CoreR.string.no_server_connection)) },
-                text = { Text(state.error!!.message ?: stringResource(CoreR.string.unknown_error)) },
-                confirmButton = {
-                    TextButton(onClick = { onAction(HomeAction.OnEnableOfflineMode) }) {
-                        Text(stringResource(CoreR.string.enable_offline_mode))
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showErrorDialog = false
-                            onAction(HomeAction.OnRetryClick)
-                        }
-                    ) {
-                        Text(stringResource(CoreR.string.retry))
-                    }
-                },
-            )
-        }
-        }
+                if (state.error != null && showErrorDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showErrorDialog = false },
+                        title = { Text(stringResource(CoreR.string.no_server_connection)) },
+                        text = {
+                            Text(
+                                state.error!!.message ?: stringResource(CoreR.string.unknown_error)
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { onAction(HomeAction.OnEnableOfflineMode) }) {
+                                Text(stringResource(CoreR.string.enable_offline_mode))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showErrorDialog = false
+                                    onAction(HomeAction.OnRetryClick)
+                                }
+                            ) {
+                                Text(stringResource(CoreR.string.retry))
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 

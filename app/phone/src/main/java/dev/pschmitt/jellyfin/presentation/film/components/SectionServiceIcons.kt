@@ -23,7 +23,10 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
 fun SectionServiceIcons(serviceIcons: List<Int>, modifier: Modifier = Modifier) {
     if (serviceIcons.isEmpty()) return
 
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.extraSmall)) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.extraSmall),
+    ) {
         serviceIcons.forEach { iconRes ->
             Icon(
                 painter = painterResource(iconRes),

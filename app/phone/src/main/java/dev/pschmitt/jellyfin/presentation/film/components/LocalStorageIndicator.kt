@@ -23,13 +23,13 @@ import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 import dev.pschmitt.jellyfin.utils.isPathOnRemovableStorage
 
 /**
- * The same "icon + size" caption used for a downloaded item's row on the Downloads screen
- * (see `StorageIconFor`/`DownloadRow` there), reused on the movie/episode detail page so a
- * downloaded item's on-disk footprint and location are visible without a trip to that screen.
- * [isBroken] mirrors `FindroidItem.isDownloadBroken()` - an error-tinted warning icon instead of
- * the storage icon, since a 0 B reading here means the same "file's actually missing" thing it
- * does there. [showSize] is false on the movie/episode detail page - the size lives on the
- * "Delete download" tile there instead (see ItemButtonsBar), so this only needs to surface the
+ * The same "icon + size" caption used for a downloaded item's row on the Downloads screen (see
+ * `StorageIconFor`/`DownloadRow` there), reused on the movie/episode detail page so a downloaded
+ * item's on-disk footprint and location are visible without a trip to that screen. [isBroken]
+ * mirrors `FindroidItem.isDownloadBroken()` - an error-tinted warning icon instead of the storage
+ * icon, since a 0 B reading here means the same "file's actually missing" thing it does there.
+ * [showSize] is false on the movie/episode detail page - the size lives on the "Delete download"
+ * tile there instead (see ItemButtonsBar), so this only needs to surface the
  * broken/marked-for-deletion states; the size line is still shown when neither of those apply
  * everywhere else that doesn't merge size into a button.
  */
@@ -97,13 +97,19 @@ fun LocalStorageIndicator(
 @Preview(showBackground = true)
 @Composable
 private fun LocalStorageIndicatorPreview() {
-    FindroidTheme { LocalStorageIndicator(path = "/storage/emulated/0/downloads/x", sizeBytes = 1_400_000_000L) }
+    FindroidTheme {
+        LocalStorageIndicator(path = "/storage/emulated/0/downloads/x", sizeBytes = 1_400_000_000L)
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun LocalStorageIndicatorBrokenPreview() {
     FindroidTheme {
-        LocalStorageIndicator(path = "/storage/emulated/0/downloads/x", sizeBytes = 0L, isBroken = true)
+        LocalStorageIndicator(
+            path = "/storage/emulated/0/downloads/x",
+            sizeBytes = 0L,
+            isBroken = true,
+        )
     }
 }

@@ -57,7 +57,9 @@ fun DownloadingBadge(progress: DownloadProgress, modifier: Modifier = Modifier) 
 @Composable
 @Preview
 private fun DownloadingBadgeQueuedPreview() {
-    FindroidTheme { DownloadingBadge(progress = DownloadProgress(status = DownloadManager.STATUS_PENDING)) }
+    FindroidTheme {
+        DownloadingBadge(progress = DownloadProgress(status = DownloadManager.STATUS_PENDING))
+    }
 }
 
 @Composable

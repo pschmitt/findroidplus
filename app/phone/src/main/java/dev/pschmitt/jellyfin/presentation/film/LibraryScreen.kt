@@ -4,17 +4,16 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -198,19 +197,17 @@ private fun LibraryScreenLayout(
                     if (searchExpanded) {
                         TextField(
                             value = state.searchQuery,
-                            onValueChange = {
-                                onAction(LibraryAction.OnSearchQueryChange(it))
-                            },
-                            modifier =
-                                Modifier.fillMaxWidth().focusRequester(searchFocusRequester),
+                            onValueChange = { onAction(LibraryAction.OnSearchQueryChange(it)) },
+                            modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester),
                             placeholder = { Text(libraryName) },
                             singleLine = true,
-                            colors = TextFieldDefaults.colors(
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                            ),
+                            colors =
+                                TextFieldDefaults.colors(
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                ),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions =
                                 KeyboardActions(onSearch = { keyboardController?.hide() }),
@@ -301,154 +298,164 @@ private fun LibraryScreenLayout(
             },
         ) {
             Column {
-            ErrorGroup(
-                loadStates = items.loadState,
-                onRefresh = { items.refresh() },
-                modifier = Modifier.fillMaxWidth().padding(listPadding),
-            )
+                ErrorGroup(
+                    loadStates = items.loadState,
+                    onRefresh = { items.refresh() },
+                    modifier = Modifier.fillMaxWidth().padding(listPadding),
+                )
 
-            val seerrActive = isMergedMedia && state.seerrConfigured
-            // The Requested tab replaces the library grid with the Seerr request list; while a
-            // search is open the normal search behavior wins.
-            val requestedTabActive =
-                seerrActive && state.filter == MediaFilter.REQUESTED && !searchExpanded
-            // Opening search with an empty query surfaces the recent Seerr requests - feedback
-            // on what's been asked for and how far along it is.
-            val showRecentRequests =
-                seerrActive &&
-                    searchExpanded &&
-                    state.searchQuery.isBlank() &&
-                    state.recentRequests.isNotEmpty()
-            // A Seerr result already in the library right above it is a plain duplicate - matched
-            // by tmdbId against whatever's currently loaded (the direct, reliable signal), with
-            // Seerr's own AVAILABLE status as a fallback for anything not loaded into `items` yet
-            // (e.g. still fetching the next page).
-            val libraryTmdbIds =
-                items.itemSnapshotList.mapNotNull { it?.tmdbIdOrNull() }.toSet()
-            val seerrResults =
-                if (seerrActive && state.searchQuery.isNotBlank()) {
-                    state.seerrResults
-                        .filter {
-                            when (state.filter) {
-                                MediaFilter.ALL,
-                                MediaFilter.REQUESTED -> true
-                                MediaFilter.MOVIES -> it.mediaType == SeerrMediaType.MOVIE
-                                MediaFilter.SHOWS -> it.mediaType == SeerrMediaType.TV
+                val seerrActive = isMergedMedia && state.seerrConfigured
+                // The Requested tab replaces the library grid with the Seerr request list; while a
+                // search is open the normal search behavior wins.
+                val requestedTabActive =
+                    seerrActive && state.filter == MediaFilter.REQUESTED && !searchExpanded
+                // Opening search with an empty query surfaces the recent Seerr requests - feedback
+                // on what's been asked for and how far along it is.
+                val showRecentRequests =
+                    seerrActive &&
+                        searchExpanded &&
+                        state.searchQuery.isBlank() &&
+                        state.recentRequests.isNotEmpty()
+                // A Seerr result already in the library right above it is a plain duplicate -
+                // matched
+                // by tmdbId against whatever's currently loaded (the direct, reliable signal), with
+                // Seerr's own AVAILABLE status as a fallback for anything not loaded into `items`
+                // yet
+                // (e.g. still fetching the next page).
+                val libraryTmdbIds =
+                    items.itemSnapshotList.mapNotNull { it?.tmdbIdOrNull() }.toSet()
+                val seerrResults =
+                    if (seerrActive && state.searchQuery.isNotBlank()) {
+                        state.seerrResults
+                            .filter {
+                                when (state.filter) {
+                                    MediaFilter.ALL,
+                                    MediaFilter.REQUESTED -> true
+                                    MediaFilter.MOVIES -> it.mediaType == SeerrMediaType.MOVIE
+                                    MediaFilter.SHOWS -> it.mediaType == SeerrMediaType.TV
+                                }
                             }
-                        }
-                        .filter { it.status != SeerrMediaStatus.AVAILABLE }
-                        .filter { it.tmdbId !in libraryTmdbIds }
-                } else {
-                    emptyList()
-                }
-            val showSeerrSection =
-                seerrActive &&
-                    state.searchQuery.isNotBlank() &&
-                    (seerrResults.isNotEmpty() || state.seerrSearching || state.seerrError != null)
+                            .filter { it.status != SeerrMediaStatus.AVAILABLE }
+                            .filter { it.tmdbId !in libraryTmdbIds }
+                    } else {
+                        emptyList()
+                    }
+                val showSeerrSection =
+                    seerrActive &&
+                        state.searchQuery.isNotBlank() &&
+                        (seerrResults.isNotEmpty() ||
+                            state.seerrSearching ||
+                            state.seerrError != null)
 
-            LazyVerticalGrid(
-                columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = listPadding,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-            ) {
-                if (showRecentRequests || requestedTabActive) {
-                    if (showRecentRequests) {
-                        item(key = "seerr-requests-header", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(
-                                text = stringResource(CoreR.string.discover_recent_requests),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        }
-                    }
-                    if (requestedTabActive && state.recentRequests.isEmpty()) {
-                        item(key = "seerr-requests-empty", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(
-                                text = stringResource(CoreR.string.discover_requested_empty),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    items(
-                        items = state.recentRequests,
-                        key = { "seerr-request-${it.id}" },
-                        span = { GridItemSpan(maxLineSpan) },
-                    ) { request ->
-                        SeerrRequestRow(
-                            request = request,
-                            // Cancelling only makes sense while Seerr can still stop anything -
-                            // available (or partially available) media is already there.
-                            onCancel =
-                                if (
-                                    request.mediaStatus == SeerrMediaStatus.PENDING ||
-                                        request.mediaStatus == SeerrMediaStatus.PROCESSING ||
-                                        request.mediaStatus == SeerrMediaStatus.NOT_REQUESTED
-                                ) {
-                                    { pendingSeerrCancel = request }
-                                } else {
-                                    null
-                                },
-                            onClick = { onSeerrItemClick(request.tmdbId, request.mediaType) },
-                        )
-                    }
-                }
-                if (!requestedTabActive) {
-                    items(count = items.itemCount, key = items.itemKey { it.id }) {
-                        val item = items[it]
-                        item?.let { item ->
-                            ItemCard(
-                                item = item,
-                                direction = Direction.VERTICAL,
-                                onClick = { onAction(LibraryAction.OnItemClick(item)) },
-                                modifier = Modifier.animateItem(),
-                                queueStatus = state.queueStatus[item.id],
-                            )
-                        }
-                    }
-                }
-                if (showSeerrSection) {
-                    item(key = "seerr-results-header", span = { GridItemSpan(maxLineSpan) }) {
-                        Column {
-                            Text(
-                                text = stringResource(CoreR.string.media_seerr_section),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            if (state.seerrSearching) {
-                                Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
-                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                            }
-                            state.seerrError?.let { error ->
-                                Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
+                LazyVerticalGrid(
+                    columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = listPadding,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                ) {
+                    if (showRecentRequests || requestedTabActive) {
+                        if (showRecentRequests) {
+                            item(
+                                key = "seerr-requests-header",
+                                span = { GridItemSpan(maxLineSpan) },
+                            ) {
                                 Text(
-                                    text = error,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
+                                    text = stringResource(CoreR.string.discover_recent_requests),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        }
+                        if (requestedTabActive && state.recentRequests.isEmpty()) {
+                            item(
+                                key = "seerr-requests-empty",
+                                span = { GridItemSpan(maxLineSpan) },
+                            ) {
+                                Text(
+                                    text = stringResource(CoreR.string.discover_requested_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        items(
+                            items = state.recentRequests,
+                            key = { "seerr-request-${it.id}" },
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) { request ->
+                            SeerrRequestRow(
+                                request = request,
+                                // Cancelling only makes sense while Seerr can still stop anything -
+                                // available (or partially available) media is already there.
+                                onCancel =
+                                    if (
+                                        request.mediaStatus == SeerrMediaStatus.PENDING ||
+                                            request.mediaStatus == SeerrMediaStatus.PROCESSING ||
+                                            request.mediaStatus == SeerrMediaStatus.NOT_REQUESTED
+                                    ) {
+                                        { pendingSeerrCancel = request }
+                                    } else {
+                                        null
+                                    },
+                                onClick = { onSeerrItemClick(request.tmdbId, request.mediaType) },
+                            )
+                        }
+                    }
+                    if (!requestedTabActive) {
+                        items(count = items.itemCount, key = items.itemKey { it.id }) {
+                            val item = items[it]
+                            item?.let { item ->
+                                ItemCard(
+                                    item = item,
+                                    direction = Direction.VERTICAL,
+                                    onClick = { onAction(LibraryAction.OnItemClick(item)) },
+                                    modifier = Modifier.animateItem(),
+                                    queueStatus = state.queueStatus[item.id],
                                 )
                             }
                         }
                     }
-                    items(
-                        items = seerrResults,
-                        key = { "seerr-result-${it.mediaType}-${it.tmdbId}" },
-                        span = { GridItemSpan(maxLineSpan) },
-                    ) { result ->
-                        SeerrResultRow(
-                            item = result,
-                            requestedThisSession = result.tmdbId in state.requestedTmdbIds,
-                            queueStatus =
-                                if (result.mediaType == SeerrMediaType.MOVIE) {
-                                    state.radarrQueueStatus[result.tmdbId]
-                                } else {
-                                    null
-                                },
-                            onRequest = { onAction(LibraryAction.OnSeerrRequest(result)) },
-                            onClick = { onSeerrItemClick(result.tmdbId, result.mediaType) },
-                        )
+                    if (showSeerrSection) {
+                        item(key = "seerr-results-header", span = { GridItemSpan(maxLineSpan) }) {
+                            Column {
+                                Text(
+                                    text = stringResource(CoreR.string.media_seerr_section),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                if (state.seerrSearching) {
+                                    Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                                state.seerrError?.let { error ->
+                                    Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
+                                    Text(
+                                        text = error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                        items(
+                            items = seerrResults,
+                            key = { "seerr-result-${it.mediaType}-${it.tmdbId}" },
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) { result ->
+                            SeerrResultRow(
+                                item = result,
+                                requestedThisSession = result.tmdbId in state.requestedTmdbIds,
+                                queueStatus =
+                                    if (result.mediaType == SeerrMediaType.MOVIE) {
+                                        state.radarrQueueStatus[result.tmdbId]
+                                    } else {
+                                        null
+                                    },
+                                onRequest = { onAction(LibraryAction.OnSeerrRequest(result)) },
+                                onClick = { onSeerrItemClick(result.tmdbId, result.mediaType) },
+                            )
+                        }
                     }
                 }
-            }
             }
         }
     }
@@ -458,8 +465,7 @@ private fun LibraryScreenLayout(
             title = { Text(text = stringResource(CoreR.string.seerr_cancel_request)) },
             text = {
                 Text(
-                    text =
-                        stringResource(CoreR.string.seerr_cancel_request_message, request.title)
+                    text = stringResource(CoreR.string.seerr_cancel_request_message, request.title)
                 )
             },
             onDismissRequest = { pendingSeerrCancel = null },

@@ -80,14 +80,14 @@ fun EpisodeCard(
                     DownloadedBadge(
                         modifier =
                             Modifier.align(Alignment.TopStart)
-                                .padding(PaddingValues(MaterialTheme.spacings.small)),
+                                .padding(PaddingValues(MaterialTheme.spacings.small))
                     )
                 }
                 if (isMarkedForDeletion) {
                     MarkedForDeletionBadge(
                         modifier =
                             Modifier.align(Alignment.BottomEnd)
-                                .padding(PaddingValues(MaterialTheme.spacings.small)),
+                                .padding(PaddingValues(MaterialTheme.spacings.small))
                     )
                 }
             }

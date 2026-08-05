@@ -14,8 +14,8 @@ import timber.log.Timber
 
 /**
  * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
- * `SecureCredentialStore` - passed in as plain lambdas rather than a direct dependency because
- * that type lives in `core`, which depends on `data`, not the other way around. Same pattern as
+ * `SecureCredentialStore` - passed in as plain lambdas rather than a direct dependency because that
+ * type lives in `core`, which depends on `data`, not the other way around. Same pattern as
  * `CalendarRepositoryImpl`/`QueueStatusRepositoryImpl`.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.PvrDiskSpaceModule] (a Hilt `@Provides`) rather than an
@@ -90,11 +90,13 @@ class PvrDiskSpaceRepositoryImpl(
         diskSpaces: List<PvrDiskSpaceDto>,
     ): PvrServiceDiskSpace? {
         if (diskSpaces.isEmpty()) return null
-        val matched =
-            rootFolders.mapNotNull { root ->
-                diskSpaces.filter { root.path.startsWith(it.path) }.maxByOrNull { it.path.length }
-            }
-        val chosen = matched.maxByOrNull { it.totalSpace } ?: diskSpaces.maxByOrNull { it.totalSpace }
-        return chosen?.let { PvrServiceDiskSpace(freeBytes = it.freeSpace, totalBytes = it.totalSpace) }
+        val matched = rootFolders.mapNotNull { root ->
+            diskSpaces.filter { root.path.startsWith(it.path) }.maxByOrNull { it.path.length }
+        }
+        val chosen =
+            matched.maxByOrNull { it.totalSpace } ?: diskSpaces.maxByOrNull { it.totalSpace }
+        return chosen?.let {
+            PvrServiceDiskSpace(freeBytes = it.freeSpace, totalBytes = it.totalSpace)
+        }
     }
 }

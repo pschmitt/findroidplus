@@ -69,7 +69,10 @@ constructor(
             val nowEnabled = enabled && running
             appPreferences.setValue(appPreferences.localControlEnabled, nowEnabled)
             _state.emit(
-                _state.value.copy(localControlEnabled = nowEnabled, startFailed = enabled && !running)
+                _state.value.copy(
+                    localControlEnabled = nowEnabled,
+                    startFailed = enabled && !running,
+                )
             )
         }
     }

@@ -24,9 +24,10 @@ import timber.log.Timber
  * Eligibility is computed entirely from the local DB (see [isMarkedForAutoDeletion]) rather than
  * re-fetching each candidate from the server - this used to call [JellyfinRepository.getEpisode]
  * once per downloaded episode, which was both a needless network round trip per item and a
- * different eligibility check than the one the "marked for deletion" UI badge uses (the badge
- * reads local DB state), so the two could disagree. [FindroidUserDataDto.lastPlayedDate][dev.pschmitt.jellyfin.models.FindroidUserDataDto]
- * is kept in sync locally by every `setPlayed` call site (see `JellyfinRepositoryImpl`/
+ * different eligibility check than the one the "marked for deletion" UI badge uses (the badge reads
+ * local DB state), so the two could disagree.
+ * [FindroidUserDataDto.lastPlayedDate][dev.pschmitt.jellyfin.models.FindroidUserDataDto] is kept in
+ * sync locally by every `setPlayed` call site (see `JellyfinRepositoryImpl`/
  * `JellyfinRepositoryOfflineImpl`), so the local copy is authoritative.
  */
 @HiltWorker
@@ -51,7 +52,8 @@ constructor(
             val hours = appPreferences.getValue(appPreferences.autoDeleteWatchedHours)
             val userId = jellyfinRepository.getUserId()
 
-            val episodes = database.getEpisodesByServerId(serverId).toFindroidEpisodes(database, userId)
+            val episodes =
+                database.getEpisodesByServerId(serverId).toFindroidEpisodes(database, userId)
 
             for (episode in episodes) {
                 if (!episode.isMarkedForAutoDeletion(hours)) continue

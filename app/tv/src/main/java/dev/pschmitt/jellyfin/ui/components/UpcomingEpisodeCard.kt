@@ -38,12 +38,12 @@ import java.time.LocalDate
 
 /**
  * A Sonarr-known episode not yet in the Jellyfin library - dimmed, and `enabled = false` on the
- * outer [Surface] so D-pad focus traversal skips right over the row itself rather than landing on
- * a dead/no-op target (same mechanism disabled settings cards use, see SettingsSwitchCard). No
- * poster (there isn't one yet) and an explicit "Not yet available" label so it doesn't read as a
- * broken real episode. When [onToggleQueued] is set, the nested queue-toggle [IconButton] is
- * independently focusable/clickable regardless of the outer surface being disabled - it's the one
- * actionable thing this row can do. Mirrors the phone app's
+ * outer [Surface] so D-pad focus traversal skips right over the row itself rather than landing on a
+ * dead/no-op target (same mechanism disabled settings cards use, see SettingsSwitchCard). No poster
+ * (there isn't one yet) and an explicit "Not yet available" label so it doesn't read as a broken
+ * real episode. When [onToggleQueued] is set, the nested queue-toggle [IconButton] is independently
+ * focusable/clickable regardless of the outer surface being disabled - it's the one actionable
+ * thing this row can do. Mirrors the phone app's
  * `dev.pschmitt.jellyfin.presentation.film.components.UpcomingEpisodeCard`.
  */
 @Composable
@@ -72,12 +72,16 @@ fun UpcomingEpisodeCard(
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painter = painterResource(CoreR.drawable.ic_calendar), contentDescription = null)
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_calendar),
+                    contentDescription = null,
+                )
             }
             Spacer(modifier = Modifier.width(MaterialTheme.spacings.medium))
             Column {
                 val title =
-                    episode.title ?: stringResource(CoreR.string.episode_number, episode.episodeNumber)
+                    episode.title
+                        ?: stringResource(CoreR.string.episode_number, episode.episodeNumber)
                 Text(
                     text = stringResource(CoreR.string.episode_name, episode.episodeNumber, title),
                     style = MaterialTheme.typography.titleMedium,
@@ -94,7 +98,11 @@ fun UpcomingEpisodeCard(
                                     formatCalendarDate(airDate),
                                     formatCalendarTime(airTime),
                                 )
-                            } ?: stringResource(CoreR.string.season_upcoming_episode_air_date, formatCalendarDate(airDate))
+                            }
+                                ?: stringResource(
+                                    CoreR.string.season_upcoming_episode_air_date,
+                                    formatCalendarDate(airDate),
+                                )
                         } ?: stringResource(CoreR.string.season_upcoming_episode_tba),
                     style = MaterialTheme.typography.bodyMedium,
                 )

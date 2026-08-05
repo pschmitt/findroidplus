@@ -20,8 +20,8 @@ data class RemoteConfigSyncPlan(
 
 /**
  * Pure decision logic behind `RemoteConfigRepositoryImpl.syncNow` (lives in `core`, since applying
- * a command needs `Downloader`/`AutoDownloadRuleEvaluator`, which `data` can't depend on - see
- * that class's kdoc). Split out so it's unit-testable without faking
+ * a command needs `Downloader`/`AutoDownloadRuleEvaluator`, which `data` can't depend on - see that
+ * class's kdoc). Split out so it's unit-testable without faking
  * `JellyfinRepository`/`ServerDatabaseDao` - same "extract the matching/branching logic into a
  * plain function" approach as `matchSonarr`/`matchRadarr` in `QueueStatusRepositoryImpl`.
  * [hasServer] answers "has this device added this server locally yet" (backed by
@@ -44,7 +44,8 @@ fun planRemoteConfigSync(
         .sortedBy { it.createdAt }
         .forEach { command ->
             when {
-                now - command.createdAt > REMOTE_CONFIG_MAX_COMMAND_AGE_MILLIS -> applied += command.id
+                now - command.createdAt > REMOTE_CONFIG_MAX_COMMAND_AGE_MILLIS ->
+                    applied += command.id
                 !hasServer(command.serverId) -> Unit // stays queued - server not added here yet
                 else -> {
                     toApply += command
@@ -53,8 +54,9 @@ fun planRemoteConfigSync(
             }
         }
 
-    val prunedDevices =
-        devices.filter { it.id == thisDeviceId || now - it.lastSeenMillis <= REMOTE_CONFIG_DEVICE_TTL_MILLIS }
+    val prunedDevices = devices.filter {
+        it.id == thisDeviceId || now - it.lastSeenMillis <= REMOTE_CONFIG_DEVICE_TTL_MILLIS
+    }
     // Only devices *positively known* to be stale (present in the registry, past their TTL) get
     // their queued commands dead-lettered alongside them. A target simply absent from the
     // registry - e.g. it hasn't run its very first sync yet - is not the same thing as stale, so

@@ -53,8 +53,8 @@ import kotlinx.coroutines.coroutineScope
 
 /**
  * TV equivalent of phone's `DownloadScopeDialog` for Show/Season screens. There's no per-episode
- * detail screen on TV (episodes navigate straight to the player), so unlike phone this dialog
- * only ever offers season/show/future-seasons scope - no "this episode only" option.
+ * detail screen on TV (episodes navigate straight to the player), so unlike phone this dialog only
+ * ever offers season/show/future-seasons scope - no "this episode only" option.
  */
 @Composable
 fun DownloadScopeDialog(
@@ -64,7 +64,8 @@ fun DownloadScopeDialog(
     initialOnlyUnwatched: Boolean = false,
     canDelete: Boolean = false,
     onDelete: (() -> Unit)? = null,
-    onConfirm: (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
+    onConfirm:
+        (selection: DownloadSelection, alsoFollowNew: Boolean, onlyUnwatched: Boolean) -> Unit,
     onDismiss: () -> Unit,
     getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
         null,
@@ -74,8 +75,9 @@ fun DownloadScopeDialog(
     // Either kind of previously-saved rule (future-seasons-only, or per-season-follow) means the
     // show already has ongoing tracking from the user's point of view - there's only one toggle
     // for that now, so either signal being true should show it as on.
-    var alsoFollowNew by
-        remember { mutableStateOf(initialAlsoFollowNew || initialSelection.alsoFutureSeasons) }
+    var alsoFollowNew by remember {
+        mutableStateOf(initialAlsoFollowNew || initialSelection.alsoFutureSeasons)
+    }
     var onlyUnwatched by remember { mutableStateOf(initialOnlyUnwatched) }
     var seasonsExpanded by remember { mutableStateOf(false) }
 
@@ -85,16 +87,17 @@ fun DownloadScopeDialog(
     // Cached per (season id, onlyUnwatched) so toggling a season off and back on - or flipping
     // "only unwatched" back to what it was - doesn't re-hit the network; only ever grows for the
     // lifetime of this dialog.
-    val seasonSizeCache = remember { mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>() }
+    val seasonSizeCache = remember {
+        mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>()
+    }
     LaunchedEffect(selectedSeasonIds, onlyUnwatched) {
         if (getSeasonSize == null) return@LaunchedEffect
         val missing = selectedSeasonIds.filter { (it to onlyUnwatched) !in seasonSizeCache }
         if (missing.isEmpty()) return@LaunchedEffect
         coroutineScope {
-            val sizes =
-                missing.map { seasonId ->
-                    seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
-                }
+            val sizes = missing.map { seasonId ->
+                seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
+            }
             sizes.forEach { (seasonId, deferred) ->
                 seasonSizeCache[seasonId to onlyUnwatched] = deferred.await()
             }
@@ -143,7 +146,8 @@ fun DownloadScopeDialog(
                     if (seasons == null) {
                         item {
                             Box(
-                                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.large),
+                                modifier =
+                                    Modifier.fillMaxWidth().padding(MaterialTheme.spacings.large),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 CircularProgressIndicator()
@@ -157,7 +161,8 @@ fun DownloadScopeDialog(
                                     label = stringResource(CoreR.string.download_scope_show),
                                     icon = CoreR.drawable.ic_tv,
                                     onToggle = { checked ->
-                                        selectedSeasonIds = if (checked) allSeasonIds else emptySet()
+                                        selectedSeasonIds =
+                                            if (checked) allSeasonIds else emptySet()
                                     },
                                 )
                             }
@@ -297,12 +302,16 @@ fun DownloadScopeDialog(
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
                 Row(
                     modifier =
-                        Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacings.default),
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = MaterialTheme.spacings.default),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 ) {
                     if (canDelete && onDelete != null) {
                         Button(onClick = onDelete) {
-                            Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_trash),
+                                contentDescription = null,
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = stringResource(CoreR.string.download_scope_remove))
                         }
@@ -310,9 +319,21 @@ fun DownloadScopeDialog(
                     Button(onClick = onDismiss) { Text(text = stringResource(CoreR.string.cancel)) }
                     Button(
                         enabled = bulkModeSelected,
-                        onClick = { onConfirm(DownloadSelection(seasonIds = selectedSeasonIds, alsoFutureSeasons = alsoFollowNew), alsoFollowNew, onlyUnwatched) },
+                        onClick = {
+                            onConfirm(
+                                DownloadSelection(
+                                    seasonIds = selectedSeasonIds,
+                                    alsoFutureSeasons = alsoFollowNew,
+                                ),
+                                alsoFollowNew,
+                                onlyUnwatched,
+                            )
+                        },
                     ) {
-                        Icon(painter = painterResource(CoreR.drawable.ic_download), contentDescription = null)
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_download),
+                            contentDescription = null,
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = stringResource(CoreR.string.download))
                     }
@@ -353,5 +374,7 @@ private fun ScopeToggleRow(
 @Composable
 @Preview
 private fun DownloadScopeDialogPreview() {
-    FindroidTheme { DownloadScopeDialog(seasons = emptyList(), onConfirm = { _, _, _ -> }, onDismiss = {}) }
+    FindroidTheme {
+        DownloadScopeDialog(seasons = emptyList(), onConfirm = { _, _, _ -> }, onDismiss = {})
+    }
 }

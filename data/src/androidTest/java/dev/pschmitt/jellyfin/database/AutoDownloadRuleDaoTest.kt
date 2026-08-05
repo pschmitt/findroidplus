@@ -36,8 +36,22 @@ class AutoDownloadRuleDaoTest {
         db = Room.inMemoryDatabaseBuilder(context, ServerDatabase::class.java).build()
         dao = db.getServerDatabaseDao()
 
-        dao.insertServer(Server(id = serverA, name = serverA, currentServerAddressId = null, currentUserId = null))
-        dao.insertServer(Server(id = serverB, name = serverB, currentServerAddressId = null, currentUserId = null))
+        dao.insertServer(
+            Server(
+                id = serverA,
+                name = serverA,
+                currentServerAddressId = null,
+                currentUserId = null,
+            )
+        )
+        dao.insertServer(
+            Server(
+                id = serverB,
+                name = serverB,
+                currentServerAddressId = null,
+                currentUserId = null,
+            )
+        )
         dao.insertUser(User(id = userA, name = "userA", serverId = serverA))
         dao.insertUser(User(id = userB, name = "userB", serverId = serverA))
     }

@@ -104,7 +104,7 @@ constructor(
                                 }
                             },
                         ),
-                    )
+                    ),
             ),
             PreferenceGroup(
                 nameStringResource = R.string.settings_category_interface,
@@ -291,7 +291,7 @@ constructor(
                                                     optionValues = R.array.languages_values,
                                                     optionsIncludeNull = true,
                                                 ),
-                                            ),
+                                            )
                                     ),
                                     PreferenceGroup(
                                         preferences =
@@ -764,7 +764,7 @@ constructor(
                                     ),
                                 ),
                         )
-                    )
+                    ),
             ),
             PreferenceGroup(
                 nameStringResource = R.string.title_download,
@@ -808,7 +808,7 @@ constructor(
                                                     },
                                                     backendPreference = appPreferences.offlineMode,
                                                 )
-                                            ),
+                                            )
                                     ),
                                     PreferenceGroup(
                                         nameStringResource = R.string.download_group_network,
@@ -1063,7 +1063,7 @@ constructor(
                                                         appPreferences.pvrSearchTimeout,
                                                     suffixRes = R.string.ms,
                                                 ),
-                                            )
+                                            ),
                                     ),
                                     // "Cache" used to be its own top-level group; folded in here
                                     // since image caching is itself a network-traffic tradeoff, not
@@ -1096,7 +1096,7 @@ constructor(
                                     ),
                                 ),
                         )
-                    )
+                    ),
             ),
             PreferenceGroup(
                 nameStringResource = R.string.settings_group_data,
@@ -1135,7 +1135,7 @@ constructor(
                                 }
                             },
                         ),
-                    )
+                    ),
             ),
             PreferenceGroup(
                 nameStringResource = R.string.about,
@@ -1151,7 +1151,7 @@ constructor(
                                 }
                             },
                         )
-                    )
+                    ),
             ),
         )
 

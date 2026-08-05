@@ -27,7 +27,8 @@ object BackupModule {
             database = serverDatabase,
             appPreferences = appPreferences,
             getSecret = secureCredentialStore::getString,
-            // Blocking, not the fire-and-forget default - see SecureCredentialStore.putStringBlocking.
+            // Blocking, not the fire-and-forget default - see
+            // SecureCredentialStore.putStringBlocking.
             putSecret = secureCredentialStore::putStringBlocking,
         )
     }

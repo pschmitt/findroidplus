@@ -11,8 +11,8 @@ import timber.log.Timber
 
 /**
  * [sonarrApiKeyProvider] resolves the current secret from `SecureCredentialStore` - passed in as a
- * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type
- * lives in `core`, which depends on `data`, not the other way around. Same pattern as
+ * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type lives
+ * in `core`, which depends on `data`, not the other way around. Same pattern as
  * [SeasonEpisodesRepositoryImpl]/[CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
  *
  * [scheduleCompletionCheck] enqueues `dev.pschmitt.jellyfin.work.AutomaticSearchWorker` - also a
@@ -36,13 +36,12 @@ class SonarrSearchRepositoryImpl(
     private data class CachedReleases(val releases: List<PvrRelease>, val fetchedAtMs: Long)
 
     override suspend fun searchSeriesByTmdbId(tmdbId: Int): Result<Unit> {
-        val result =
-            runAction { api ->
-                val seriesId =
-                    api.getSeries().firstOrNull { it.tmdbId == tmdbId }?.id
-                        ?: throw IllegalArgumentException("Could not find this show in Sonarr")
-                api.searchSeries(seriesId)
-            }
+        val result = runAction { api ->
+            val seriesId =
+                api.getSeries().firstOrNull { it.tmdbId == tmdbId }?.id
+                    ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+            api.searchSeries(seriesId)
+        }
         result.onSuccess {
             // A series search can change any episode's available releases.
             releaseCache.clear()
@@ -56,9 +55,9 @@ class SonarrSearchRepositoryImpl(
         episodeNumber: Int,
     ): Int? {
         val api = api() ?: return null
-        val seriesId = api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id ?: return null
-        return api
-            .getEpisodes(seriesId)
+        val seriesId =
+            api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id ?: return null
+        return api.getEpisodes(seriesId)
             .firstOrNull { it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber }
             ?.id
     }
@@ -80,7 +79,9 @@ class SonarrSearchRepositoryImpl(
     ): Result<AutomaticSearchOutcome> = runAction { api ->
         var status = api.getCommandStatus(commandId)
         val deadline = System.currentTimeMillis() + PVR_COMMAND_AWAIT_TIMEOUT_MS
-        while (status.status !in PVR_TERMINAL_COMMAND_STATUSES && System.currentTimeMillis() < deadline) {
+        while (
+            status.status !in PVR_TERMINAL_COMMAND_STATUSES && System.currentTimeMillis() < deadline
+        ) {
             delay(PVR_COMMAND_POLL_INTERVAL_MS)
             status = api.getCommandStatus(commandId)
         }
@@ -106,40 +107,38 @@ class SonarrSearchRepositoryImpl(
             }
     }
 
-    override suspend fun grabRelease(release: PvrRelease): Result<Unit> =
-        runAction { it.grabRelease(release.guid, release.indexerId) }
-            .onSuccess {
-                // Don't know which episode this release belonged to from here - clear everything
-                // rather than risk showing a stale list that still offers an already-grabbed release.
-                releaseCache.clear()
-            }
-
-    override suspend fun deleteSeriesByTvdbId(tvdbId: String): Result<Unit> =
-        runAction { api ->
-            val seriesId =
-                api.getSeries().firstOrNull { it.tvdbId.toString() == tvdbId }?.id
-                    ?: throw IllegalArgumentException("Could not find this show in Sonarr")
-            api.deleteSeries(seriesId, deleteFiles = true, addImportListExclusion = true)
+    override suspend fun grabRelease(release: PvrRelease): Result<Unit> = runAction {
+        it.grabRelease(release.guid, release.indexerId)
+    }
+        .onSuccess {
+            // Don't know which episode this release belonged to from here - clear everything
+            // rather than risk showing a stale list that still offers an already-grabbed release.
+            releaseCache.clear()
         }
+
+    override suspend fun deleteSeriesByTvdbId(tvdbId: String): Result<Unit> = runAction { api ->
+        val seriesId =
+            api.getSeries().firstOrNull { it.tvdbId.toString() == tvdbId }?.id
+                ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+        api.deleteSeries(seriesId, deleteFiles = true, addImportListExclusion = true)
+    }
 
     override suspend fun unmonitorEpisode(
         seriesTvdbId: String,
         seasonNumber: Int,
         episodeNumber: Int,
-    ): Result<Unit> =
-        runAction { api ->
-            val seriesId =
-                api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id
-                    ?: throw IllegalArgumentException("Could not find this show in Sonarr")
-            val episodeId =
-                api
-                    .getEpisodes(seriesId)
-                    .firstOrNull {
-                        it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber
-                    }
-                    ?.id ?: throw IllegalArgumentException("Could not find this episode in Sonarr")
-            api.setEpisodesMonitored(listOf(episodeId), monitored = false)
-        }
+    ): Result<Unit> = runAction { api ->
+        val seriesId =
+            api.getSeries().firstOrNull { it.tvdbId.toString() == seriesTvdbId }?.id
+                ?: throw IllegalArgumentException("Could not find this show in Sonarr")
+        val episodeId =
+            api.getEpisodes(seriesId)
+                .firstOrNull {
+                    it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber
+                }
+                ?.id ?: throw IllegalArgumentException("Could not find this episode in Sonarr")
+        api.setEpisodesMonitored(listOf(episodeId), monitored = false)
+    }
 
     private suspend fun <T> runAction(block: suspend (SonarrApi) -> T): Result<T> {
         val api = api() ?: return Result.failure(IllegalStateException("Sonarr is not configured"))

@@ -26,7 +26,8 @@ fun InfoDialog(videoMetadata: VideoMetadata, downloadedFilePath: String?, onDism
                 ExtraInfoText(videoMetadata = videoMetadata)
                 if (downloadedFilePath != null) {
                     Text(
-                        text = "${stringResource(CoreR.string.download_file_path)}: $downloadedFilePath",
+                        text =
+                            "${stringResource(CoreR.string.download_file_path)}: $downloadedFilePath",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

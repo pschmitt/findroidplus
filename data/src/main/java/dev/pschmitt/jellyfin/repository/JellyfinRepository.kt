@@ -127,19 +127,21 @@ interface JellyfinRepository {
     suspend fun refreshLibrary()
 
     /**
-     * Whether the current Jellyfin user's server-side policy allows deleting media at all
-     * ("Allow this user to delete media" in Jellyfin's admin UI) - gates whether the "Delete from
-     * Jellyfin" action is even shown, rather than offering it and having [deleteItem] fail with a
-     * permissions error.
+     * Whether the current Jellyfin user's server-side policy allows deleting media at all ("Allow
+     * this user to delete media" in Jellyfin's admin UI) - gates whether the "Delete from Jellyfin"
+     * action is even shown, rather than offering it and having [deleteItem] fail with a permissions
+     * error.
      */
     suspend fun canDeleteMedia(): Boolean
 
     fun getBaseUrl(): String
 
-    /** The current user's raw Jellyfin access token - only needed for the local control API's
-     * debug-proxy endpoint (`core/.../localcontrol/LocalControlRouter.kt`), which forwards
-     * ad hoc requests using the app's own already-stored credentials rather than exposing them
-     * to the caller. */
+    /**
+     * The current user's raw Jellyfin access token - only needed for the local control API's
+     * debug-proxy endpoint (`core/.../localcontrol/LocalControlRouter.kt`), which forwards ad hoc
+     * requests using the app's own already-stored credentials rather than exposing them to the
+     * caller.
+     */
     fun getAccessToken(): String?
 
     suspend fun updateDeviceName(name: String)
@@ -156,8 +158,15 @@ interface JellyfinRepository {
      * remote config (see [dev.pschmitt.jellyfin.repository.RemoteConfigRepository]), since every
      * instance already talks to this same Jellyfin account continuously.
      */
-    suspend fun getDisplayPreferences(displayPreferencesId: String, client: String): DisplayPreferencesDto
+    suspend fun getDisplayPreferences(
+        displayPreferencesId: String,
+        client: String,
+    ): DisplayPreferencesDto
 
     /** Writes back a [DisplayPreferencesDto] previously obtained from [getDisplayPreferences]. */
-    suspend fun updateDisplayPreferences(displayPreferencesId: String, client: String, data: DisplayPreferencesDto)
+    suspend fun updateDisplayPreferences(
+        displayPreferencesId: String,
+        client: String,
+        data: DisplayPreferencesDto,
+    )
 }

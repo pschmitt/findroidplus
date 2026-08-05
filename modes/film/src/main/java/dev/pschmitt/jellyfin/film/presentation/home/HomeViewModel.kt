@@ -16,8 +16,8 @@ import dev.pschmitt.jellyfin.models.HomeSection
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
-import dev.pschmitt.jellyfin.repository.SeerrRepository
 import dev.pschmitt.jellyfin.repository.QueueStatusRepository
+import dev.pschmitt.jellyfin.repository.SeerrRepository
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
 import dev.pschmitt.jellyfin.utils.HomeSectionKeys
@@ -27,12 +27,12 @@ import dev.pschmitt.jellyfin.utils.resolveHomeSectionOrder
 import dev.pschmitt.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -75,7 +75,8 @@ constructor(
                     _state.value.copy(
                         activeDownloads =
                             snapshot.entries.filter {
-                                it.status.status == dev.pschmitt.jellyfin.models.QueueItemStatus.DOWNLOADING
+                                it.status.status ==
+                                    dev.pschmitt.jellyfin.models.QueueItemStatus.DOWNLOADING
                             }
                     )
             }
@@ -149,11 +150,11 @@ constructor(
     }
 
     /**
-     * Default order: Pending downloads, Latest Shows, Next Up, Continue Watching, Favorites,
-     * Latest Movies, Suggestions, Trending, Popular Shows, Popular Movies - views are split by
-     * library type (TV/movie) so each lands next to its own "Latest ..." slot rather than grouped
-     * together. Only used until the user actually reorders anything - from then on
-     * [resolveHomeSectionOrder] keeps whatever they set and just appends genuinely new keys here.
+     * Default order: Pending downloads, Latest Shows, Next Up, Continue Watching, Favorites, Latest
+     * Movies, Suggestions, Trending, Popular Shows, Popular Movies - views are split by library
+     * type (TV/movie) so each lands next to its own "Latest ..." slot rather than grouped together.
+     * Only used until the user actually reorders anything - from then on [resolveHomeSectionOrder]
+     * keeps whatever they set and just appends genuinely new keys here.
      */
     private fun recomputeSectionOrder() {
         val current = _state.value
@@ -164,29 +165,34 @@ constructor(
         val showViews = current.views.filter { it.view.type == CollectionType.TvShows }
         val movieViews = current.views.filter { it.view.type == CollectionType.Movies }
         val otherViews =
-            current.views.filterNot { it.view.type == CollectionType.TvShows || it.view.type == CollectionType.Movies }
+            current.views.filterNot {
+                it.view.type == CollectionType.TvShows || it.view.type == CollectionType.Movies
+            }
         val discoverKeyOrder =
             listOf(
                 FilmR.string.home_discover_trending,
                 FilmR.string.home_discover_popular_shows,
                 FilmR.string.home_discover_popular_movies,
             )
-        val discoverByKey = current.discoverSections.associateBy { HomeSectionKeys.discover(it.titleRes) }
+        val discoverByKey =
+            current.discoverSections.associateBy { HomeSectionKeys.discover(it.titleRes) }
 
-        val natural =
-            buildList {
-                    add(HomeSectionKeys.ACTIVE_DOWNLOADS)
-                    addAll(showViews.map { HomeSectionKeys.view(it.view.id) })
-                    if (current.nextUpSection != null) add(HomeSectionKeys.NEXT_UP)
-                    if (current.resumeSection != null) add(HomeSectionKeys.CONTINUE_WATCHING)
-                    if (current.favoritesSection != null) add(HomeSectionKeys.FAVORITES)
-                    addAll(movieViews.map { HomeSectionKeys.view(it.view.id) })
-                    addAll(otherViews.map { HomeSectionKeys.view(it.view.id) })
-                    if (current.suggestionsSection != null) add(HomeSectionKeys.SUGGESTIONS)
-                    addAll(discoverKeyOrder.map { HomeSectionKeys.discover(it) }.filter { it in discoverByKey })
-                }
-                .filterNot { it in hidden }
-        val persisted = homeSectionOrderFromString(appPreferences.getValue(appPreferences.homeSectionOrder))
+        val natural = buildList {
+            add(HomeSectionKeys.ACTIVE_DOWNLOADS)
+            addAll(showViews.map { HomeSectionKeys.view(it.view.id) })
+            if (current.nextUpSection != null) add(HomeSectionKeys.NEXT_UP)
+            if (current.resumeSection != null) add(HomeSectionKeys.CONTINUE_WATCHING)
+            if (current.favoritesSection != null) add(HomeSectionKeys.FAVORITES)
+            addAll(movieViews.map { HomeSectionKeys.view(it.view.id) })
+            addAll(otherViews.map { HomeSectionKeys.view(it.view.id) })
+            if (current.suggestionsSection != null) add(HomeSectionKeys.SUGGESTIONS)
+            addAll(
+                discoverKeyOrder.map { HomeSectionKeys.discover(it) }.filter { it in discoverByKey }
+            )
+        }
+            .filterNot { it in hidden }
+        val persisted =
+            homeSectionOrderFromString(appPreferences.getValue(appPreferences.homeSectionOrder))
         _state.value = current.copy(sectionOrder = resolveHomeSectionOrder(natural, persisted))
     }
 
@@ -335,9 +341,9 @@ constructor(
     }
 
     /**
-     * Seerr-backed discovery rows at the bottom of Home. Failures are silently dropped
-     * (discovery is bonus content - a broken Seerr instance must not take down Home), and
-     * sections that fail or come back empty simply don't appear.
+     * Seerr-backed discovery rows at the bottom of Home. Failures are silently dropped (discovery
+     * is bonus content - a broken Seerr instance must not take down Home), and sections that fail
+     * or come back empty simply don't appear.
      */
     private suspend fun loadDiscover() {
         if (
@@ -350,18 +356,17 @@ constructor(
 
         Timber.i("Loading Seerr discovery sections")
         val sections = coroutineScope {
-            val trending =
-                async { FilmR.string.home_discover_trending to seerrRepository.getTrending() }
-            val movies =
-                async {
-                    FilmR.string.home_discover_popular_movies to
-                        seerrRepository.getPopularMovies()
-                }
-            val shows =
-                async {
-                    FilmR.string.home_discover_popular_shows to seerrRepository.getPopularShows()
-                }
-            listOf(trending.await(), movies.await(), shows.await()).mapNotNull { (titleRes, result) ->
+            val trending = async {
+                FilmR.string.home_discover_trending to seerrRepository.getTrending()
+            }
+            val movies = async {
+                FilmR.string.home_discover_popular_movies to seerrRepository.getPopularMovies()
+            }
+            val shows = async {
+                FilmR.string.home_discover_popular_shows to seerrRepository.getPopularShows()
+            }
+            listOf(trending.await(), movies.await(), shows.await()).mapNotNull { (titleRes, result)
+                ->
                 result
                     .getOrNull()
                     ?.takeIf { it.isNotEmpty() }
@@ -402,8 +407,8 @@ constructor(
     /**
      * Applies a long-press drag move made directly on the Home screen: mutates the already-
      * resolved [HomeState.sectionOrder] in place and persists it immediately, same as a move made
-     * from the "Customize home screen" settings screen - both write the same preference, so
-     * either surface stays in sync with the other.
+     * from the "Customize home screen" settings screen - both write the same preference, so either
+     * surface stays in sync with the other.
      */
     private fun reorderSections(fromIndex: Int, toIndex: Int) {
         val order = _state.value.sectionOrder
@@ -414,6 +419,9 @@ constructor(
         reordered.add(toIndex, key)
 
         _state.value = _state.value.copy(sectionOrder = reordered)
-        appPreferences.setValue(appPreferences.homeSectionOrder, homeSectionOrderToString(reordered))
+        appPreferences.setValue(
+            appPreferences.homeSectionOrder,
+            homeSectionOrderToString(reordered),
+        )
     }
 }

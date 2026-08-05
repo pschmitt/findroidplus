@@ -31,9 +31,9 @@ import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.UiText
-import dev.pschmitt.jellyfin.utils.DownloadProgress
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
+import dev.pschmitt.jellyfin.utils.DownloadProgress
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 import dev.pschmitt.jellyfin.utils.formatDownloadSpeed
 import dev.pschmitt.jellyfin.utils.formatEta
@@ -135,7 +135,9 @@ fun DownloaderCard(
                         )
                     }
                 }
-                if (state.status == DownloadManager.STATUS_RUNNING && state.speedBytesPerSecond > 0) {
+                if (
+                    state.status == DownloadManager.STATUS_RUNNING && state.speedBytesPerSecond > 0
+                ) {
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     val speedText = formatDownloadSpeed(state.speedBytesPerSecond)
                     Row(
@@ -176,7 +178,9 @@ fun DownloaderCard(
             }
             if (showControls) {
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)
+                    ) {
                         when (state.status) {
                             DownloadManager.STATUS_PENDING -> {
                                 FilledTonalIconButton(onClick = onForceClick) {

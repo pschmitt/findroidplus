@@ -16,9 +16,9 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Writes a backup to the user-chosen SAF folder, encrypted with the configured auto-backup
- * password if one is set (see AppPreferences.autoBackupPassword), same as an unencrypted export
- * when left blank.
+ * Writes a backup to the user-chosen SAF folder, encrypted with the configured auto-backup password
+ * if one is set (see AppPreferences.autoBackupPassword), same as an unencrypted export when left
+ * blank.
  */
 @HiltWorker
 class AutoBackupWorker
@@ -29,9 +29,11 @@ constructor(
     private val backupManager: BackupManager,
     private val appPreferences: AppPreferences,
 ) : CoroutineWorker(context, params) {
-    /** Records [reason] to [AppPreferences.autoBackupLastError] so it survives process death and
-     * can be surfaced in the Backup & Restore settings screen - a scheduled auto-backup that fails
-     * has no other way to reach the user, unlike the manual "Back up now" flow's snackbar. */
+    /**
+     * Records [reason] to [AppPreferences.autoBackupLastError] so it survives process death and can
+     * be surfaced in the Backup & Restore settings screen - a scheduled auto-backup that fails has
+     * no other way to reach the user, unlike the manual "Back up now" flow's snackbar.
+     */
     private fun recordFailure(reason: String) {
         appPreferences.setValue(appPreferences.autoBackupLastError, reason)
     }
@@ -66,14 +68,19 @@ constructor(
                                     "(SAF folder grant may have been revoked or the folder moved/deleted)",
                                 folderUriString,
                             )
-                            recordFailure("Could not create backup file - check the backup folder is still accessible")
+                            recordFailure(
+                                "Could not create backup file - check the backup folder is still accessible"
+                            )
                             return@withContext Result.failure()
                         }
 
                 val password = appPreferences.getValue(appPreferences.autoBackupPassword)
                 val envelope = backupManager.buildBackup()
                 backupManager.writeBackup(envelope, file.uri, password = password)
-                appPreferences.setValue(appPreferences.lastBackupTimestamp, System.currentTimeMillis())
+                appPreferences.setValue(
+                    appPreferences.lastBackupTimestamp,
+                    System.currentTimeMillis(),
+                )
                 appPreferences.setValue(appPreferences.autoBackupLastError, null)
                 Result.success()
             } catch (e: Exception) {

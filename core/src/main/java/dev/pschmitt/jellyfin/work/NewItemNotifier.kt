@@ -12,17 +12,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Posts a batched notification when [NewItemNotificationWorker] finds movies/episodes newly
- * added to the Jellyfin library since the last check. Multiple items from one check cycle
- * collapse into a single group in the notification shade instead of flooding it with one entry
- * per item, per the "grouped/batched, not one-per-item" requirement - a real Android notification
- * group (one summary + per-item child notifications sharing a `setGroup` key) rather than an
- * in-place-updated single notification like [DownloadNotificationCoordinator], since each item
- * here still needs its own independent tap target and (conditionally) its own "Download" action.
- * Beyond [MAX_CHILDREN] items in one cycle, per-item actions stop being useful in a shade that's
- * about to be dominated by one group anyway, so it falls back to a single summary-only
- * notification (an inbox-style list of titles, tap to open the app) instead of posting dozens of
- * children.
+ * Posts a batched notification when [NewItemNotificationWorker] finds movies/episodes newly added
+ * to the Jellyfin library since the last check. Multiple items from one check cycle collapse into a
+ * single group in the notification shade instead of flooding it with one entry per item, per the
+ * "grouped/batched, not one-per-item" requirement - a real Android notification group (one
+ * summary + per-item child notifications sharing a `setGroup` key) rather than an in-place-updated
+ * single notification like [DownloadNotificationCoordinator], since each item here still needs its
+ * own independent tap target and (conditionally) its own "Download" action. Beyond [MAX_CHILDREN]
+ * items in one cycle, per-item actions stop being useful in a shade that's about to be dominated by
+ * one group anyway, so it falls back to a single summary-only notification (an inbox-style list of
+ * titles, tap to open the app) instead of posting dozens of children.
  */
 @Singleton
 class NewItemNotifier @Inject constructor(@ApplicationContext private val context: Context) {
@@ -119,7 +118,9 @@ class NewItemNotifier @Inject constructor(@ApplicationContext private val contex
 
     private fun postOverflowSummary(items: List<NewItem>) {
         val style = NotificationCompat.InboxStyle()
-        style.setSummaryText(context.getString(CoreR.string.new_items_notification_title, items.size))
+        style.setSummaryText(
+            context.getString(CoreR.string.new_items_notification_title, items.size)
+        )
         items.take(MAX_CHILDREN).forEach { style.addLine(it.title) }
 
         val notification =

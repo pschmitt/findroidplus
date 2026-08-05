@@ -54,12 +54,18 @@ class ManualImportController(
                                     isLoading = false,
                                     candidates = candidates,
                                     selectedIds =
-                                        candidates.filter { c -> c.canImport }.map { c -> c.id }.toSet(),
+                                        candidates
+                                            .filter { c -> c.canImport }
+                                            .map { c -> c.id }
+                                            .toSet(),
                                 )
                             }
                         },
                         onFailure = { e ->
-                            Timber.w(e, "Failed to load manual import candidates for ${ref.downloadId}")
+                            Timber.w(
+                                e,
+                                "Failed to load manual import candidates for ${ref.downloadId}",
+                            )
                             updateEntry(index) { it.copy(isLoading = false, error = e.message) }
                         },
                     )
@@ -73,7 +79,9 @@ class ManualImportController(
 
     fun selectEntry(index: Int) {
         _state.update { current ->
-            current?.let { if (index in it.entries.indices) it.copy(selectedEntryIndex = index) else it }
+            current?.let {
+                if (index in it.entries.indices) it.copy(selectedEntryIndex = index) else it
+            }
         }
     }
 
@@ -81,15 +89,16 @@ class ManualImportController(
         val index = _state.value?.selectedEntryIndex ?: return
         updateEntry(index) { entry ->
             val selected = entry.selectedIds
-            val newSelected = if (candidateId in selected) selected - candidateId else selected + candidateId
+            val newSelected =
+                if (candidateId in selected) selected - candidateId else selected + candidateId
             entry.copy(selectedIds = newSelected)
         }
     }
 
     /**
-     * Imports from the currently-selected entry only, then removes every other entry in the
-     * cluster as a losing duplicate (best-effort - a cleanup failure is logged, not surfaced,
-     * since the import itself already succeeded and is the part the user actually asked for).
+     * Imports from the currently-selected entry only, then removes every other entry in the cluster
+     * as a losing duplicate (best-effort - a cleanup failure is logged, not surfaced, since the
+     * import itself already succeeded and is the part the user actually asked for).
      */
     fun confirm(onSuccess: () -> Unit = {}, onFailure: (String?) -> Unit = {}) {
         val current = _state.value ?: return
@@ -114,7 +123,12 @@ class ManualImportController(
     }
 
     /** Rejects the whole cluster - every entry, not just the one currently selected. */
-    fun reject(removeFromClient: Boolean, blocklist: Boolean, onSuccess: () -> Unit = {}, onFailure: (String?) -> Unit = {}) {
+    fun reject(
+        removeFromClient: Boolean,
+        blocklist: Boolean,
+        onSuccess: () -> Unit = {},
+        onFailure: (String?) -> Unit = {},
+    ) {
         val current = _state.value ?: return
         if (current.isRejecting) return
         _state.update { it?.copy(isRejecting = true) }
@@ -140,15 +154,26 @@ class ManualImportController(
         scope.launch {
             losers.forEach { loser ->
                 queueStatusRepository
-                    .removeQueueItem(loser.source, loser.queueItemId, removeFromClient = true, blocklist = false)
+                    .removeQueueItem(
+                        loser.source,
+                        loser.queueItemId,
+                        removeFromClient = true,
+                        blocklist = false,
+                    )
                     .onFailure {
-                        Timber.w(it, "Failed to remove losing duplicate queue item ${loser.queueItemId}")
+                        Timber.w(
+                            it,
+                            "Failed to remove losing duplicate queue item ${loser.queueItemId}",
+                        )
                     }
             }
         }
     }
 
-    private inline fun updateEntry(index: Int, transform: (ManualImportEntry) -> ManualImportEntry) {
+    private inline fun updateEntry(
+        index: Int,
+        transform: (ManualImportEntry) -> ManualImportEntry,
+    ) {
         _state.update { current ->
             current?.let {
                 val entries = it.entries.toMutableList()

@@ -5,9 +5,8 @@ import dev.pschmitt.jellyfin.models.CalendarResult
 /**
  * Exposes upcoming Sonarr/Radarr releases (future air dates/release dates), merged and sorted by
  * date. Unlike [QueueStatusRepository], this is a plain on-demand suspend fetch - release dates
- * don't change minute to minute, so there's no WorkManager worker or `StateFlow`/polling loop
- * here, just a fetch-and-match called whenever the Calendar screen (or a show screen) needs fresh
- * data.
+ * don't change minute to minute, so there's no WorkManager worker or `StateFlow`/polling loop here,
+ * just a fetch-and-match called whenever the Calendar screen (or a show screen) needs fresh data.
  */
 interface CalendarRepository {
     /**

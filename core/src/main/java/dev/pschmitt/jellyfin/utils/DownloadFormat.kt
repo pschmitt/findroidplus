@@ -2,9 +2,9 @@ package dev.pschmitt.jellyfin.utils
 
 /**
  * Binary (IEC) units - e.g. "4.40 GiB" - used for every file/transfer size shown in the app,
- * matching how Sonarr/Radarr (and most similar dashboards) report space. Deliberately not
- * Android's own `Formatter.formatFileSize`/`formatShortFileSize` (decimal/1000-based) - mixing the
- * two made the same byte count look like two different sizes depending on which screen showed it.
+ * matching how Sonarr/Radarr (and most similar dashboards) report space. Deliberately not Android's
+ * own `Formatter.formatFileSize`/`formatShortFileSize` (decimal/1000-based) - mixing the two made
+ * the same byte count look like two different sizes depending on which screen showed it.
  */
 fun formatBinaryFileSize(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
@@ -19,9 +19,9 @@ fun formatBinaryFileSize(bytes: Long): String {
 }
 
 /**
- * Compact "used / total" pair for a storage usage bar, e.g. "2.81 / 4 TiB" - both numbers share
- * the total's unit and trailing zeros are trimmed (unlike calling [formatBinaryFileSize] on each
- * side independently, which produced verbose, redundant-unit text like "2.81 TiB of 4.00 TiB").
+ * Compact "used / total" pair for a storage usage bar, e.g. "2.81 / 4 TiB" - both numbers share the
+ * total's unit and trailing zeros are trimmed (unlike calling [formatBinaryFileSize] on each side
+ * independently, which produced verbose, redundant-unit text like "2.81 TiB of 4.00 TiB").
  */
 fun formatBinaryUsagePair(usedBytes: Long, totalBytes: Long): String {
     if (totalBytes <= 0) return formatBinaryFileSize(usedBytes)

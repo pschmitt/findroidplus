@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,107 +100,117 @@ private fun PersonScreenLayout(
         onSettingsClick = { onAction(PersonAction.NavigateToSettings) },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        state.person?.let { person ->
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Spacer(Modifier.height(MaterialTheme.spacings.default))
-                when {
-                    windowSizeClass.isWidthAtLeastBreakpoint(
-                        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
-                    ) -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(itemsPadding),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(MaterialTheme.spacings.default),
-                        ) {
-                            PersonImage(person)
-                            Column(
-                                verticalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.medium)
+            state.person?.let { person ->
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Spacer(Modifier.height(MaterialTheme.spacings.default))
+                    when {
+                        windowSizeClass.isWidthAtLeastBreakpoint(
+                            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+                        ) -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(itemsPadding),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(MaterialTheme.spacings.default),
                             ) {
+                                PersonImage(person)
+                                Column(
+                                    verticalArrangement =
+                                        Arrangement.spacedBy(MaterialTheme.spacings.medium)
+                                ) {
+                                    Text(
+                                        text = person.name,
+                                        style = MaterialTheme.typography.headlineMedium,
+                                    )
+                                    if (person.overview.isNotBlank()) {
+                                        OverviewText(text = person.overview, maxCollapsedLines = 12)
+                                    }
+                                }
+                            }
+                        }
+                        else -> {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(itemsPadding),
+                                verticalArrangement =
+                                    Arrangement.spacedBy(MaterialTheme.spacings.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                PersonImage(person)
                                 Text(
                                     text = person.name,
                                     style = MaterialTheme.typography.headlineMedium,
                                 )
                                 if (person.overview.isNotBlank()) {
-                                    OverviewText(text = person.overview, maxCollapsedLines = 12)
+                                    OverviewText(text = person.overview, maxCollapsedLines = 4)
                                 }
                             }
                         }
                     }
-                    else -> {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(itemsPadding),
-                            verticalArrangement =
-                                Arrangement.spacedBy(MaterialTheme.spacings.medium),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            PersonImage(person)
-                            Text(
-                                text = person.name,
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                            if (person.overview.isNotBlank()) {
-                                OverviewText(text = person.overview, maxCollapsedLines = 4)
+
+                    Spacer(Modifier.height(MaterialTheme.spacings.default))
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default)
+                    ) {
+                        if (state.starredInMovies.isNotEmpty()) {
+                            Column {
+                                Text(
+                                    text = stringResource(CoreR.string.movies_label),
+                                    modifier = Modifier.padding(itemsPadding),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(
+                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall)
+                                )
+                                LazyRow(
+                                    contentPadding = itemsPadding,
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(MaterialTheme.spacings.default),
+                                ) {
+                                    items(state.starredInMovies, key = { it.id }) { item ->
+                                        ItemCard(
+                                            item = item,
+                                            direction = Direction.VERTICAL,
+                                            onClick = {
+                                                onAction(PersonAction.NavigateToItem(item))
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (state.starredInShows.isNotEmpty()) {
+                            Column {
+                                Text(
+                                    text = stringResource(CoreR.string.shows_label),
+                                    modifier = Modifier.padding(itemsPadding),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(
+                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall)
+                                )
+                                LazyRow(
+                                    contentPadding = itemsPadding,
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(MaterialTheme.spacings.default),
+                                ) {
+                                    items(state.starredInShows, key = { it.id }) { item ->
+                                        ItemCard(
+                                            item = item,
+                                            direction = Direction.VERTICAL,
+                                            onClick = {
+                                                onAction(PersonAction.NavigateToItem(item))
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
+
+                    Spacer(Modifier.height(paddingBottom))
                 }
-
-                Spacer(Modifier.height(MaterialTheme.spacings.default))
-
-                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default)) {
-                    if (state.starredInMovies.isNotEmpty()) {
-                        Column {
-                            Text(
-                                text = stringResource(CoreR.string.movies_label),
-                                modifier = Modifier.padding(itemsPadding),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                            LazyRow(
-                                contentPadding = itemsPadding,
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.default),
-                            ) {
-                                items(state.starredInMovies, key = { it.id }) { item ->
-                                    ItemCard(
-                                        item = item,
-                                        direction = Direction.VERTICAL,
-                                        onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (state.starredInShows.isNotEmpty()) {
-                        Column {
-                            Text(
-                                text = stringResource(CoreR.string.shows_label),
-                                modifier = Modifier.padding(itemsPadding),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                            LazyRow(
-                                contentPadding = itemsPadding,
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.default),
-                            ) {
-                                items(state.starredInShows, key = { it.id }) { item ->
-                                    ItemCard(
-                                        item = item,
-                                        direction = Direction.VERTICAL,
-                                        onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(paddingBottom))
-            }
-        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
         }
     }
 }

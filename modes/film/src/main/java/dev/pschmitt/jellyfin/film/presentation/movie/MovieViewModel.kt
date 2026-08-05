@@ -11,9 +11,9 @@ import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.film.domain.VideoMetadataParser
 import dev.pschmitt.jellyfin.film.presentation.downloads.ManualImportController
 import dev.pschmitt.jellyfin.film.presentation.downloads.PendingImportRef
-import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.FindroidItemPerson
 import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -72,11 +72,14 @@ constructor(
      */
     fun openManualImportForCurrentItem() {
         val status = _state.value.queueStatus ?: return
-        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED)
+            return
         val title = _state.value.movie?.name ?: return
         val refs =
             _state.value.queueEntries.mapNotNull { entry ->
-                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+                entry.status.downloadId?.let {
+                    PendingImportRef(entry.status.source, it, entry.queueItemId)
+                }
             }
         if (refs.isEmpty()) return
         manualImport.open(title, refs)
@@ -117,12 +120,11 @@ constructor(
 
     private fun observeQueueStatus(movieId: UUID) {
         if (queueStatusJob != null) return
-        queueStatusJob =
-            viewModelScope.launch {
-                queueStatusRepository.getQueueStatusFlow(movieId).collect { status ->
-                    _state.value = _state.value.copy(queueStatus = status)
-                }
+        queueStatusJob = viewModelScope.launch {
+            queueStatusRepository.getQueueStatusFlow(movieId).collect { status ->
+                _state.value = _state.value.copy(queueStatus = status)
             }
+        }
         viewModelScope.launch {
             queueStatusRepository.getQueueEntriesFlow(movieId).collect { entries ->
                 _state.value = _state.value.copy(queueEntries = entries)
@@ -162,7 +164,10 @@ constructor(
             val result = radarrSearchRepository.getReleases(movieId)
             _state.value =
                 _state.value.copy(
-                    releasePicker = result.getOrNull()?.let { ReleasePickerState(isLoading = false, releases = it) }
+                    releasePicker =
+                        result.getOrNull()?.let {
+                            ReleasePickerState(isLoading = false, releases = it)
+                        }
                 )
             result.onFailure { searchEventsChannel.send(SearchEvent.Failed(it.message)) }
         }
@@ -184,20 +189,18 @@ constructor(
             if (cascadeToPvr) {
                 val tmdbId = _state.value.movie?.tmdbId
                 tmdbId?.let { id ->
-                    radarrSearchRepository
-                        .deleteMovieByTmdbId(id)
-                        .onFailure { Timber.w(it, "Failed to cascade movie delete to Radarr") }
+                    radarrSearchRepository.deleteMovieByTmdbId(id).onFailure {
+                        Timber.w(it, "Failed to cascade movie delete to Radarr")
+                    }
                 }
                 tmdbId?.toIntOrNull()?.let { tmdbIdInt ->
                     seerrRepository
                         .getDetails(tmdbIdInt, SeerrMediaType.MOVIE)
                         .onSuccess { detail ->
                             detail.cancellableRequestIds.forEach { requestId ->
-                                seerrRepository
-                                    .cancelRequest(requestId)
-                                    .onFailure {
-                                        Timber.w(it, "Failed to cancel Seerr request $requestId")
-                                    }
+                                seerrRepository.cancelRequest(requestId).onFailure {
+                                    Timber.w(it, "Failed to cancel Seerr request $requestId")
+                                }
                             }
                         }
                         .onFailure {

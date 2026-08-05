@@ -5,13 +5,13 @@ import java.time.LocalTime
 import java.util.UUID
 
 /**
- * A single upcoming Sonarr/Radarr release, already date-resolved and (best-effort) matched
- * against a real Jellyfin item id by [dev.pschmitt.jellyfin.repository.CalendarRepository] - see
+ * A single upcoming Sonarr/Radarr release, already date-resolved and (best-effort) matched against
+ * a real Jellyfin item id by [dev.pschmitt.jellyfin.repository.CalendarRepository] - see
  * `matchSonarrCalendar`/`matchRadarrCalendar` in `CalendarMatching.kt`.
  *
- * Unlike [QueueStatus], an entry Findroid couldn't match to a local Jellyfin item is still
- * included here (with [itemId] `null`) rather than dropped - the point of the calendar is to show
- * "something is coming" even before the show/movie has been added to the Jellyfin library.
+ * Unlike [QueueStatus], an entry Findroid couldn't match to a local Jellyfin item is still included
+ * here (with [itemId] `null`) rather than dropped - the point of the calendar is to show "something
+ * is coming" even before the show/movie has been added to the Jellyfin library.
  */
 /** See [dev.pschmitt.jellyfin.repository.CalendarRepository.getUpcoming]. */
 data class CalendarResult(

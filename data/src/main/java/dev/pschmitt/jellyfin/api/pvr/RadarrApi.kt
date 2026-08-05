@@ -14,9 +14,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /**
  * Thin client for a single Radarr instance. Cheap to construct per-call - [baseUrl] and [apiKey]
  * are resolved by the caller (typically from [dev.pschmitt.jellyfin.security.SecureCredentialStore]
- * and the Radarr settings) rather than injected as a Hilt singleton, since the user can
- * reconfigure either at runtime. Only a single Radarr instance is supported, matching the app's
- * existing single-Jellyfin-server assumption.
+ * and the Radarr settings) rather than injected as a Hilt singleton, since the user can reconfigure
+ * either at runtime. Only a single Radarr instance is supported, matching the app's existing
+ * single-Jellyfin-server assumption.
  */
 class RadarrApi(private val baseUrl: String, private val apiKey: String) {
     private val client by lazy { PvrHttpClient.create(apiKey, PvrService.RADARR) }
@@ -69,17 +69,23 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
 
     /**
      * Triggers an automatic search - Radarr picks and grabs the best release itself. Returns the
-     * queued command's id (see [getCommandStatus]), not the result - Radarr answers this as soon
-     * as the command is queued, well before the search itself finishes.
+     * queued command's id (see [getCommandStatus]), not the result - Radarr answers this as soon as
+     * the command is queued, well before the search itself finishes.
      */
     suspend fun searchMovie(movieId: Int): Int =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command")
-            val body = json.encodeToString(RadarrCommandRequest(name = "MoviesSearch", movieIds = listOf(movieId)))
+            val body =
+                json.encodeToString(
+                    RadarrCommandRequest(name = "MoviesSearch", movieIds = listOf(movieId))
+                )
             json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
         }
 
-    /** Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via [searchMovie]. */
+    /**
+     * Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via
+     * [searchMovie].
+     */
     suspend fun getCommandStatus(commandId: Int): PvrCommandResponse =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command", commandId.toString())
@@ -97,13 +103,19 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
      * Lists candidate releases for a movie (interactive/manual search), without grabbing any.
      * Radarr answers this synchronously only once it has polled every enabled indexer (directly or
      * via Prowlarr), which can comfortably exceed the default read timeout when an indexer is slow
-     * - so this call gets a longer, dedicated timeout rather than the shared default. [readTimeoutMs]
-     * comes from `AppPreferences.pvrSearchTimeout` (Settings > Network), since how long is
-     * reasonable to wait depends entirely on the user's indexers.
+     * - so this call gets a longer, dedicated timeout rather than the shared default.
+     *   [readTimeoutMs] comes from `AppPreferences.pvrSearchTimeout` (Settings > Network), since
+     *   how long is reasonable to wait depends entirely on the user's indexers.
      */
     suspend fun getReleases(movieId: Int, readTimeoutMs: Long): List<PvrRelease> =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v3", "release", queryParams = mapOf("movieId" to movieId.toString()))
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "release",
+                    queryParams = mapOf("movieId" to movieId.toString()),
+                )
             json.decodeFromString<List<PvrRelease>>(execute(url, readTimeoutMs = readTimeoutMs))
         }
 
@@ -111,16 +123,17 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
     suspend fun grabRelease(guid: String, indexerId: Int): Unit =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "release")
-            val body = json.encodeToString(PvrGrabReleaseRequest(guid = guid, indexerId = indexerId))
+            val body =
+                json.encodeToString(PvrGrabReleaseRequest(guid = guid, indexerId = indexerId))
             execute(url, body)
         }
 
     /**
-     * Deletes a movie from Radarr. [deleteFiles] also removes the movie file from disk (the
-     * caller is responsible for making sure Jellyfin's own copy is gone first, otherwise this
-     * would delete a file Jellyfin still thinks it owns); [addImportExclusion] stops Radarr's
-     * import lists from re-adding the movie on their next sync (the same protection a plain
-     * delete already gets against a *manual* re-add, extended to automated ones).
+     * Deletes a movie from Radarr. [deleteFiles] also removes the movie file from disk (the caller
+     * is responsible for making sure Jellyfin's own copy is gone first, otherwise this would delete
+     * a file Jellyfin still thinks it owns); [addImportExclusion] stops Radarr's import lists from
+     * re-adding the movie on their next sync (the same protection a plain delete already gets
+     * against a *manual* re-add, extended to automated ones).
      */
     suspend fun deleteMovie(movieId: Int, deleteFiles: Boolean, addImportExclusion: Boolean): Unit =
         withContext(Dispatchers.IO) {
@@ -144,7 +157,11 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
      * download client; [blocklist] prevents Radarr from grabbing the same release again. There is
      * deliberately no "pause": the v3 API exposes none - pausing lives in the download client.
      */
-    suspend fun deleteQueueItem(queueItemId: Int, removeFromClient: Boolean, blocklist: Boolean): Unit =
+    suspend fun deleteQueueItem(
+        queueItemId: Int,
+        removeFromClient: Boolean,
+        blocklist: Boolean,
+    ): Unit =
         withContext(Dispatchers.IO) {
             val url =
                 buildUrl(
@@ -197,9 +214,9 @@ class RadarrApi(private val baseUrl: String, private val apiKey: String) {
     }
 
     /**
-     * [jsonBody] `null` issues a GET; otherwise a POST with that body as the JSON payload.
-     * [delete] issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s default read
-     * timeout for this call only.
+     * [jsonBody] `null` issues a GET; otherwise a POST with that body as the JSON payload. [delete]
+     * issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s default read timeout for
+     * this call only.
      */
     private fun execute(
         url: String,

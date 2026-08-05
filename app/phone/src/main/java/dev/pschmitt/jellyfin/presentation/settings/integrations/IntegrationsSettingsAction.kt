@@ -14,7 +14,8 @@ sealed interface IntegrationsSettingsAction {
 
     data class OnDeleteJellyfinServer(val serverId: String) : IntegrationsSettingsAction
 
-    data class OnLoginJellyfinUser(val username: String, val password: String) : IntegrationsSettingsAction
+    data class OnLoginJellyfinUser(val username: String, val password: String) :
+        IntegrationsSettingsAction
 
     data object OnQuickConnectClick : IntegrationsSettingsAction
 

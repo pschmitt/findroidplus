@@ -45,7 +45,9 @@ constructor(
                 // downloads - see BackupManager.restore()'s doc for why this can't just happen
                 // unconditionally at restore() time.
                 viewModelScope.launch {
-                    summary?.autoDownloadRules?.let { rules -> backupManager.applyAutoDownloadRules(rules) }
+                    summary?.autoDownloadRules?.let { rules ->
+                        backupManager.applyAutoDownloadRules(rules)
+                    }
                     _state.value = _state.value.copy(downloadPromptAnswered = true)
                 }
             }
@@ -64,8 +66,7 @@ constructor(
     private fun loadBackup(password: String?) {
         val uri = pickedUri ?: return
         viewModelScope.launch {
-            _state.value =
-                _state.value.copy(isLoading = true, error = null, wrongPassword = false)
+            _state.value = _state.value.copy(isLoading = true, error = null, wrongPassword = false)
             try {
                 val envelope = backupManager.readBackup(uri, password)
                 val summary = backupManager.restore(envelope)

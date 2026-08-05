@@ -25,12 +25,12 @@ import timber.log.Timber
 /**
  * Constructed via [dev.pschmitt.jellyfin.di.RemoteConfigModule] (a Hilt `@Provides`, mirroring
  * `AutoDownloadRuleModule`) rather than an `@Inject` constructor, since `data` has no Hilt plugin.
- * Lives in `core` rather than alongside every other `*RepositoryImpl` in `data` because applying
- * an [RemoteConfigCommand.EvaluateNow]/[RemoteConfigCommand.DownloadItem] command needs
+ * Lives in `core` rather than alongside every other `*RepositoryImpl` in `data` because applying an
+ * [RemoteConfigCommand.EvaluateNow]/[RemoteConfigCommand.DownloadItem] command needs
  * [AutoDownloadRuleEvaluator]/[Downloader], both `core`-only - `data` has no dependency on `core`
- * (it's the other way around), so this class can't live there. The pure queue/expiry/pruning
- * logic it delegates to ([planRemoteConfigSync]) has no such dependency and stays in `data`,
- * unit-tested there without needing to fake any of this class's dependencies.
+ * (it's the other way around), so this class can't live there. The pure queue/expiry/pruning logic
+ * it delegates to ([planRemoteConfigSync]) has no such dependency and stays in `data`, unit-tested
+ * there without needing to fake any of this class's dependencies.
  *
  * [writeMutex] only serializes this process's own read-modify-writes; two different devices can
  * still race at the HTTP level (no ETag/CAS against the server). That's an accepted tradeoff for
@@ -214,7 +214,8 @@ class RemoteConfigRepositoryImpl(
             writeMutex.withLock {
                 val thisId = appPreferences.getOrCreateThisDeviceId()
                 val bucket = fetchBucket()
-                val devices = decodeDevices(bucket.customPrefs[KEY_DEVICES]).filterNot { it.id == thisId }
+                val devices =
+                    decodeDevices(bucket.customPrefs[KEY_DEVICES]).filterNot { it.id == thisId }
                 val pending =
                     decodeCommands(bucket.customPrefs[KEY_PENDING]).filterNot {
                         it.targetDeviceId == thisId
@@ -293,21 +294,23 @@ class RemoteConfigRepositoryImpl(
             } catch (e: Exception) {
                 return emptyList()
             }
-        return ruleRepository.getRules(serverId, userId).groupBy { it.seriesId }.mapNotNull {
-            (seriesId, rules) ->
-            try {
-                RemoteActiveRuleSummary(
-                    serverId = serverId,
-                    seriesId = seriesId.toString(),
-                    showName = jellyfinRepository.getShow(seriesId).name,
-                    seasonCount = rules.count { it.seasonId != null && it.enabled },
-                    alsoFutureSeasons = rules.any { it.seasonId == null && it.enabled },
-                )
-            } catch (e: Exception) {
-                Timber.w(e, "Failed to resolve show name while publishing active-rule summary")
-                null
+        return ruleRepository
+            .getRules(serverId, userId)
+            .groupBy { it.seriesId }
+            .mapNotNull { (seriesId, rules) ->
+                try {
+                    RemoteActiveRuleSummary(
+                        serverId = serverId,
+                        seriesId = seriesId.toString(),
+                        showName = jellyfinRepository.getShow(seriesId).name,
+                        seasonCount = rules.count { it.seasonId != null && it.enabled },
+                        alsoFutureSeasons = rules.any { it.seasonId == null && it.enabled },
+                    )
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to resolve show name while publishing active-rule summary")
+                    null
+                }
             }
-        }
     }
 
     private suspend fun applyCommand(command: RemoteConfigCommand) {
@@ -339,8 +342,13 @@ class RemoteConfigRepositoryImpl(
         // the show's scope active isn't a removal, so it shouldn't delete anything even if the
         // pushing device happened to set this flag. Mirrors AutoDownloadRulesViewModel
         // .deleteShowRule's exact local pattern, just applied here on the receiving device.
-        if (command.alsoDeleteDownloads && command.seasonIds.isEmpty() && !command.alsoFutureSeasons) {
-            val episodes = database.getEpisodesByShowId(seriesId).map { it.toFindroidEpisode(database, userId) }
+        if (
+            command.alsoDeleteDownloads && command.seasonIds.isEmpty() && !command.alsoFutureSeasons
+        ) {
+            val episodes =
+                database.getEpisodesByShowId(seriesId).map {
+                    it.toFindroidEpisode(database, userId)
+                }
             clearDownloads(episodes, database, downloader)
         }
     }
@@ -350,7 +358,8 @@ class RemoteConfigRepositoryImpl(
         val seriesId = UUID.fromString(command.seriesId)
         val evaluator = AutoDownloadRuleEvaluator()
         for (seasonIdString in command.seasonIds) {
-            // Transient (never persisted) - same as ShowViewModel/SeasonViewModel/EpisodeViewModel's
+            // Transient (never persisted) - same as
+            // ShowViewModel/SeasonViewModel/EpisodeViewModel's
             // local one-time "download what matches now" path, just evaluated here instead.
             val transientRule =
                 AutoDownloadRuleDto(
@@ -381,7 +390,10 @@ class RemoteConfigRepositoryImpl(
     private suspend fun fetchBucket(): DisplayPreferencesDto =
         jellyfinRepository.getDisplayPreferences(BUCKET_ID, CLIENT)
 
-    private suspend fun writeBucket(bucket: DisplayPreferencesDto, vararg entries: Pair<String, String>) {
+    private suspend fun writeBucket(
+        bucket: DisplayPreferencesDto,
+        vararg entries: Pair<String, String>,
+    ) {
         jellyfinRepository.updateDisplayPreferences(
             BUCKET_ID,
             CLIENT,

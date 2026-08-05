@@ -111,9 +111,7 @@ class AutoDownloadRuleRepositoryImpl(private val database: ServerDatabaseDao) :
         }
 
     override suspend fun setRuleOnlyUnwatched(id: Long, onlyUnwatched: Boolean) =
-        withContext(Dispatchers.IO) {
-            database.setAutoDownloadRuleOnlyUnwatched(id, onlyUnwatched)
-        }
+        withContext(Dispatchers.IO) { database.setAutoDownloadRuleOnlyUnwatched(id, onlyUnwatched) }
 
     override suspend fun reconcileRules(
         serverId: String,
@@ -139,10 +137,12 @@ class AutoDownloadRuleRepositoryImpl(private val database: ServerDatabaseDao) :
                 for (seasonId in seasonIds) {
                     val existing =
                         database.getSeasonAutoDownloadRule(serverId, userId, seriesId, seasonId)
-                    val rule = upsertRule(existing, serverId, userId, seriesId, seasonId, enabled = true)
+                    val rule =
+                        upsertRule(existing, serverId, userId, seriesId, seasonId, enabled = true)
                     database.setAutoDownloadRuleOnlyNewEpisodes(rule.id, onlyNewEpisodes)
                     database.setAutoDownloadRuleOnlyUnwatched(rule.id, onlyUnwatched)
-                    result += rule.copy(onlyNewEpisodes = onlyNewEpisodes, onlyUnwatched = onlyUnwatched)
+                    result +=
+                        rule.copy(onlyNewEpisodes = onlyNewEpisodes, onlyUnwatched = onlyUnwatched)
                 }
             }
 

@@ -40,9 +40,9 @@ import timber.log.Timber
 /**
  * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
  * `SecureCredentialStore` - passed in as plain lambdas (rather than depending on
- * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`,
- * not the other way around. [onDownloadFinished] posts the "download finished" notification -
- * also a lambda, since notifications are a `core`-layer concern.
+ * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`, not
+ * the other way around. [onDownloadFinished] posts the "download finished" notification - also a
+ * lambda, since notifications are a `core`-layer concern.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.QueueStatusModule] (a Hilt `@Provides`, mirroring
  * `AutoDownloadRuleModule`) rather than an `@Inject` constructor, since `data` has no Hilt plugin.
@@ -50,8 +50,7 @@ import timber.log.Timber
  * Match candidates are fetched from the *live* Jellyfin library via [JellyfinRepository] rather
  * than the local Room cache (which only holds downloaded items) - same reasoning as
  * `CalendarRepositoryImpl`, which hit this exact bug first. To keep the per-poll request count
- * bounded, only shows/seasons actually referenced by the current queue get their episodes
- * fetched.
+ * bounded, only shows/seasons actually referenced by the current queue get their episodes fetched.
  */
 class QueueStatusRepositoryImpl(
     private val appPreferences: AppPreferences,
@@ -87,8 +86,9 @@ class QueueStatusRepositoryImpl(
     private var sonarrEverSucceeded = false
     private var radarrEverSucceeded = false
 
-    override fun getQueueSnapshotFlow(): Flow<PvrQueueSnapshot> =
-        _queueSnapshot.onStart { ensurePollingStarted() }
+    override fun getQueueSnapshotFlow(): Flow<PvrQueueSnapshot> = _queueSnapshot.onStart {
+        ensurePollingStarted()
+    }
 
     override fun getQueueStatusFlow(): Flow<Map<UUID, QueueStatus>> =
         getQueueSnapshotFlow().map { it.entries.toQueueStatusMap() }.distinctUntilChanged()
@@ -110,7 +110,8 @@ class QueueStatusRepositoryImpl(
                     emptyList()
                 } else {
                     val key = anchor.duplicateGroupKey()
-                    if (key == null) listOf(anchor) else snapshot.entries.filter { it.duplicateGroupKey() == key }
+                    if (key == null) listOf(anchor)
+                    else snapshot.entries.filter { it.duplicateGroupKey() == key }
                 }
             }
             .distinctUntilChanged()
@@ -185,7 +186,10 @@ class QueueStatusRepositoryImpl(
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            Timber.w(e, "Failed to remove ${serviceName(source)} queue item $queueItemId")
+                            Timber.w(
+                                e,
+                                "Failed to remove ${serviceName(source)} queue item $queueItemId",
+                            )
                             source to queueItemId
                         }
                     }
@@ -411,7 +415,8 @@ class QueueStatusRepositoryImpl(
                     emptyList()
                 } else {
                     val series = api.getSeries()
-                    val (shows, episodesByShowId) = loadQueueReferencedShowsAndEpisodes(series, queue)
+                    val (shows, episodesByShowId) =
+                        loadQueueReferencedShowsAndEpisodes(series, queue)
                     matchSonarr(series, queue, shows, episodesByShowId)
                 }
             }
@@ -423,7 +428,11 @@ class QueueStatusRepositoryImpl(
             throw e
         } catch (e: Exception) {
             sonarrConsecutiveFailures++
-            Timber.w(e, "Failed to refresh Sonarr queue status (%d in a row)", sonarrConsecutiveFailures)
+            Timber.w(
+                e,
+                "Failed to refresh Sonarr queue status (%d in a row)",
+                sonarrConsecutiveFailures,
+            )
             // A blip that's still within tolerance keeps showing the last known-good queue
             // instead of flashing an error banner and wiping the list after a single failed poll
             // - fetchedSources stays empty so notifyFinishedDownloads doesn't diff against this
@@ -464,7 +473,11 @@ class QueueStatusRepositoryImpl(
             throw e
         } catch (e: Exception) {
             radarrConsecutiveFailures++
-            Timber.w(e, "Failed to refresh Radarr queue status (%d in a row)", radarrConsecutiveFailures)
+            Timber.w(
+                e,
+                "Failed to refresh Radarr queue status (%d in a row)",
+                radarrConsecutiveFailures,
+            )
             if (radarrConsecutiveFailures < FAILURE_THRESHOLD) {
                 if (radarrEverSucceeded) {
                     PvrQueueSnapshot(entries = lastGoodRadarrEntries)
@@ -496,10 +509,10 @@ class QueueStatusRepositoryImpl(
     }
 
     /**
-     * Fetches the Jellyfin shows and episodes the current [queue] can possibly match against:
-     * the full show list is one request, but episodes are fetched only for the shows *and
-     * seasons* the queue references, since episode listing is one request per season and a
-     * long-running show can have dozens of seasons irrelevant to the queue.
+     * Fetches the Jellyfin shows and episodes the current [queue] can possibly match against: the
+     * full show list is one request, but episodes are fetched only for the shows *and seasons* the
+     * queue references, since episode listing is one request per season and a long-running show can
+     * have dozens of seasons irrelevant to the queue.
      */
     private suspend fun loadQueueReferencedShowsAndEpisodes(
         series: List<SonarrSeries>,
@@ -509,7 +522,9 @@ class QueueStatusRepositoryImpl(
             series.filter { it.tvdbId != 0 }.associate { it.id to it.tvdbId.toString() }
         val seasonNumbersByTvdbId: Map<String, Set<Int>> =
             queue
-                .mapNotNull { item -> tvdbIdBySeriesId[item.seriesId]?.let { it to item.seasonNumber } }
+                .mapNotNull { item ->
+                    tvdbIdBySeriesId[item.seriesId]?.let { it to item.seasonNumber }
+                }
                 .groupBy({ it.first }, { it.second })
                 .mapValues { (_, seasonNumbers) -> seasonNumbers.toSet() }
         if (seasonNumbersByTvdbId.isEmpty()) {

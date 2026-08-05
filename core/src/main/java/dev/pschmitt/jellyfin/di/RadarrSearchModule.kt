@@ -27,13 +27,16 @@ object RadarrSearchModule {
     ): RadarrSearchRepository {
         return RadarrSearchRepositoryImpl(
             appPreferences = appPreferences,
-            radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
+            radarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            },
             scheduleCompletionCheck = { movieId, commandId ->
                 val request =
                     OneTimeWorkRequestBuilder<AutomaticSearchWorker>()
                         .setInputData(
                             workDataOf(
-                                AutomaticSearchWorker.KEY_SOURCE to AutomaticSearchWorker.SOURCE_RADARR,
+                                AutomaticSearchWorker.KEY_SOURCE to
+                                    AutomaticSearchWorker.SOURCE_RADARR,
                                 AutomaticSearchWorker.KEY_TARGET_ID to movieId,
                                 AutomaticSearchWorker.KEY_COMMAND_ID to commandId,
                             )

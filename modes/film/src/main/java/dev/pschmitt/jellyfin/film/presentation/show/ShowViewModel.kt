@@ -15,9 +15,9 @@ import dev.pschmitt.jellyfin.models.FindroidEpisode
 import dev.pschmitt.jellyfin.models.FindroidItemPerson
 import dev.pschmitt.jellyfin.models.FindroidSeason
 import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.FindroidSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.SeerrMediaType
-import dev.pschmitt.jellyfin.models.FindroidSourceType
 import dev.pschmitt.jellyfin.models.toFindroidEpisode
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
@@ -161,7 +161,9 @@ constructor(
                 val withPosters = missing.map { it.copy(posterUrl = posterUrls[it.seasonNumber]) }
                 _state.emit(_state.value.copy(missingSeasons = withPosters))
             }
-            .onFailure { e -> Timber.w(e, "Failed to load missing-season posters for show $showId") }
+            .onFailure { e ->
+                Timber.w(e, "Failed to load missing-season posters for show $showId")
+            }
     }
 
     private suspend fun loadQueuedSeasons(showId: UUID) {
@@ -210,13 +212,17 @@ constructor(
     }
 
     private suspend fun getExistingScope(showId: UUID): ExistingAutoDownloadScope {
-        val serverId = appPreferences.getValue(appPreferences.currentServer)
-            ?: return ExistingAutoDownloadScope()
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return ExistingAutoDownloadScope()
         val userId = repository.getUserId()
-        return autoDownloadRuleRepository.getRulesForSeries(serverId, userId, showId).toExistingScope()
+        return autoDownloadRuleRepository
+            .getRulesForSeries(serverId, userId, showId)
+            .toExistingScope()
     }
 
-    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> =
+        remoteConfigRepository.listOtherDevices()
 
     private fun downloadWithScope(
         selection: DownloadSelection,
@@ -260,7 +266,14 @@ constructor(
                         createdAt = System.currentTimeMillis(),
                         onlyNewEpisodes = false,
                     )
-                evaluator.evaluate(transientRule, database, repository, downloader, appPreferences, onlyUnwatched)
+                evaluator.evaluate(
+                    transientRule,
+                    database,
+                    repository,
+                    downloader,
+                    appPreferences,
+                    onlyUnwatched,
+                )
             }
 
             if (alsoFollowNew || selection.alsoFutureSeasons) {
@@ -278,10 +291,12 @@ constructor(
         }
     }
 
-    /** Count and total primary-source size of [seasonId]'s episodes that would actually be
-     * downloaded right now - excludes episodes already downloaded locally, and (if
-     * [onlyUnwatched]) already-watched ones, matching the scope the "only unwatched" toggle
-     * would apply to the real download. */
+    /**
+     * Count and total primary-source size of [seasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if [onlyUnwatched])
+     * already-watched ones, matching the scope the "only unwatched" toggle would apply to the real
+     * download.
+     */
     suspend fun getUndownloadedEpisodeSize(
         seasonId: UUID,
         onlyUnwatched: Boolean,
@@ -309,9 +324,11 @@ constructor(
         }
     }
 
-    /** Downloaded size only - the local Room cache only ever knows about episodes that were
-     * downloaded (or otherwise separately cached), so it's the right source for "how much of
-     * this show is on disk" but not for [totalEpisodeCount]. */
+    /**
+     * Downloaded size only - the local Room cache only ever knows about episodes that were
+     * downloaded (or otherwise separately cached), so it's the right source for "how much of this
+     * show is on disk" but not for [totalEpisodeCount].
+     */
     private suspend fun downloadsSizeBytes(showId: UUID): Long =
         withContext(Dispatchers.IO) {
             database.getEpisodesByShowId(showId).sumOf { episode ->
@@ -322,8 +339,10 @@ constructor(
             }
         }
 
-    /** Real per-season episode counts from the server - the local Room cache only has episodes
-     * that were downloaded or individually visited, not the show's true total. */
+    /**
+     * Real per-season episode counts from the server - the local Room cache only has episodes that
+     * were downloaded or individually visited, not the show's true total.
+     */
     private suspend fun totalEpisodeCount(showId: UUID, seasons: List<FindroidSeason>): Int =
         withContext(Dispatchers.IO) {
             seasons.sumOf { season -> repository.getEpisodes(showId, season.id).size }
@@ -334,7 +353,9 @@ constructor(
             val userId = repository.getUserId()
             val episodes =
                 withContext(Dispatchers.IO) {
-                    database.getEpisodesByShowId(showId).map { it.toFindroidEpisode(database, userId) }
+                    database.getEpisodesByShowId(showId).map {
+                        it.toFindroidEpisode(database, userId)
+                    }
                 }
             clearDownloads(episodes, database, downloader)
 
@@ -363,20 +384,18 @@ constructor(
             // when only this best-effort cleanup step didn't.
             if (cascadeToPvr) {
                 _state.value.seriesTvdbId?.let { tvdbId ->
-                    sonarrSearchRepository
-                        .deleteSeriesByTvdbId(tvdbId)
-                        .onFailure { Timber.w(it, "Failed to cascade show delete to Sonarr") }
+                    sonarrSearchRepository.deleteSeriesByTvdbId(tvdbId).onFailure {
+                        Timber.w(it, "Failed to cascade show delete to Sonarr")
+                    }
                 }
                 _state.value.seriesTmdbId?.let { tmdbId ->
                     seerrRepository
                         .getDetails(tmdbId, SeerrMediaType.TV)
                         .onSuccess { detail ->
                             detail.cancellableRequestIds.forEach { requestId ->
-                                seerrRepository
-                                    .cancelRequest(requestId)
-                                    .onFailure {
-                                        Timber.w(it, "Failed to cancel Seerr request $requestId")
-                                    }
+                                seerrRepository.cancelRequest(requestId).onFailure {
+                                    Timber.w(it, "Failed to cancel Seerr request $requestId")
+                                }
                             }
                         }
                         .onFailure {
@@ -389,7 +408,9 @@ constructor(
             val userId = repository.getUserId()
             val episodes =
                 withContext(Dispatchers.IO) {
-                    database.getEpisodesByShowId(showId).map { it.toFindroidEpisode(database, userId) }
+                    database.getEpisodesByShowId(showId).map {
+                        it.toFindroidEpisode(database, userId)
+                    }
                 }
             clearDownloads(episodes, database, downloader)
             deleteEventsChannel.send(DeleteItemEvent.Deleted)

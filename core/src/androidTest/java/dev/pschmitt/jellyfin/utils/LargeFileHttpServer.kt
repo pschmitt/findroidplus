@@ -10,7 +10,9 @@ import java.io.FileInputStream
  * the file lazily from disk via a seeked FileInputStream - never buffers it in memory.
  */
 class LargeFileHttpServer(port: Int, private val file: File) : NanoHTTPD(port) {
-    /** Records the most recent incoming Range header, so tests can assert resume actually used it. */
+    /**
+     * Records the most recent incoming Range header, so tests can assert resume actually used it.
+     */
     @Volatile var lastRangeHeader: String? = null
 
     override fun serve(session: IHTTPSession): Response {

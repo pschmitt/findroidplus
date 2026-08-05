@@ -65,11 +65,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.models.DiscoveredServer
 import dev.pschmitt.jellyfin.models.ServerWithAddresses
 import dev.pschmitt.jellyfin.models.User
-import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.setup.components.DiscoveredServerItem
 import dev.pschmitt.jellyfin.presentation.setup.components.LoadingButton
@@ -138,9 +137,13 @@ private fun IntegrationsSettingsScreenLayout(
                 onServerSelected = {
                     onAction(IntegrationsSettingsAction.OnJellyfinServerSelected(it))
                 },
-                onUserSelected = { onAction(IntegrationsSettingsAction.OnJellyfinUserSelected(it)) },
+                onUserSelected = {
+                    onAction(IntegrationsSettingsAction.OnJellyfinUserSelected(it))
+                },
                 onAddServer = { onAction(IntegrationsSettingsAction.OnAddJellyfinServer(it)) },
-                onDeleteServer = { onAction(IntegrationsSettingsAction.OnDeleteJellyfinServer(it)) },
+                onDeleteServer = {
+                    onAction(IntegrationsSettingsAction.OnDeleteJellyfinServer(it))
+                },
                 onLogin = { username, password ->
                     onAction(IntegrationsSettingsAction.OnLoginJellyfinUser(username, password))
                 },
@@ -241,9 +244,7 @@ private fun IntegrationsSettingsScreenLayout(
                 onBaseUrlChanged = {
                     onAction(IntegrationsSettingsAction.OnSeerrBaseUrlChanged(it))
                 },
-                onApiKeyChanged = {
-                    onAction(IntegrationsSettingsAction.OnSeerrApiKeyChanged(it))
-                },
+                onApiKeyChanged = { onAction(IntegrationsSettingsAction.OnSeerrApiKeyChanged(it)) },
                 onTestConnectionClick = {
                     onAction(IntegrationsSettingsAction.OnTestSeerrConnection)
                 },
@@ -443,9 +444,7 @@ private fun JellyfinConnectionSection(
                         KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                     keyboardActions =
                         KeyboardActions(
-                            onGo = {
-                                if (serverAddress.isNotBlank()) onAddServer(serverAddress)
-                            }
+                            onGo = { if (serverAddress.isNotBlank()) onAddServer(serverAddress) }
                         ),
                     isError = state.addServerError != null,
                     enabled = !state.jellyfinOperationInProgress,
@@ -614,7 +613,9 @@ private fun JellyfinConnectionSection(
                                     Text(
                                         text =
                                             state.quickConnectCode
-                                                ?: stringResource(SetupR.string.login_btn_quick_connect)
+                                                ?: stringResource(
+                                                    SetupR.string.login_btn_quick_connect
+                                                )
                                     )
                                 }
                             }
@@ -628,10 +629,17 @@ private fun JellyfinConnectionSection(
     serverToDelete?.let { server ->
         AlertDialog(
             title = { Text(stringResource(SetupR.string.remove_server_dialog)) },
-            text = { Text(stringResource(SetupR.string.remove_server_dialog_text, server.server.name)) },
+            text = {
+                Text(stringResource(SetupR.string.remove_server_dialog_text, server.server.name))
+            },
             onDismissRequest = { serverToDelete = null },
             confirmButton = {
-                TextButton(onClick = { onDeleteServer(server.server.id); serverToDelete = null }) {
+                TextButton(
+                    onClick = {
+                        onDeleteServer(server.server.id)
+                        serverToDelete = null
+                    }
+                ) {
                     Text(stringResource(SetupR.string.confirm))
                 }
             },
@@ -648,7 +656,12 @@ private fun JellyfinConnectionSection(
             text = { Text(stringResource(SetupR.string.remove_user_dialog_text, user.name)) },
             onDismissRequest = { userToDelete = null },
             confirmButton = {
-                TextButton(onClick = { onDeleteUser(user.id); userToDelete = null }) {
+                TextButton(
+                    onClick = {
+                        onDeleteUser(user.id)
+                        userToDelete = null
+                    }
+                ) {
                     Text(stringResource(SetupR.string.confirm))
                 }
             },
@@ -744,7 +757,11 @@ private fun JellyfinUserRow(
             }
         }
         Spacer(Modifier.width(12.dp))
-        Text(text = name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
         if (selected) {
             Icon(
                 painter = painterResource(CoreR.drawable.ic_check),
@@ -830,7 +847,7 @@ private fun PvrServiceSection(
                             clipboardManager.getText()?.text?.let { pasted ->
                                 onApiKeyChanged(pasted.trim())
                             }
-                        },
+                        }
                     ) {
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_clipboard_paste),
@@ -942,7 +959,9 @@ private fun PvrAdvancedHttpFields(
                 value = headers,
                 onValueChange = { onChanged(it, basicAuthUsername, basicAuthPassword) },
                 label = { Text(stringResource(CoreR.string.integrations_custom_headers)) },
-                placeholder = { Text(stringResource(CoreR.string.integrations_custom_headers_hint)) },
+                placeholder = {
+                    Text(stringResource(CoreR.string.integrations_custom_headers_hint))
+                },
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth(),
             )

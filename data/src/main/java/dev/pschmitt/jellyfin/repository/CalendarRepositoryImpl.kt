@@ -21,8 +21,8 @@ import timber.log.Timber
 /**
  * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
  * `SecureCredentialStore` - passed in as plain lambdas (rather than depending on
- * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`,
- * not the other way around. Same pattern as `QueueStatusRepositoryImpl`.
+ * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`, not
+ * the other way around. Same pattern as `QueueStatusRepositoryImpl`.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.CalendarModule] (a Hilt `@Provides`) rather than an
  * `@Inject` constructor, since `data` has no Hilt plugin.
@@ -35,9 +35,9 @@ import timber.log.Timber
  * [loadJellyfinShows]/[loadJellyfinMovies] fetch the *live* library via
  * [JellyfinRepository.getItems] rather than the local Room cache: that cache only holds items the
  * user has actually downloaded, which is a poor match candidate set for "what's coming up" - most
- * upcoming episodes/movies won't be downloaded yet, so matching against it would leave nearly
- * every entry's [CalendarEntry.itemId] (and thus poster/click-through) unresolved. Confirmed this
- * was really happening on a fresh install (empty local `shows`/`movies` tables). Note
+ * upcoming episodes/movies won't be downloaded yet, so matching against it would leave nearly every
+ * entry's [CalendarEntry.itemId] (and thus poster/click-through) unresolved. Confirmed this was
+ * really happening on a fresh install (empty local `shows`/`movies` tables). Note
  * [QueueStatusRepositoryImpl] still has this bug - it wasn't in scope to fix here, but shares the
  * exact same local-cache pattern and should get the same treatment.
  */
@@ -70,17 +70,23 @@ class CalendarRepositoryImpl(
     private suspend fun enrichPosters(entries: List<dev.pschmitt.jellyfin.models.CalendarEntry>) =
         coroutineScope {
             entries
-            .map { entry ->
-                async {
-                    if (entry.images?.primary != null || entry.tmdbId == null) entry
-                    else {
-                        val type = if (entry.source == PvrSource.RADARR) SeerrMediaType.MOVIE else SeerrMediaType.TV
-                        val seerrPoster = seerrRepository.getDetails(entry.tmdbId, type).getOrNull()?.posterUrl
-                        entry.copy(posterUrl = seerrPoster ?: entry.posterUrl)
+                .map { entry ->
+                    async {
+                        if (entry.images?.primary != null || entry.tmdbId == null) entry
+                        else {
+                            val type =
+                                if (entry.source == PvrSource.RADARR) SeerrMediaType.MOVIE
+                                else SeerrMediaType.TV
+                            val seerrPoster =
+                                seerrRepository
+                                    .getDetails(entry.tmdbId, type)
+                                    .getOrNull()
+                                    ?.posterUrl
+                            entry.copy(posterUrl = seerrPoster ?: entry.posterUrl)
+                        }
                     }
                 }
-            }
-            .awaitAll()
+                .awaitAll()
         }
 
     private suspend fun fetchSonarrCalendar(start: LocalDate, end: LocalDate): CalendarResult {
@@ -130,8 +136,8 @@ class CalendarRepositoryImpl(
     /**
      * [jellyfinRepository.getItems] never populates [FindroidShow.seasons] (it always defaults to
      * empty - true of every mapping path, not just this one), so [matchSonarrCalendar]'s season
-     * lookup would silently never resolve, leaving every entry's `itemId` null and the calendar
-     * row permanently unclickable. Fetches seasons only for shows the calendar actually references
+     * lookup would silently never resolve, leaving every entry's `itemId` null and the calendar row
+     * permanently unclickable. Fetches seasons only for shows the calendar actually references
      * (matched by tvdbId), not the whole library, since a full-library season fetch would be one
      * request per show.
      */
@@ -140,7 +146,10 @@ class CalendarRepositoryImpl(
         entries: List<SonarrCalendarEntry>,
     ): List<FindroidShow> = coroutineScope {
         val referencedTvdbIds =
-            entries.mapNotNull { it.series?.tvdbId?.takeIf { id -> id != 0 } }.map { it.toString() }.toSet()
+            entries
+                .mapNotNull { it.series?.tvdbId?.takeIf { id -> id != 0 } }
+                .map { it.toString() }
+                .toSet()
         val (referenced, rest) = shows.partition { it.tvdbId in referencedTvdbIds }
         val withSeasons =
             referenced
@@ -151,7 +160,8 @@ class CalendarRepositoryImpl(
                             seasons =
                                 seasons.map { season ->
                                     season.copy(
-                                        episodes = jellyfinRepository.getEpisodes(show.id, season.id)
+                                        episodes =
+                                            jellyfinRepository.getEpisodes(show.id, season.id)
                                     )
                                 }
                         )

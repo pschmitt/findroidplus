@@ -120,9 +120,10 @@ fun ShowScreen(
 private fun ShowScreenLayout(
     state: ShowState,
     onAction: (ShowAction) -> Unit,
-    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
-        DownloadSizeEstimate()
-    },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
+        { _, _ ->
+            DownloadSizeEstimate()
+        },
 ) {
     val focusRequester = remember { FocusRequester() }
     val configuration = LocalConfiguration.current
@@ -342,12 +343,18 @@ private fun ShowScreenLayout(
                                             contentDescription = null,
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(text = stringResource(id = CoreR.string.clear_show_downloads))
+                                        Text(
+                                            text =
+                                                stringResource(
+                                                    id = CoreR.string.clear_show_downloads
+                                                )
+                                        )
                                     }
                                 } else {
                                     Button(onClick = { downloadScopeDialogOpen = true }) {
                                         Icon(
-                                            painter = painterResource(id = CoreR.drawable.ic_download),
+                                            painter =
+                                                painterResource(id = CoreR.drawable.ic_download),
                                             contentDescription = null,
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -462,7 +469,10 @@ private fun ShowScreenLayout(
             initialOnlyUnwatched = state.existingScope.onlyUnwatched,
             canDelete = state.hasDownloads || state.autoDownloadEnabled,
             getSeasonSize = getSeasonSize,
-            onDelete = { downloadScopeDialogOpen = false; clearDownloadsDialogOpen = true },
+            onDelete = {
+                downloadScopeDialogOpen = false
+                clearDownloadsDialogOpen = true
+            },
             onConfirm = { selection, alsoFollowNew, onlyUnwatched ->
                 onAction(ShowAction.DownloadWithScope(selection, alsoFollowNew, onlyUnwatched))
                 downloadScopeDialogOpen = false
@@ -504,9 +514,9 @@ private fun ShowScreenLayoutPreview() {
 }
 
 /**
- * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so
- * the seasons row can be sorted by season number instead of showing all missing seasons appended
- * after every real one regardless of number.
+ * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
+ * seasons row can be sorted by season number instead of showing all missing seasons appended after
+ * every real one regardless of number.
  */
 private sealed interface SeasonRowItem {
     val seasonNumber: Int

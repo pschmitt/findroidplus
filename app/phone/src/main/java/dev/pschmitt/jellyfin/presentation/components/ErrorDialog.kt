@@ -108,8 +108,8 @@ fun ErrorDialog(exception: Throwable, onDismissRequest: () -> Unit) {
 /**
  * Full, selectable/copyable view of a plain error message - e.g. a Sonarr/Radarr API failure body
  * that only fits a line or two inline before it's clipped. Unlike [ErrorDialog] this has no
- * exception/stack trace to show, just the message text itself, so it skips the headline+trace
- * split in favor of one scrollable block.
+ * exception/stack trace to show, just the message text itself, so it skips the headline+trace split
+ * in favor of one scrollable block.
  */
 @Composable
 fun MessageDetailsDialog(
@@ -181,7 +181,9 @@ fun MessageDetailsDialog(
                     ) {
                         Text(stringResource(CoreR.string.share))
                     }
-                    TextButton(onClick = onDismissRequest) { Text(stringResource(CoreR.string.close)) }
+                    TextButton(onClick = onDismissRequest) {
+                        Text(stringResource(CoreR.string.close))
+                    }
                 }
             }
         }

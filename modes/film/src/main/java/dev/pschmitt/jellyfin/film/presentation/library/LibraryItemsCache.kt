@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Per-library tabs recreate [LibraryViewModel] (and its paging flow) on every switch, since
  * Navigation-Compose's popUpTo/restoreState can't tell two different libraries apart - they all
- * share the single LibraryRoute destination. Without this, every tab switch re-hit the network
- * even for a library already browsed this session. Caching the paging flow here, scoped to an
+ * share the single LibraryRoute destination. Without this, every tab switch re-hit the network even
+ * for a library already browsed this session. Caching the paging flow here, scoped to an
  * application-lifetime CoroutineScope rather than the short-lived ViewModel one, makes revisiting
  * an already-loaded library instant.
  */

@@ -68,7 +68,8 @@ class BackupDataTest {
 
     @Test
     fun `UnsupportedBackupVersionException names the writing app version when known`() {
-        val exception = UnsupportedBackupVersionException(backupVersion = 2, writtenByAppVersion = "3.0.0")
+        val exception =
+            UnsupportedBackupVersionException(backupVersion = 2, writtenByAppVersion = "3.0.0")
 
         assertTrue(exception.message!!.contains("3.0.0"))
         assertTrue(exception.message!!.contains("2"))
@@ -76,7 +77,8 @@ class BackupDataTest {
 
     @Test
     fun `UnsupportedBackupVersionException degrades gracefully when the app version is blank`() {
-        val exception = UnsupportedBackupVersionException(backupVersion = 2, writtenByAppVersion = "")
+        val exception =
+            UnsupportedBackupVersionException(backupVersion = 2, writtenByAppVersion = "")
 
         assertTrue(exception.message!!.contains("newer version of the app"))
         assertTrue(exception.message!!.contains("2"))

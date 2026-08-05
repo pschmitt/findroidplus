@@ -23,22 +23,22 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import timber.log.Timber
 
 /**
- * Periodically diffs the current Jellyfin library (movies + episodes, the whole library - not
- * just PVR-tracked items) against what was seen on the previous check, and posts a batched
- * notification via [NewItemNotifier] for anything genuinely new. Scoped to the current server
- * only, same as [AutoDownloadWorker] and for the same reason: [JellyfinRepository] is a Hilt
- * singleton bound to whichever server is "current", so diffing against any other server here
- * would compare the wrong library.
+ * Periodically diffs the current Jellyfin library (movies + episodes, the whole library - not just
+ * PVR-tracked items) against what was seen on the previous check, and posts a batched notification
+ * via [NewItemNotifier] for anything genuinely new. Scoped to the current server only, same as
+ * [AutoDownloadWorker] and for the same reason: [JellyfinRepository] is a Hilt singleton bound to
+ * whichever server is "current", so diffing against any other server here would compare the wrong
+ * library.
  *
- * State (a last-checked timestamp, and the bounded set of item ids seen on the last check - used
- * to detect "new since last check") is kept in [AppPreferences] as plain preference values rather
- * than a new Room table/column - deliberately, to avoid bumping the DB schema version while a
- * separate feature (pending pre-order downloads) is being built concurrently in another worktree
- * that also touches Room. The seen-ids set is naturally self-bounding: each cycle simply replaces
- * it with the ids from that cycle's fetch (capped at [FETCH_LIMIT]), so it never grows without
- * bound - at the cost of an item being able to scroll out of the seen-window unobserved if more
- * than [FETCH_LIMIT] items land in the library between two checks, a tradeoff against persisting
- * an ever-growing id list.
+ * State (a last-checked timestamp, and the bounded set of item ids seen on the last check - used to
+ * detect "new since last check") is kept in [AppPreferences] as plain preference values rather than
+ * a new Room table/column - deliberately, to avoid bumping the DB schema version while a separate
+ * feature (pending pre-order downloads) is being built concurrently in another worktree that also
+ * touches Room. The seen-ids set is naturally self-bounding: each cycle simply replaces it with the
+ * ids from that cycle's fetch (capped at [FETCH_LIMIT]), so it never grows without bound - at the
+ * cost of an item being able to scroll out of the seen-window unobserved if more than [FETCH_LIMIT]
+ * items land in the library between two checks, a tradeoff against persisting an ever-growing id
+ * list.
  */
 @HiltWorker
 class NewItemNotificationWorker
@@ -81,7 +81,8 @@ constructor(
             val previouslySeenIds = readSeenIds()
             val isFirstCheck =
                 previouslySeenIds.isEmpty() &&
-                    appPreferences.getValue(appPreferences.newItemNotificationsLastCheckMillis) == 0L
+                    appPreferences.getValue(appPreferences.newItemNotificationsLastCheckMillis) ==
+                        0L
 
             // First-ever check: nothing has been "seen" yet, so every item currently in the
             // library would otherwise look "new". Just record the baseline instead of firing a

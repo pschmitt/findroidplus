@@ -60,16 +60,28 @@ fun LocalAccessScreen(navigateBack: () -> Unit, viewModel: LocalAccessViewModel 
                 is LocalAccessAction.OnBackClick -> navigateBack()
                 is LocalAccessAction.CopyToken -> {
                     clipboardManager.setText(AnnotatedString(state.token))
-                    Toast.makeText(context, CoreR.string.local_access_token_copied_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.local_access_token_copied_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 }
                 is LocalAccessAction.CopyCliDownloadCommand -> {
                     clipboardManager.setText(AnnotatedString(state.cliDownloadCommand))
-                    Toast.makeText(context, CoreR.string.local_access_cli_copied_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.local_access_cli_copied_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 }
                 is LocalAccessAction.RegenerateToken -> {
-                    Toast.makeText(context, CoreR.string.local_access_token_regenerated_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.local_access_token_regenerated_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                     viewModel.onAction(action)
                 }
@@ -81,7 +93,10 @@ fun LocalAccessScreen(navigateBack: () -> Unit, viewModel: LocalAccessViewModel 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LocalAccessScreenLayout(state: LocalAccessState, onAction: (LocalAccessAction) -> Unit) {
+private fun LocalAccessScreenLayout(
+    state: LocalAccessState,
+    onAction: (LocalAccessAction) -> Unit,
+) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
@@ -125,7 +140,11 @@ private fun LocalAccessScreenLayout(state: LocalAccessState, onAction: (LocalAcc
 }
 
 @Composable
-private fun LocalControlToggleRow(enabled: Boolean, startFailed: Boolean, onToggle: (Boolean) -> Unit) {
+private fun LocalControlToggleRow(
+    enabled: Boolean,
+    startFailed: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
     Column {
         Row(
             modifier =
@@ -219,8 +238,12 @@ private fun TokenSection(token: String, onCopy: () -> Unit, onRegenerate: () -> 
     if (confirmRegenerateOpen) {
         AlertDialog(
             onDismissRequest = { confirmRegenerateOpen = false },
-            title = { Text(text = stringResource(CoreR.string.local_access_regenerate_confirm_title)) },
-            text = { Text(text = stringResource(CoreR.string.local_access_regenerate_confirm_message)) },
+            title = {
+                Text(text = stringResource(CoreR.string.local_access_regenerate_confirm_title))
+            },
+            text = {
+                Text(text = stringResource(CoreR.string.local_access_regenerate_confirm_message))
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

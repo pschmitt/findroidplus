@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -20,11 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 
-/** Formats a minute count as "15 minutes" / "2 hours" / "3 days", picking the coarsest exact unit. */
+/**
+ * Formats a minute count as "15 minutes" / "2 hours" / "3 days", picking the coarsest exact unit.
+ */
 fun formatIntervalMinutes(minutes: Int): String =
     when {
         minutes % 1440 == 0 -> {
@@ -50,7 +52,9 @@ fun IntervalPickerContent(
     validRange: IntRange,
     onValueChange: (Int) -> Unit,
 ) {
-    var customText by remember { mutableStateOf(if (value in presetsMinutes) "" else value.toString()) }
+    var customText by remember {
+        mutableStateOf(if (value in presetsMinutes) "" else value.toString())
+    }
     val isCustomSelected = value !in presetsMinutes
 
     Column(modifier = Modifier.selectableGroup()) {

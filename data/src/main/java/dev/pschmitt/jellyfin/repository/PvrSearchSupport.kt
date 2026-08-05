@@ -12,15 +12,19 @@ import java.net.UnknownHostException
  */
 
 /**
- * Turns raw network exceptions into messages worth showing the user directly (as a toast) -
- * [SocketTimeoutException] in particular is common with slow indexers (e.g. Prowlarr proxying
- * several trackers for an interactive search) and "timeout" alone isn't an obvious cause.
+ * Turns raw network exceptions into messages worth showing the user directly (as a
+ * toast) - [SocketTimeoutException] in particular is common with slow indexers (e.g. Prowlarr
+ * proxying several trackers for an interactive search) and "timeout" alone isn't an obvious cause.
  */
 internal fun mapPvrSearchError(serviceName: String, e: Exception): Throwable =
     when {
         e is SocketTimeoutException ->
-            IOException("$serviceName timed out - it or one of its indexers may be slow to respond", e)
-        e is UnknownHostException -> IOException("Could not reach $serviceName - check the server URL", e)
+            IOException(
+                "$serviceName timed out - it or one of its indexers may be slow to respond",
+                e,
+            )
+        e is UnknownHostException ->
+            IOException("Could not reach $serviceName - check the server URL", e)
         // A reverse proxy in front of the service (or its own proxy to an indexer) gave up before
         // the service finished polling indexers - distinct from SocketTimeoutException, which is
         // *this* client giving up, so it needs its own message pointing at the proxy's timeout
@@ -38,7 +42,8 @@ internal val PVR_GATEWAY_ERROR_CODES = setOf(502, 503, 504)
 
 // Sonarr/Radarr's terminal command states - anything else (queued/started) means the search is
 // still in progress.
-internal val PVR_TERMINAL_COMMAND_STATUSES = setOf("completed", "failed", "aborted", "cancelled", "orphaned")
+internal val PVR_TERMINAL_COMMAND_STATUSES =
+    setOf("completed", "failed", "aborted", "cancelled", "orphaned")
 
 internal const val PVR_COMMAND_POLL_INTERVAL_MS = 5_000L
 

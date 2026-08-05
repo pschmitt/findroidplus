@@ -6,10 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -208,8 +208,7 @@ private fun FilterChipRow(
                                     MediaFilter.ALL -> CoreR.string.discover_filter_all
                                     MediaFilter.MOVIES -> CoreR.string.discover_filter_movies
                                     MediaFilter.SHOWS -> CoreR.string.discover_filter_shows
-                                    MediaFilter.REQUESTED ->
-                                        CoreR.string.discover_filter_requested
+                                    MediaFilter.REQUESTED -> CoreR.string.discover_filter_requested
                                 }
                             )
                     )

@@ -75,10 +75,11 @@ class QueueStatusMatchingTest {
         // SonarrSeries.tvdbId defaults to 0, the DTO's "unset" sentinel.
         val series = listOf(SonarrSeries(id = 1, title = "Some Show"))
         val queue =
-            listOf(SonarrQueueItem(id = 42, seriesId = 1, seasonNumber = 1, episode = SonarrEpisode(5)))
+            listOf(
+                SonarrQueueItem(id = 42, seriesId = 1, seasonNumber = 1, episode = SonarrEpisode(5))
+            )
 
-        val result =
-            matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
+        val result = matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
 
         assertEquals(1, result.size)
         assertNull(result.single().item)
@@ -106,8 +107,7 @@ class QueueStatusMatchingTest {
                 )
             )
 
-        val result =
-            matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
+        val result = matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
 
         assertEquals(1, result.size)
         assertNull(result.single().item)
@@ -122,9 +122,12 @@ class QueueStatusMatchingTest {
 
         val series = listOf(SonarrSeries(id = 1, tvdbId = 1000))
         val queue =
-            listOf(SonarrQueueItem(id = 42, seriesId = 1, seasonNumber = 1, episode = SonarrEpisode(5)))
+            listOf(
+                SonarrQueueItem(id = 42, seriesId = 1, seasonNumber = 1, episode = SonarrEpisode(5))
+            )
 
-        // episodesByShowId has no entry at all for showId - show exists, but nothing has synced yet.
+        // episodesByShowId has no entry at all for showId - show exists, but nothing has synced
+        // yet.
         val result = matchSonarr(series, queue, listOf(show), emptyMap())
 
         assertEquals(1, result.size)
@@ -133,7 +136,8 @@ class QueueStatusMatchingTest {
 
         // Also covers the case where the show's episode list exists but simply doesn't (yet)
         // contain the queued episode.
-        val otherEpisode = testEpisode(id = UUID.randomUUID(), seriesId = showId, season = 1, index = 1)
+        val otherEpisode =
+            testEpisode(id = UUID.randomUUID(), seriesId = showId, season = 1, index = 1)
         val result2 =
             matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(otherEpisode)))
         assertNull(result2.single().item)
@@ -181,8 +185,7 @@ class QueueStatusMatchingTest {
                 ),
             )
 
-        val result =
-            matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
+        val result = matchSonarr(series, queue, listOf(show), mapOf(showId to listOf(episode)))
 
         // Both queue rows are kept in the list (a queue view should show both downloads), but the
         // per-item badge map collapses them with the later entry winning.
@@ -203,7 +206,15 @@ class QueueStatusMatchingTest {
 
         val movies = listOf(RadarrMovie(id = 7, tmdbId = 2000))
         val queue =
-            listOf(RadarrQueueItem(id = 1, movieId = 7, status = "downloading", size = 1000, sizeleft = 100))
+            listOf(
+                RadarrQueueItem(
+                    id = 1,
+                    movieId = 7,
+                    status = "downloading",
+                    size = 1000,
+                    sizeleft = 100,
+                )
+            )
 
         val result = matchRadarr(movies, queue, listOf(movie))
 
@@ -274,7 +285,12 @@ class QueueStatusMatchingTest {
         val queue =
             listOf(
                 RadarrQueueItem(id = 1, movieId = 7, status = "downloading"),
-                RadarrQueueItem(id = 2, movieId = 7, status = "warning", trackedDownloadStatus = "warning"),
+                RadarrQueueItem(
+                    id = 2,
+                    movieId = 7,
+                    status = "warning",
+                    trackedDownloadStatus = "warning",
+                ),
             )
 
         val result = matchRadarr(movies, queue, listOf(movie))
@@ -304,7 +320,11 @@ class QueueStatusMatchingTest {
     fun `mapQueueItemStatus maps trackedDownloadStatus error to FAILED regardless of status`() {
         assertEquals(
             QueueItemStatus.FAILED,
-            mapQueueItemStatus(status = "downloading", trackedDownloadStatus = "error", trackedDownloadState = null),
+            mapQueueItemStatus(
+                status = "downloading",
+                trackedDownloadStatus = "error",
+                trackedDownloadState = null,
+            ),
         )
     }
 
@@ -312,7 +332,11 @@ class QueueStatusMatchingTest {
     fun `mapQueueItemStatus maps trackedDownloadStatus warning to WARNING regardless of status`() {
         assertEquals(
             QueueItemStatus.WARNING,
-            mapQueueItemStatus(status = "downloading", trackedDownloadStatus = "warning", trackedDownloadState = null),
+            mapQueueItemStatus(
+                status = "downloading",
+                trackedDownloadStatus = "warning",
+                trackedDownloadState = null,
+            ),
         )
     }
 
@@ -322,7 +346,11 @@ class QueueStatusMatchingTest {
             assertEquals(
                 "status=$status",
                 QueueItemStatus.QUEUED,
-                mapQueueItemStatus(status = status, trackedDownloadStatus = null, trackedDownloadState = null),
+                mapQueueItemStatus(
+                    status = status,
+                    trackedDownloadStatus = null,
+                    trackedDownloadState = null,
+                ),
             )
         }
     }
@@ -331,7 +359,11 @@ class QueueStatusMatchingTest {
     fun `mapQueueItemStatus maps downloading to DOWNLOADING`() {
         assertEquals(
             QueueItemStatus.DOWNLOADING,
-            mapQueueItemStatus(status = "downloading", trackedDownloadStatus = "ok", trackedDownloadState = "downloading"),
+            mapQueueItemStatus(
+                status = "downloading",
+                trackedDownloadStatus = "ok",
+                trackedDownloadState = "downloading",
+            ),
         )
     }
 
@@ -339,11 +371,19 @@ class QueueStatusMatchingTest {
     fun `mapQueueItemStatus maps completed or import tracked states to IMPORTING`() {
         assertEquals(
             QueueItemStatus.IMPORTING,
-            mapQueueItemStatus(status = "completed", trackedDownloadStatus = "ok", trackedDownloadState = null),
+            mapQueueItemStatus(
+                status = "completed",
+                trackedDownloadStatus = "ok",
+                trackedDownloadState = null,
+            ),
         )
         assertEquals(
             QueueItemStatus.IMPORTING,
-            mapQueueItemStatus(status = "downloading", trackedDownloadStatus = "ok", trackedDownloadState = "importPending"),
+            mapQueueItemStatus(
+                status = "downloading",
+                trackedDownloadStatus = "ok",
+                trackedDownloadState = "importPending",
+            ),
         )
     }
 
@@ -351,11 +391,19 @@ class QueueStatusMatchingTest {
     fun `mapQueueItemStatus maps failed status or tracked state to FAILED`() {
         assertEquals(
             QueueItemStatus.FAILED,
-            mapQueueItemStatus(status = "failed", trackedDownloadStatus = null, trackedDownloadState = null),
+            mapQueueItemStatus(
+                status = "failed",
+                trackedDownloadStatus = null,
+                trackedDownloadState = null,
+            ),
         )
         assertEquals(
             QueueItemStatus.FAILED,
-            mapQueueItemStatus(status = "downloading", trackedDownloadStatus = "ok", trackedDownloadState = "failedPending"),
+            mapQueueItemStatus(
+                status = "downloading",
+                trackedDownloadStatus = "ok",
+                trackedDownloadState = "failedPending",
+            ),
         )
     }
 
@@ -450,7 +498,11 @@ class QueueStatusMatchingTest {
                 quality = PvrQualityInfo(quality = PvrQualityDetail(id = 7, name = "Bluray-1080p")),
                 downloadId = "ADE418CD87072DDF0E2513500FD39C3282EAE073",
                 rejections =
-                    listOf(PvrRejection(reason = "Episode file already imported at 7/18/2026 4:19:29 AM")),
+                    listOf(
+                        PvrRejection(
+                            reason = "Episode file already imported at 7/18/2026 4:19:29 AM"
+                        )
+                    ),
             )
 
         val candidate = item.toCandidate()
@@ -483,8 +535,14 @@ class QueueStatusMatchingTest {
 
     @Test
     fun `RadarrManualImportItem toCandidate has no episode label and is importable once matched to a movie`() {
-        val matched = RadarrManualImportItem(id = 1, name = "Some.Movie.mkv", movie = RadarrMovie(id = 7, tmdbId = 2000))
-        val unmatched = RadarrManualImportItem(id = 2, name = "Unrecognized.Movie.mkv", movie = null)
+        val matched =
+            RadarrManualImportItem(
+                id = 1,
+                name = "Some.Movie.mkv",
+                movie = RadarrMovie(id = 7, tmdbId = 2000),
+            )
+        val unmatched =
+            RadarrManualImportItem(id = 2, name = "Unrecognized.Movie.mkv", movie = null)
 
         assertNull(matched.toCandidate().episodeLabel)
         assertTrue(matched.toCandidate().canImport)

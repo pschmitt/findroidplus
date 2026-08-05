@@ -48,9 +48,9 @@ internal object DownloadSlotLimiter {
     }
 
     /**
-     * Cuts [sourceId] to the front of the line and lets it start right away, going one over
-     * [limit] until whichever download the caller pauses in response releases its slot back.
-     * Returns false if [sourceId] isn't currently waiting (e.g. it already started on its own).
+     * Cuts [sourceId] to the front of the line and lets it start right away, going one over [limit]
+     * until whichever download the caller pauses in response releases its slot back. Returns false
+     * if [sourceId] isn't currently waiting (e.g. it already started on its own).
      */
     suspend fun forcePromote(sourceId: String): Boolean {
         mutex.withLock {
@@ -70,16 +70,15 @@ internal object DownloadSlotLimiter {
 
     /**
      * Moves every waiter in [sourceIds] to the front of the line, in the order [sourceIds] lists
-     * them, without bypassing [limit] - they'll be served next as slots free up naturally, ahead
-     * of whatever else is currently waiting. Used to prioritize a whole show's queued episodes
-     * over other shows' without forcibly pausing multiple unrelated running downloads at once.
+     * them, without bypassing [limit] - they'll be served next as slots free up naturally, ahead of
+     * whatever else is currently waiting. Used to prioritize a whole show's queued episodes over
+     * other shows' without forcibly pausing multiple unrelated running downloads at once.
      */
     suspend fun prioritize(sourceIds: List<String>) {
         if (sourceIds.isEmpty()) return
         mutex.withLock {
             val order = sourceIds.withIndex().associate { (index, id) -> id to index }
-            val sorted =
-                waiters.sortedBy { waiter -> order[waiter.sourceId] ?: sourceIds.size }
+            val sorted = waiters.sortedBy { waiter -> order[waiter.sourceId] ?: sourceIds.size }
             waiters.clear()
             waiters.addAll(sorted)
         }

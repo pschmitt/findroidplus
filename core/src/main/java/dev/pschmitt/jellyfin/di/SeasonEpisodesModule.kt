@@ -22,7 +22,9 @@ object SeasonEpisodesModule {
     ): SeasonEpisodesRepository {
         return SeasonEpisodesRepositoryImpl(
             appPreferences = appPreferences,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
+            sonarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            },
         )
     }
 }

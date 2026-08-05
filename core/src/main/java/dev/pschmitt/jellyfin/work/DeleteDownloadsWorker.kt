@@ -28,10 +28,10 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Deletes a batch of already-downloaded movies/episodes in the background, so the Downloads
- * page's single/bulk/clear-all delete actions survive the app being backgrounded and show
- * progress via a notification instead of silently blocking on [Downloader.deleteItem] calls in
- * the calling ViewModel's scope.
+ * Deletes a batch of already-downloaded movies/episodes in the background, so the Downloads page's
+ * single/bulk/clear-all delete actions survive the app being backgrounded and show progress via a
+ * notification instead of silently blocking on [Downloader.deleteItem] calls in the calling
+ * ViewModel's scope.
  */
 @HiltWorker
 class DeleteDownloadsWorker
@@ -58,12 +58,11 @@ constructor(
                 itemIds.forEachIndexed { index, itemId ->
                     try {
                         val item = findFindroidItem(itemId)
-                        val source =
-                            item?.let {
-                                database.getSources(itemId).firstOrNull {
-                                    it.type == FindroidSourceType.LOCAL
-                                }
+                        val source = item?.let {
+                            database.getSources(itemId).firstOrNull {
+                                it.type == FindroidSourceType.LOCAL
                             }
+                        }
                         if (item != null && source != null) {
                             downloader.deleteItem(item, source.toFindroidSource(database))
                         }
@@ -106,9 +105,7 @@ constructor(
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(downloadsContentIntent(applicationContext))
-            .apply {
-                if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true)
-            }
+            .apply { if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true) }
             .build()
     }
 

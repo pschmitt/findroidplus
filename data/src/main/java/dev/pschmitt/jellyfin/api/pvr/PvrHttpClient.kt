@@ -2,20 +2,20 @@ package dev.pschmitt.jellyfin.api.pvr
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import okhttp3.Credentials
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import okhttp3.Credentials
 import timber.log.Timber
 
 /**
  * Shared holder for the [OkHttpClient] used to talk to a Sonarr/Radarr instance. The base client
- * (connection pool, timeouts, dispatcher) is built once and reused via [OkHttpClient.newBuilder]
- * so every [SonarrApi]/[RadarrApi] instance can be constructed cheaply per-call - only a fresh
- * `X-Api-Key` interceptor is attached per instance, since the key can change at runtime if the
- * user reconfigures the server in settings. Not `internal`: the local control API's debug-proxy
- * endpoint (`core/.../localcontrol/LocalControlRouter.kt`) reuses [create] directly rather than
- * duplicating this auth/logging setup for its own raw PVR calls.
+ * (connection pool, timeouts, dispatcher) is built once and reused via [OkHttpClient.newBuilder] so
+ * every [SonarrApi]/[RadarrApi] instance can be constructed cheaply per-call - only a fresh
+ * `X-Api-Key` interceptor is attached per instance, since the key can change at runtime if the user
+ * reconfigures the server in settings. Not `internal`: the local control API's debug-proxy endpoint
+ * (`core/.../localcontrol/LocalControlRouter.kt`) reuses [create] directly rather than duplicating
+ * this auth/logging setup for its own raw PVR calls.
  */
 object PvrHttpClient {
     private const val API_KEY_HEADER = "X-Api-Key"
@@ -44,7 +44,10 @@ object PvrHttpClient {
         override fun intercept(chain: Interceptor.Chain): Response {
             val advanced = PvrAdvancedSettings.provider(service)
             val requestBuilder = chain.request().newBuilder().header(API_KEY_HEADER, apiKey)
-            if (!advanced.basicAuthUsername.isNullOrBlank() && !advanced.basicAuthPassword.isNullOrBlank()) {
+            if (
+                !advanced.basicAuthUsername.isNullOrBlank() &&
+                    !advanced.basicAuthPassword.isNullOrBlank()
+            ) {
                 requestBuilder.header(
                     "Authorization",
                     Credentials.basic(advanced.basicAuthUsername, advanced.basicAuthPassword),
@@ -59,10 +62,10 @@ object PvrHttpClient {
 
     /**
      * Method/URL/status/timing only - never headers or bodies, since the API key travels as a
-     * header (see [ApiKeyInterceptor]). The interactive release search in particular can run for
-     * a long time waiting on indexers, and otherwise leaves zero trace of having happened at all
-     * if it never returns - this is the only way to tell, from logcat, whether a request is still
-     * in flight, came back with an unexpected status, or never made it out at all.
+     * header (see [ApiKeyInterceptor]). The interactive release search in particular can run for a
+     * long time waiting on indexers, and otherwise leaves zero trace of having happened at all if
+     * it never returns - this is the only way to tell, from logcat, whether a request is still in
+     * flight, came back with an unexpected status, or never made it out at all.
      *
      * `BaseApplication` plants a [Timber.DebugTree] regardless of build type specifically so this
      * (and other `Timber` diagnostics) aren't silent on the release builds users actually run.

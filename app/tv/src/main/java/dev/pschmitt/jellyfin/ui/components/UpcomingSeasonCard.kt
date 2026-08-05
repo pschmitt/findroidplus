@@ -39,9 +39,9 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
  * A Sonarr-known season not yet in the Jellyfin library - the show-level equivalent of
- * [UpcomingEpisodeCard]. The outer surface is non-interactive for the same reason as that card:
- * TV has no Seerr detail screen wired up yet, so a tap on the card itself has nothing productive
- * to do. When [onToggleQueued] is set, a queue-toggle [IconButton] overlaid on the poster is
+ * [UpcomingEpisodeCard]. The outer surface is non-interactive for the same reason as that card: TV
+ * has no Seerr detail screen wired up yet, so a tap on the card itself has nothing productive to
+ * do. When [onToggleQueued] is set, a queue-toggle [IconButton] overlaid on the poster is
  * independently focusable/clickable regardless of the outer surface being disabled.
  */
 @Composable
@@ -123,7 +123,8 @@ fun UpcomingSeasonCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(CoreR.string.upcoming_season_episode_count, season.episodeCount),
+                text =
+                    stringResource(CoreR.string.upcoming_season_episode_count, season.episodeCount),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -70,7 +70,8 @@ suspend fun BaseItemDto.toFindroidMovie(
         chapters = toFindroidChapters(),
         trickplayInfo =
             trickplay?.mapValues { it.value[it.value.keys.max()]!!.toFindroidTrickplayInfo() },
-        tmdbId = providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
+        tmdbId =
+            providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
         dateCreated = dateCreated,
     )
 }
@@ -134,7 +135,8 @@ fun List<FindroidMovieDto>.toFindroidMovies(
     if (isEmpty()) return emptyList()
     val itemIds = map { it.id }
 
-    val userDataByItemId = database.getUserDataForItems(itemIds, userId).associateBy { it.itemId }.toMutableMap()
+    val userDataByItemId =
+        database.getUserDataForItems(itemIds, userId).associateBy { it.itemId }.toMutableMap()
     for (itemId in itemIds) {
         if (itemId !in userDataByItemId) {
             val created =
@@ -152,8 +154,10 @@ fun List<FindroidMovieDto>.toFindroidMovies(
 
     val sourcesByItemId = database.getSourcesForItems(itemIds).groupBy { it.itemId }
     val sourceIds = sourcesByItemId.values.flatten().map { it.id }
-    val mediaStreamsBySourceId = database.getMediaStreamsForSources(sourceIds).groupBy { it.sourceId }
-    val trickplayBySourceId = database.getTrickplayInfoForSources(sourceIds).associateBy { it.sourceId }
+    val mediaStreamsBySourceId =
+        database.getMediaStreamsForSources(sourceIds).groupBy { it.sourceId }
+    val trickplayBySourceId =
+        database.getTrickplayInfoForSources(sourceIds).associateBy { it.sourceId }
 
     return map { dto ->
         val userData = userDataByItemId.getValue(dto.id)
@@ -164,7 +168,9 @@ fun List<FindroidMovieDto>.toFindroidMovies(
         val trickplayInfo =
             sources
                 .mapNotNull { source ->
-                    trickplayBySourceId[source.id]?.toFindroidTrickplayInfo()?.let { source.id to it }
+                    trickplayBySourceId[source.id]?.toFindroidTrickplayInfo()?.let {
+                        source.id to it
+                    }
                 }
                 .toMap()
 

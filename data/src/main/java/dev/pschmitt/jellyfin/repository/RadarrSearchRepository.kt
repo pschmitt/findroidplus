@@ -22,8 +22,8 @@ interface RadarrSearchRepository {
 
     /**
      * Triggers an automatic search - Radarr picks and grabs the best release itself. Returns once
-     * the search is *queued*, not once it finishes (see [awaitAutomaticSearchResult] for that) -
-     * on success, also schedules a background check so the user gets notified once it actually
+     * the search is *queued*, not once it finishes (see [awaitAutomaticSearchResult] for that) - on
+     * success, also schedules a background check so the user gets notified once it actually
      * completes, even if they've since left the screen.
      */
     suspend fun searchMovie(movieId: Int): Result<Unit>
@@ -34,7 +34,10 @@ interface RadarrSearchRepository {
      * from a background worker, not the triggering screen's ViewModel - see
      * `dev.pschmitt.jellyfin.work.AutomaticSearchWorker`.
      */
-    suspend fun awaitAutomaticSearchResult(movieId: Int, commandId: Int): Result<AutomaticSearchOutcome>
+    suspend fun awaitAutomaticSearchResult(
+        movieId: Int,
+        commandId: Int,
+    ): Result<AutomaticSearchOutcome>
 
     /**
      * Lists candidate releases for a movie (interactive/manual search). Results are cached per

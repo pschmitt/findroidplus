@@ -12,8 +12,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 /**
- * Builds, encodes/decodes, and restores backups. Not `@Inject`-constructed directly (`data`
- * module has no Hilt setup, matching how `JellyfinRepositoryImpl` etc. are wired) - see
+ * Builds, encodes/decodes, and restores backups. Not `@Inject`-constructed directly (`data` module
+ * has no Hilt setup, matching how `JellyfinRepositoryImpl` etc. are wired) - see
  * core/di/BackupModule.kt for the Hilt `@Provides` binding.
  *
  * [getSecret]/[putSecret] read/write `SecureCredentialStore` - passed in as plain lambdas (rather
@@ -58,7 +58,8 @@ class BackupManager(
 
     suspend fun writeBackup(envelope: BackupEnvelope, uri: Uri, password: String?) {
         withContext(Dispatchers.IO) {
-            val plainBytes = json.encodeToString(BackupEnvelope.serializer(), envelope).toByteArray()
+            val plainBytes =
+                json.encodeToString(BackupEnvelope.serializer(), envelope).toByteArray()
             val bytes = BackupCrypto.encode(plainBytes, password)
             context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: error("Could not open $uri for writing")
@@ -83,7 +84,8 @@ class BackupManager(
         }
 
     fun isBackupEncrypted(uri: Uri): Boolean {
-        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return false
+        val bytes =
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return false
         return BackupCrypto.isEncrypted(bytes)
     }
 
@@ -165,8 +167,7 @@ class BackupManager(
                     is Long -> PrefValue.LongValue(value)
                     is Float -> PrefValue.FloatValue(value)
                     is String -> PrefValue.StringValue(value)
-                    is Set<*> ->
-                        PrefValue.StringSetValue(value.filterIsInstance<String>().toSet())
+                    is Set<*> -> PrefValue.StringSetValue(value.filterIsInstance<String>().toSet())
                     else -> continue
                 }
         }
@@ -207,11 +208,13 @@ class BackupManager(
     }
 }
 
-/** Thrown by [BackupManager.readBackup] for a backup written by a newer app version whose
- * format this build doesn't understand yet - a clear message instead of a raw deserialize
- * crash. [writtenByAppVersion] is blank for backups from before this field existed (impossible
- * in practice, since old backups can only ever have [BackupEnvelope.version] <= the version
- * this build already knows). */
+/**
+ * Thrown by [BackupManager.readBackup] for a backup written by a newer app version whose format
+ * this build doesn't understand yet - a clear message instead of a raw deserialize crash.
+ * [writtenByAppVersion] is blank for backups from before this field existed (impossible in
+ * practice, since old backups can only ever have [BackupEnvelope.version] <= the version this build
+ * already knows).
+ */
 class UnsupportedBackupVersionException(backupVersion: Int, writtenByAppVersion: String) :
     Exception(
         "This backup was created by a newer version of the app" +

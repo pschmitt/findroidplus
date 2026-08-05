@@ -15,10 +15,10 @@ import dev.pschmitt.jellyfin.utils.homeSectionOrderFromString
 import dev.pschmitt.jellyfin.utils.homeSectionOrderToString
 import dev.pschmitt.jellyfin.utils.resolveHomeSectionOrder
 import javax.inject.Inject
-import org.jellyfin.sdk.model.api.BaseItemDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.BaseItemDto
 import timber.log.Timber
 
 @HiltViewModel
@@ -36,9 +36,9 @@ constructor(
     private data class SectionInfo(val label: UiText, val serviceIcons: List<Int> = emptyList())
 
     /**
-     * Every known (key, info) pair regardless of hidden status - populated once by [load] (it's
-     * the only part of this screen that needs a repository round trip, for library names), then
-     * reused by [hide]/[restore] to recompute the visible/hidden split without refetching.
+     * Every known (key, info) pair regardless of hidden status - populated once by [load] (it's the
+     * only part of this screen that needs a repository round trip, for library names), then reused
+     * by [hide]/[restore] to recompute the visible/hidden split without refetching.
      */
     private var cachedLabels: LinkedHashMap<String, SectionInfo> = LinkedHashMap()
 
@@ -62,7 +62,8 @@ constructor(
             val hasQueueSource =
                 appPreferences.getValue(appPreferences.sonarrEnabled) ||
                     appPreferences.getValue(appPreferences.radarrEnabled)
-            val pvrIcons = if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
+            val pvrIcons =
+                if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
             labels[HomeSectionKeys.ACTIVE_DOWNLOADS] =
                 SectionInfo(UiText.StringResource(CoreR.string.pvr_queue_section_title), pvrIcons)
 
@@ -76,16 +77,14 @@ constructor(
                             CollectionType.fromString(view.collectionType?.serialName) in
                                 CollectionType.supported
                         }
-                    showViews =
-                        views.filter {
-                            CollectionType.fromString(it.collectionType?.serialName) ==
-                                CollectionType.TvShows
-                        }
-                    movieViews =
-                        views.filter {
-                            CollectionType.fromString(it.collectionType?.serialName) ==
-                                CollectionType.Movies
-                        }
+                    showViews = views.filter {
+                        CollectionType.fromString(it.collectionType?.serialName) ==
+                            CollectionType.TvShows
+                    }
+                    movieViews = views.filter {
+                        CollectionType.fromString(it.collectionType?.serialName) ==
+                            CollectionType.Movies
+                    }
                     otherViews = views.filterNot { it in showViews || it in movieViews }
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to load library views for home layout settings")
@@ -107,7 +106,10 @@ constructor(
             }
             if (appPreferences.getValue(appPreferences.homeContinueWatching)) {
                 labels[HomeSectionKeys.CONTINUE_WATCHING] =
-                    SectionInfo(UiText.StringResource(FilmR.string.continue_watching), jellyfinIcons)
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.continue_watching),
+                        jellyfinIcons,
+                    )
             }
             if (appPreferences.getValue(appPreferences.homeFavorites)) {
                 labels[HomeSectionKeys.FAVORITES] =
@@ -133,7 +135,10 @@ constructor(
                 // Radarr/Sonarr only come into it once a specific title is actually requested.
                 val seerrIcons = listOf(CoreR.drawable.ic_seerr)
                 labels[HomeSectionKeys.discover(FilmR.string.home_discover_trending)] =
-                    SectionInfo(UiText.StringResource(FilmR.string.home_discover_trending), seerrIcons)
+                    SectionInfo(
+                        UiText.StringResource(FilmR.string.home_discover_trending),
+                        seerrIcons,
+                    )
                 labels[HomeSectionKeys.discover(FilmR.string.home_discover_popular_shows)] =
                     SectionInfo(
                         UiText.StringResource(FilmR.string.home_discover_popular_shows),
@@ -202,15 +207,16 @@ constructor(
         val persisted =
             homeSectionOrderFromString(appPreferences.getValue(appPreferences.homeSectionOrder))
         val order = resolveHomeSectionOrder(visibleNatural, persisted)
-        val rows =
-            order.mapNotNull { key ->
-                cachedLabels[key]?.let { HomeLayoutRow(key, it.label, it.serviceIcons) }
-            }
+        val rows = order.mapNotNull { key ->
+            cachedLabels[key]?.let { HomeLayoutRow(key, it.label, it.serviceIcons) }
+        }
 
         val hiddenRows =
-            natural.filter { it in hidden }.mapNotNull { key ->
-                cachedLabels[key]?.let { HomeLayoutRow(key, it.label, it.serviceIcons) }
-            }
+            natural
+                .filter { it in hidden }
+                .mapNotNull { key ->
+                    cachedLabels[key]?.let { HomeLayoutRow(key, it.label, it.serviceIcons) }
+                }
 
         _state.value = _state.value.copy(rows = rows, hiddenRows = hiddenRows)
     }

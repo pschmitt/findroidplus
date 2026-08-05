@@ -7,11 +7,11 @@ import kotlinx.serialization.Serializable
 /**
  * Everything a QR-provisioning code carries. Deliberately not
  * [dev.pschmitt.jellyfin.backup.BackupEnvelope] reused wholesale: that type's
- * [dev.pschmitt.jellyfin.backup.BackupEnvelope.preferences] is a dump of *every* `SharedPreferences`
- * key (see `BackupManager.dumpPreferences()`), which is correct for a full-device backup but way
- * more than a QR code meant to carry only the sections the user explicitly checked
- * (Jellyfin/Sonarr/Radarr/Seerr) should leak - [plainPrefs]/[secrets] here are built as an explicit
- * whitelist per section instead, see [QrConfigManager.buildEnvelope].
+ * [dev.pschmitt.jellyfin.backup.BackupEnvelope.preferences] is a dump of *every*
+ * `SharedPreferences` key (see `BackupManager.dumpPreferences()`), which is correct for a
+ * full-device backup but way more than a QR code meant to carry only the sections the user
+ * explicitly checked (Jellyfin/Sonarr/Radarr/Seerr) should leak - [plainPrefs]/[secrets] here are
+ * built as an explicit whitelist per section instead, see [QrConfigManager.buildEnvelope].
  *
  * [server] carries only the *current* session's user (not every user ever logged in on that server,
  * unlike a full backup) - see [QrConfigManager.buildEnvelope].

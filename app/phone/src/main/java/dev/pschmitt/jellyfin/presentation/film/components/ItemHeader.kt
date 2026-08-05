@@ -74,8 +74,8 @@ fun ItemHeader(
  * Static (non-scrolling) variant of the same hero banner shape - same 16:9/full-width box as the
  * scrolling overloads above, minus the parallax effect that needs a host scroll position to react
  * to. For hero banners that aren't the top of their own scrollable detail page, e.g. the Home
- * screen's suggestions carousel (HomeCarouselItem) - so the two read as one consistent banner
- * shape instead of a bespoke one-off per screen.
+ * screen's suggestions carousel (HomeCarouselItem) - so the two read as one consistent banner shape
+ * instead of a bespoke one-off per screen.
  */
 @Composable
 fun ItemHeader(
@@ -208,10 +208,10 @@ private fun ItemHeaderBase(
 }
 
 /**
- * Same hero-banner shape as the [FindroidItem] overloads above, for screens whose backdrop isn't
- * a Jellyfin server image at all (e.g. SeerrMediaScreen, which only has a plain TMDB CDN URL, not
- * a [FindroidItem]/[Uri]-based one to resolve). No parallax/logo support - neither has been needed
- * by a non-Jellyfin caller yet.
+ * Same hero-banner shape as the [FindroidItem] overloads above, for screens whose backdrop isn't a
+ * Jellyfin server image at all (e.g. SeerrMediaScreen, which only has a plain TMDB CDN URL, not a
+ * [FindroidItem]/[Uri]-based one to resolve). No parallax/logo support - neither has been needed by
+ * a non-Jellyfin caller yet.
  */
 @Composable
 fun ItemHeader(

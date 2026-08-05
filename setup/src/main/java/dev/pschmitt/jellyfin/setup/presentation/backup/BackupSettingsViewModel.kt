@@ -1,13 +1,13 @@
 package dev.pschmitt.jellyfin.setup.presentation.backup
 
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pschmitt.jellyfin.backup.BackupManager
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.work.AutoBackupScheduler
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

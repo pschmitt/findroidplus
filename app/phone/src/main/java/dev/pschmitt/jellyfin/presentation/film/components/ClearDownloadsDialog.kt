@@ -71,9 +71,7 @@ fun ClearDownloadsDialog(
                     )
                 }
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
-                Row(
-                    modifier = Modifier.clickable { checkboxChecked = !checkboxChecked },
-                ) {
+                Row(modifier = Modifier.clickable { checkboxChecked = !checkboxChecked }) {
                     Checkbox(
                         checked = checkboxChecked,
                         onCheckedChange = { checkboxChecked = it },

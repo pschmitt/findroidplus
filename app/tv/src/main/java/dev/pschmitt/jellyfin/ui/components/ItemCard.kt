@@ -70,7 +70,8 @@ fun ItemCard(
                     DownloadingBadge(
                         progress = downloadProgress,
                         modifier =
-                            Modifier.align(Alignment.TopStart).padding(MaterialTheme.spacings.small),
+                            Modifier.align(Alignment.TopStart)
+                                .padding(MaterialTheme.spacings.small),
                     )
                 } else if (item.isDownloaded()) {
                     DownloadedBadge(
@@ -81,7 +82,8 @@ fun ItemCard(
                 if (isMarkedForDeletion) {
                     MarkedForDeletionBadge(
                         modifier =
-                            Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.spacings.small)
+                            Modifier.align(Alignment.BottomEnd)
+                                .padding(MaterialTheme.spacings.small)
                     )
                 }
                 if (direction == Direction.HORIZONTAL) {

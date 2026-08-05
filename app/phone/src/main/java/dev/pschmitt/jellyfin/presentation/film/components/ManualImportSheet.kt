@@ -58,8 +58,8 @@ import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
  * [state.entries][ManualImportSheetState.entries] normally holds exactly one entry; when
  * Sonarr/Radarr have two duplicate queue rows for the same release still awaiting import (see
  * `PvrQueueEntry.duplicateGroupKey`), it holds one per duplicate and a small picker lets the user
- * choose which one to actually review/import from - the other(s) are removed automatically once
- * the chosen one is confirmed (see `ManualImportController.confirm`).
+ * choose which one to actually review/import from - the other(s) are removed automatically once the
+ * chosen one is confirmed (see `ManualImportController.confirm`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +90,10 @@ fun ManualImportSheet(
                         vertical = MaterialTheme.spacings.medium,
                     )
             ) {
-                Text(text = stringResource(CoreR.string.manual_import_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(CoreR.string.manual_import_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
                 Text(
                     text = state.title,
                     style = MaterialTheme.typography.bodySmall,
@@ -119,19 +122,31 @@ fun ManualImportSheet(
                         }
                     selected.error != null && selected.candidates.isEmpty() ->
                         Text(
-                            text = stringResource(CoreR.string.manual_import_loading_failed, selected.error.orEmpty()),
-                            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
+                            text =
+                                stringResource(
+                                    CoreR.string.manual_import_loading_failed,
+                                    selected.error.orEmpty(),
+                                ),
+                            modifier =
+                                Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
                             color = MaterialTheme.colorScheme.error,
                         )
                     selected.candidates.isEmpty() ->
                         Text(
                             text = stringResource(CoreR.string.manual_import_empty),
-                            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
+                            modifier =
+                                Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     else ->
-                        LazyColumn(contentPadding = PaddingValues(horizontal = MaterialTheme.spacings.medium)) {
-                            itemsIndexed(items = selected.candidates, key = { _, candidate -> candidate.id }) { index, candidate ->
+                        LazyColumn(
+                            contentPadding =
+                                PaddingValues(horizontal = MaterialTheme.spacings.medium)
+                        ) {
+                            itemsIndexed(
+                                items = selected.candidates,
+                                key = { _, candidate -> candidate.id },
+                            ) { index, candidate ->
                                 ManualImportRow(
                                     candidate = candidate,
                                     checked = candidate.id in selected.selectedIds,
@@ -147,9 +162,7 @@ fun ManualImportSheet(
             if (selected.candidates.isNotEmpty()) {
                 HorizontalDivider()
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(MaterialTheme.spacings.medium),
+                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(
@@ -157,7 +170,9 @@ fun ManualImportSheet(
                         enabled = !state.isImporting && !state.isRejecting,
                     ) {
                         if (state.isRejecting) {
-                            CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
                         } else {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_trash),
@@ -186,12 +201,23 @@ fun ManualImportSheet(
                     }
                     Button(
                         onClick = onConfirm,
-                        enabled = selected.selectedIds.isNotEmpty() && !state.isImporting && !state.isRejecting,
+                        enabled =
+                            selected.selectedIds.isNotEmpty() &&
+                                !state.isImporting &&
+                                !state.isRejecting,
                     ) {
                         if (state.isImporting) {
-                            CircularProgressIndicator(modifier = Modifier.height(16.dp).width(16.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.height(16.dp).width(16.dp)
+                            )
                         } else {
-                            Text(text = stringResource(CoreR.string.manual_import_confirm, selected.selectedIds.size))
+                            Text(
+                                text =
+                                    stringResource(
+                                        CoreR.string.manual_import_confirm,
+                                        selected.selectedIds.size,
+                                    )
+                            )
                         }
                     }
                 }
@@ -227,7 +253,11 @@ fun ManualImportSheet(
  * falling back to a plain ordinal while still loading.
  */
 @Composable
-private fun ManualImportEntryPicker(entries: List<ManualImportEntry>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+private fun ManualImportEntryPicker(
+    entries: List<ManualImportEntry>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
     Column(modifier = Modifier.padding(vertical = MaterialTheme.spacings.small)) {
         entries.forEachIndexed { index, entry ->
             val label =
@@ -261,9 +291,9 @@ private fun ManualImportEntryPicker(entries: List<ManualImportEntry>, selectedIn
 /**
  * Confirms discarding the whole release the manual-import sheet is reviewing - e.g. one
  * Sonarr/Radarr itself flagged as suspicious (a disguised executable, wrong language, ...), or
- * where none of the files are worth keeping. Mirrors the queue row's own remove confirmation
- * (same flags, same defaults), just reachable from within the review sheet instead of requiring
- * the user to back out to the queue row's trash icon first.
+ * where none of the files are worth keeping. Mirrors the queue row's own remove confirmation (same
+ * flags, same defaults), just reachable from within the review sheet instead of requiring the user
+ * to back out to the queue row's trash icon first.
  */
 @Composable
 private fun RejectReleaseDialog(
@@ -330,7 +360,11 @@ private fun RejectReleaseDialog(
 }
 
 @Composable
-private fun ManualImportRow(candidate: ManualImportCandidate, checked: Boolean, onToggle: () -> Unit) {
+private fun ManualImportRow(
+    candidate: ManualImportCandidate,
+    checked: Boolean,
+    onToggle: () -> Unit,
+) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
@@ -349,7 +383,11 @@ private fun ManualImportRow(candidate: ManualImportCandidate, checked: Boolean, 
                 style = MaterialTheme.typography.bodyMedium,
             )
             val details =
-                listOfNotNull(candidate.episodeLabel, candidate.qualityName, formatBinaryFileSize(candidate.sizeBytes))
+                listOfNotNull(
+                        candidate.episodeLabel,
+                        candidate.qualityName,
+                        formatBinaryFileSize(candidate.sizeBytes),
+                    )
                     .joinToString(" · ")
             Text(
                 text = details,

@@ -50,9 +50,12 @@ sealed interface SeasonAction {
         val airTime: LocalTime? = null,
     ) : SeasonAction
 
-    /** [knownEpisodeId] is Sonarr's numeric episode id when already known (upcoming episode rows),
-     * `null` for real episodes - resolved from [SeasonState.seriesTvdbId] instead. */
-    data class SearchEpisodeAutomatic(val episodeNumber: Int, val knownEpisodeId: Int?) : SeasonAction
+    /**
+     * [knownEpisodeId] is Sonarr's numeric episode id when already known (upcoming episode rows),
+     * `null` for real episodes - resolved from [SeasonState.seriesTvdbId] instead.
+     */
+    data class SearchEpisodeAutomatic(val episodeNumber: Int, val knownEpisodeId: Int?) :
+        SeasonAction
 
     data class OpenReleasePicker(val episodeNumber: Int, val knownEpisodeId: Int?) : SeasonAction
 
@@ -60,8 +63,10 @@ sealed interface SeasonAction {
 
     data object DismissReleasePicker : SeasonAction
 
-    /** Toggles a "download this episode once it's available" request for an upcoming-episode
-     * placeholder row - queues it if not already queued, cancels it otherwise. [sonarrEpisodeId]
-     * is stashed on the request row for convenience, same as [UpcomingEpisode.episodeId]. */
+    /**
+     * Toggles a "download this episode once it's available" request for an upcoming-episode
+     * placeholder row - queues it if not already queued, cancels it otherwise. [sonarrEpisodeId] is
+     * stashed on the request row for convenience, same as [UpcomingEpisode.episodeId].
+     */
     data class ToggleEpisodeQueued(val episodeNumber: Int, val sonarrEpisodeId: Int) : SeasonAction
 }

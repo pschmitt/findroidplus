@@ -48,7 +48,10 @@ fun RemoteManagementToggleRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacings.default, vertical = MaterialTheme.spacings.small),
+                .padding(
+                    horizontal = MaterialTheme.spacings.default,
+                    vertical = MaterialTheme.spacings.small,
+                ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -126,7 +129,8 @@ private fun ActiveRuleRow(
             ItemPoster(
                 item = show,
                 direction = Direction.VERTICAL,
-                modifier = Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
+                modifier =
+                    Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
             )
             Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
         }
@@ -202,12 +206,16 @@ fun PendingCommandRow(
     devices: List<RemoteDeviceInfo>,
     onAction: (RemoteDevicesAction) -> Unit,
 ) {
-    val targetName = devices.find { it.id == command.targetDeviceId }?.name ?: command.targetDeviceId
+    val targetName =
+        devices.find { it.id == command.targetDeviceId }?.name ?: command.targetDeviceId
     val suffixRes =
         when (command) {
-            is RemoteConfigCommand.ReconcileRules -> CoreR.string.remote_devices_command_reconcile_suffix
-            is RemoteConfigCommand.EvaluateNow -> CoreR.string.remote_devices_command_evaluate_suffix
-            is RemoteConfigCommand.DownloadItem -> CoreR.string.remote_devices_command_download_suffix
+            is RemoteConfigCommand.ReconcileRules ->
+                CoreR.string.remote_devices_command_reconcile_suffix
+            is RemoteConfigCommand.EvaluateNow ->
+                CoreR.string.remote_devices_command_evaluate_suffix
+            is RemoteConfigCommand.DownloadItem ->
+                CoreR.string.remote_devices_command_download_suffix
         }
     val suffixText = stringResource(suffixRes)
 
@@ -220,14 +228,13 @@ fun PendingCommandRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = command.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = stringResource(CoreR.string.remote_devices_pending_to, suffixText, targetName),
+                text =
+                    stringResource(CoreR.string.remote_devices_pending_to, suffixText, targetName),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(
-            onClick = { onAction(RemoteDevicesAction.CancelPendingCommand(command.id)) }
-        ) {
+        IconButton(onClick = { onAction(RemoteDevicesAction.CancelPendingCommand(command.id)) }) {
             Icon(painter = painterResource(CoreR.drawable.ic_x), contentDescription = null)
         }
     }

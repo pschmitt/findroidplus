@@ -27,9 +27,9 @@ import dev.pschmitt.jellyfin.models.FindroidItem
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 
 /**
- * A Netflix-style play affordance overlaid on the item's header image, replacing the old
- * dedicated Play button in ItemButtonsBar. Always resumes (or starts) playback - restarting from
- * the beginning is a separate action reachable from ItemButtonsBar's overflow menu.
+ * A Netflix-style play affordance overlaid on the item's header image, replacing the old dedicated
+ * Play button in ItemButtonsBar. Always resumes (or starts) playback - restarting from the
+ * beginning is a separate action reachable from ItemButtonsBar's overflow menu.
  */
 @Composable
 fun PlayOverlayButton(

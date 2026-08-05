@@ -200,7 +200,10 @@ private fun MainScreenLayout(
                 MediaScreen(navigateToLibrary = navigateToLibrary, isLoading = { isLoading = it })
             }
             3 -> {
-                DownloadsScreen(navigateToMovie = navigateToMovie, navigateToPlayer = navigateToPlayer)
+                DownloadsScreen(
+                    navigateToMovie = navigateToMovie,
+                    navigateToPlayer = navigateToPlayer,
+                )
             }
         }
     }

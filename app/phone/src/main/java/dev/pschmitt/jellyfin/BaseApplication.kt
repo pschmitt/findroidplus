@@ -25,13 +25,13 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
-import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.api.pvr.PvrAdvancedConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrAdvancedSettings
 import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
 import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.localcontrol.LocalControlServer
 import dev.pschmitt.jellyfin.security.SecureCredentialStore
+import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
 import dev.pschmitt.jellyfin.work.AutoBackupScheduler
 import dev.pschmitt.jellyfin.work.AutoDeleteWatchedWorker
@@ -73,30 +73,35 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
 
         // Planted unconditionally, not just for BuildConfig.DEBUG - otherwise Timber is silent on
         // the release builds users actually run, which leaves no trace in logcat when diagnosing
-        // e.g. a Sonarr search failure after the fact (see PvrHttpClient/SonarrSearchRepositoryImpl).
+        // e.g. a Sonarr search failure after the fact (see
+        // PvrHttpClient/SonarrSearchRepositoryImpl).
         Timber.plant(Timber.DebugTree())
 
         PvrAdvancedSettings.provider = { service ->
             val (headersKey, usernameKey, passwordKey) =
                 when (service) {
-                    PvrService.SONARR -> Triple(
-                        PvrCredentialKeys.SONARR_HTTP_HEADERS,
-                        PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
-                        PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
-                    )
-                    PvrService.RADARR -> Triple(
-                        PvrCredentialKeys.RADARR_HTTP_HEADERS,
-                        PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
-                        PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
-                    )
-                    PvrService.SEERR -> Triple(
-                        PvrCredentialKeys.SEERR_HTTP_HEADERS,
-                        PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
-                        PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
-                    )
+                    PvrService.SONARR ->
+                        Triple(
+                            PvrCredentialKeys.SONARR_HTTP_HEADERS,
+                            PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
+                            PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
+                        )
+                    PvrService.RADARR ->
+                        Triple(
+                            PvrCredentialKeys.RADARR_HTTP_HEADERS,
+                            PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
+                            PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
+                        )
+                    PvrService.SEERR ->
+                        Triple(
+                            PvrCredentialKeys.SEERR_HTTP_HEADERS,
+                            PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
+                            PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
+                        )
                 }
             PvrAdvancedConfig(
-                headers = PvrAdvancedConfig.parseHeaders(secureCredentialStore.getString(headersKey)),
+                headers =
+                    PvrAdvancedConfig.parseHeaders(secureCredentialStore.getString(headersKey)),
                 basicAuthUsername = secureCredentialStore.getString(usernameKey),
                 basicAuthPassword = secureCredentialStore.getString(passwordKey),
             )
@@ -167,21 +172,17 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     }
 
     private fun scheduleUserDataSync(workManager: WorkManager) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
         val syncWorkRequest =
-            OneTimeWorkRequestBuilder<SyncWorker>()
-                .setConstraints(constraints)
-                .build()
+            OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(constraints).build()
 
-        workManager
-            .enqueueUniqueWork(
-                uniqueWorkName = "syncUserData",
-                existingWorkPolicy = ExistingWorkPolicy.KEEP,
-                request = syncWorkRequest
-            )
+        workManager.enqueueUniqueWork(
+            uniqueWorkName = "syncUserData",
+            existingWorkPolicy = ExistingWorkPolicy.KEEP,
+            request = syncWorkRequest,
+        )
     }
 
     private fun checkIntervalMinutes(): Long =
@@ -191,10 +192,11 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
             .toLong()
 
     private fun scheduleAutoDownload(workManager: WorkManager) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
-            .build()
+        val constraints =
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .build()
 
         val periodicRequest =
             PeriodicWorkRequestBuilder<AutoDownloadWorker>(checkIntervalMinutes(), TimeUnit.MINUTES)
@@ -222,9 +224,8 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     // Fixed 12h TTL, not user-configurable like the download-check interval - see
     // CalendarCache.DEFAULT_TTL_MILLIS, which PreloadCalendarWorker itself checks against.
     private fun schedulePreloadCalendar(workManager: WorkManager) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
         val periodicRequest =
             PeriodicWorkRequestBuilder<PreloadCalendarWorker>(12, TimeUnit.HOURS)
@@ -254,13 +255,17 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     }
 
     private fun schedulePendingDownloads(workManager: WorkManager) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(true)
-            .build()
+        val constraints =
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .build()
 
         val periodicRequest =
-            PeriodicWorkRequestBuilder<PendingDownloadWorker>(checkIntervalMinutes(), TimeUnit.MINUTES)
+            PeriodicWorkRequestBuilder<PendingDownloadWorker>(
+                    checkIntervalMinutes(),
+                    TimeUnit.MINUTES,
+                )
                 .setConstraints(constraints)
                 .build()
 
@@ -348,20 +353,16 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     }
 
     private fun scheduleMpvCleanup(workManager: WorkManager) {
-        val constraints = Constraints.Builder()
-            .setRequiresDeviceIdle(true)
-            .setRequiresBatteryNotLow(true)
-            .build()
+        val constraints =
+            Constraints.Builder().setRequiresDeviceIdle(true).setRequiresBatteryNotLow(true).build()
 
         val cleanupRequest =
-            OneTimeWorkRequestBuilder<MpvCleanupWorker>()
-                .setConstraints(constraints)
-                .build()
+            OneTimeWorkRequestBuilder<MpvCleanupWorker>().setConstraints(constraints).build()
 
         workManager.enqueueUniqueWork(
             uniqueWorkName = "mpv_cleanup",
             existingWorkPolicy = ExistingWorkPolicy.KEEP,
-            request = cleanupRequest
+            request = cleanupRequest,
         )
     }
 }

@@ -15,7 +15,8 @@ import javax.crypto.spec.SecretKeySpec
  * can tell up-front whether a password is needed instead of guessing from a failed parse.
  */
 object BackupCrypto {
-    private val MAGIC = byteArrayOf('F'.code.toByte(), 'R'.code.toByte(), 'B'.code.toByte(), '1'.code.toByte())
+    private val MAGIC =
+        byteArrayOf('F'.code.toByte(), 'R'.code.toByte(), 'B'.code.toByte(), '1'.code.toByte())
     private const val FLAG_PLAIN: Byte = 0
     private const val FLAG_ENCRYPTED: Byte = 1
     private const val SALT_SIZE = 16

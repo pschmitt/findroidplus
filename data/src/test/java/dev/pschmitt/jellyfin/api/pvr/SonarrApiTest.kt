@@ -29,21 +29,22 @@ class SonarrApiTest {
     @Test
     fun `getSeries decodes only the fields we need and ignores the rest`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                [
-                    {
-                        "id": 1,
-                        "tvdbId": 12345,
-                        "tmdbId": 67890,
-                        "title": "Some Show",
-                        "someUnknownField": {"nested": true},
-                        "seasons": [{"seasonNumber": 1}]
-                    }
-                ]
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    [
+                        {
+                            "id": 1,
+                            "tvdbId": 12345,
+                            "tmdbId": 67890,
+                            "title": "Some Show",
+                            "someUnknownField": {"nested": true},
+                            "seasons": [{"seasonNumber": 1}]
+                        }
+                    ]
+                    """
+                        .trimIndent()
+                )
         )
 
         val series = api.getSeries()
@@ -58,27 +59,28 @@ class SonarrApiTest {
     @Test
     fun `getQueue unwraps the paginated records list and requests a large page size`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                {
-                    "page": 1,
-                    "pageSize": 250,
-                    "totalRecords": 1,
-                    "records": [
-                        {
-                            "id": 42,
-                            "seriesId": 1,
-                            "episodeId": 10,
-                            "seasonNumber": 2,
-                            "status": "downloading",
-                            "size": 1000,
-                            "sizeleft": 250
-                        }
-                    ]
-                }
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    {
+                        "page": 1,
+                        "pageSize": 250,
+                        "totalRecords": 1,
+                        "records": [
+                            {
+                                "id": 42,
+                                "seriesId": 1,
+                                "episodeId": 10,
+                                "seasonNumber": 2,
+                                "status": "downloading",
+                                "size": 1000,
+                                "sizeleft": 250
+                            }
+                        ]
+                    }
+                    """
+                        .trimIndent()
+                )
         )
 
         val queue = api.getQueue()
@@ -98,24 +100,25 @@ class SonarrApiTest {
     @Test
     fun `getCalendar decodes a flat array and requests start, end and includeSeries`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                [
-                    {
-                        "id": 55,
-                        "seriesId": 1,
-                        "seasonNumber": 3,
-                        "episodeNumber": 5,
-                        "title": "Some Episode",
-                        "airDateUtc": "2024-07-24T01:00:00Z",
-                        "hasFile": false,
-                        "monitored": true,
-                        "series": {"tvdbId": 12345, "title": "Some Show"}
-                    }
-                ]
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    [
+                        {
+                            "id": 55,
+                            "seriesId": 1,
+                            "seasonNumber": 3,
+                            "episodeNumber": 5,
+                            "title": "Some Episode",
+                            "airDateUtc": "2024-07-24T01:00:00Z",
+                            "hasFile": false,
+                            "monitored": true,
+                            "series": {"tvdbId": 12345, "title": "Some Show"}
+                        }
+                    ]
+                    """
+                        .trimIndent()
+                )
         )
 
         val entries = api.getCalendar(LocalDate.of(2024, 7, 21), LocalDate.of(2024, 8, 20))
@@ -134,34 +137,36 @@ class SonarrApiTest {
     }
 
     @Test
-    fun `searchEpisode POSTs an EpisodeSearch command with the episode id and returns the command id`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"id": 42, "status": "queued"}"""))
+    fun `searchEpisode POSTs an EpisodeSearch command with the episode id and returns the command id`() =
+        runTest {
+            server.enqueue(MockResponse().setBody("""{"id": 42, "status": "queued"}"""))
 
-        val commandId = api.searchEpisode(episodeId = 10)
+            val commandId = api.searchEpisode(episodeId = 10)
 
-        assertEquals(42, commandId)
-        val recordedRequest = server.takeRequest()
-        assertEquals("POST", recordedRequest.method)
-        assertTrue(recordedRequest.path.orEmpty().endsWith("/api/v3/command"))
-        val body = recordedRequest.body.readUtf8()
-        assertTrue(body.contains("\"name\":\"EpisodeSearch\""))
-        assertTrue(body.contains("\"episodeIds\":[10]"))
-    }
+            assertEquals(42, commandId)
+            val recordedRequest = server.takeRequest()
+            assertEquals("POST", recordedRequest.method)
+            assertTrue(recordedRequest.path.orEmpty().endsWith("/api/v3/command"))
+            val body = recordedRequest.body.readUtf8()
+            assertTrue(body.contains("\"name\":\"EpisodeSearch\""))
+            assertTrue(body.contains("\"episodeIds\":[10]"))
+        }
 
     @Test
-    fun `searchSeries POSTs a SeriesSearch command with the series id and returns the command id`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"id": 43, "status": "queued"}"""))
+    fun `searchSeries POSTs a SeriesSearch command with the series id and returns the command id`() =
+        runTest {
+            server.enqueue(MockResponse().setBody("""{"id": 43, "status": "queued"}"""))
 
-        val commandId = api.searchSeries(seriesId = 11)
+            val commandId = api.searchSeries(seriesId = 11)
 
-        assertEquals(43, commandId)
-        val recordedRequest = server.takeRequest()
-        assertEquals("POST", recordedRequest.method)
-        assertTrue(recordedRequest.path.orEmpty().endsWith("/api/v3/command"))
-        val body = recordedRequest.body.readUtf8()
-        assertTrue(body.contains("\"name\":\"SeriesSearch\""))
-        assertTrue(body.contains("\"seriesId\":11"))
-    }
+            assertEquals(43, commandId)
+            val recordedRequest = server.takeRequest()
+            assertEquals("POST", recordedRequest.method)
+            assertTrue(recordedRequest.path.orEmpty().endsWith("/api/v3/command"))
+            val body = recordedRequest.body.readUtf8()
+            assertTrue(body.contains("\"name\":\"SeriesSearch\""))
+            assertTrue(body.contains("\"seriesId\":11"))
+        }
 
     @Test
     fun `getCommandStatus decodes the command's id and status`() = runTest {
@@ -179,9 +184,10 @@ class SonarrApiTest {
     @Test
     fun `getEpisodeById decodes season, episode number, title and series title`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """{"seasonNumber": 3, "episodeNumber": 4, "title": "Tumbleton", "series": {"title": "House of the Dragon"}}"""
-            )
+            MockResponse()
+                .setBody(
+                    """{"seasonNumber": 3, "episodeNumber": 4, "title": "Tumbleton", "series": {"title": "House of the Dragon"}}"""
+                )
         )
 
         val episode = api.getEpisodeById(episodeId = 4531)
@@ -198,23 +204,24 @@ class SonarrApiTest {
     @Test
     fun `getReleases decodes candidate releases and requests episodeId`() = runTest {
         server.enqueue(
-            MockResponse().setBody(
-                """
-                [
-                    {
-                        "guid": "abc123",
-                        "indexerId": 4,
-                        "indexer": "Some Indexer",
-                        "title": "Show.S01E01.1080p.WEB-DL",
-                        "size": 1500000000,
-                        "seeders": 42,
-                        "quality": {"quality": {"name": "WEBDL-1080p"}},
-                        "rejected": false
-                    }
-                ]
-                """
-                    .trimIndent()
-            )
+            MockResponse()
+                .setBody(
+                    """
+                    [
+                        {
+                            "guid": "abc123",
+                            "indexerId": 4,
+                            "indexer": "Some Indexer",
+                            "title": "Show.S01E01.1080p.WEB-DL",
+                            "size": 1500000000,
+                            "seeders": 42,
+                            "quality": {"quality": {"name": "WEBDL-1080p"}},
+                            "rejected": false
+                        }
+                    ]
+                    """
+                        .trimIndent()
+                )
         )
 
         val releases = api.getReleases(episodeId = 10, readTimeoutMs = 180_000L)

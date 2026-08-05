@@ -1664,9 +1664,20 @@ way: each now requires `compileSdk 37` or later, and this project is still pinne
   change itself.
 - [x] Rebased and merged PRs #15/#16/#17/#21 (`androidx.hilt` 1.4.0, `androidx.lifecycle` 2.11.0,
   `androidx.core` 1.19.0, `aboutlibraries` 15.0.4) - all green once `compileSdk 37` landed on
-  `main`.
+  `main`, all 16 Renovate PRs merged. PR #16 needed a second manual rebase (real, one-line
+  conflict this time - two version bumps landing on adjacent `libs.versions.toml` lines) since
+  each squash-merge invalidated the diff of whatever else was still open on the same file.
+- [x] Found and fixed a real CI regression right after: PR #12's `ktfmt` 0.26.0 -> 0.27.0 bump
+  changed formatting rules more broadly than expected, and `ktfmtCheck` on `main` post-merge
+  failed on 6 files across two passes of `ktfmtFormat` (5 first, then 1 more the first pass
+  missed). Ran `ktfmtFormat` (mass-reformats 234 files repo-wide - whitespace/line-wrap only,
+  semantically inert) and re-verified the full build/test/lint suite before considering this
+  done - exactly the risk `AGENTS.md` already flags about ktfmt version drift, just triggered by
+  Renovate bumping the *project's own* pinned version this time instead of a local tool mismatch.
+- [x] Version bump: `APP_CODE` 51 -> 52, `APP_NAME` "2.13.0" -> "2.13.1", plus
+  `fastlane/metadata/android/en-US/changelogs/52.txt`.
 
 **Why:** direct user follow-up the same day, once the compileSdk-37 blocker on 4 Renovate PRs was
 identified and documented.
 
-Status: **done**, 2026-08-05.
+Status: **done**, 2026-08-05 - tagged as `v2.13.1`.

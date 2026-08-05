@@ -27,9 +27,9 @@ data class PvrQueueEntry(
 /**
  * One full poll of both services' queues. [errors] carries per-service fetch failures instead of
  * silently collapsing them into an empty queue - an unreachable Sonarr should read as "Sonarr is
- * unreachable", not "nothing is downloading". [fetchedSources] lists the services that were
- * enabled *and* answered this poll: only their entries' disappearance since the previous snapshot
- * means anything (see `QueueStatusRepositoryImpl.notifyFinishedDownloads`).
+ * unreachable", not "nothing is downloading". [fetchedSources] lists the services that were enabled
+ * *and* answered this poll: only their entries' disappearance since the previous snapshot means
+ * anything (see `QueueStatusRepositoryImpl.notifyFinishedDownloads`).
  */
 data class PvrQueueSnapshot(
     val entries: List<PvrQueueEntry> = emptyList(),
@@ -47,8 +47,8 @@ data class PvrQueueSnapshot(
 data class PvrFetchError(val source: PvrSource, val message: String)
 
 /**
- * The download-progress payload of a single Sonarr/Radarr queue entry (see [PvrQueueEntry] for
- * the item association).
+ * The download-progress payload of a single Sonarr/Radarr queue entry (see [PvrQueueEntry] for the
+ * item association).
  */
 data class QueueStatus(
     val source: PvrSource,
@@ -69,6 +69,15 @@ data class QueueStatus(
     val queueItemId: Int = 0,
 )
 
-enum class PvrSource { SONARR, RADARR }
+enum class PvrSource {
+    SONARR,
+    RADARR,
+}
 
-enum class QueueItemStatus { QUEUED, DOWNLOADING, IMPORTING, WARNING, FAILED }
+enum class QueueItemStatus {
+    QUEUED,
+    DOWNLOADING,
+    IMPORTING,
+    WARNING,
+    FAILED,
+}

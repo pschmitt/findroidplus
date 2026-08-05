@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Shared between BaseApplication's startup scheduling and BackupSettingsViewModel, so toggling
- * auto-backup on/off, changing the interval, or picking a folder can reschedule immediately
- * without duplicating the gate-and-cancel logic.
+ * auto-backup on/off, changing the interval, or picking a folder can reschedule immediately without
+ * duplicating the gate-and-cancel logic.
  */
 object AutoBackupScheduler {
     private const val UNIQUE_WORK_NAME = "autoBackup"
@@ -54,7 +54,8 @@ object AutoBackupScheduler {
                 .getValue(appPreferences.autoBackupIntervalMinutes)
                 .coerceIn(15, 30 * 24 * 60)
 
-        // NetworkType.CONNECTED (same as RemoteConfigScheduler/QueueStatusScheduler): a cloud-backed
+        // NetworkType.CONNECTED (same as RemoteConfigScheduler/QueueStatusScheduler): a
+        // cloud-backed
         // SAF folder (Google Drive, etc.) needs live network to create/write a file at all - unlike
         // a local folder, where this constraint costs nothing. Without it, this job could fire with
         // no connectivity (Wi-Fi off overnight, etc.), silently failing DocumentFile.createFile()

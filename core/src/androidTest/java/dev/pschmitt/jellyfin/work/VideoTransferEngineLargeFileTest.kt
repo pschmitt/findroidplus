@@ -88,7 +88,8 @@ class VideoTransferEngineLargeFileTest {
             sourceUrl = "http://127.0.0.1:$port/source",
             destinationPath = destFile.path,
             expectedSize = FILE_SIZE,
-        ) { _, _, _, _ -> }
+        ) { _, _, _, _ ->
+        }
 
         assertEquals("bytes=$alreadyDownloaded-", server.lastRangeHeader)
         assertEquals(FILE_SIZE, destFile.length())

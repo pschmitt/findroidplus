@@ -14,9 +14,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /**
  * Thin client for a single Sonarr instance. Cheap to construct per-call - [baseUrl] and [apiKey]
  * are resolved by the caller (typically from [dev.pschmitt.jellyfin.security.SecureCredentialStore]
- * and the Sonarr settings) rather than injected as a Hilt singleton, since the user can
- * reconfigure either at runtime. Only a single Sonarr instance is supported, matching the app's
- * existing single-Jellyfin-server assumption.
+ * and the Sonarr settings) rather than injected as a Hilt singleton, since the user can reconfigure
+ * either at runtime. Only a single Sonarr instance is supported, matching the app's existing
+ * single-Jellyfin-server assumption.
  */
 class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     private val client by lazy { PvrHttpClient.create(apiKey, PvrService.SONARR) }
@@ -66,7 +66,13 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
 
     suspend fun getEpisodes(seriesId: Int): List<SonarrEpisodeDto> =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v3", "episode", queryParams = mapOf("seriesId" to seriesId.toString()))
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "episode",
+                    queryParams = mapOf("seriesId" to seriesId.toString()),
+                )
             json.decodeFromString<List<SonarrEpisodeDto>>(execute(url))
         }
 
@@ -86,13 +92,16 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
 
     /**
      * Triggers an automatic search - Sonarr picks and grabs the best release itself. Returns the
-     * queued command's id (see [getCommandStatus]), not the result - Sonarr answers this as soon
-     * as the command is queued, well before the search itself finishes.
+     * queued command's id (see [getCommandStatus]), not the result - Sonarr answers this as soon as
+     * the command is queued, well before the search itself finishes.
      */
     suspend fun searchEpisode(episodeId: Int): Int =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command")
-            val body = json.encodeToString(SonarrCommandRequest(name = "EpisodeSearch", episodeIds = listOf(episodeId)))
+            val body =
+                json.encodeToString(
+                    SonarrCommandRequest(name = "EpisodeSearch", episodeIds = listOf(episodeId))
+                )
             json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
         }
 
@@ -100,11 +109,17 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     suspend fun searchSeries(seriesId: Int): Int =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command")
-            val body = json.encodeToString(SonarrSeriesCommandRequest(name = "SeriesSearch", seriesId = seriesId))
+            val body =
+                json.encodeToString(
+                    SonarrSeriesCommandRequest(name = "SeriesSearch", seriesId = seriesId)
+                )
             json.decodeFromString<PvrCommandResponse>(execute(url, body)).id
         }
 
-    /** Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via [searchEpisode]. */
+    /**
+     * Current status ("queued"/"started"/"completed"/"failed"/...) of a command started via
+     * [searchEpisode].
+     */
     suspend fun getCommandStatus(commandId: Int): PvrCommandResponse =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "command", commandId.toString())
@@ -122,13 +137,19 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
      * Lists candidate releases for an episode (interactive/manual search), without grabbing any.
      * Sonarr answers this synchronously only once it has polled every enabled indexer (directly or
      * via Prowlarr), which can comfortably exceed the default read timeout when an indexer is slow
-     * - so this call gets a longer, dedicated timeout rather than the shared default. [readTimeoutMs]
-     * comes from `AppPreferences.pvrSearchTimeout` (Settings > Network), since how long is
-     * reasonable to wait depends entirely on the user's indexers.
+     * - so this call gets a longer, dedicated timeout rather than the shared default.
+     *   [readTimeoutMs] comes from `AppPreferences.pvrSearchTimeout` (Settings > Network), since
+     *   how long is reasonable to wait depends entirely on the user's indexers.
      */
     suspend fun getReleases(episodeId: Int, readTimeoutMs: Long): List<PvrRelease> =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v3", "release", queryParams = mapOf("episodeId" to episodeId.toString()))
+            val url =
+                buildUrl(
+                    "api",
+                    "v3",
+                    "release",
+                    queryParams = mapOf("episodeId" to episodeId.toString()),
+                )
             json.decodeFromString<List<PvrRelease>>(execute(url, readTimeoutMs = readTimeoutMs))
         }
 
@@ -136,18 +157,23 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     suspend fun grabRelease(guid: String, indexerId: Int): Unit =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "release")
-            val body = json.encodeToString(PvrGrabReleaseRequest(guid = guid, indexerId = indexerId))
+            val body =
+                json.encodeToString(PvrGrabReleaseRequest(guid = guid, indexerId = indexerId))
             execute(url, body)
         }
 
     /**
      * Deletes a series from Sonarr. [deleteFiles] also removes the episode files from disk (the
-     * caller is responsible for making sure Jellyfin's own copy is gone first, otherwise this
-     * would delete files Jellyfin still thinks it owns); [addImportListExclusion] stops Sonarr's
-     * import lists from re-adding the series on their next sync (the same protection a plain
-     * delete already gets against a *manual* re-add, extended to automated ones).
+     * caller is responsible for making sure Jellyfin's own copy is gone first, otherwise this would
+     * delete files Jellyfin still thinks it owns); [addImportListExclusion] stops Sonarr's import
+     * lists from re-adding the series on their next sync (the same protection a plain delete
+     * already gets against a *manual* re-add, extended to automated ones).
      */
-    suspend fun deleteSeries(seriesId: Int, deleteFiles: Boolean, addImportListExclusion: Boolean): Unit =
+    suspend fun deleteSeries(
+        seriesId: Int,
+        deleteFiles: Boolean,
+        addImportListExclusion: Boolean,
+    ): Unit =
         withContext(Dispatchers.IO) {
             val url =
                 buildUrl(
@@ -172,7 +198,10 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     suspend fun setEpisodesMonitored(episodeIds: List<Int>, monitored: Boolean): Unit =
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v3", "episode", "monitor")
-            val body = json.encodeToString(SonarrEpisodeMonitorRequest(episodeIds = episodeIds, monitored = monitored))
+            val body =
+                json.encodeToString(
+                    SonarrEpisodeMonitorRequest(episodeIds = episodeIds, monitored = monitored)
+                )
             execute(url, body, put = true)
         }
 
@@ -181,7 +210,11 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
      * download client; [blocklist] prevents Sonarr from grabbing the same release again. There is
      * deliberately no "pause": the v3 API exposes none - pausing lives in the download client.
      */
-    suspend fun deleteQueueItem(queueItemId: Int, removeFromClient: Boolean, blocklist: Boolean): Unit =
+    suspend fun deleteQueueItem(
+        queueItemId: Int,
+        removeFromClient: Boolean,
+        blocklist: Boolean,
+    ): Unit =
         withContext(Dispatchers.IO) {
             val url =
                 buildUrl(
@@ -234,8 +267,8 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
     }
 
     /**
-     * [jsonBody] `null` issues a GET; otherwise a POST (or [put], a PUT) with that body as the
-     * JSON payload. [delete] issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s
+     * [jsonBody] `null` issues a GET; otherwise a POST (or [put], a PUT) with that body as the JSON
+     * payload. [delete] issues a DELETE instead. [readTimeoutMs] overrides [PvrHttpClient]'s
      * default read timeout for this call only.
      */
     private fun execute(

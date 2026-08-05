@@ -18,7 +18,13 @@ class PendingDownloadRequestRepositoryImpl(private val database: ServerDatabaseD
         sonarrEpisodeId: Int?,
     ): PendingDownloadRequestDto =
         withContext(Dispatchers.IO) {
-            database.getPendingDownloadRequest(serverId, userId, seriesId, seasonNumber, episodeNumber)
+            database.getPendingDownloadRequest(
+                serverId,
+                userId,
+                seriesId,
+                seasonNumber,
+                episodeNumber,
+            )
                 ?: run {
                     val request =
                         PendingDownloadRequestDto(
@@ -43,7 +49,8 @@ class PendingDownloadRequestRepositoryImpl(private val database: ServerDatabaseD
         episodeNumber: Int?,
     ) =
         withContext(Dispatchers.IO) {
-            database.getPendingDownloadRequest(serverId, userId, seriesId, seasonNumber, episodeNumber)
+            database
+                .getPendingDownloadRequest(serverId, userId, seriesId, seasonNumber, episodeNumber)
                 ?.let { database.deletePendingDownloadRequest(it.id) }
             Unit
         }
@@ -56,8 +63,13 @@ class PendingDownloadRequestRepositoryImpl(private val database: ServerDatabaseD
         episodeNumber: Int?,
     ): Boolean =
         withContext(Dispatchers.IO) {
-            database.getPendingDownloadRequest(serverId, userId, seriesId, seasonNumber, episodeNumber) !=
-                null
+            database.getPendingDownloadRequest(
+                serverId,
+                userId,
+                seriesId,
+                seasonNumber,
+                episodeNumber,
+            ) != null
         }
 
     override suspend fun getQueuedForSeries(

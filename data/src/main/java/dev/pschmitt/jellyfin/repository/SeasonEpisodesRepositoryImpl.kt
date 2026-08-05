@@ -10,8 +10,8 @@ import timber.log.Timber
 
 /**
  * [sonarrApiKeyProvider] resolves the current secret from `SecureCredentialStore` - passed in as a
- * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type
- * lives in `core`, which depends on `data`, not the other way around. Same pattern as
+ * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type lives
+ * in `core`, which depends on `data`, not the other way around. Same pattern as
  * [CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
  *
  * Constructed via `dev.pschmitt.jellyfin.di.SeasonEpisodesModule` (a Hilt `@Provides`) rather than
@@ -31,7 +31,8 @@ class SeasonEpisodesRepositoryImpl(
     override suspend fun getMissingSeasons(
         seriesTvdbId: String,
         knownSeasonNumbers: Set<Int>,
-    ): List<UpcomingSeason> = matchMissingSeasons(fetchSeriesEpisodes(seriesTvdbId), knownSeasonNumbers)
+    ): List<UpcomingSeason> =
+        matchMissingSeasons(fetchSeriesEpisodes(seriesTvdbId), knownSeasonNumbers)
 
     /**
      * Every Sonarr-known episode of the series matching [seriesTvdbId], regardless of season -

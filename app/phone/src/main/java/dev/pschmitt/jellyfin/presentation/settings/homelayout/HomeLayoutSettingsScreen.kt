@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -29,17 +28,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.film.presentation.homelayout.HomeLayoutRow
-import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.pschmitt.jellyfin.film.presentation.homelayout.HomeLayoutSettingsAction
 import dev.pschmitt.jellyfin.film.presentation.homelayout.HomeLayoutSettingsState
 import dev.pschmitt.jellyfin.film.presentation.homelayout.HomeLayoutSettingsViewModel
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
+import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
@@ -134,7 +132,8 @@ private fun HomeLayoutSettingsScreenLayout(
                         onMoveDown = {},
                         showMoveButtons = false,
                         trailingIcon = CoreR.drawable.ic_plus,
-                        trailingIconDescription = stringResource(CoreR.string.home_layout_show_section),
+                        trailingIconDescription =
+                            stringResource(CoreR.string.home_layout_show_section),
                         onTrailingClick = { onAction(HomeLayoutSettingsAction.OnRestore(row.key)) },
                         titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -185,7 +184,10 @@ private fun HomeLayoutRowItem(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacings.default, vertical = MaterialTheme.spacings.small),
+                .padding(
+                    horizontal = MaterialTheme.spacings.default,
+                    vertical = MaterialTheme.spacings.small,
+                ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -194,7 +196,11 @@ private fun HomeLayoutRowItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SectionServiceIcons(row.serviceIcons)
-            Text(text = row.label.asString(), style = MaterialTheme.typography.bodyLarge, color = titleColor)
+            Text(
+                text = row.label.asString(),
+                style = MaterialTheme.typography.bodyLarge,
+                color = titleColor,
+            )
         }
         Row {
             if (showMoveButtons) {
@@ -212,7 +218,10 @@ private fun HomeLayoutRowItem(
                 }
             }
             IconButton(onClick = onTrailingClick) {
-                Icon(painter = painterResource(trailingIcon), contentDescription = trailingIconDescription)
+                Icon(
+                    painter = painterResource(trailingIcon),
+                    contentDescription = trailingIconDescription,
+                )
             }
         }
     }

@@ -51,18 +51,18 @@ import kotlinx.coroutines.coroutineScope
 
 /**
  * Lets the user pick what to download: for an episode, either just that episode, a bulk selection
- * of seasons/whole show, or both at once - "this episode" (an immediate single download) and
- * "also download new episodes" (a forward-looking rule) aren't alternatives to each other, so
- * they stay independently toggleable; picking a specific season/whole-show scope, on the other
- * hand, does deselect "this episode" since that's a genuinely different bulk scope. For a season
- * or show screen, only the bulk selection applies (no episode option at all).
- * "Automatically download new episodes" covers both halves of staying current on a show: new
- * episodes airing in a season already picked below, and brand new seasons that don't exist yet -
- * there's no reason to make the user think about that distinction, since the intent ("keep this
- * show up to date") is the same either way. [seasons] is null while still loading.
+ * of seasons/whole show, or both at once - "this episode" (an immediate single download) and "also
+ * download new episodes" (a forward-looking rule) aren't alternatives to each other, so they stay
+ * independently toggleable; picking a specific season/whole-show scope, on the other hand, does
+ * deselect "this episode" since that's a genuinely different bulk scope. For a season or show
+ * screen, only the bulk selection applies (no episode option at all). "Automatically download new
+ * episodes" covers both halves of staying current on a show: new episodes airing in a season
+ * already picked below, and brand new seasons that don't exist yet - there's no reason to make the
+ * user think about that distinction, since the intent ("keep this show up to date") is the same
+ * either way. [seasons] is null while still loading.
  * [initialSelection]/[initialAlsoFollowNew]/[initialOnlyUnwatched] pre-populate the dialog from an
- * already-saved rule, if any, so reopening it reflects what's actually configured instead of
- * always starting blank.
+ * already-saved rule, if any, so reopening it reflects what's actually configured instead of always
+ * starting blank.
  */
 @Composable
 fun DownloadScopeDialog(
@@ -102,8 +102,9 @@ fun DownloadScopeDialog(
     // Either kind of previously-saved rule (future-seasons-only, or per-season-follow) means the
     // show already has ongoing tracking from the user's point of view - there's only one toggle
     // for that now, so either signal being true should show it as on.
-    var alsoFollowNew by
-        remember { mutableStateOf(initialAlsoFollowNew || initialSelection.alsoFutureSeasons) }
+    var alsoFollowNew by remember {
+        mutableStateOf(initialAlsoFollowNew || initialSelection.alsoFutureSeasons)
+    }
     var onlyUnwatched by remember { mutableStateOf(initialOnlyUnwatched) }
     var seasonsExpanded by remember { mutableStateOf(false) }
     var selectedDeviceId by remember { mutableStateOf<String?>(null) }
@@ -117,16 +118,17 @@ fun DownloadScopeDialog(
     // Cached per (season id, onlyUnwatched) so toggling a season off and back on - or flipping
     // "only unwatched" back to what it was - doesn't re-hit the network; only ever grows for the
     // lifetime of this dialog.
-    val seasonSizeCache = remember { mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>() }
+    val seasonSizeCache = remember {
+        mutableStateMapOf<Pair<UUID, Boolean>, DownloadSizeEstimate>()
+    }
     LaunchedEffect(selectedSeasonIds, thisEpisodeOnly, onlyUnwatched) {
         if (thisEpisodeOnly || getSeasonSize == null) return@LaunchedEffect
         val missing = selectedSeasonIds.filter { (it to onlyUnwatched) !in seasonSizeCache }
         if (missing.isEmpty()) return@LaunchedEffect
         coroutineScope {
-            val sizes =
-                missing.map { seasonId ->
-                    seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
-                }
+            val sizes = missing.map { seasonId ->
+                seasonId to async { getSeasonSize(seasonId, onlyUnwatched) }
+            }
             sizes.forEach { (seasonId, deferred) ->
                 seasonSizeCache[seasonId to onlyUnwatched] = deferred.await()
             }
@@ -192,7 +194,8 @@ fun DownloadScopeDialog(
                 } else {
                     if (allSeasonIds.isNotEmpty()) {
                         ToggleOptionRow(
-                            checked = !thisEpisodeOnly && selectedSeasonIds.containsAll(allSeasonIds),
+                            checked =
+                                !thisEpisodeOnly && selectedSeasonIds.containsAll(allSeasonIds),
                             label = stringResource(CoreR.string.download_scope_show),
                             icon = CoreR.drawable.ic_tv,
                             onToggle = { checked ->

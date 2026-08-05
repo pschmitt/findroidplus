@@ -51,9 +51,9 @@ import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeAction
 import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeState
 import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeViewModel
 import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.FindroidSourceType
 import dev.pschmitt.jellyfin.models.QueueItemStatus
+import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.isDownloadBroken
 import dev.pschmitt.jellyfin.models.isDownloaded
 import dev.pschmitt.jellyfin.models.isMarkedForAutoDeletion
@@ -582,7 +582,11 @@ private fun EpisodeScreenLayout(
                             getSeasons = getSeasons,
                             getSeasonSize = getSeasonSize,
                             getOtherDevices = getOtherDevices,
-                            onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
+                            onBulkDownload = {
+                                selection,
+                                alsoFollowNew,
+                                onlyUnwatched,
+                                targetDeviceId ->
                                 onAction(
                                     EpisodeAction.DownloadWithScope(
                                         selection,

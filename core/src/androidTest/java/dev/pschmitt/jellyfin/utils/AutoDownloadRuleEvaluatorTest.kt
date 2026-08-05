@@ -36,8 +36,7 @@ class AutoDownloadRuleEvaluatorTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, ServerDatabase::class.java).build()
         dao = db.getServerDatabaseDao()
-        appPreferences =
-            AppPreferences(context.getSharedPreferences("evaluator_test_prefs", 0))
+        appPreferences = AppPreferences(context.getSharedPreferences("evaluator_test_prefs", 0))
     }
 
     @After
@@ -86,7 +85,8 @@ class AutoDownloadRuleEvaluatorTest {
         val repository =
             FakeJellyfinRepository(
                 seasons = listOf(season1, season2),
-                episodesBySeasonId = mapOf(season1.id to listOf(episode1), season2.id to listOf(episode2)),
+                episodesBySeasonId =
+                    mapOf(season1.id to listOf(episode1), season2.id to listOf(episode2)),
             )
         val downloader = FakeDownloader()
 
@@ -117,7 +117,8 @@ class AutoDownloadRuleEvaluatorTest {
         val repository =
             FakeJellyfinRepository(
                 seasons = listOf(season1, season2),
-                episodesBySeasonId = mapOf(season1.id to listOf(episode1), season2.id to listOf(episode2)),
+                episodesBySeasonId =
+                    mapOf(season1.id to listOf(episode1), season2.id to listOf(episode2)),
             )
         val downloader = FakeDownloader()
 
@@ -186,7 +187,13 @@ class AutoDownloadRuleEvaluatorTest {
             )
         val downloader = FakeDownloader()
 
-        evaluator.evaluate(rule(seasonId = null, enabled = false), dao, repository, downloader, appPreferences)
+        evaluator.evaluate(
+            rule(seasonId = null, enabled = false),
+            dao,
+            repository,
+            downloader,
+            appPreferences,
+        )
 
         assertTrue(downloader.downloadedItemIds.isEmpty())
     }

@@ -34,8 +34,12 @@ object QueueStatusModule {
         return QueueStatusRepositoryImpl(
             appPreferences = appPreferences,
             jellyfinRepository = jellyfinRepository,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
-            radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
+            sonarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            },
+            radarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            },
             onDownloadFinished = downloadFinishedNotifier::notifyFinished,
             scope = scope,
         )

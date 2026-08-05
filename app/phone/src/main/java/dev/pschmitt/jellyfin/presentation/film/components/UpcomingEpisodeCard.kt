@@ -77,7 +77,9 @@ fun UpcomingEpisodeCard(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.Center,
             ) {
-                val title = episode.title ?: stringResource(CoreR.string.episode_number, episode.episodeNumber)
+                val title =
+                    episode.title
+                        ?: stringResource(CoreR.string.episode_number, episode.episodeNumber)
                 Text(
                     text = stringResource(CoreR.string.episode_name, episode.episodeNumber, title),
                     maxLines = 1,
@@ -93,7 +95,11 @@ fun UpcomingEpisodeCard(
                                     formatCalendarDate(airDate),
                                     formatCalendarTime(airTime),
                                 )
-                            } ?: stringResource(CoreR.string.season_upcoming_episode_air_date, formatCalendarDate(airDate))
+                            }
+                                ?: stringResource(
+                                    CoreR.string.season_upcoming_episode_air_date,
+                                    formatCalendarDate(airDate),
+                                )
                         } ?: stringResource(CoreR.string.season_upcoming_episode_tba),
                     style = MaterialTheme.typography.bodySmall,
                 )

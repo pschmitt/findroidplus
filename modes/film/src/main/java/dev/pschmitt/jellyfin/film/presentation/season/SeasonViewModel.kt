@@ -15,7 +15,6 @@ import dev.pschmitt.jellyfin.models.FindroidEpisode
 import dev.pschmitt.jellyfin.models.FindroidSeason
 import dev.pschmitt.jellyfin.models.FindroidSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
-import dev.pschmitt.jellyfin.models.UpcomingEpisode
 import dev.pschmitt.jellyfin.models.isDownloading
 import dev.pschmitt.jellyfin.models.toFindroidEpisode
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
@@ -108,7 +107,8 @@ constructor(
                         seriesTvdbId = seriesTvdbId,
                         seriesTmdbId = series.tmdbId?.toIntOrNull(),
                         sonarrConfigured = pvrConfiguration.isSonarrConfigured(),
-                        autoDeleteWatchedEnabled = appPreferences.getValue(appPreferences.autoDeleteWatched),
+                        autoDeleteWatchedEnabled =
+                            appPreferences.getValue(appPreferences.autoDeleteWatched),
                         autoDeleteWatchedHours =
                             appPreferences.getValue(appPreferences.autoDeleteWatchedHours),
                         isRefreshing = false,
@@ -188,8 +188,10 @@ constructor(
         }
     }
 
-    /** Resolves the Sonarr episode id to act on - already known for upcoming-episode rows
-     * ([knownEpisodeId]), otherwise resolved from [SeasonState.seriesTvdbId]. */
+    /**
+     * Resolves the Sonarr episode id to act on - already known for upcoming-episode rows
+     * ([knownEpisodeId]), otherwise resolved from [SeasonState.seriesTvdbId].
+     */
     private suspend fun resolveTargetEpisodeId(episodeNumber: Int, knownEpisodeId: Int?): Int? {
         if (knownEpisodeId != null) return knownEpisodeId
         val seriesTvdbId = _state.value.seriesTvdbId ?: return null
@@ -218,13 +220,18 @@ constructor(
             val episodeId = resolveTargetEpisodeId(episodeNumber, knownEpisodeId)
             if (episodeId == null) {
                 _state.value = _state.value.copy(releasePicker = null)
-                searchEventsChannel.send(SearchEvent.Failed("Could not find this episode in Sonarr"))
+                searchEventsChannel.send(
+                    SearchEvent.Failed("Could not find this episode in Sonarr")
+                )
                 return@launch
             }
             val result = sonarrSearchRepository.getReleases(episodeId)
             _state.value =
                 _state.value.copy(
-                    releasePicker = result.getOrNull()?.let { ReleasePickerState(isLoading = false, releases = it) }
+                    releasePicker =
+                        result.getOrNull()?.let {
+                            ReleasePickerState(isLoading = false, releases = it)
+                        }
                 )
             result.onFailure { searchEventsChannel.send(SearchEvent.Failed(it.message)) }
         }
@@ -243,15 +250,14 @@ constructor(
     private fun observeQueueStatus(episodes: List<FindroidEpisode>) {
         val episodeIds = episodes.map { it.id }.toSet()
         queueStatusJob?.cancel()
-        queueStatusJob =
-            viewModelScope.launch {
-                queueStatusRepository.getQueueStatusFlow().collect { queueStatusByItemId ->
-                    _state.value =
-                        _state.value.copy(
-                            queueStatus = queueStatusByItemId.filterKeys { it in episodeIds }
-                        )
-                }
+        queueStatusJob = viewModelScope.launch {
+            queueStatusRepository.getQueueStatusFlow().collect { queueStatusByItemId ->
+                _state.value =
+                    _state.value.copy(
+                        queueStatus = queueStatusByItemId.filterKeys { it in episodeIds }
+                    )
             }
+        }
     }
 
     private fun reconcileDownloadProgress(episodes: List<FindroidEpisode>) {
@@ -270,16 +276,15 @@ constructor(
                 episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.downloadId
                     ?: return@forEach
             downloadIdsByEpisode[episode.id] = downloadId
-            progressJobs[episode.id] =
-                viewModelScope.launch {
-                    downloader.getProgressFlow(downloadId).collect { progress ->
-                        _state.value =
-                            _state.value.copy(
-                                downloadProgress =
-                                    _state.value.downloadProgress + (episode.id to progress)
-                            )
-                    }
+            progressJobs[episode.id] = viewModelScope.launch {
+                downloader.getProgressFlow(downloadId).collect { progress ->
+                    _state.value =
+                        _state.value.copy(
+                            downloadProgress =
+                                _state.value.downloadProgress + (episode.id to progress)
+                        )
                 }
+            }
         }
     }
 
@@ -290,10 +295,13 @@ constructor(
     }
 
     private suspend fun getExistingScope(seriesId: UUID): ExistingAutoDownloadScope {
-        val serverId = appPreferences.getValue(appPreferences.currentServer)
-            ?: return ExistingAutoDownloadScope()
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return ExistingAutoDownloadScope()
         val userId = repository.getUserId()
-        return autoDownloadRuleRepository.getRulesForSeries(serverId, userId, seriesId).toExistingScope()
+        return autoDownloadRuleRepository
+            .getRulesForSeries(serverId, userId, seriesId)
+            .toExistingScope()
     }
 
     suspend fun getSeasons(): List<FindroidSeason> {
@@ -301,10 +309,12 @@ constructor(
         return repository.getSeasons(seriesId)
     }
 
-    /** Count and total primary-source size of [targetSeasonId]'s episodes that would actually be
-     * downloaded right now - excludes episodes already downloaded locally, and (if
-     * [onlyUnwatched]) already-watched ones, matching the scope the "only unwatched" toggle
-     * would apply to the real download. */
+    /**
+     * Count and total primary-source size of [targetSeasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if [onlyUnwatched])
+     * already-watched ones, matching the scope the "only unwatched" toggle would apply to the real
+     * download.
+     */
     suspend fun getUndownloadedEpisodeSize(
         targetSeasonId: UUID,
         onlyUnwatched: Boolean,
@@ -333,7 +343,8 @@ constructor(
         }
     }
 
-    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> =
+        remoteConfigRepository.listOtherDevices()
 
     private fun downloadWithScope(
         selection: DownloadSelection,
@@ -374,7 +385,14 @@ constructor(
                         createdAt = System.currentTimeMillis(),
                         onlyNewEpisodes = false,
                     )
-                evaluator.evaluate(transientRule, database, repository, downloader, appPreferences, onlyUnwatched)
+                evaluator.evaluate(
+                    transientRule,
+                    database,
+                    repository,
+                    downloader,
+                    appPreferences,
+                    onlyUnwatched,
+                )
             }
 
             if (alsoFollowNew || selection.alsoFutureSeasons) {
@@ -416,7 +434,12 @@ constructor(
 
             if (alsoRemoveRules) {
                 appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
-                    autoDownloadRuleRepository.deleteSeasonRule(serverId, userId, seriesId, seasonId)
+                    autoDownloadRuleRepository.deleteSeasonRule(
+                        serverId,
+                        userId,
+                        seriesId,
+                        seasonId,
+                    )
                 }
             }
 

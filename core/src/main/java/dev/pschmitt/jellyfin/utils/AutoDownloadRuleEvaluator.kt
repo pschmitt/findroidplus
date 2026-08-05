@@ -12,9 +12,9 @@ import org.jellyfin.sdk.model.api.ItemFields
 import timber.log.Timber
 
 /**
- * Queues every currently-missing episode matched by [rule]. Reused by both the immediate
- * on-enable UI action and [dev.pschmitt.jellyfin.work.AutoDownloadWorker] so dedup logic only
- * lives in one place.
+ * Queues every currently-missing episode matched by [rule]. Reused by both the immediate on-enable
+ * UI action and [dev.pschmitt.jellyfin.work.AutoDownloadWorker] so dedup logic only lives in one
+ * place.
  */
 class AutoDownloadRuleEvaluator {
     suspend fun evaluate(
@@ -108,17 +108,17 @@ class AutoDownloadRuleEvaluator {
 /**
  * Whether [rule] would download [episode] right now - the same enabled/scope/onlyUnwatched/
  * onlyNewEpisodes filters [AutoDownloadRuleEvaluator.evaluate] applies while enumerating a whole
- * season fetched from the server, but as a standalone check against a single already-known
- * episode. Doesn't check whether a source already exists for [episode] - callers that care (both
- * [AutoDownloadRuleEvaluator.evaluate] and
- * [dev.pschmitt.jellyfin.work.NewItemNotificationWorker], which uses this to decide whether a new-
- * episode notification's "Download" action would be redundant - the episode will be
- * auto-downloaded anyway) check that themselves via `ServerDatabaseDao.getSources`.
+ * season fetched from the server, but as a standalone check against a single already-known episode.
+ * Doesn't check whether a source already exists for [episode] - callers that care (both
+ * [AutoDownloadRuleEvaluator.evaluate] and [dev.pschmitt.jellyfin.work.NewItemNotificationWorker],
+ * which uses this to decide whether a new- episode notification's "Download" action would be
+ * redundant - the episode will be auto-downloaded anyway) check that themselves via
+ * `ServerDatabaseDao.getSources`.
  *
- * [effectiveOnlyUnwatched] mirrors [AutoDownloadRuleEvaluator.evaluate]'s own extra
- * `onlyUnwatched` parameter (an immediate one-off download can request unwatched-only even for a
- * rule that doesn't have that flag set) - defaults to the rule's own flag for callers with no
- * extra requirement of their own.
+ * [effectiveOnlyUnwatched] mirrors [AutoDownloadRuleEvaluator.evaluate]'s own extra `onlyUnwatched`
+ * parameter (an immediate one-off download can request unwatched-only even for a rule that doesn't
+ * have that flag set) - defaults to the rule's own flag for callers with no extra requirement of
+ * their own.
  */
 fun coversEpisode(
     rule: AutoDownloadRuleDto,

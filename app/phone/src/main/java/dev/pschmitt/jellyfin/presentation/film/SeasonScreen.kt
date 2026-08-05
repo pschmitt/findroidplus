@@ -20,8 +20,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,38 +43,38 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.PlayerActivity
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummySeason
+import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonAction
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonState
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonViewModel
 import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
+import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
+import dev.pschmitt.jellyfin.presentation.film.components.AggregateInfoDialog
 import dev.pschmitt.jellyfin.presentation.film.components.ClearDownloadsDialog
 import dev.pschmitt.jellyfin.presentation.film.components.Direction
 import dev.pschmitt.jellyfin.presentation.film.components.EpisodeCard
-import dev.pschmitt.jellyfin.presentation.film.components.AggregateInfoDialog
 import dev.pschmitt.jellyfin.presentation.film.components.ItemActionButton
-import dev.pschmitt.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.pschmitt.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.pschmitt.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.pschmitt.jellyfin.presentation.film.components.ItemHeader
 import dev.pschmitt.jellyfin.presentation.film.components.ItemMetaRow
+import dev.pschmitt.jellyfin.presentation.film.components.ItemOverflowMenu
 import dev.pschmitt.jellyfin.presentation.film.components.ItemPoster
 import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.pschmitt.jellyfin.presentation.film.components.UpcomingEpisodeCard
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
+import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
 import dev.pschmitt.jellyfin.utils.displayNameWithContext
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
-import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
 
@@ -105,8 +105,10 @@ fun SeasonScreen(
     ObserveAsEvents(viewModel.searchEvents) { event ->
         val message =
             when (event) {
-                is SearchEvent.SearchTriggered -> androidContext.getString(CoreR.string.search_triggered_toast)
-                is SearchEvent.ReleaseGrabbed -> androidContext.getString(CoreR.string.release_grabbed_toast)
+                is SearchEvent.SearchTriggered ->
+                    androidContext.getString(CoreR.string.search_triggered_toast)
+                is SearchEvent.ReleaseGrabbed ->
+                    androidContext.getString(CoreR.string.release_grabbed_toast)
                 is SearchEvent.Failed ->
                     androidContext.getString(
                         CoreR.string.search_failed_toast,
@@ -186,9 +188,10 @@ private fun SeasonScreenLayout(
     onAction: (SeasonAction) -> Unit,
     onRefresh: () -> Unit = {},
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
-    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
-        DownloadSizeEstimate()
-    },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
+        { _, _ ->
+            DownloadSizeEstimate()
+        },
     getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
 ) {
     val androidContext = LocalContext.current
@@ -221,288 +224,301 @@ private fun SeasonScreenLayout(
         },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        state.season?.let { season ->
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                state = lazyListState,
-                contentPadding = PaddingValues(bottom = paddingBottom),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-            ) {
-                item {
-                    ItemHeader(
-                        item = season,
-                        lazyListState = lazyListState,
-                        content = {
-                            PlayOverlayButton(
-                                item = season,
-                                onClick = {
-                                    onAction(SeasonAction.Play(startFromBeginning = false))
-                                },
-                                enabled = season.canPlay && state.episodes.isNotEmpty(),
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                            Row(
-                                modifier =
-                                    Modifier.align(Alignment.BottomStart)
-                                        .padding(start = paddingStart, end = paddingEnd),
-                                verticalAlignment = Alignment.Bottom,
-                            ) {
-                                ItemPoster(
+            state.season?.let { season ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    state = lazyListState,
+                    contentPadding = PaddingValues(bottom = paddingBottom),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                ) {
+                    item {
+                        ItemHeader(
+                            item = season,
+                            lazyListState = lazyListState,
+                            content = {
+                                PlayOverlayButton(
                                     item = season,
-                                    direction = Direction.VERTICAL,
+                                    onClick = {
+                                        onAction(SeasonAction.Play(startFromBeginning = false))
+                                    },
+                                    enabled = season.canPlay && state.episodes.isNotEmpty(),
+                                    modifier = Modifier.align(Alignment.Center),
+                                )
+                                Row(
                                     modifier =
-                                        Modifier.width(120.dp).clip(MaterialTheme.shapes.small),
-                                )
-                                Spacer(Modifier.width(MaterialTheme.spacings.medium))
-                                Column(modifier = Modifier) {
-                                    Text(
-                                        text = season.seriesName,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 1,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        Modifier.align(Alignment.BottomStart)
+                                            .padding(start = paddingStart, end = paddingEnd),
+                                    verticalAlignment = Alignment.Bottom,
+                                ) {
+                                    ItemPoster(
+                                        item = season,
+                                        direction = Direction.VERTICAL,
+                                        modifier =
+                                            Modifier.width(120.dp).clip(MaterialTheme.shapes.small),
                                     )
-                                    Text(
-                                        text = season.name,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 3,
-                                        style = MaterialTheme.typography.headlineMedium,
-                                    )
+                                    Spacer(Modifier.width(MaterialTheme.spacings.medium))
+                                    Column(modifier = Modifier) {
+                                        Text(
+                                            text = season.seriesName,
+                                            overflow = TextOverflow.Ellipsis,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                        Text(
+                                            text = season.name,
+                                            overflow = TextOverflow.Ellipsis,
+                                            maxLines = 3,
+                                            style = MaterialTheme.typography.headlineMedium,
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    ItemMetaRow(
-                        modifier =
-                            Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    ItemButtonsBar(
-                        item = season,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(SeasonAction.Play(startFromBeginning = startFromBeginning))
-                        },
-                        onTrailerClick = {},
-                        onDownloadClick = {},
-                        onDownloadCancelClick = {},
-                        onDownloadDeleteClick = {},
-                        modifier =
-                            Modifier.padding(start = paddingStart, end = paddingEnd).fillMaxWidth(),
-                        downloaderState = DownloaderState(),
-                        enableDownloadDialog = true,
-                        getSeasons = getSeasons,
-                        getSeasonSize = getSeasonSize,
-                        getOtherDevices = getOtherDevices,
-                        initialSelection =
-                            DownloadSelection(
-                                seasonIds = state.existingScope.seasonIds.ifEmpty { setOf(season.id) },
-                                alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
-                            ),
-                        initialAlsoFollowNew = state.existingScope.alsoFollowNew,
-                        initialOnlyUnwatched = state.existingScope.onlyUnwatched,
-                        hasActiveDownloadOrRule = state.hasDownloads || state.autoDownloadEnabled,
-                        onDeleteDownloads = { clearSeasonDownloadsDialogOpen = true },
-                        downloadIconTint =
-                            if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
-                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
-                            onAction(
-                                SeasonAction.DownloadWithScope(
-                                    selection,
-                                    alsoFollowNew,
-                                    onlyUnwatched,
-                                    targetDeviceId,
+                            },
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        ItemMetaRow(
+                            modifier =
+                                Modifier.padding(start = paddingStart, end = paddingEnd)
+                                    .fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        ItemButtonsBar(
+                            item = season,
+                            onPlayClick = { startFromBeginning ->
+                                onAction(SeasonAction.Play(startFromBeginning = startFromBeginning))
+                            },
+                            onTrailerClick = {},
+                            onDownloadClick = {},
+                            onDownloadCancelClick = {},
+                            onDownloadDeleteClick = {},
+                            modifier =
+                                Modifier.padding(start = paddingStart, end = paddingEnd)
+                                    .fillMaxWidth(),
+                            downloaderState = DownloaderState(),
+                            enableDownloadDialog = true,
+                            getSeasons = getSeasons,
+                            getSeasonSize = getSeasonSize,
+                            getOtherDevices = getOtherDevices,
+                            initialSelection =
+                                DownloadSelection(
+                                    seasonIds =
+                                        state.existingScope.seasonIds.ifEmpty { setOf(season.id) },
+                                    alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
+                                ),
+                            initialAlsoFollowNew = state.existingScope.alsoFollowNew,
+                            initialOnlyUnwatched = state.existingScope.onlyUnwatched,
+                            hasActiveDownloadOrRule =
+                                state.hasDownloads || state.autoDownloadEnabled,
+                            onDeleteDownloads = { clearSeasonDownloadsDialogOpen = true },
+                            downloadIconTint =
+                                if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt())
+                                else null,
+                            onBulkDownload = {
+                                selection,
+                                alsoFollowNew,
+                                onlyUnwatched,
+                                targetDeviceId ->
+                                onAction(
+                                    SeasonAction.DownloadWithScope(
+                                        selection,
+                                        alsoFollowNew,
+                                        onlyUnwatched,
+                                        targetDeviceId,
+                                    )
                                 )
-                            )
-                            Toast.makeText(
-                                    androidContext,
-                                    when {
-                                        targetDeviceId != null ->
-                                            CoreR.string.remote_config_download_sent_toast
-                                        alsoFollowNew -> CoreR.string.auto_download_enabled_toast
-                                        else -> CoreR.string.download_queued_toast
-                                    },
-                                    Toast.LENGTH_SHORT,
-                                )
-                                .show()
-                        },
-                        // Same "size as the label" tile the single-episode Delete download tile
-                        // uses (see ItemButtonsBar) - one reusable shape for both scopes instead
-                        // of a bespoke button + separate disk-usage caption.
-                        trailingContent = {
-                            if (state.hasDownloads || state.autoDownloadEnabled) {
-                                ItemActionButton(
-                                    icon = painterResource(CoreR.drawable.ic_trash),
-                                    label =
-                                        state.downloadsSizeBytes
-                                            .takeIf { it > 0L }
-                                            ?.let { formatBinaryFileSize(it) }
-                                            ?: stringResource(CoreR.string.clear_season_downloads),
-                                    onClick = { clearSeasonDownloadsDialogOpen = true },
-                                    contentColor = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        },
-                        overflowContent = {
-                            ItemOverflowMenu { closeMenu ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (season.played) CoreR.string.unmark_as_played
-                                                else CoreR.string.mark_as_played
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_check),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (season.played) SeasonAction.UnmarkAsPlayed
-                                            else SeasonAction.MarkAsPlayed
-                                        )
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (season.favorite) {
-                                                    CoreR.string.remove_from_favorites
-                                                } else {
-                                                    CoreR.string.add_to_favorites
-                                                }
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    if (season.favorite) {
-                                                        CoreR.drawable.ic_heart_filled
-                                                    } else {
-                                                        CoreR.drawable.ic_heart
-                                                    }
+                                Toast.makeText(
+                                        androidContext,
+                                        when {
+                                            targetDeviceId != null ->
+                                                CoreR.string.remote_config_download_sent_toast
+                                            alsoFollowNew ->
+                                                CoreR.string.auto_download_enabled_toast
+                                            else -> CoreR.string.download_queued_toast
+                                        },
+                                        Toast.LENGTH_SHORT,
+                                    )
+                                    .show()
+                            },
+                            // Same "size as the label" tile the single-episode Delete download tile
+                            // uses (see ItemButtonsBar) - one reusable shape for both scopes
+                            // instead
+                            // of a bespoke button + separate disk-usage caption.
+                            trailingContent = {
+                                if (state.hasDownloads || state.autoDownloadEnabled) {
+                                    ItemActionButton(
+                                        icon = painterResource(CoreR.drawable.ic_trash),
+                                        label =
+                                            state.downloadsSizeBytes
+                                                .takeIf { it > 0L }
+                                                ?.let { formatBinaryFileSize(it) }
+                                                ?: stringResource(
+                                                    CoreR.string.clear_season_downloads
                                                 ),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
+                                        onClick = { clearSeasonDownloadsDialogOpen = true },
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            },
+                            overflowContent = {
+                                ItemOverflowMenu { closeMenu ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (season.played) CoreR.string.unmark_as_played
+                                                    else CoreR.string.mark_as_played
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_check),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(
+                                                if (season.played) SeasonAction.UnmarkAsPlayed
+                                                else SeasonAction.MarkAsPlayed
+                                            )
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (season.favorite) {
+                                                        CoreR.string.remove_from_favorites
+                                                    } else {
+                                                        CoreR.string.add_to_favorites
+                                                    }
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        if (season.favorite) {
+                                                            CoreR.drawable.ic_heart_filled
+                                                        } else {
+                                                            CoreR.drawable.ic_heart
+                                                        }
+                                                    ),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(
+                                                if (season.favorite) SeasonAction.UnmarkAsFavorite
+                                                else SeasonAction.MarkAsFavorite
+                                            )
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(CoreR.string.info)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_info),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            infoDialogOpen = true
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+                    items(items = state.episodes, key = { episode -> episode.id }) { episode ->
+                        EpisodeCard(
+                            episode = episode,
+                            onClick = { onAction(SeasonAction.NavigateToItem(episode)) },
+                            modifier = Modifier.padding(start = paddingStart, end = paddingEnd),
+                            downloadProgress = state.downloadProgress[episode.id],
+                            queueStatus = state.queueStatus[episode.id],
+                            onSearchAutomatic =
+                                if (state.sonarrConfigured) {
+                                    {
                                         onAction(
-                                            if (season.favorite) SeasonAction.UnmarkAsFavorite
-                                            else SeasonAction.MarkAsFavorite
+                                            SeasonAction.SearchEpisodeAutomatic(
+                                                episodeNumber = episode.indexNumber,
+                                                knownEpisodeId = null,
+                                            )
                                         )
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(CoreR.string.info)) },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_info),
-                                            contentDescription = null,
+                                    }
+                                } else {
+                                    null
+                                },
+                            onSearchManual =
+                                if (state.sonarrConfigured) {
+                                    {
+                                        onAction(
+                                            SeasonAction.OpenReleasePicker(
+                                                episodeNumber = episode.indexNumber,
+                                                knownEpisodeId = null,
+                                            )
                                         )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        infoDialogOpen = true
-                                    },
-                                )
-                            }
-                        },
-                    )
-                }
-                items(items = state.episodes, key = { episode -> episode.id }) { episode ->
-                    EpisodeCard(
-                        episode = episode,
-                        onClick = { onAction(SeasonAction.NavigateToItem(episode)) },
-                        modifier = Modifier.padding(start = paddingStart, end = paddingEnd),
-                        downloadProgress = state.downloadProgress[episode.id],
-                        queueStatus = state.queueStatus[episode.id],
-                        onSearchAutomatic =
-                            if (state.sonarrConfigured) {
-                                {
-                                    onAction(
-                                        SeasonAction.SearchEpisodeAutomatic(
-                                            episodeNumber = episode.indexNumber,
-                                            knownEpisodeId = null,
+                                    }
+                                } else {
+                                    null
+                                },
+                        )
+                    }
+                    items(
+                        items = state.upcomingEpisodes,
+                        key = { episode -> "upcoming-${episode.episodeNumber}" },
+                    ) { episode ->
+                        UpcomingEpisodeCard(
+                            episode = episode,
+                            modifier = Modifier.padding(start = paddingStart, end = paddingEnd),
+                            onClick =
+                                state.seriesTmdbId?.let { tmdbId ->
+                                    {
+                                        onAction(
+                                            SeasonAction.NavigateToSeerr(
+                                                tmdbId = tmdbId,
+                                                seasonNumber = episode.seasonNumber,
+                                                episodeNumber = episode.episodeNumber,
+                                                sonarrEpisodeId = episode.episodeId,
+                                                airDate = episode.airDate,
+                                                airTime = episode.airTime,
+                                            )
                                         )
+                                    }
+                                },
+                            onSearchAutomatic = {
+                                onAction(
+                                    SeasonAction.SearchEpisodeAutomatic(
+                                        episodeNumber = episode.episodeNumber,
+                                        knownEpisodeId = episode.episodeId,
                                     )
-                                }
-                            } else {
-                                null
+                                )
                             },
-                        onSearchManual =
-                            if (state.sonarrConfigured) {
-                                {
-                                    onAction(
-                                        SeasonAction.OpenReleasePicker(
-                                            episodeNumber = episode.indexNumber,
-                                            knownEpisodeId = null,
-                                        )
+                            onSearchManual = {
+                                onAction(
+                                    SeasonAction.OpenReleasePicker(
+                                        episodeNumber = episode.episodeNumber,
+                                        knownEpisodeId = episode.episodeId,
                                     )
-                                }
-                            } else {
-                                null
+                                )
                             },
-                    )
-                }
-                items(
-                    items = state.upcomingEpisodes,
-                    key = { episode -> "upcoming-${episode.episodeNumber}" },
-                ) { episode ->
-                    UpcomingEpisodeCard(
-                        episode = episode,
-                        modifier = Modifier.padding(start = paddingStart, end = paddingEnd),
-                        onClick =
-                            state.seriesTmdbId?.let { tmdbId ->
-                                {
-                                    onAction(
-                                        SeasonAction.NavigateToSeerr(
-                                            tmdbId = tmdbId,
-                                            seasonNumber = episode.seasonNumber,
-                                            episodeNumber = episode.episodeNumber,
-                                            sonarrEpisodeId = episode.episodeId,
-                                            airDate = episode.airDate,
-                                            airTime = episode.airTime,
-                                        )
+                            queued = state.queuedEpisodeNumbers.contains(episode.episodeNumber),
+                            onToggleQueued = {
+                                onAction(
+                                    SeasonAction.ToggleEpisodeQueued(
+                                        episodeNumber = episode.episodeNumber,
+                                        sonarrEpisodeId = episode.episodeId,
                                     )
-                                }
+                                )
                             },
-                        onSearchAutomatic = {
-                            onAction(
-                                SeasonAction.SearchEpisodeAutomatic(
-                                    episodeNumber = episode.episodeNumber,
-                                    knownEpisodeId = episode.episodeId,
-                                )
-                            )
-                        },
-                        onSearchManual = {
-                            onAction(
-                                SeasonAction.OpenReleasePicker(
-                                    episodeNumber = episode.episodeNumber,
-                                    knownEpisodeId = episode.episodeId,
-                                )
-                            )
-                        },
-                        queued = state.queuedEpisodeNumbers.contains(episode.episodeNumber),
-                        onToggleQueued = {
-                            onAction(
-                                SeasonAction.ToggleEpisodeQueued(
-                                    episodeNumber = episode.episodeNumber,
-                                    sonarrEpisodeId = episode.episodeId,
-                                )
-                            )
-                        },
-                    )
+                        )
+                    }
                 }
-            }
-        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
         }
     }
 

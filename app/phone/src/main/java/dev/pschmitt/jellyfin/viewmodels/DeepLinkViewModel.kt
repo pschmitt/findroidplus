@@ -4,9 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.FindroidEpisode
 import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
 import dev.pschmitt.jellyfin.models.FindroidShow
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import java.net.URLDecoder
@@ -18,10 +16,9 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * Resolves `jellyfin://tv-shows/<show name>[/<season name or number>[/<episode name or
- * number>]]` deep links to the item they refer to, using fuzzy name matching (exact ->
- * starts-with -> contains -> first search result) since callers can't reasonably supply exact
- * IDs.
+ * Resolves `jellyfin://tv-shows/<show name>[/<season name or number>[/<episode name or number>]]`
+ * deep links to the item they refer to, using fuzzy name matching (exact -> starts-with -> contains
+ * -> first search result) since callers can't reasonably supply exact IDs.
  */
 @HiltViewModel
 class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepository) :
@@ -76,15 +73,20 @@ class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepo
             findBestMatch(
                 repository.getSearchItems(showQuery).filterIsInstance<FindroidShow>(),
                 showQuery,
-            ) { it.name } ?: return null
+            ) {
+                it.name
+            } ?: return null
 
         val seasonQuery = segments.getOrNull(1) ?: return show
         val seasons = repository.getSeasons(show.id)
-        val season = findBestMatchByIndexOrName(seasons, seasonQuery, { it.indexNumber }, { it.name }) ?: return show
+        val season =
+            findBestMatchByIndexOrName(seasons, seasonQuery, { it.indexNumber }, { it.name })
+                ?: return show
 
         val episodeQuery = segments.getOrNull(2) ?: return season
         val episodes = repository.getEpisodes(show.id, season.id)
-        return findBestMatchByIndexOrName(episodes, episodeQuery, { it.indexNumber }, { it.name }) ?: season
+        return findBestMatchByIndexOrName(episodes, episodeQuery, { it.indexNumber }, { it.name })
+            ?: season
     }
 
     private fun <T> findBestMatchByIndexOrName(
@@ -94,9 +96,11 @@ class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepo
         name: (T) -> String,
     ): T? {
         Regex("""\d+""").find(query)?.value?.toIntOrNull()?.let { number ->
-            candidates.firstOrNull { index(it) == number }?.let {
-                return it
-            }
+            candidates
+                .firstOrNull { index(it) == number }
+                ?.let {
+                    return it
+                }
         }
         return findBestMatch(candidates, query, name)
     }

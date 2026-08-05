@@ -7,16 +7,19 @@ import javax.inject.Qualifier
 /**
  * Qualifies the [SharedPreferences] instance backed by Jetpack Security's
  * `EncryptedSharedPreferences` - distinguishes it from the plain, unqualified `SharedPreferences`
- * `SharedPreferencesModule` already provides for [dev.pschmitt.jellyfin.settings.domain.AppPreferences].
+ * `SharedPreferencesModule` already provides for
+ * [dev.pschmitt.jellyfin.settings.domain.AppPreferences].
  */
 @Qualifier @Retention(AnnotationRetention.BINARY) annotation class EncryptedPrefs
 
 /**
- * Small, generic encrypted key/value store - deliberately not Sonarr/Radarr-specific, so it can
- * be reused for other secrets later (e.g. migrating the plaintext Jellyfin access token stored in
+ * Small, generic encrypted key/value store - deliberately not Sonarr/Radarr-specific, so it can be
+ * reused for other secrets later (e.g. migrating the plaintext Jellyfin access token stored in
  * `User.kt`, which is out of scope for now).
  */
-class SecureCredentialStore @Inject constructor(@EncryptedPrefs private val prefs: SharedPreferences) {
+class SecureCredentialStore
+@Inject
+constructor(@EncryptedPrefs private val prefs: SharedPreferences) {
     fun getString(key: String): String? = prefs.getString(key, null)
 
     fun putString(key: String, value: String?) {

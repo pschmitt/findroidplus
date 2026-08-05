@@ -21,11 +21,11 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Moves or deletes already-downloaded files when the user switches the download location
- * preference between internal/external storage. Storage indices are re-resolved from the
- * (raw "internal"/"external") input strings at run time via [resolveDownloadStorageIndex] rather
- * than passed in directly, so a stale index can't be enqueued if volumes change between the
- * settings screen and this worker actually running.
+ * Moves or deletes already-downloaded files when the user switches the download location preference
+ * between internal/external storage. Storage indices are re-resolved from the (raw
+ * "internal"/"external") input strings at run time via [resolveDownloadStorageIndex] rather than
+ * passed in directly, so a stale index can't be enqueued if volumes change between the settings
+ * screen and this worker actually running.
  */
 @HiltWorker
 class RelocateDownloadsWorker
@@ -58,13 +58,17 @@ constructor(
                         if (toIndex < 0) return@withContext Result.failure()
                         downloader.moveDownloads(fromIndex, toIndex) { done, total ->
                             notify(progressNotification(mode, done, total))
-                            setProgress(workDataOf(KEY_MODE to mode, KEY_DONE to done, KEY_TOTAL to total))
+                            setProgress(
+                                workDataOf(KEY_MODE to mode, KEY_DONE to done, KEY_TOTAL to total)
+                            )
                         }
                     }
                     MODE_CLEAR -> {
                         downloader.clearDownloads(fromIndex) { done, total ->
                             notify(progressNotification(mode, done, total))
-                            setProgress(workDataOf(KEY_MODE to mode, KEY_DONE to done, KEY_TOTAL to total))
+                            setProgress(
+                                workDataOf(KEY_MODE to mode, KEY_DONE to done, KEY_TOTAL to total)
+                            )
                         }
                     }
                     else -> return@withContext Result.failure()
@@ -95,9 +99,7 @@ constructor(
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(downloadsContentIntent(applicationContext))
-            .apply {
-                if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true)
-            }
+            .apply { if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true) }
             .build()
     }
 

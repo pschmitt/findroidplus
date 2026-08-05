@@ -7,8 +7,11 @@ sealed interface SettingsAction {
 
     data class OnUpdate(val preference: Preference) : SettingsAction
 
-    data class OnRelocateDownloads(val mode: RelocateDownloadsMode, val from: String, val to: String) :
-        SettingsAction
+    data class OnRelocateDownloads(
+        val mode: RelocateDownloadsMode,
+        val from: String,
+        val to: String,
+    ) : SettingsAction
 }
 
 enum class RelocateDownloadsMode {

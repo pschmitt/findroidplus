@@ -126,7 +126,11 @@ fun AboutScreen(navigateBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
-                                text = stringResource(SettingsR.string.about_revision, BuildConfig.GIT_REVISION),
+                                text =
+                                    stringResource(
+                                        SettingsR.string.about_revision,
+                                        BuildConfig.GIT_REVISION,
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Spacer(Modifier.height(MaterialTheme.spacings.small))

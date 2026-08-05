@@ -4,8 +4,8 @@ import java.util.UUID
 
 /**
  * Stable identifiers for each independently-reorderable row on the Home screen. Per-library
- * ("Latest <library>") and per-Seerr-discover rows are dynamic, so they're keyed off the
- * underlying library id / string resource id rather than a fixed constant.
+ * ("Latest <library>") and per-Seerr-discover rows are dynamic, so they're keyed off the underlying
+ * library id / string resource id rather than a fixed constant.
  */
 object HomeSectionKeys {
     const val SUGGESTIONS = "suggestions"
@@ -22,10 +22,10 @@ object HomeSectionKeys {
 }
 
 /**
- * Merges a persisted section-key order with the current "natural" (default) order: keys present
- * in [persisted] keep that relative order; any key in [natural] that [persisted] doesn't mention
- * (a library added since the order was last saved, a section just enabled, ...) is appended at
- * the end in its natural relative order, rather than disappearing or jumping to the front.
+ * Merges a persisted section-key order with the current "natural" (default) order: keys present in
+ * [persisted] keep that relative order; any key in [natural] that [persisted] doesn't mention (a
+ * library added since the order was last saved, a section just enabled, ...) is appended at the end
+ * in its natural relative order, rather than disappearing or jumping to the front.
  */
 fun resolveHomeSectionOrder(natural: List<String>, persisted: List<String>): List<String> {
     val naturalSet = natural.toSet()

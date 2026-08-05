@@ -44,54 +44,52 @@ constructor(
 
     private fun search(query: String) {
         currentJob?.cancel()
-        currentJob =
-            viewModelScope.launch {
-                try {
-                    if (query.isBlank()) {
-                        _state.emit(
-                            SearchState(
-                                items = suggestedItems(),
-                                radarrQueueStatus = _state.value.radarrQueueStatus,
-                            )
+        currentJob = viewModelScope.launch {
+            try {
+                if (query.isBlank()) {
+                    _state.emit(
+                        SearchState(
+                            items = suggestedItems(),
+                            radarrQueueStatus = _state.value.radarrQueueStatus,
                         )
-                        return@launch
+                    )
+                    return@launch
+                }
+
+                _state.emit(
+                    SearchState(
+                        loading = true,
+                        seerrSearching = pvrConfiguration.isSeerrConfigured(),
+                        radarrQueueStatus = _state.value.radarrQueueStatus,
+                    )
+                )
+                val items = repository.getSearchItems(query)
+                // Hide Seerr results already in the Jellyfin library right above them - a
+                // Seerr result is only useful here as "not on your server yet, want to
+                // request it?", so one that's already a library hit is a plain duplicate.
+                val libraryTmdbIds = items.mapNotNull { it.tmdbIdOrNull() }.toSet()
+                val seerrResults =
+                    if (pvrConfiguration.isSeerrConfigured()) {
+                        seerrRepository.search(query).getOrDefault(emptyList()).filter {
+                            it.tmdbId !in libraryTmdbIds
+                        }
+                    } else {
+                        emptyList()
                     }
 
-                    _state.emit(
-                        SearchState(
-                            loading = true,
-                            seerrSearching = pvrConfiguration.isSeerrConfigured(),
-                            radarrQueueStatus = _state.value.radarrQueueStatus,
-                        )
+                _state.emit(
+                    SearchState(
+                        items = items,
+                        seerrResults = seerrResults,
+                        loading = false,
+                        radarrQueueStatus = _state.value.radarrQueueStatus,
                     )
-                    val items = repository.getSearchItems(query)
-                    // Hide Seerr results already in the Jellyfin library right above them - a
-                    // Seerr result is only useful here as "not on your server yet, want to
-                    // request it?", so one that's already a library hit is a plain duplicate.
-                    val libraryTmdbIds = items.mapNotNull { it.tmdbIdOrNull() }.toSet()
-                    val seerrResults =
-                        if (pvrConfiguration.isSeerrConfigured()) {
-                            seerrRepository
-                                .search(query)
-                                .getOrDefault(emptyList())
-                                .filter { it.tmdbId !in libraryTmdbIds }
-                        } else {
-                            emptyList()
-                        }
-
-                    _state.emit(
-                        SearchState(
-                            items = items,
-                            seerrResults = seerrResults,
-                            loading = false,
-                            radarrQueueStatus = _state.value.radarrQueueStatus,
-                        )
-                    )
-                } catch (_: CancellationException) {} catch (e: Exception) {
-                    Timber.e(e)
-                    _state.emit(_state.value.copy(loading = false))
-                }
+                )
+            } catch (_: CancellationException) {} catch (e: Exception) {
+                Timber.e(e)
+                _state.emit(_state.value.copy(loading = false))
             }
+        }
     }
 
     // Populates the otherwise-blank pre-search screen with Home's already-loaded Continue

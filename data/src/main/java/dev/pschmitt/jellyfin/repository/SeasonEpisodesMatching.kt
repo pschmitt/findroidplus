@@ -5,8 +5,8 @@ import dev.pschmitt.jellyfin.models.UpcomingEpisode
 import dev.pschmitt.jellyfin.models.UpcomingSeason
 
 /**
- * Pure function - no suspend, no I/O - so it's directly unit-testable without Room/Hilt/Android
- * in the loop, same as [matchSonarrCalendar]/[matchRadarrCalendar].
+ * Pure function - no suspend, no I/O - so it's directly unit-testable without Room/Hilt/Android in
+ * the loop, same as [matchSonarrCalendar]/[matchRadarrCalendar].
  */
 fun matchUpcomingEpisodes(
     sonarrEpisodes: List<SonarrEpisodeDto>,
@@ -30,11 +30,11 @@ fun matchUpcomingEpisodes(
         .sortedBy { it.episodeNumber }
 
 /**
- * Pure function, same rationale as [matchUpcomingEpisodes] - the show-level equivalent, used by
- * the Show screen to surface seasons Sonarr knows about that have no matching [FindroidSeason] in
- * the Jellyfin library yet. Season 0 ("Specials" in Sonarr's convention) is deliberately excluded:
- * it exists for virtually every series and is usually unmonitored, so surfacing it as a
- * requestable placeholder on every show would be noise rather than signal.
+ * Pure function, same rationale as [matchUpcomingEpisodes] - the show-level equivalent, used by the
+ * Show screen to surface seasons Sonarr knows about that have no matching [FindroidSeason] in the
+ * Jellyfin library yet. Season 0 ("Specials" in Sonarr's convention) is deliberately excluded: it
+ * exists for virtually every series and is usually unmonitored, so surfacing it as a requestable
+ * placeholder on every show would be noise rather than signal.
  */
 fun matchMissingSeasons(
     sonarrEpisodes: List<SonarrEpisodeDto>,

@@ -7,10 +7,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Single source of truth for "is Sonarr/Radarr actually usable right now" (enabled + base URL +
- * API key present), so UI surfaces can hide PVR actions instead of showing buttons that can only
- * fail with a toast. Lives in `core` because the API key sits in [SecureCredentialStore], which
- * the `data`-layer repositories can't reach (they get it as an injected lambda instead).
+ * Single source of truth for "is Sonarr/Radarr actually usable right now" (enabled + base URL + API
+ * key present), so UI surfaces can hide PVR actions instead of showing buttons that can only fail
+ * with a toast. Lives in `core` because the API key sits in [SecureCredentialStore], which the
+ * `data`-layer repositories can't reach (they get it as an injected lambda instead).
  */
 @Singleton
 class PvrConfiguration

@@ -29,8 +29,12 @@ object CalendarModule {
             appPreferences = appPreferences,
             jellyfinRepository = jellyfinRepository,
             seerrRepository = seerrRepository,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
-            radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
+            sonarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            },
+            radarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            },
         )
     }
 

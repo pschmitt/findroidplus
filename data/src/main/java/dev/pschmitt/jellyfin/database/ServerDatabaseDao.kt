@@ -70,7 +70,8 @@ interface ServerDatabaseDao {
     @Query("SELECT * FROM servers")
     fun getAllServersWithAddressesAndUsers(): List<ServerWithAddressesAndUsers>
 
-    @Query("SELECT * FROM autoDownloadRules") fun getAllAutoDownloadRules(): List<AutoDownloadRuleDto>
+    @Query("SELECT * FROM autoDownloadRules")
+    fun getAllAutoDownloadRules(): List<AutoDownloadRuleDto>
 
     @Query("DELETE FROM servers") fun clear()
 
@@ -308,7 +309,11 @@ interface ServerDatabaseDao {
     @Query(
         "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId IS NULL"
     )
-    fun getShowAutoDownloadRule(serverId: String, userId: UUID, seriesId: UUID): AutoDownloadRuleDto?
+    fun getShowAutoDownloadRule(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+    ): AutoDownloadRuleDto?
 
     @Query(
         "SELECT * FROM autoDownloadRules WHERE serverId = :serverId AND userId = :userId AND seriesId = :seriesId AND seasonId = :seasonId"
@@ -404,6 +409,8 @@ interface ServerDatabaseDao {
         seriesId: UUID,
     ): List<PendingDownloadRequestDto>
 
-    @Query("SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId")
+    @Query(
+        "SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId"
+    )
     fun getPendingDownloadRequests(serverId: String, userId: UUID): List<PendingDownloadRequestDto>
 }

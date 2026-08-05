@@ -34,10 +34,10 @@ fun Activity.restart() {
 }
 
 /**
- * Unlike [restart], this kills the whole process rather than just recreating the Activity - only
- * an Activity restart isn't enough after a backup restore, since @Singleton-scoped Hilt
- * dependencies like JellyfinApi are constructed once from the current server/user at process
- * startup and never rebuilt for the lifetime of the process.
+ * Unlike [restart], this kills the whole process rather than just recreating the Activity - only an
+ * Activity restart isn't enough after a backup restore, since @Singleton-scoped Hilt dependencies
+ * like JellyfinApi are constructed once from the current server/user at process startup and never
+ * rebuilt for the lifetime of the process.
  */
 fun Activity.restartProcess() {
     val intent = packageManager.getLaunchIntentForPackage(packageName)
@@ -82,6 +82,9 @@ fun DateTime.format(pattern: String = "system"): String {
         "iso" -> date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
         "dmy" -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.getDefault()))
         "mdy" -> date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.getDefault()))
-        else -> date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault()))
+        else ->
+            date.format(
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault())
+            )
     }
 }

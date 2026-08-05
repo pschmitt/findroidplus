@@ -3,10 +3,11 @@ package dev.pschmitt.jellyfin.localcontrol
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-/** Result of a [LocalControlRouter] call - [LocalControlServer] maps this onto an HTTP response
- * (the JSON body verbatim, `status` as the real HTTP status code). */
-@Serializable
-data class LocalControlResponse(val status: Int, val body: JsonElement? = null)
+/**
+ * Result of a [LocalControlRouter] call - [LocalControlServer] maps this onto an HTTP response (the
+ * JSON body verbatim, `status` as the real HTTP status code).
+ */
+@Serializable data class LocalControlResponse(val status: Int, val body: JsonElement? = null)
 
 object LocalControlStatus {
     const val OK = 200

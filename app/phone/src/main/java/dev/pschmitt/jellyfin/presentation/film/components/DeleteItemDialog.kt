@@ -73,7 +73,10 @@ fun DeleteItemDialog(
                 if (pvrCascadeLabel != null) {
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
                     Row(modifier = Modifier.clickable { cascadeChecked = !cascadeChecked }) {
-                        Checkbox(checked = cascadeChecked, onCheckedChange = { cascadeChecked = it })
+                        Checkbox(
+                            checked = cascadeChecked,
+                            onCheckedChange = { cascadeChecked = it },
+                        )
                         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                         Column {
                             Text(text = pvrCascadeLabel)
@@ -98,12 +101,15 @@ fun DeleteItemDialog(
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_trash),
                     contentDescription = null,
-                    tint = if (confirmEnabled) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                    tint =
+                        if (confirmEnabled) MaterialTheme.colorScheme.error
+                        else LocalContentColor.current,
                 )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
                 Text(
                     text = stringResource(CoreR.string.delete),
-                    color = if (confirmEnabled) MaterialTheme.colorScheme.error else Color.Unspecified,
+                    color =
+                        if (confirmEnabled) MaterialTheme.colorScheme.error else Color.Unspecified,
                 )
             }
         },

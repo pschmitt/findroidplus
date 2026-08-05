@@ -17,9 +17,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * Periodically checks every pending "download when available" request (see
- * `dev.pschmitt.jellyfin.models.PendingDownloadRequestDto`) against the current Jellyfin library and
- * fulfills any whose season/episode has appeared - see [PendingDownloadFulfiller]. Scoped to the
- * currently active server/user only, same rationale as [AutoDownloadWorker]: [Downloader] and
+ * `dev.pschmitt.jellyfin.models.PendingDownloadRequestDto`) against the current Jellyfin library
+ * and fulfills any whose season/episode has appeared - see [PendingDownloadFulfiller]. Scoped to
+ * the currently active server/user only, same rationale as [AutoDownloadWorker]: [Downloader] and
  * [JellyfinRepository] are both Hilt singletons scoped to the "current" server, so evaluating any
  * other server here would mis-tag persisted rows. Requests for inactive servers stay correctly
  * persisted and get evaluated whenever the user switches back to that server.
@@ -40,13 +40,20 @@ constructor(
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
             val serverId =
-                appPreferences.getValue(appPreferences.currentServer) ?: return@withContext Result.success()
+                appPreferences.getValue(appPreferences.currentServer)
+                    ?: return@withContext Result.success()
             val userId = jellyfinRepository.getUserId()
 
             val fulfiller = PendingDownloadFulfiller()
             for (request in requestRepository.getAll(serverId, userId)) {
                 val fulfilled =
-                    fulfiller.fulfill(request, database, jellyfinRepository, downloader, appPreferences) { title ->
+                    fulfiller.fulfill(
+                        request,
+                        database,
+                        jellyfinRepository,
+                        downloader,
+                        appPreferences,
+                    ) { title ->
                         notifier.notifyFulfilled(title)
                     }
                 if (fulfilled) {

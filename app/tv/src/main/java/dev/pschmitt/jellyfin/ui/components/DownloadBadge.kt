@@ -72,8 +72,10 @@ fun DownloadingBadge(progress: DownloadProgress, modifier: Modifier = Modifier) 
     }
 }
 
-/** Static overlay shown on ItemCard/EpisodeCard posters for episodes the auto-delete-watched
- * worker will remove soon - see FindroidEpisode.isMarkedForAutoDeletion. */
+/**
+ * Static overlay shown on ItemCard/EpisodeCard posters for episodes the auto-delete-watched worker
+ * will remove soon - see FindroidEpisode.isMarkedForAutoDeletion.
+ */
 @Composable
 fun MarkedForDeletionBadge(modifier: Modifier = Modifier) {
     BaseBadge(modifier = modifier) {
@@ -103,7 +105,9 @@ private fun DownloadedBadgePreview() {
 @Preview
 private fun DownloadingBadgePreview() {
     FindroidTheme {
-        DownloadingBadge(progress = DownloadProgress(status = DownloadManager.STATUS_RUNNING, percent = 42))
+        DownloadingBadge(
+            progress = DownloadProgress(status = DownloadManager.STATUS_RUNNING, percent = 42)
+        )
     }
 }
 

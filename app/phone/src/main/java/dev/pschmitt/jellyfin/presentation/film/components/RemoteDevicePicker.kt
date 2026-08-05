@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.presentation.components.BaseDialog
@@ -31,13 +30,13 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
 /**
  * Row + dialog for picking which device a rule/download should apply to (FINDROID-44) - `null` =
  * this device (local, today's default behavior), or one of [otherDevices] to push to instead.
- * Shared between the auto-download rule editor (`AutoDownloadRulesScreen`) and the regular
- * download popup (`DownloadScopeDialog`). Loosely modeled on `JellyfinServerUserPicker` from the
- * QR export screen (clickable summary row + `BaseDialog` + radio-button list), but styled as a
- * standalone tonal control (device icon, rounded surface) rather than a plain list row - unlike
- * that one-off account picker, this choice materially changes what a rule/download does (push
- * elsewhere vs. apply locally), so it's meant to stand out rather than blend into the
- * surrounding settings-style rows.
+ * Shared between the auto-download rule editor (`AutoDownloadRulesScreen`) and the regular download
+ * popup (`DownloadScopeDialog`). Loosely modeled on `JellyfinServerUserPicker` from the QR export
+ * screen (clickable summary row + `BaseDialog` + radio-button list), but styled as a standalone
+ * tonal control (device icon, rounded surface) rather than a plain list row - unlike that one-off
+ * account picker, this choice materially changes what a rule/download does (push elsewhere vs.
+ * apply locally), so it's meant to stand out rather than blend into the surrounding settings-style
+ * rows.
  */
 @Composable
 fun RemoteDevicePicker(
@@ -81,7 +80,10 @@ fun RemoteDevicePicker(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            Icon(painter = painterResource(CoreR.drawable.ic_chevron_down), contentDescription = null)
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_chevron_down),
+                contentDescription = null,
+            )
         }
     }
 

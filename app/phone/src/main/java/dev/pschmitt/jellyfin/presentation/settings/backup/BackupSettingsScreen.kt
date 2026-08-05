@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -88,7 +87,9 @@ fun BackupSettingsScreen(
             is BackupSettingsEvent.BackupNowSuccess -> {
                 viewModel.load()
                 scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(CoreR.string.backup_now_success))
+                    snackbarHostState.showSnackbar(
+                        context.getString(CoreR.string.backup_now_success)
+                    )
                 }
             }
             is BackupSettingsEvent.BackupNowError -> {
@@ -152,7 +153,9 @@ fun BackupSettingsScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text(text = stringResource(CoreR.string.backup_now_password_hint)) },
+                        label = {
+                            Text(text = stringResource(CoreR.string.backup_now_password_hint))
+                        },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -260,11 +263,13 @@ private fun BackupSettingsScreenLayout(
 
             if (state.autoBackupEnabled) {
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth().clickable { showIntervalDialog = true },
+                    modifier = Modifier.fillMaxWidth().clickable { showIntervalDialog = true },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(painter = painterResource(CoreR.drawable.ic_gauge), contentDescription = null)
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_gauge),
+                        contentDescription = null,
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -308,7 +313,10 @@ private fun BackupSettingsScreenLayout(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(painter = painterResource(CoreR.drawable.ic_lock), contentDescription = null)
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_lock),
+                        contentDescription = null,
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
                     var passwordText by
                         rememberSaveable(state.autoBackupPassword) {
@@ -332,7 +340,10 @@ private fun BackupSettingsScreenLayout(
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(painter = painterResource(CoreR.drawable.ic_check), contentDescription = null)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -406,7 +417,10 @@ private fun BackupSettingsScreenLayout(
                 style = MaterialTheme.typography.bodySmall,
             )
             OutlinedButton(onClick = onRestoreClick) {
-                Icon(painter = painterResource(CoreR.drawable.ic_rotate_ccw), contentDescription = null)
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_rotate_ccw),
+                    contentDescription = null,
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(CoreR.string.restore_backup))
             }

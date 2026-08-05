@@ -50,8 +50,8 @@ interface AutoDownloadRuleRepository {
      * exists iff [alsoFutureSeasons] is true - the two are no longer mutually exclusive, since a
      * season row and the show-level (seasonId IS NULL) row can coexist. [onlyNewEpisodes] applies
      * to the season-specific rules; the future-seasons rule is always only-new by definition
-     * (there's nothing to backfill for a season that doesn't exist yet). [onlyUnwatched] applies
-     * to every resulting rule.
+     * (there's nothing to backfill for a season that doesn't exist yet). [onlyUnwatched] applies to
+     * every resulting rule.
      */
     suspend fun reconcileRules(
         serverId: String,
@@ -72,7 +72,11 @@ interface AutoDownloadRuleRepository {
     suspend fun deleteAllRules(serverId: String, userId: UUID)
 }
 
-/** The picked scope (seasons + future-seasons + follow-up behavior) an existing set of rules for a series represents - reconstructed from the raw DB rows so a dialog can be reopened pre-populated with what's already saved. */
+/**
+ * The picked scope (seasons + future-seasons + follow-up behavior) an existing set of rules for a
+ * series represents - reconstructed from the raw DB rows so a dialog can be reopened pre-populated
+ * with what's already saved.
+ */
 data class ExistingAutoDownloadScope(
     val seasonIds: Set<UUID> = emptySet(),
     val alsoFutureSeasons: Boolean = false,

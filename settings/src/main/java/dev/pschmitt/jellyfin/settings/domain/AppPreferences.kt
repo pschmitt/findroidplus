@@ -91,8 +91,7 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val autoDownloadCheckIntervalMinutes =
         Preference("pref_downloads_auto_check_interval_minutes", 2 * 60)
     val maxParallelDownloads = Preference("pref_downloads_max_parallel", 2)
-    val pauseDownloadsOnBatterySaver =
-        Preference("pref_downloads_pause_on_battery_saver", true)
+    val pauseDownloadsOnBatterySaver = Preference("pref_downloads_pause_on_battery_saver", true)
     // Optional overall cap on total downloaded content, in GiB - off by default. Only gates
     // automatic downloads (AutoDownloadRuleEvaluator/PendingDownloadFulfiller); manual downloads
     // started from the app are never blocked by this.
@@ -171,7 +170,9 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val thisDeviceId = Preference<String?>("pref_this_device_id", null)
 
     fun getOrCreateThisDeviceId(): String {
-        getValue(thisDeviceId)?.let { return it }
+        getValue(thisDeviceId)?.let {
+            return it
+        }
         val id = UUID.randomUUID().toString()
         setValue(thisDeviceId, id)
         return id

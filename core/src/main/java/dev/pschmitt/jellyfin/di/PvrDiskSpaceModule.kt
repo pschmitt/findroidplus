@@ -22,8 +22,12 @@ object PvrDiskSpaceModule {
     ): PvrDiskSpaceRepository {
         return PvrDiskSpaceRepositoryImpl(
             appPreferences = appPreferences,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
-            radarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) },
+            sonarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            },
+            radarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            },
         )
     }
 }

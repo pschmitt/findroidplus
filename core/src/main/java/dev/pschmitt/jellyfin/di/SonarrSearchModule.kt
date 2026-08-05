@@ -27,13 +27,16 @@ object SonarrSearchModule {
     ): SonarrSearchRepository {
         return SonarrSearchRepositoryImpl(
             appPreferences = appPreferences,
-            sonarrApiKeyProvider = { secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) },
+            sonarrApiKeyProvider = {
+                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            },
             scheduleCompletionCheck = { episodeId, commandId ->
                 val request =
                     OneTimeWorkRequestBuilder<AutomaticSearchWorker>()
                         .setInputData(
                             workDataOf(
-                                AutomaticSearchWorker.KEY_SOURCE to AutomaticSearchWorker.SOURCE_SONARR,
+                                AutomaticSearchWorker.KEY_SOURCE to
+                                    AutomaticSearchWorker.SOURCE_SONARR,
                                 AutomaticSearchWorker.KEY_TARGET_ID to episodeId,
                                 AutomaticSearchWorker.KEY_COMMAND_ID to commandId,
                             )

@@ -29,19 +29,22 @@ interface SonarrSearchRepository {
 
     /**
      * Triggers an automatic search - Sonarr picks and grabs the best release itself. Returns once
-     * the search is *queued*, not once it finishes (see [awaitAutomaticSearchResult] for that) -
-     * on success, also schedules a background check so the user gets notified once it actually
+     * the search is *queued*, not once it finishes (see [awaitAutomaticSearchResult] for that) - on
+     * success, also schedules a background check so the user gets notified once it actually
      * completes, even if they've since left the screen.
      */
     suspend fun searchEpisode(episodeId: Int): Result<Unit>
 
     /**
-     * Polls Sonarr until the automatic search command started by [searchEpisode] reaches a
-     * terminal state, then looks up the episode's title for a human-readable notification. Meant
-     * to be called from a background worker, not the triggering screen's ViewModel - see
+     * Polls Sonarr until the automatic search command started by [searchEpisode] reaches a terminal
+     * state, then looks up the episode's title for a human-readable notification. Meant to be
+     * called from a background worker, not the triggering screen's ViewModel - see
      * `dev.pschmitt.jellyfin.work.AutomaticSearchWorker`.
      */
-    suspend fun awaitAutomaticSearchResult(episodeId: Int, commandId: Int): Result<AutomaticSearchOutcome>
+    suspend fun awaitAutomaticSearchResult(
+        episodeId: Int,
+        commandId: Int,
+    ): Result<AutomaticSearchOutcome>
 
     /**
      * Lists candidate releases for an episode (interactive/manual search). Results are cached per
@@ -55,9 +58,9 @@ interface SonarrSearchRepository {
     suspend fun grabRelease(release: PvrRelease): Result<Unit>
 
     /**
-     * Deletes the series matched by TVDB id from Sonarr, including its files, and excludes it
-     * from future import-list re-adds - the "also remove from Sonarr" cascade for a whole-show
-     * delete from Jellyfin.
+     * Deletes the series matched by TVDB id from Sonarr, including its files, and excludes it from
+     * future import-list re-adds - the "also remove from Sonarr" cascade for a whole-show delete
+     * from Jellyfin.
      */
     suspend fun deleteSeriesByTvdbId(tvdbId: String): Result<Unit>
 
@@ -66,5 +69,9 @@ interface SonarrSearchRepository {
      * again" when there's no whole-series delete to reach for, i.e. the "also remove from Sonarr"
      * cascade for a single-episode delete from Jellyfin.
      */
-    suspend fun unmonitorEpisode(seriesTvdbId: String, seasonNumber: Int, episodeNumber: Int): Result<Unit>
+    suspend fun unmonitorEpisode(
+        seriesTvdbId: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+    ): Result<Unit>
 }

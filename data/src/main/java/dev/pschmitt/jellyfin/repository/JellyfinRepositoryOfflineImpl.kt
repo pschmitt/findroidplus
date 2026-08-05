@@ -350,7 +350,10 @@ class JellyfinRepositoryOfflineImpl(
         return jellyfinApi.userId!!
     }
 
-    override suspend fun getDisplayPreferences(displayPreferencesId: String, client: String): DisplayPreferencesDto {
+    override suspend fun getDisplayPreferences(
+        displayPreferencesId: String,
+        client: String,
+    ): DisplayPreferencesDto {
         throw Exception("Remote config is not available in offline mode")
     }
 

@@ -23,14 +23,14 @@ import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.utils.LocalOfflineMode
 
 /**
- * Home's own header - server switcher title + error/retry/search/settings actions. A real
- * Material3 [TopAppBar] - solid background, standard [IconButton]s, standard height - same look
- * as [ItemTopBar] (Movie/Show/Season/Episode/Person) and the Media/Library screen's own
- * `TopAppBar`, rather than a bespoke transparent bar with its own color/height. The server name
- * reuses [TopBarTitle] (the same title composable Library uses), made clickable to open the
- * server-switch sheet. (Favorites used to live here as an icon button - it's now its own Home
- * section instead, next to Continue Watching/Next Up, so it can actually be browsed rather than
- * being a single tap-through.)
+ * Home's own header - server switcher title + error/retry/search/settings actions. A real Material3
+ * [TopAppBar] - solid background, standard [IconButton]s, standard height - same look as
+ * [ItemTopBar] (Movie/Show/Season/Episode/Person) and the Media/Library screen's own `TopAppBar`,
+ * rather than a bespoke transparent bar with its own color/height. The server name reuses
+ * [TopBarTitle] (the same title composable Library uses), made clickable to open the server-switch
+ * sheet. (Favorites used to live here as an icon button - it's now its own Home section instead,
+ * next to Continue Watching/Next Up, so it can actually be browsed rather than being a single
+ * tap-through.)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,12 +81,18 @@ fun HomeHeader(
 
             if (!isOfflineMode) {
                 IconButton(onClick = onSearchClick) {
-                    Icon(painter = painterResource(CoreR.drawable.ic_search), contentDescription = null)
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_search),
+                        contentDescription = null,
+                    )
                 }
             }
 
             IconButton(onClick = onUserClick) {
-                Icon(painter = painterResource(CoreR.drawable.ic_settings), contentDescription = null)
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_settings),
+                    contentDescription = null,
+                )
             }
         },
         windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),

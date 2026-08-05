@@ -12,8 +12,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * Thin client for a single Seerr (formerly Jellyseerr) instance, authenticated via `X-Api-Key` like the
- * Sonarr/Radarr clients (shared [PvrHttpClient]). Cheap to construct per-call - [baseUrl] and
+ * Thin client for a single Seerr (formerly Jellyseerr) instance, authenticated via `X-Api-Key` like
+ * the Sonarr/Radarr clients (shared [PvrHttpClient]). Cheap to construct per-call - [baseUrl] and
  * [apiKey] are resolved by the caller (typically from
  * [dev.pschmitt.jellyfin.security.SecureCredentialStore] and the Seerr settings) rather than
  * injected as a Hilt singleton, since the user can reconfigure either at runtime.
@@ -35,9 +35,9 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
         }
 
     /**
-     * Discovery lists for the Home screen - same result shape as [search]. [path] is the
-     * discover endpoint's last segment: "trending" (mixed movies/series), "movies" or "tv"
-     * (both popularity-sorted).
+     * Discovery lists for the Home screen - same result shape as [search]. [path] is the discover
+     * endpoint's last segment: "trending" (mixed movies/series), "movies" or "tv" (both
+     * popularity-sorted).
      */
     suspend fun discover(path: String, page: Int = 1): SeerrSearchResponse =
         withContext(Dispatchers.IO) {
@@ -53,10 +53,10 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
         }
 
     /**
-     * Files a request; Seerr routes it to Sonarr/Radarr with the server-side defaults
-     * (quality profile, root folder). When [seasonNumber] is `null`, series requests ask for
-     * all seasons - Seerr's "seasons": "all" shorthand. When it's set, only that season is
-     * requested - Seerr expects an array of season numbers for that case.
+     * Files a request; Seerr routes it to Sonarr/Radarr with the server-side defaults (quality
+     * profile, root folder). When [seasonNumber] is `null`, series requests ask for all seasons -
+     * Seerr's "seasons": "all" shorthand. When it's set, only that season is requested - Seerr
+     * expects an array of season numbers for that case.
      */
     suspend fun createRequest(mediaType: String, tmdbId: Int, seasonNumber: Int? = null) {
         withContext(Dispatchers.IO) {
@@ -108,11 +108,14 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
     /** Returns a season and its episodes, used for an episode-specific Seerr detail view. */
     suspend fun getTvSeason(tmdbId: Int, seasonNumber: Int): SeerrTvSeasonDetails =
         withContext(Dispatchers.IO) {
-            val url = buildUrl("api", "v1", "tv", tmdbId.toString(), "season", seasonNumber.toString())
+            val url =
+                buildUrl("api", "v1", "tv", tmdbId.toString(), "season", seasonNumber.toString())
             json.decodeFromString<SeerrTvSeasonDetails>(execute(url))
         }
 
-    /** Cancels/deletes a request filed via [createRequest] (or any request the API key may manage). */
+    /**
+     * Cancels/deletes a request filed via [createRequest] (or any request the API key may manage).
+     */
     suspend fun deleteRequest(requestId: Int) {
         withContext(Dispatchers.IO) {
             val url = buildUrl("api", "v1", "request", requestId.toString())
@@ -138,8 +141,8 @@ class SeerrApi(private val baseUrl: String, private val apiKey: String) {
     }
 
     /**
-     * [jsonBody] `null` issues a GET; otherwise a POST with that body as the JSON payload.
-     * [delete] issues a DELETE instead.
+     * [jsonBody] `null` issues a GET; otherwise a POST with that body as the JSON payload. [delete]
+     * issues a DELETE instead.
      */
     private fun execute(url: String, jsonBody: String? = null, delete: Boolean = false): String {
         val request =

@@ -30,11 +30,22 @@ class SeasonEpisodesMatchingTest {
         val episodes =
             listOf(
                 SonarrEpisodeDto(id = 1, seasonNumber = 1, episodeNumber = 1, title = "Pilot"),
-                SonarrEpisodeDto(id = 2, seasonNumber = 1, episodeNumber = 2, title = "Episode Two"),
-                SonarrEpisodeDto(id = 3, seasonNumber = 2, episodeNumber = 1, title = "Other Season"),
+                SonarrEpisodeDto(
+                    id = 2,
+                    seasonNumber = 1,
+                    episodeNumber = 2,
+                    title = "Episode Two",
+                ),
+                SonarrEpisodeDto(
+                    id = 3,
+                    seasonNumber = 2,
+                    episodeNumber = 1,
+                    title = "Other Season",
+                ),
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = setOf(1))
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = setOf(1))
 
         assertEquals(1, result.size)
         assertEquals(2, result[0].episodeNumber)
@@ -51,16 +62,19 @@ class SeasonEpisodesMatchingTest {
                 SonarrEpisodeDto(id = 3, seasonNumber = 1, episodeNumber = 2),
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertEquals(listOf(1, 2, 3), result.map { it.episodeNumber })
     }
 
     @Test
     fun `blank title becomes null rather than an empty string`() {
-        val episodes = listOf(SonarrEpisodeDto(id = 1, seasonNumber = 1, episodeNumber = 1, title = ""))
+        val episodes =
+            listOf(SonarrEpisodeDto(id = 1, seasonNumber = 1, episodeNumber = 1, title = ""))
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertEquals(null, result.single().title)
     }
@@ -77,7 +91,8 @@ class SeasonEpisodesMatchingTest {
                 )
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertEquals(LocalDate.of(2024, 7, 24), result.single().airDate)
     }
@@ -94,7 +109,8 @@ class SeasonEpisodesMatchingTest {
                 )
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         // Default TimeZone is fixed to UTC in setUp(), so the instant's UTC time and its
         // system-default-zone-converted LocalTime line up exactly.
@@ -113,7 +129,8 @@ class SeasonEpisodesMatchingTest {
                 )
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertEquals(null, result.single().airTime)
     }
@@ -131,7 +148,8 @@ class SeasonEpisodesMatchingTest {
                 )
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = emptySet())
 
         assertTrue(result.single().hasFile)
         assertEquals(false, result.single().monitored)
@@ -145,7 +163,8 @@ class SeasonEpisodesMatchingTest {
                 SonarrEpisodeDto(id = 2, seasonNumber = 1, episodeNumber = 2),
             )
 
-        val result = matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = setOf(1, 2))
+        val result =
+            matchUpcomingEpisodes(episodes, seasonNumber = 1, knownEpisodeNumbers = setOf(1, 2))
 
         assertTrue(result.isEmpty())
     }

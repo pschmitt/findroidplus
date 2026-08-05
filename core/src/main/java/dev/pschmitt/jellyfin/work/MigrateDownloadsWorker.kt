@@ -21,8 +21,8 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Moves a specific selection of already-downloaded items (the Downloads screen's "migrate
- * selected" action) to a different storage volume - the selection-scoped counterpart to
+ * Moves a specific selection of already-downloaded items (the Downloads screen's "migrate selected"
+ * action) to a different storage volume - the selection-scoped counterpart to
  * [RelocateDownloadsWorker], which moves *every* download on one volume when the user changes the
  * download-location preference in Settings. Runs as a foreground service for the same reason: a
  * move can involve copying several large files, easily long enough to outlast the screen that
@@ -75,9 +75,7 @@ constructor(
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(downloadsContentIntent(applicationContext))
-            .apply {
-                if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true)
-            }
+            .apply { if (total > 0) setProgress(total, done, false) else setProgress(0, 0, true) }
             .build()
     }
 

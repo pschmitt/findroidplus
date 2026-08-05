@@ -77,7 +77,8 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
             Spacer(modifier = Modifier.height(MaterialTheme.spacings.large))
             OutlinedButton(onClick = { onAction(WelcomeAction.OnLearnMoreClick) }) {
                 Text(
-                    text = stringResource(dev.pschmitt.jellyfin.setup.R.string.welcome_btn_learn_more)
+                    text =
+                        stringResource(dev.pschmitt.jellyfin.setup.R.string.welcome_btn_learn_more)
                 )
             }
             Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
@@ -85,7 +86,9 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
                 onClick = { onAction(WelcomeAction.OnContinueClick) },
                 modifier = Modifier.focusRequester(focusRequester),
             ) {
-                Text(text = stringResource(dev.pschmitt.jellyfin.setup.R.string.welcome_btn_continue))
+                Text(
+                    text = stringResource(dev.pschmitt.jellyfin.setup.R.string.welcome_btn_continue)
+                )
             }
         }
     }

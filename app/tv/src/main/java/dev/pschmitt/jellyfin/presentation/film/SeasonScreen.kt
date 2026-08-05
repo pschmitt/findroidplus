@@ -79,9 +79,10 @@ private fun SeasonScreenLayout(
     state: SeasonState,
     onAction: (SeasonAction) -> Unit,
     getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
-    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
-        DownloadSizeEstimate()
-    },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
+        { _, _ ->
+            DownloadSizeEstimate()
+        },
 ) {
     var downloadScopeDialogOpen by remember { mutableStateOf(false) }
     var clearDownloadsDialogOpen by remember { mutableStateOf(false) }
@@ -100,9 +101,7 @@ private fun SeasonScreenLayout(
                 ) {
                     Text(text = season.name, style = MaterialTheme.typography.displayMedium)
                     Text(text = season.seriesName, style = MaterialTheme.typography.headlineMedium)
-                    Spacer(
-                        modifier = Modifier.height(MaterialTheme.spacings.default)
-                    )
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                     if (state.hasDownloads) {
                         Button(onClick = { clearDownloadsDialogOpen = true }) {
                             Icon(
@@ -171,14 +170,18 @@ private fun SeasonScreenLayout(
             seasons = seasons,
             initialSelection =
                 DownloadSelection(
-                    seasonIds = state.existingScope.seasonIds.ifEmpty { setOfNotNull(state.season?.id) },
+                    seasonIds =
+                        state.existingScope.seasonIds.ifEmpty { setOfNotNull(state.season?.id) },
                     alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
                 ),
             initialAlsoFollowNew = state.existingScope.alsoFollowNew,
             initialOnlyUnwatched = state.existingScope.onlyUnwatched,
             canDelete = state.hasDownloads || state.autoDownloadEnabled,
             getSeasonSize = getSeasonSize,
-            onDelete = { downloadScopeDialogOpen = false; clearDownloadsDialogOpen = true },
+            onDelete = {
+                downloadScopeDialogOpen = false
+                clearDownloadsDialogOpen = true
+            },
             onConfirm = { selection, alsoFollowNew, onlyUnwatched ->
                 onAction(SeasonAction.DownloadWithScope(selection, alsoFollowNew, onlyUnwatched))
                 downloadScopeDialogOpen = false
@@ -190,7 +193,9 @@ private fun SeasonScreenLayout(
     if (clearDownloadsDialogOpen) {
         AlertDialog(
             title = { Text(text = stringResource(id = CoreR.string.clear_season_downloads)) },
-            text = { Text(text = stringResource(id = CoreR.string.clear_season_downloads_message)) },
+            text = {
+                Text(text = stringResource(id = CoreR.string.clear_season_downloads_message))
+            },
             onDismissRequest = { clearDownloadsDialogOpen = false },
             confirmButton = {
                 TextButton(

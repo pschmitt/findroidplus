@@ -176,7 +176,8 @@ data class SonarrEpisodeDto(
 // Bulk monitored on/off toggle - the closest Sonarr equivalent to "don't grab this one again" for
 // a single episode (there is no per-episode delete/exclude the way there is for a whole series).
 
-@Serializable data class SonarrEpisodeMonitorRequest(val episodeIds: List<Int>, val monitored: Boolean)
+@Serializable
+data class SonarrEpisodeMonitorRequest(val episodeIds: List<Int>, val monitored: Boolean)
 
 // endregion
 
@@ -305,10 +306,18 @@ data class RadarrCalendarEntry(
 
 @Serializable data class PvrQualityDetail(val id: Int = 0, val name: String? = null)
 
-@Serializable data class PvrQualityRevision(val version: Int = 1, val real: Int = 0, val isRepack: Boolean = false)
+@Serializable
+data class PvrQualityRevision(
+    val version: Int = 1,
+    val real: Int = 0,
+    val isRepack: Boolean = false,
+)
 
 @Serializable
-data class PvrQualityInfo(val quality: PvrQualityDetail? = null, val revision: PvrQualityRevision? = null)
+data class PvrQualityInfo(
+    val quality: PvrQualityDetail? = null,
+    val revision: PvrQualityRevision? = null,
+)
 
 @Serializable data class PvrLanguage(val id: Int = 0, val name: String? = null)
 

@@ -34,8 +34,8 @@ import dev.pschmitt.jellyfin.utils.formatDownloadSpeed
 import dev.pschmitt.jellyfin.utils.formatEta
 
 /**
- * Shown over a poster when Sonarr/Radarr have a matching item in their download queue, but it
- * isn't (yet) an in-progress local Jellyfin download. Callers should prefer [DownloadingBadge]/
+ * Shown over a poster when Sonarr/Radarr have a matching item in their download queue, but it isn't
+ * (yet) an in-progress local Jellyfin download. Callers should prefer [DownloadingBadge]/
  * [DownloadedBadge] over this badge whenever a real local download is in flight - see
  * `EpisodeCard`/`ItemCard` for the precedence rule.
  *

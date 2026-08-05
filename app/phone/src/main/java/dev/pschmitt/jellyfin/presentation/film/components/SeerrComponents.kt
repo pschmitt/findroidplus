@@ -31,9 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import dev.pschmitt.jellyfin.core.R as CoreR
+import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaType
-import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.SeerrRequestItem
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
 import dev.pschmitt.jellyfin.presentation.theme.spacings
@@ -105,8 +105,8 @@ fun SeerrResultRow(
 
 /**
  * A recently filed Seerr request: poster, title, media type, and its availability status.
- * [onCancel] (when non-null) renders a trailing cancel button - the caller decides which
- * requests are still worth cancelling (pending/processing).
+ * [onCancel] (when non-null) renders a trailing cancel button - the caller decides which requests
+ * are still worth cancelling (pending/processing).
  */
 @Composable
 fun SeerrRequestRow(

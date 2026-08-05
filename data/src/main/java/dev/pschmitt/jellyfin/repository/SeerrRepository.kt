@@ -6,10 +6,10 @@ import dev.pschmitt.jellyfin.models.SeerrRequestItem
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
 
 /**
- * Discover/request flows backed by a Seerr/Seerr instance - the "add new content" side of
- * the PVR integration. Seerr owns the Sonarr/Radarr routing (quality profiles, root
- * folders), so Findroid only ever searches and files requests. All calls are user-initiated, so
- * failures are surfaced via [Result] rather than swallowed, same as the search repositories.
+ * Discover/request flows backed by a Seerr/Seerr instance - the "add new content" side of the PVR
+ * integration. Seerr owns the Sonarr/Radarr routing (quality profiles, root folders), so Findroid
+ * only ever searches and files requests. All calls are user-initiated, so failures are surfaced via
+ * [Result] rather than swallowed, same as the search repositories.
  */
 interface SeerrRepository {
     /** TMDB-backed movie/series search, with each result's current availability in Seerr. */
@@ -33,8 +33,8 @@ interface SeerrRepository {
     ): Result<SeerrMediaDetail>
 
     /**
-     * Requests the item. When [seasonNumber] is `null`, a series request covers all seasons;
-     * when set, only that season is requested. Ignored for movies.
+     * Requests the item. When [seasonNumber] is `null`, a series request covers all seasons; when
+     * set, only that season is requested. Ignored for movies.
      */
     suspend fun request(
         tmdbId: Int,
@@ -49,12 +49,15 @@ interface SeerrRepository {
     suspend fun cancelRequest(requestId: Int): Result<Unit>
 
     /**
-     * TMDB season poster URLs for [seasonNumbers] of the series [tmdbId] - fetched in parallel,
-     * one `GET /tv/{tmdbId}/season/{n}` call per season (TMDB's show-level detail response
-     * doesn't carry per-season poster paths, only [getDetails]'s season-scoped call does). Used
-     * for the Show screen's missing-season placeholder cards, so they show real artwork instead
-     * of a generic icon. A season whose lookup fails maps to `null` rather than failing the whole
+     * TMDB season poster URLs for [seasonNumbers] of the series [tmdbId] - fetched in parallel, one
+     * `GET /tv/{tmdbId}/season/{n}` call per season (TMDB's show-level detail response doesn't
+     * carry per-season poster paths, only [getDetails]'s season-scoped call does). Used for the
+     * Show screen's missing-season placeholder cards, so they show real artwork instead of a
+     * generic icon. A season whose lookup fails maps to `null` rather than failing the whole
      * batch - one bad season shouldn't blank out the others.
      */
-    suspend fun getSeasonPosterUrls(tmdbId: Int, seasonNumbers: List<Int>): Result<Map<Int, String?>>
+    suspend fun getSeasonPosterUrls(
+        tmdbId: Int,
+        seasonNumbers: List<Int>,
+    ): Result<Map<Int, String?>>
 }

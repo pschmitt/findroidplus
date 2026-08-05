@@ -43,7 +43,13 @@ class CalendarMatchingTest {
         val showId = UUID.randomUUID()
         val seasonId = UUID.randomUUID()
         val season = testSeason(id = seasonId, seriesId = showId, indexNumber = 3)
-        val show = testShow(id = showId, tvdbId = "1000", name = "House of the Dragon", seasons = listOf(season))
+        val show =
+            testShow(
+                id = showId,
+                tvdbId = "1000",
+                name = "House of the Dragon",
+                seasons = listOf(season),
+            )
 
         val entries =
             listOf(
@@ -85,7 +91,8 @@ class CalendarMatchingTest {
                 id = showId,
                 tvdbId = "1000",
                 name = "House of the Dragon",
-                seasons = listOf(testSeason(id = UUID.randomUUID(), seriesId = showId, indexNumber = 1)),
+                seasons =
+                    listOf(testSeason(id = UUID.randomUUID(), seriesId = showId, indexNumber = 1)),
             )
 
         val entries =
@@ -209,7 +216,11 @@ class CalendarMatchingTest {
         // RadarrCalendarEntry.tmdbId defaults to 0, the DTO's "unset" sentinel.
         val entries =
             listOf(
-                RadarrCalendarEntry(id = 1, title = "Unmatched Movie", inCinemas = "2024-07-24T00:00:00Z")
+                RadarrCalendarEntry(
+                    id = 1,
+                    title = "Unmatched Movie",
+                    inCinemas = "2024-07-24T00:00:00Z",
+                )
             )
 
         val result =
@@ -248,7 +259,12 @@ class CalendarMatchingTest {
     fun `selectRadarrDate uses inCinemas when it is the only date set`() {
         val entry = RadarrCalendarEntry(id = 1, inCinemas = "2024-07-10T00:00:00Z")
 
-        val date = selectRadarrDate(entry, start = LocalDate.of(2024, 7, 1), end = LocalDate.of(2024, 8, 1))
+        val date =
+            selectRadarrDate(
+                entry,
+                start = LocalDate.of(2024, 7, 1),
+                end = LocalDate.of(2024, 8, 1),
+            )
 
         assertEquals(LocalDate.of(2024, 7, 10), date)
     }
@@ -257,7 +273,12 @@ class CalendarMatchingTest {
     fun `selectRadarrDate uses digitalRelease when it is the only date set`() {
         val entry = RadarrCalendarEntry(id = 1, digitalRelease = "2024-07-15T00:00:00Z")
 
-        val date = selectRadarrDate(entry, start = LocalDate.of(2024, 7, 1), end = LocalDate.of(2024, 8, 1))
+        val date =
+            selectRadarrDate(
+                entry,
+                start = LocalDate.of(2024, 7, 1),
+                end = LocalDate.of(2024, 8, 1),
+            )
 
         assertEquals(LocalDate.of(2024, 7, 15), date)
     }
@@ -274,7 +295,12 @@ class CalendarMatchingTest {
 
         // inCinemas (June 1) is outside [start, end]; between the two in-range dates,
         // physicalRelease (July 15) is earlier than digitalRelease (July 20).
-        val date = selectRadarrDate(entry, start = LocalDate.of(2024, 7, 1), end = LocalDate.of(2024, 8, 1))
+        val date =
+            selectRadarrDate(
+                entry,
+                start = LocalDate.of(2024, 7, 1),
+                end = LocalDate.of(2024, 8, 1),
+            )
 
         assertEquals(LocalDate.of(2024, 7, 15), date)
     }
@@ -283,7 +309,12 @@ class CalendarMatchingTest {
     fun `selectRadarrDate falls back to the first non-null date in preference order when none are in range`() {
         val entry = RadarrCalendarEntry(id = 1, inCinemas = "2023-01-01T00:00:00Z")
 
-        val date = selectRadarrDate(entry, start = LocalDate.of(2024, 7, 1), end = LocalDate.of(2024, 8, 1))
+        val date =
+            selectRadarrDate(
+                entry,
+                start = LocalDate.of(2024, 7, 1),
+                end = LocalDate.of(2024, 8, 1),
+            )
 
         assertEquals(LocalDate.of(2023, 1, 1), date)
     }
@@ -292,7 +323,12 @@ class CalendarMatchingTest {
     fun `selectRadarrDate returns null when all three dates are null`() {
         val entry = RadarrCalendarEntry(id = 1)
 
-        val date = selectRadarrDate(entry, start = LocalDate.of(2024, 7, 1), end = LocalDate.of(2024, 8, 1))
+        val date =
+            selectRadarrDate(
+                entry,
+                start = LocalDate.of(2024, 7, 1),
+                end = LocalDate.of(2024, 8, 1),
+            )
 
         assertNull(date)
     }
@@ -305,11 +341,25 @@ class CalendarMatchingTest {
     fun `combined Sonarr and Radarr results interleave correctly by date once sorted`() {
         val sonarrEntries =
             listOf(
-                SonarrCalendarEntry(id = 1, airDateUtc = "2024-07-24T00:00:00Z", title = "Episode A"),
-                SonarrCalendarEntry(id = 2, airDateUtc = "2024-07-10T00:00:00Z", title = "Episode B"),
+                SonarrCalendarEntry(
+                    id = 1,
+                    airDateUtc = "2024-07-24T00:00:00Z",
+                    title = "Episode A",
+                ),
+                SonarrCalendarEntry(
+                    id = 2,
+                    airDateUtc = "2024-07-10T00:00:00Z",
+                    title = "Episode B",
+                ),
             )
         val radarrEntries =
-            listOf(RadarrCalendarEntry(id = 1, title = "Movie A", digitalRelease = "2024-07-17T00:00:00Z"))
+            listOf(
+                RadarrCalendarEntry(
+                    id = 1,
+                    title = "Movie A",
+                    digitalRelease = "2024-07-17T00:00:00Z",
+                )
+            )
 
         val sonarrResult = matchSonarrCalendar(sonarrEntries, emptyList())
         val radarrResult =

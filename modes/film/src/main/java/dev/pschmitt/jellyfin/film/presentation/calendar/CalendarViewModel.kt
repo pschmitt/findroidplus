@@ -36,9 +36,9 @@ constructor(
 
     /**
      * Only blocks with a spinner when there's genuinely nothing to show yet (first load this
-     * process, or a previous load never succeeded) - otherwise this is a silent background
-     * refresh on top of whatever [CalendarCache]/[init] already put on screen, so reopening the
-     * tab never re-blocks on a fresh Sonarr/Radarr/Jellyfin fetch the way it used to.
+     * process, or a previous load never succeeded) - otherwise this is a silent background refresh
+     * on top of whatever [CalendarCache]/[init] already put on screen, so reopening the tab never
+     * re-blocks on a fresh Sonarr/Radarr/Jellyfin fetch the way it used to.
      *
      * [force] skips the cache's 12h TTL check - an explicit pull-to-refresh should always hit the
      * network, but the tab-reopen path in [init] shouldn't, since `PreloadCalendarWorker` (or a
@@ -73,8 +73,8 @@ constructor(
 
 /**
  * Groups an already date-sorted (ascending) list of entries into consecutive same-date runs,
- * preserving order - a free function so it's directly unit-testable without a ViewModel/Hilt in
- * the loop, same convention as `buildPvrQueueGroups` in `DownloadsViewModel.kt`.
+ * preserving order - a free function so it's directly unit-testable without a ViewModel/Hilt in the
+ * loop, same convention as `buildPvrQueueGroups` in `DownloadsViewModel.kt`.
  */
 internal fun groupByDate(entries: List<CalendarEntry>): List<Pair<LocalDate, List<CalendarEntry>>> =
     entries.groupBy { it.date }.map { (date, entriesForDate) -> date to entriesForDate }

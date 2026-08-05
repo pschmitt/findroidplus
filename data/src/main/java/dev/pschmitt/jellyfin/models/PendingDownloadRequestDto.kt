@@ -16,8 +16,8 @@ import kotlinx.serialization.Serializable
  * than a Jellyfin item id, since there isn't one until Sonarr grabs it, Jellyfin scans it in, and
  * the season/episode actually appears. Periodically resolved against the live Jellyfin library by
  * [dev.pschmitt.jellyfin.work.PendingDownloadWorker] (via
- * [dev.pschmitt.jellyfin.utils.PendingDownloadFulfiller]) - once the target appears, its download is
- * enqueued, a notification is posted, and this row is deleted. A one-off "download whichever
+ * [dev.pschmitt.jellyfin.utils.PendingDownloadFulfiller]) - once the target appears, its download
+ * is enqueued, a notification is posted, and this row is deleted. A one-off "download whichever
  * episodes exist once this appears" request, not a persistent "keep following new episodes" rule -
  * see [dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository] for that.
  */

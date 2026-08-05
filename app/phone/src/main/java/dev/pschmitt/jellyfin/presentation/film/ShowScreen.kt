@@ -6,12 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -21,9 +19,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,11 +45,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.PlayerActivity
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.delete.DeleteItemEvent
-import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyShow
+import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.show.ShowAction
 import dev.pschmitt.jellyfin.film.presentation.show.ShowState
 import dev.pschmitt.jellyfin.film.presentation.show.ShowViewModel
@@ -78,12 +76,12 @@ import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.UpcomingSeasonCard
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
+import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
+import dev.pschmitt.jellyfin.utils.ObserveAsEvents
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 import dev.pschmitt.jellyfin.utils.formatCalendarDate
 import dev.pschmitt.jellyfin.utils.formatCalendarTime
-import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.getShowDateString
-import dev.pschmitt.jellyfin.utils.ObserveAsEvents
 import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
 
@@ -159,7 +157,8 @@ fun ShowScreen(
                     try {
                         uriHandler.openUri(action.trailer)
                     } catch (e: IllegalArgumentException) {
-                        Toast.makeText(androidContext, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(androidContext, e.localizedMessage, Toast.LENGTH_SHORT)
+                            .show()
                     }
                 }
                 is ShowAction.MarkAsPlayed ->
@@ -208,9 +207,10 @@ private fun ShowScreenLayout(
     state: ShowState,
     onAction: (ShowAction) -> Unit,
     onRefresh: () -> Unit = {},
-    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate = { _, _ ->
-        DownloadSizeEstimate()
-    },
+    getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
+        { _, _ ->
+            DownloadSizeEstimate()
+        },
     getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
 ) {
     val androidContext = LocalContext.current
@@ -233,368 +233,395 @@ private fun ShowScreenLayout(
         onSettingsClick = { onAction(ShowAction.OnSettingsClick) },
     ) {
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        state.show?.let { show ->
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                ItemHeader(
-                    item = show,
-                    scrollState = scrollState,
-                    content = {
-                        PlayOverlayButton(
-                            item = show,
-                            onClick = { onAction(ShowAction.Play(startFromBeginning = false)) },
-                            enabled = show.canPlay && state.seasons.isNotEmpty(),
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    },
-                )
-                Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    Text(
-                        text = show.name,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 3,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    show.originalTitle?.let { originalTitle ->
-                        if (originalTitle != show.name) {
-                            Text(
-                                text = originalTitle,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    ItemMetaRow(
-                        dateText = getShowDateString(show),
-                        runtimeTicks = show.runtimeTicks,
-                        officialRating = show.officialRating,
-                        communityRating = show.communityRating,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    ItemButtonsBar(
+            state.show?.let { show ->
+                Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+                    ItemHeader(
                         item = show,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(ShowAction.Play(startFromBeginning = startFromBeginning))
-                        },
-                        onTrailerClick = { uri -> onAction(ShowAction.PlayTrailer(uri)) },
-                        onDownloadClick = {},
-                        onDownloadCancelClick = {},
-                        onDownloadDeleteClick = {},
-                        modifier = Modifier.fillMaxWidth(),
-                        downloaderState = DownloaderState(),
-                        enableDownloadDialog = true,
-                        initialSelection =
-                            DownloadSelection(
-                                seasonIds = state.existingScope.seasonIds,
-                                alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
-                            ),
-                        initialAlsoFollowNew = state.existingScope.alsoFollowNew,
-                        initialOnlyUnwatched = state.existingScope.onlyUnwatched,
-                        getSeasons = { state.seasons },
-                        getSeasonSize = getSeasonSize,
-                        getOtherDevices = getOtherDevices,
-                        hasActiveDownloadOrRule = state.hasDownloads || state.autoDownloadEnabled,
-                        onDeleteDownloads = { clearShowDownloadsDialogOpen = true },
-                        downloadIconTint =
-                            if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt()) else null,
-                        onBulkDownload = { selection, alsoFollowNew, onlyUnwatched, targetDeviceId ->
-                            onAction(
-                                ShowAction.DownloadWithScope(
-                                    selection,
-                                    alsoFollowNew,
-                                    onlyUnwatched,
-                                    targetDeviceId,
-                                )
+                        scrollState = scrollState,
+                        content = {
+                            PlayOverlayButton(
+                                item = show,
+                                onClick = { onAction(ShowAction.Play(startFromBeginning = false)) },
+                                enabled = show.canPlay && state.seasons.isNotEmpty(),
+                                modifier = Modifier.align(Alignment.Center),
                             )
-                            Toast.makeText(
-                                    androidContext,
-                                    when {
-                                        targetDeviceId != null ->
-                                            CoreR.string.remote_config_download_sent_toast
-                                        alsoFollowNew -> CoreR.string.auto_download_enabled_toast
-                                        else -> CoreR.string.download_queued_toast
-                                    },
-                                    Toast.LENGTH_SHORT,
-                                )
-                                .show()
                         },
-                        // Same "size as the label" tile the single-episode/movie Delete download
-                        // tile uses (see ItemButtonsBar) - one reusable shape for both scopes
-                        // instead of a bespoke button + separate disk-usage caption.
-                        trailingContent = {
-                            if (state.hasDownloads || state.autoDownloadEnabled) {
-                                ItemActionButton(
-                                    icon = painterResource(CoreR.drawable.ic_trash),
-                                    label =
-                                        state.downloadsSizeBytes
-                                            .takeIf { it > 0L }
-                                            ?.let { formatBinaryFileSize(it) }
-                                            ?: stringResource(CoreR.string.clear_show_downloads),
-                                    onClick = { clearShowDownloadsDialogOpen = true },
-                                    contentColor = MaterialTheme.colorScheme.error,
+                    )
+                    Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        Text(
+                            text = show.name,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 3,
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                        show.originalTitle?.let { originalTitle ->
+                            if (originalTitle != show.name) {
+                                Text(
+                                    text = originalTitle,
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
-                        },
-                        overflowContent = {
-                            ItemOverflowMenu { closeMenu ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (show.played) CoreR.string.unmark_as_played
-                                                else CoreR.string.mark_as_played
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_check),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (show.played) ShowAction.UnmarkAsPlayed
-                                            else ShowAction.MarkAsPlayed
-                                        )
-                                    },
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        ItemMetaRow(
+                            dateText = getShowDateString(show),
+                            runtimeTicks = show.runtimeTicks,
+                            officialRating = show.officialRating,
+                            communityRating = show.communityRating,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        ItemButtonsBar(
+                            item = show,
+                            onPlayClick = { startFromBeginning ->
+                                onAction(ShowAction.Play(startFromBeginning = startFromBeginning))
+                            },
+                            onTrailerClick = { uri -> onAction(ShowAction.PlayTrailer(uri)) },
+                            onDownloadClick = {},
+                            onDownloadCancelClick = {},
+                            onDownloadDeleteClick = {},
+                            modifier = Modifier.fillMaxWidth(),
+                            downloaderState = DownloaderState(),
+                            enableDownloadDialog = true,
+                            initialSelection =
+                                DownloadSelection(
+                                    seasonIds = state.existingScope.seasonIds,
+                                    alsoFutureSeasons = state.existingScope.alsoFutureSeasons,
+                                ),
+                            initialAlsoFollowNew = state.existingScope.alsoFollowNew,
+                            initialOnlyUnwatched = state.existingScope.onlyUnwatched,
+                            getSeasons = { state.seasons },
+                            getSeasonSize = getSeasonSize,
+                            getOtherDevices = getOtherDevices,
+                            hasActiveDownloadOrRule =
+                                state.hasDownloads || state.autoDownloadEnabled,
+                            onDeleteDownloads = { clearShowDownloadsDialogOpen = true },
+                            downloadIconTint =
+                                if (state.autoDownloadEnabled) Color("#F2C94C".toColorInt())
+                                else null,
+                            onBulkDownload = {
+                                selection,
+                                alsoFollowNew,
+                                onlyUnwatched,
+                                targetDeviceId ->
+                                onAction(
+                                    ShowAction.DownloadWithScope(
+                                        selection,
+                                        alsoFollowNew,
+                                        onlyUnwatched,
+                                        targetDeviceId,
+                                    )
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (show.favorite) {
-                                                    CoreR.string.remove_from_favorites
-                                                } else {
-                                                    CoreR.string.add_to_favorites
-                                                }
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    if (show.favorite) {
-                                                        CoreR.drawable.ic_heart_filled
-                                                    } else {
-                                                        CoreR.drawable.ic_heart
-                                                    }
+                                Toast.makeText(
+                                        androidContext,
+                                        when {
+                                            targetDeviceId != null ->
+                                                CoreR.string.remote_config_download_sent_toast
+                                            alsoFollowNew ->
+                                                CoreR.string.auto_download_enabled_toast
+                                            else -> CoreR.string.download_queued_toast
+                                        },
+                                        Toast.LENGTH_SHORT,
+                                    )
+                                    .show()
+                            },
+                            // Same "size as the label" tile the single-episode/movie Delete
+                            // download
+                            // tile uses (see ItemButtonsBar) - one reusable shape for both scopes
+                            // instead of a bespoke button + separate disk-usage caption.
+                            trailingContent = {
+                                if (state.hasDownloads || state.autoDownloadEnabled) {
+                                    ItemActionButton(
+                                        icon = painterResource(CoreR.drawable.ic_trash),
+                                        label =
+                                            state.downloadsSizeBytes
+                                                .takeIf { it > 0L }
+                                                ?.let { formatBinaryFileSize(it) }
+                                                ?: stringResource(
+                                                    CoreR.string.clear_show_downloads
                                                 ),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (show.favorite) ShowAction.UnmarkAsFavorite
-                                            else ShowAction.MarkAsFavorite
-                                        )
-                                    },
-                                )
-                                // Always offered, regardless of Sonarr configuration/tmdbId
-                                // presence - a search that can't resolve a target fails with a
-                                // clear toast instead of the entry silently vanishing. No manual/
-                                // interactive counterpart at the series level - Sonarr's release
-                                // picker is per-episode, not per-series.
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(CoreR.string.search_episode_automatic))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_sonarr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(ShowAction.SearchSeriesAutomatic)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(CoreR.string.info)) },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_info),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        infoDialogOpen = true
-                                    },
-                                )
-                                if (state.canDelete) {
-                                    HorizontalDivider()
+                                        onClick = { clearShowDownloadsDialogOpen = true },
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            },
+                            overflowContent = {
+                                ItemOverflowMenu { closeMenu ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = stringResource(CoreR.string.delete_from_jellyfin),
-                                                color = MaterialTheme.colorScheme.error,
+                                                stringResource(
+                                                    if (show.played) CoreR.string.unmark_as_played
+                                                    else CoreR.string.mark_as_played
+                                                )
                                             )
                                         },
                                         leadingIcon = {
                                             Icon(
-                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                painter = painterResource(CoreR.drawable.ic_check),
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error,
                                             )
                                         },
                                         onClick = {
                                             closeMenu()
-                                            deleteDialogOpen = true
-                                        },
-                                    )
-                                }
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    OverviewText(text = show.overview, maxCollapsedLines = 3)
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    InfoText(
-                        genres = show.genres,
-                        director = state.director,
-                        writers = state.writers,
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    state.nextUp?.let { nextUp ->
-                        Text(
-                            text = stringResource(CoreR.string.next_up),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Column(
-                            modifier =
-                                Modifier.widthIn(max = 420.dp)
-                                    .clip(MaterialTheme.shapes.small)
-                                    .clickable { onAction(ShowAction.NavigateToItem(nextUp)) }
-                        ) {
-                            ItemPoster(
-                                item = nextUp,
-                                direction = Direction.HORIZONTAL,
-                                modifier = Modifier.clip(MaterialTheme.shapes.medium),
-                            )
-                            Spacer(Modifier.height(MaterialTheme.spacings.extraSmall))
-                            Text(
-                                text =
-                                    stringResource(
-                                        id = CoreR.string.episode_name_extended,
-                                        nextUp.parentIndexNumber,
-                                        nextUp.indexNumber,
-                                        nextUp.name,
-                                    ),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    }
-                    if (state.nextUp == null) {
-                        state.nextAiring?.let { nextAiring ->
-                            Text(
-                                text =
-                                    nextAiring.airTime?.let { airTime ->
-                                        stringResource(
-                                            CoreR.string.next_episode_airs_time,
-                                            nextAiring.subtitle.orEmpty(),
-                                            formatCalendarDate(nextAiring.date),
-                                            formatCalendarTime(airTime),
-                                        )
-                                    }
-                                        ?: stringResource(
-                                            CoreR.string.next_episode_airs,
-                                            nextAiring.subtitle.orEmpty(),
-                                            formatCalendarDate(nextAiring.date),
-                                        ),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                        }
-                    }
-                }
-
-                if (state.seasons.isNotEmpty() || state.missingSeasons.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
-                        Text(
-                            text = stringResource(CoreR.string.seasons),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    }
-                    val seasonRowItems =
-                        (state.seasons.map { SeasonRowItem.Real(it) } +
-                                state.missingSeasons.map { SeasonRowItem.Missing(it) })
-                            .sortedBy { it.seasonNumber }
-                    LazyRow(
-                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-                    ) {
-                        items(
-                            items = seasonRowItems,
-                            key = { item ->
-                                when (item) {
-                                    is SeasonRowItem.Real -> item.season.id
-                                    is SeasonRowItem.Missing -> "missing-${item.season.seasonNumber}"
-                                }
-                            },
-                        ) { item ->
-                            when (item) {
-                                is SeasonRowItem.Real ->
-                                    ItemCard(
-                                        item = item.season,
-                                        direction = Direction.VERTICAL,
-                                        onClick = { onAction(ShowAction.NavigateToItem(item.season)) },
-                                    )
-                                is SeasonRowItem.Missing ->
-                                    UpcomingSeasonCard(
-                                        season = item.season,
-                                        onClick =
-                                            state.seriesTmdbId?.let { tmdbId ->
-                                                {
-                                                    onAction(
-                                                        ShowAction.NavigateToSeerr(
-                                                            tmdbId = tmdbId,
-                                                            seasonNumber = item.season.seasonNumber,
-                                                        )
-                                                    )
-                                                }
-                                            },
-                                        queued =
-                                            state.queuedSeasonNumbers.contains(
-                                                item.season.seasonNumber
-                                            ),
-                                        onToggleQueued = {
                                             onAction(
-                                                ShowAction.ToggleSeasonQueued(
-                                                    seasonNumber = item.season.seasonNumber
-                                                )
+                                                if (show.played) ShowAction.UnmarkAsPlayed
+                                                else ShowAction.MarkAsPlayed
                                             )
                                         },
                                     )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (show.favorite) {
+                                                        CoreR.string.remove_from_favorites
+                                                    } else {
+                                                        CoreR.string.add_to_favorites
+                                                    }
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        if (show.favorite) {
+                                                            CoreR.drawable.ic_heart_filled
+                                                        } else {
+                                                            CoreR.drawable.ic_heart
+                                                        }
+                                                    ),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(
+                                                if (show.favorite) ShowAction.UnmarkAsFavorite
+                                                else ShowAction.MarkAsFavorite
+                                            )
+                                        },
+                                    )
+                                    // Always offered, regardless of Sonarr configuration/tmdbId
+                                    // presence - a search that can't resolve a target fails with a
+                                    // clear toast instead of the entry silently vanishing. No
+                                    // manual/
+                                    // interactive counterpart at the series level - Sonarr's
+                                    // release
+                                    // picker is per-episode, not per-series.
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    CoreR.string.search_episode_automatic
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_sonarr),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(ShowAction.SearchSeriesAutomatic)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(CoreR.string.info)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_info),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            infoDialogOpen = true
+                                        },
+                                    )
+                                    if (state.canDelete) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text =
+                                                        stringResource(
+                                                            CoreR.string.delete_from_jellyfin
+                                                        ),
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(CoreR.drawable.ic_trash),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                deleteDialogOpen = true
+                                            },
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        OverviewText(text = show.overview, maxCollapsedLines = 3)
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        InfoText(
+                            genres = show.genres,
+                            director = state.director,
+                            writers = state.writers,
+                        )
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        state.nextUp?.let { nextUp ->
+                            Text(
+                                text = stringResource(CoreR.string.next_up),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(Modifier.height(MaterialTheme.spacings.small))
+                            Column(
+                                modifier =
+                                    Modifier.widthIn(max = 420.dp)
+                                        .clip(MaterialTheme.shapes.small)
+                                        .clickable { onAction(ShowAction.NavigateToItem(nextUp)) }
+                            ) {
+                                ItemPoster(
+                                    item = nextUp,
+                                    direction = Direction.HORIZONTAL,
+                                    modifier = Modifier.clip(MaterialTheme.shapes.medium),
+                                )
+                                Spacer(Modifier.height(MaterialTheme.spacings.extraSmall))
+                                Text(
+                                    text =
+                                        stringResource(
+                                            id = CoreR.string.episode_name_extended,
+                                            nextUp.parentIndexNumber,
+                                            nextUp.indexNumber,
+                                            nextUp.name,
+                                        ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        }
+                        if (state.nextUp == null) {
+                            state.nextAiring?.let { nextAiring ->
+                                Text(
+                                    text =
+                                        nextAiring.airTime?.let { airTime ->
+                                            stringResource(
+                                                CoreR.string.next_episode_airs_time,
+                                                nextAiring.subtitle.orEmpty(),
+                                                formatCalendarDate(nextAiring.date),
+                                                formatCalendarTime(airTime),
+                                            )
+                                        }
+                                            ?: stringResource(
+                                                CoreR.string.next_episode_airs,
+                                                nextAiring.subtitle.orEmpty(),
+                                                formatCalendarDate(nextAiring.date),
+                                            ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(Modifier.height(MaterialTheme.spacings.medium))
                             }
                         }
                     }
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                }
 
-                if (state.actors.isNotEmpty()) {
-                    ActorsRow(
-                        actors = state.actors,
-                        onActorClick = { personId ->
-                            onAction(ShowAction.NavigateToPerson(personId))
-                        },
-                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                    )
+                    if (state.seasons.isNotEmpty() || state.missingSeasons.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.padding(start = paddingStart, end = paddingEnd)
+                        ) {
+                            Text(
+                                text = stringResource(CoreR.string.seasons),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        }
+                        val seasonRowItems =
+                            (state.seasons.map { SeasonRowItem.Real(it) } +
+                                    state.missingSeasons.map { SeasonRowItem.Missing(it) })
+                                .sortedBy { it.seasonNumber }
+                        LazyRow(
+                            contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(MaterialTheme.spacings.default),
+                        ) {
+                            items(
+                                items = seasonRowItems,
+                                key = { item ->
+                                    when (item) {
+                                        is SeasonRowItem.Real -> item.season.id
+                                        is SeasonRowItem.Missing ->
+                                            "missing-${item.season.seasonNumber}"
+                                    }
+                                },
+                            ) { item ->
+                                when (item) {
+                                    is SeasonRowItem.Real ->
+                                        ItemCard(
+                                            item = item.season,
+                                            direction = Direction.VERTICAL,
+                                            onClick = {
+                                                onAction(ShowAction.NavigateToItem(item.season))
+                                            },
+                                        )
+                                    is SeasonRowItem.Missing ->
+                                        UpcomingSeasonCard(
+                                            season = item.season,
+                                            onClick =
+                                                state.seriesTmdbId?.let { tmdbId ->
+                                                    {
+                                                        onAction(
+                                                            ShowAction.NavigateToSeerr(
+                                                                tmdbId = tmdbId,
+                                                                seasonNumber =
+                                                                    item.season.seasonNumber,
+                                                            )
+                                                        )
+                                                    }
+                                                },
+                                            queued =
+                                                state.queuedSeasonNumbers.contains(
+                                                    item.season.seasonNumber
+                                                ),
+                                            onToggleQueued = {
+                                                onAction(
+                                                    ShowAction.ToggleSeasonQueued(
+                                                        seasonNumber = item.season.seasonNumber
+                                                    )
+                                                )
+                                            },
+                                        )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    }
+
+                    if (state.actors.isNotEmpty()) {
+                        ActorsRow(
+                            actors = state.actors,
+                            onActorClick = { personId ->
+                                onAction(ShowAction.NavigateToPerson(personId))
+                            },
+                            contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
+                        )
+                    }
+                    Spacer(Modifier.height(paddingBottom))
                 }
-                Spacer(Modifier.height(paddingBottom))
-            }
-        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
         }
     }
 
@@ -656,8 +683,8 @@ private fun EpisodeScreenLayoutPreview() {
 }
 
 /**
- * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so
- * the seasons row can be sorted by season number - rendering real seasons first and missing ones
+ * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
+ * seasons row can be sorted by season number - rendering real seasons first and missing ones
  * appended at the end (as two separate `items()` blocks previously did) put a show's e.g. season 4
  * placeholder after 1-3 but ahead of a real season 5, wherever one existed.
  */

@@ -23,9 +23,7 @@ object SecureCredentialStoreModule {
     @EncryptedPrefs
     @Singleton
     @Provides
-    fun provideEncryptedSharedPreferences(
-        @ApplicationContext context: Context
-    ): SharedPreferences {
+    fun provideEncryptedSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
         val masterKey =
             MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
 

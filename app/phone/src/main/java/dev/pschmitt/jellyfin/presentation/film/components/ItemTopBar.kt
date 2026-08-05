@@ -20,13 +20,13 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 
 /**
- * Shared top bar for Show/Movie/Season/Episode/Person - these are "fullscreen" detail screens
- * with no [androidx.compose.material3.Scaffold] of their own, so the settings action lives here
- * rather than being duplicated per screen. A real Material3 [TopAppBar] - solid background,
- * standard [IconButton]s, standard height - the same look as the Media/Library screen's own
- * `TopAppBar`, rather than a bespoke transparent/floating bar with its own color and height.
- * On tablets the home button is suppressed even when requested: the nav rail stays visible on
- * detail screens there (see NavigationRoot), so Home is always one tap away already.
+ * Shared top bar for Show/Movie/Season/Episode/Person - these are "fullscreen" detail screens with
+ * no [androidx.compose.material3.Scaffold] of their own, so the settings action lives here rather
+ * than being duplicated per screen. A real Material3 [TopAppBar] - solid background, standard
+ * [IconButton]s, standard height - the same look as the Media/Library screen's own `TopAppBar`,
+ * rather than a bespoke transparent/floating bar with its own color and height. On tablets the home
+ * button is suppressed even when requested: the nav rail stays visible on detail screens there (see
+ * NavigationRoot), so Home is always one tap away already.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +58,10 @@ fun ItemTopBar(
                 }
                 if (hasHomeButton && !isTablet) {
                     IconButton(onClick = onHomeClick) {
-                        Icon(painter = painterResource(CoreR.drawable.ic_home), contentDescription = null)
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_home),
+                            contentDescription = null,
+                        )
                     }
                 }
             }

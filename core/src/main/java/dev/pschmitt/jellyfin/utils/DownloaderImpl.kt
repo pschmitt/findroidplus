@@ -479,9 +479,7 @@ class DownloaderImpl(
     /** Shared per-source move: the file itself plus any external media stream files. */
     private fun moveSourceFiles(sourceDto: FindroidSourceDto, fromDir: File, toDir: File) {
         moveFile(File(sourceDto.path), fromDir, toDir, expectedChecksum = sourceDto.checksum)
-            ?.let { newPath ->
-                database.setSourcePath(sourceDto.id, newPath)
-            }
+            ?.let { newPath -> database.setSourcePath(sourceDto.id, newPath) }
         for (mediaStream in database.getMediaStreamsBySourceId(sourceDto.id)) {
             moveFile(File(mediaStream.path), fromDir, toDir)?.let { newPath ->
                 database.setMediaStreamPath(mediaStream.id, newPath)

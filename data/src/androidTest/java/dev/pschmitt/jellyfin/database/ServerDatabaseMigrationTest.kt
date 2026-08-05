@@ -13,7 +13,10 @@ class ServerDatabaseMigrationTest {
 
     @get:Rule
     val helper: MigrationTestHelper =
-        MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), ServerDatabase::class.java)
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            ServerDatabase::class.java,
+        )
 
     @Test
     fun migrate8To9_createsAutoDownloadRulesTable() {
@@ -25,7 +28,9 @@ class ServerDatabaseMigrationTest {
             db.query(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='autoDownloadRules'"
             )
-        cursor.use { assert(it.count == 1) { "autoDownloadRules table should exist after migration" } }
+        cursor.use {
+            assert(it.count == 1) { "autoDownloadRules table should exist after migration" }
+        }
         db.close()
     }
 

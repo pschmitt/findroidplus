@@ -31,8 +31,8 @@ import dev.pschmitt.jellyfin.repository.SonarrSearchRepository
 import dev.pschmitt.jellyfin.repository.toExistingScope
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.AutoDownloadRuleEvaluator
-import dev.pschmitt.jellyfin.utils.clearDownloads
 import dev.pschmitt.jellyfin.utils.Downloader
+import dev.pschmitt.jellyfin.utils.clearDownloads
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -85,11 +85,14 @@ constructor(
     /** Opens the manage-import sheet for this episode's own PVR queue entry, if it has one. */
     fun openManualImportForCurrentItem() {
         val status = _state.value.queueStatus ?: return
-        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED) return
+        if (status.status != QueueItemStatus.WARNING && status.status != QueueItemStatus.FAILED)
+            return
         val title = _state.value.episode?.name ?: return
         val refs =
             _state.value.queueEntries.mapNotNull { entry ->
-                entry.status.downloadId?.let { PendingImportRef(entry.status.source, it, entry.queueItemId) }
+                entry.status.downloadId?.let {
+                    PendingImportRef(entry.status.source, it, entry.queueItemId)
+                }
             }
         if (refs.isEmpty()) return
         manualImport.open(title, refs)
@@ -97,12 +100,11 @@ constructor(
 
     private fun observeQueueStatus(episodeId: UUID) {
         if (queueStatusJob != null) return
-        queueStatusJob =
-            viewModelScope.launch {
-                queueStatusRepository.getQueueStatusFlow(episodeId).collect { status ->
-                    _state.value = _state.value.copy(queueStatus = status)
-                }
+        queueStatusJob = viewModelScope.launch {
+            queueStatusRepository.getQueueStatusFlow(episodeId).collect { status ->
+                _state.value = _state.value.copy(queueStatus = status)
             }
+        }
         viewModelScope.launch {
             queueStatusRepository.getQueueEntriesFlow(episodeId).collect { entries ->
                 _state.value = _state.value.copy(queueEntries = entries)
@@ -177,13 +179,18 @@ constructor(
             val episodeId = resolveTargetEpisodeId()
             if (episodeId == null) {
                 _state.value = _state.value.copy(releasePicker = null)
-                searchEventsChannel.send(SearchEvent.Failed("Could not find this episode in Sonarr"))
+                searchEventsChannel.send(
+                    SearchEvent.Failed("Could not find this episode in Sonarr")
+                )
                 return@launch
             }
             val result = sonarrSearchRepository.getReleases(episodeId)
             _state.value =
                 _state.value.copy(
-                    releasePicker = result.getOrNull()?.let { ReleasePickerState(isLoading = false, releases = it) }
+                    releasePicker =
+                        result.getOrNull()?.let {
+                            ReleasePickerState(isLoading = false, releases = it)
+                        }
                 )
             result.onFailure { searchEventsChannel.send(SearchEvent.Failed(it.message)) }
         }
@@ -217,7 +224,11 @@ constructor(
                 val seriesTvdbId = _state.value.seriesTvdbId
                 if (episode != null && seriesTvdbId != null) {
                     sonarrSearchRepository
-                        .unmonitorEpisode(seriesTvdbId, episode.parentIndexNumber, episode.indexNumber)
+                        .unmonitorEpisode(
+                            seriesTvdbId,
+                            episode.parentIndexNumber,
+                            episode.indexNumber,
+                        )
                         .onFailure { Timber.w(it, "Failed to cascade episode delete to Sonarr") }
                 }
             }
@@ -239,10 +250,12 @@ constructor(
         return repository.getSeasons(seriesId)
     }
 
-    /** Count and total primary-source size of [seasonId]'s episodes that would actually be
-     * downloaded right now - excludes episodes already downloaded locally, and (if
-     * [onlyUnwatched]) already-watched ones. Mirrors ShowViewModel/SeasonViewModel's method of
-     * the same name for the bulk-selection part of this screen's download-scope dialog. */
+    /**
+     * Count and total primary-source size of [seasonId]'s episodes that would actually be
+     * downloaded right now - excludes episodes already downloaded locally, and (if [onlyUnwatched])
+     * already-watched ones. Mirrors ShowViewModel/SeasonViewModel's method of the same name for the
+     * bulk-selection part of this screen's download-scope dialog.
+     */
     suspend fun getUndownloadedEpisodeSize(
         seasonId: UUID,
         onlyUnwatched: Boolean,
@@ -272,13 +285,17 @@ constructor(
     }
 
     private suspend fun getExistingScope(seriesId: UUID): ExistingAutoDownloadScope {
-        val serverId = appPreferences.getValue(appPreferences.currentServer)
-            ?: return ExistingAutoDownloadScope()
+        val serverId =
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return ExistingAutoDownloadScope()
         val userId = repository.getUserId()
-        return autoDownloadRuleRepository.getRulesForSeries(serverId, userId, seriesId).toExistingScope()
+        return autoDownloadRuleRepository
+            .getRulesForSeries(serverId, userId, seriesId)
+            .toExistingScope()
     }
 
-    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> =
+        remoteConfigRepository.listOtherDevices()
 
     private fun downloadWithScope(
         selection: DownloadSelection,
@@ -319,7 +336,14 @@ constructor(
                         createdAt = System.currentTimeMillis(),
                         onlyNewEpisodes = false,
                     )
-                evaluator.evaluate(transientRule, database, repository, downloader, appPreferences, onlyUnwatched)
+                evaluator.evaluate(
+                    transientRule,
+                    database,
+                    repository,
+                    downloader,
+                    appPreferences,
+                    onlyUnwatched,
+                )
             }
 
             if (alsoFollowNew || selection.alsoFutureSeasons) {

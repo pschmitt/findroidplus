@@ -6,9 +6,9 @@ import android.content.Intent
 import java.util.UUID
 
 /**
- * Extras on a new-item notification's content [PendingIntent] so the host app can navigate
- * straight to the item it's about when tapped, mirroring [EXTRA_OPEN_DOWNLOADS] /
- * [downloadsContentIntent] for the Downloads screen.
+ * Extras on a new-item notification's content [PendingIntent] so the host app can navigate straight
+ * to the item it's about when tapped, mirroring [EXTRA_OPEN_DOWNLOADS] / [downloadsContentIntent]
+ * for the Downloads screen.
  */
 const val EXTRA_OPEN_ITEM_ID = "dev.pschmitt.jellyfin.EXTRA_OPEN_ITEM_ID"
 const val EXTRA_OPEN_ITEM_IS_MOVIE = "dev.pschmitt.jellyfin.EXTRA_OPEN_ITEM_IS_MOVIE"

@@ -44,8 +44,8 @@ data class RelocateDownloadsProgress(val mode: String, val done: Int, val total:
 
 /**
  * Observes the shared "relocateDownloads" unique work directly via WorkManager rather than going
- * through a ViewModel - the settings module can't depend on core (core already depends on
- * settings for AppPreferences), so this lives in app/phone instead, which depends on both.
+ * through a ViewModel - the settings module can't depend on core (core already depends on settings
+ * for AppPreferences), so this lives in app/phone instead, which depends on both.
  */
 @Composable
 fun rememberRelocateDownloadsProgress(): RelocateDownloadsProgress? {

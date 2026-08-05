@@ -43,8 +43,10 @@ constructor(
 
             val outcome =
                 when (source) {
-                    SOURCE_SONARR -> sonarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
-                    SOURCE_RADARR -> radarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
+                    SOURCE_SONARR ->
+                        sonarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
+                    SOURCE_RADARR ->
+                        radarrSearchRepository.awaitAutomaticSearchResult(targetId, commandId)
                     else -> return@withContext Result.failure()
                 }
             outcome
@@ -79,13 +81,15 @@ constructor(
 
         // commandId is unique per triggered search, so concurrent searches get their own
         // notification instead of overwriting each other.
-        NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID_BASE + commandId, notification)
+        NotificationManagerCompat.from(applicationContext)
+            .notify(NOTIFICATION_ID_BASE + commandId, notification)
     }
 
     private fun openAppPendingIntent(): PendingIntent? {
         val intent =
-            applicationContext.packageManager.getLaunchIntentForPackage(applicationContext.packageName)
-                ?: return null
+            applicationContext.packageManager.getLaunchIntentForPackage(
+                applicationContext.packageName
+            ) ?: return null
         return PendingIntent.getActivity(
             applicationContext,
             0,

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,12 +29,12 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -105,7 +105,10 @@ fun AutoDownloadRulesScreen(
             is AutoDownloadRuleEvent.RuleSentToDevice ->
                 Toast.makeText(
                         context,
-                        context.getString(CoreR.string.remote_config_rule_sent_toast, event.deviceName),
+                        context.getString(
+                            CoreR.string.remote_config_rule_sent_toast,
+                            event.deviceName,
+                        ),
                         Toast.LENGTH_SHORT,
                     )
                     .show()
@@ -320,7 +323,8 @@ private fun AutoDownloadShowRuleRow(
                     item = show.show,
                     direction = Direction.VERTICAL,
                     modifier =
-                        Modifier.width(40.dp).clip(RoundedCornerShape(MaterialTheme.spacings.small)),
+                        Modifier.width(40.dp)
+                            .clip(RoundedCornerShape(MaterialTheme.spacings.small)),
                 )
             },
             headlineContent = { Text(text = show.showName) },
@@ -347,9 +351,7 @@ private fun AutoDownloadShowRuleRow(
                     Switch(
                         checked = show.enabled,
                         onCheckedChange = { enabled ->
-                            onAction(
-                                AutoDownloadRulesAction.ToggleShowRule(show.seriesId, enabled)
-                            )
+                            onAction(AutoDownloadRulesAction.ToggleShowRule(show.seriesId, enabled))
                             Toast.makeText(
                                     context,
                                     if (enabled) {
@@ -379,7 +381,12 @@ private fun AutoDownloadShowRuleRow(
             show = show,
             getSeasons = getSeasons,
             getOtherDevices = getOtherDevices,
-            onConfirm = { seasonIds, alsoFutureSeasons, onlyNewEpisodes, onlyUnwatched, targetDeviceId ->
+            onConfirm = {
+                seasonIds,
+                alsoFutureSeasons,
+                onlyNewEpisodes,
+                onlyUnwatched,
+                targetDeviceId ->
                 onAction(
                     AutoDownloadRulesAction.UpdateShowRule(
                         show.seriesId,
@@ -405,9 +412,7 @@ private fun AutoDownloadShowRuleRow(
             checkboxSummary = stringResource(CoreR.string.also_delete_downloaded_episodes_summary),
             checkboxDefault = false,
             onConfirm = { alsoDeleteDownloads ->
-                onAction(
-                    AutoDownloadRulesAction.DeleteShowRule(show.seriesId, alsoDeleteDownloads)
-                )
+                onAction(AutoDownloadRulesAction.DeleteShowRule(show.seriesId, alsoDeleteDownloads))
                 Toast.makeText(
                         context,
                         CoreR.string.auto_download_rule_deleted_toast,
@@ -608,7 +613,9 @@ private fun AutoDownloadRulesScreenLayoutPreview() {
                                 seasonIds = emptySet(),
                                 alsoFutureSeasons = true,
                                 scopeLabel =
-                                    UiText.StringResource(CoreR.string.auto_download_rule_future_seasons),
+                                    UiText.StringResource(
+                                        CoreR.string.auto_download_rule_future_seasons
+                                    ),
                                 onlyNewEpisodes = false,
                                 onlyUnwatched = false,
                             )

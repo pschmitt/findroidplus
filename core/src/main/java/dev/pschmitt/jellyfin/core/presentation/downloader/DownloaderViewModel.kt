@@ -112,24 +112,23 @@ constructor(
 
     private fun observeDownloadProgress(downloadId: Long) {
         progressJob?.cancel()
-        progressJob =
-            viewModelScope.launch {
-                downloader.getProgressFlow(downloadId).collectLatest { progress ->
-                    _state.emit(
-                        DownloaderState(
-                            status = progress.status,
-                            progress = progress.percent.coerceAtLeast(0) / 100f,
-                            speedBytesPerSecond = progress.speedBytesPerSecond,
-                            etaSeconds = progress.etaSeconds,
-                            downloadedBytes = progress.downloadedBytes,
-                            totalBytes = progress.totalBytes,
-                        )
+        progressJob = viewModelScope.launch {
+            downloader.getProgressFlow(downloadId).collectLatest { progress ->
+                _state.emit(
+                    DownloaderState(
+                        status = progress.status,
+                        progress = progress.percent.coerceAtLeast(0) / 100f,
+                        speedBytesPerSecond = progress.speedBytesPerSecond,
+                        etaSeconds = progress.etaSeconds,
+                        downloadedBytes = progress.downloadedBytes,
+                        totalBytes = progress.totalBytes,
                     )
-                    if (progress.status == DownloadManager.STATUS_SUCCESSFUL) {
-                        eventsChannel.send(DownloaderEvent.Successful)
-                    }
+                )
+                if (progress.status == DownloadManager.STATUS_SUCCESSFUL) {
+                    eventsChannel.send(DownloaderEvent.Successful)
                 }
             }
+        }
     }
 
     fun onAction(action: DownloaderAction) {

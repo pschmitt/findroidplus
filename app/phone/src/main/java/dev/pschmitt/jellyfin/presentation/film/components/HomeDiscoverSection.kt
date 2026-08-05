@@ -78,7 +78,11 @@ fun HomeDiscoverSection(
 }
 
 @Composable
-private fun DiscoverCard(item: SeerrSearchItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun DiscoverCard(
+    item: SeerrSearchItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier =
             modifier.width(150.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick)

@@ -9,11 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 /**
- * Shared frame for Movie/Show/Season/Episode/Person: [ItemTopBar] gets its own row above
- * everything else, rather than floating as a translucent overlay on top of [ItemHeader]'s backdrop
- * image - the two used to share the same 288dp of vertical space, which left barely any room
- * between the top bar and a centered [PlayOverlayButton]. [content] renders below it, filling the
- * rest of the screen (typically a scrollable Column/LazyColumn starting with an [ItemHeader]).
+ * Shared frame for Movie/Show/Season/Episode/Person: [ItemTopBar] gets its own row above everything
+ * else, rather than floating as a translucent overlay on top of [ItemHeader]'s backdrop image - the
+ * two used to share the same 288dp of vertical space, which left barely any room between the top
+ * bar and a centered [PlayOverlayButton]. [content] renders below it, filling the rest of the
+ * screen (typically a scrollable Column/LazyColumn starting with an [ItemHeader]).
  */
 @Composable
 fun ItemDetailScaffold(

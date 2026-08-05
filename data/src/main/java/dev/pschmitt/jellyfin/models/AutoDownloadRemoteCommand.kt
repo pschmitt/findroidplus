@@ -6,18 +6,19 @@ import kotlinx.serialization.Serializable
 /**
  * A remote instruction addressed at [targetDeviceId], queued in the shared Jellyfin
  * `DisplayPreferences` bucket (see `RemoteConfigRepository`) until that device's next sync. IDs
- * travel as plain strings (not the project's usual
- * [dev.pschmitt.jellyfin.backup.UUIDSerializer]) since this is an ephemeral wire format converted to
- * [java.util.UUID] at the repository boundary, not a persisted model. kotlinx.serialization
- * resolves the concrete subtype from a sealed hierarchy automatically (no `SerializersModule`
- * needed), so the shared queue can hold a mix of every command type below.
+ * travel as plain strings (not the project's usual [dev.pschmitt.jellyfin.backup.UUIDSerializer])
+ * since this is an ephemeral wire format converted to [java.util.UUID] at the repository boundary,
+ * not a persisted model. kotlinx.serialization resolves the concrete subtype from a sealed
+ * hierarchy automatically (no `SerializersModule` needed), so the shared queue can hold a mix of
+ * every command type below.
  *
  * [originDeviceId] identifies which device enqueued this - lets that same device later list and
- * cancel its own still-pending pushes (see `RemoteConfigRepository.listPendingCommandsFromThisDevice`
- * /`cancelPendingCommand`). [displayName] is a human-readable label (show or item name) resolved
- * once at push time by the repository, not re-resolved by whoever renders a pending-commands list
- * later - avoids extra Jellyfin API calls just to render management UI, and survives the
- * referenced item being renamed/deleted server-side in the meantime.
+ * cancel its own still-pending pushes (see
+ * `RemoteConfigRepository.listPendingCommandsFromThisDevice` /`cancelPendingCommand`).
+ * [displayName] is a human-readable label (show or item name) resolved once at push time by the
+ * repository, not re-resolved by whoever renders a pending-commands list later - avoids extra
+ * Jellyfin API calls just to render management UI, and survives the referenced item being
+ * renamed/deleted server-side in the meantime.
  */
 @Serializable
 sealed interface RemoteConfigCommand {
@@ -29,12 +30,12 @@ sealed interface RemoteConfigCommand {
     val displayName: String
 
     /**
-     * Persists an ongoing auto-download rule - replays [dev.pschmitt.jellyfin.repository
-     * .AutoDownloadRuleRepository.reconcileRules]'s own parameters verbatim on the target, rather
-     * than modeling add/remove separately (reconcileRules already derives adds/removes from the
-     * full [seasonIds] set - an empty [seasonIds] with [alsoFutureSeasons] false clears the rule
-     * entirely, which is also how a remote "remove rule" push works -
-     * `RemoteConfigRepository.pushRemoveRule`).
+     * Persists an ongoing auto-download rule - replays
+     * [dev.pschmitt.jellyfin.repository .AutoDownloadRuleRepository.reconcileRules]'s own
+     * parameters verbatim on the target, rather than modeling add/remove separately (reconcileRules
+     * already derives adds/removes from the full [seasonIds] set - an empty [seasonIds] with
+     * [alsoFutureSeasons] false clears the rule entirely, which is also how a remote "remove rule"
+     * push works - `RemoteConfigRepository.pushRemoveRule`).
      */
     @Serializable
     @SerialName("reconcile_rules")
@@ -60,9 +61,9 @@ sealed interface RemoteConfigCommand {
     ) : RemoteConfigCommand
 
     /**
-     * One-time "download whatever currently matches this scope, right now" - no rule is
-     * persisted on the target, mirroring a local bulk download made without "also download new
-     * episodes". Applied by evaluating a transient (non-persisted)
+     * One-time "download whatever currently matches this scope, right now" - no rule is persisted
+     * on the target, mirroring a local bulk download made without "also download new episodes".
+     * Applied by evaluating a transient (non-persisted)
      * [dev.pschmitt.jellyfin.models.AutoDownloadRuleDto] per season on the target, same as
      * `ShowViewModel`/`SeasonViewModel`/`EpisodeViewModel`'s local `downloadWithScope` does today.
      */
@@ -84,8 +85,8 @@ sealed interface RemoteConfigCommand {
     /**
      * One-time download of a single already-known item + media source, right now - the "this
      * episode" immediate-download case. The target resolves its own preferred storage index at
-     * apply time ([dev.pschmitt.jellyfin.utils.Downloader.resolvePreferredStorageIndex]) rather than
-     * this carrying one, since the pushing device has no visibility into the target's storage
+     * apply time ([dev.pschmitt.jellyfin.utils.Downloader.resolvePreferredStorageIndex]) rather
+     * than this carrying one, since the pushing device has no visibility into the target's storage
      * layout.
      */
     @Serializable

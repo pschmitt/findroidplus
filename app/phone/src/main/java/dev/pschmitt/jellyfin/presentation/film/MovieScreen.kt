@@ -15,9 +15,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,8 +43,8 @@ import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderEvent
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderViewModel
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
-import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyVideoMetadata
+import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieAction
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieState
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieViewModel
@@ -137,8 +137,10 @@ fun MovieScreen(
     ObserveAsEvents(viewModel.searchEvents) { event ->
         val message =
             when (event) {
-                is SearchEvent.SearchTriggered -> context.getString(CoreR.string.search_triggered_toast)
-                is SearchEvent.ReleaseGrabbed -> context.getString(CoreR.string.release_grabbed_toast)
+                is SearchEvent.SearchTriggered ->
+                    context.getString(CoreR.string.search_triggered_toast)
+                is SearchEvent.ReleaseGrabbed ->
+                    context.getString(CoreR.string.release_grabbed_toast)
                 is SearchEvent.Failed ->
                     context.getString(
                         CoreR.string.search_failed_toast,
@@ -173,10 +175,18 @@ fun MovieScreen(
                     Toast.makeText(context, CoreR.string.marked_as_played_toast, Toast.LENGTH_SHORT)
                         .show()
                 is MovieAction.UnmarkAsPlayed ->
-                    Toast.makeText(context, CoreR.string.marked_as_unplayed_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.marked_as_unplayed_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 is MovieAction.MarkAsFavorite ->
-                    Toast.makeText(context, CoreR.string.added_to_favorites_toast, Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                            context,
+                            CoreR.string.added_to_favorites_toast,
+                            Toast.LENGTH_SHORT,
+                        )
                         .show()
                 is MovieAction.UnmarkAsFavorite ->
                     Toast.makeText(
@@ -243,292 +253,308 @@ private fun MovieScreenLayout(
         // Same default Material3 indicator as Downloads/Library/Home - one loading-feedback
         // language across the whole app instead of a screen-specific spinner.
         PullToRefreshBox(isRefreshing = state.isRefreshing, onRefresh = onRefresh) {
-        state.movie?.let { movie ->
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                ItemHeader(
-                    item = movie,
-                    scrollState = scrollState,
-                    content = {
-                        PlayOverlayButton(
-                            item = movie,
-                            onClick = { onAction(MovieAction.Play(startFromBeginning = false)) },
-                            enabled = movie.canPlay,
-                            isDeleting = downloaderState.isDeleting,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    },
-                )
-                Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    Text(
-                        text = movie.name,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 3,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    movie.originalTitle?.let { originalTitle ->
-                        if (originalTitle != movie.name) {
-                            Text(
-                                text = originalTitle,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.small))
-                    ItemMetaRow(
-                        dateText = movie.premiereDate?.format(state.dateFormat),
-                        runtimeTicks = movie.runtimeTicks,
-                        officialRating = movie.officialRating,
-                        communityRating = movie.communityRating,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        state.queueStatus?.let { queueStatus -> QueueBadge(status = queueStatus) }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    val deleteDownload: () -> Unit = {
-                        onDownloaderAction(DownloaderAction.DeleteDownload(movie))
-                        Toast.makeText(
-                                androidContext,
-                                CoreR.string.download_deleted_toast,
-                                Toast.LENGTH_SHORT,
-                            )
-                            .show()
-                    }
-                    val downloadedSource =
-                        if (movie.isDownloaded()) {
-                            movie.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
-                        } else {
-                            null
-                        }
-                    ItemButtonsBar(
+            state.movie?.let { movie ->
+                Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+                    ItemHeader(
                         item = movie,
-                        downloaderState = downloaderState,
-                        downloadLocationPreference = downloadLocationPreference,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(MovieAction.Play(startFromBeginning = startFromBeginning))
+                        scrollState = scrollState,
+                        content = {
+                            PlayOverlayButton(
+                                item = movie,
+                                onClick = {
+                                    onAction(MovieAction.Play(startFromBeginning = false))
+                                },
+                                enabled = movie.canPlay,
+                                isDeleting = downloaderState.isDeleting,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
                         },
-                        onTrailerClick = { uri -> onAction(MovieAction.PlayTrailer(uri)) },
-                        onDownloadClick = { storageIndex ->
-                            onDownloaderAction(DownloaderAction.Download(movie, storageIndex))
-                        },
-                        onDownloadCancelClick = {
-                            onDownloaderAction(DownloaderAction.CancelDownload(movie))
-                        },
-                        onDownloadForceClick = {
-                            onDownloaderAction(DownloaderAction.ForceDownload)
-                        },
-                        onDownloadPauseClick = {
-                            onDownloaderAction(DownloaderAction.PauseDownload)
-                        },
-                        onDownloadResumeClick = {
-                            onDownloaderAction(DownloaderAction.ResumeDownload)
-                        },
-                        onDownloadDeleteClick = deleteDownload,
-                        onDownloadCardClick =
-                            state.queueStatus
-                                ?.status
-                                ?.takeIf {
-                                    it == QueueItemStatus.WARNING || it == QueueItemStatus.FAILED
-                                }
-                                ?.let { { onManageImportClick() } },
-                        overflowContent = {
-                            ItemOverflowMenu { closeMenu ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (movie.played) CoreR.string.unmark_as_played
-                                                else CoreR.string.mark_as_played
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_check),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (movie.played) MovieAction.UnmarkAsPlayed
-                                            else MovieAction.MarkAsPlayed
-                                        )
-                                    },
+                    )
+                    Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        Text(
+                            text = movie.name,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 3,
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                        movie.originalTitle?.let { originalTitle ->
+                            if (originalTitle != movie.name) {
+                                Text(
+                                    text = originalTitle,
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (movie.favorite) CoreR.string.remove_from_favorites
-                                                else CoreR.string.add_to_favorites
-                                            )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    if (movie.favorite) CoreR.drawable.ic_heart_filled
-                                                    else CoreR.drawable.ic_heart
-                                                ),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(
-                                            if (movie.favorite) MovieAction.UnmarkAsFavorite
-                                            else MovieAction.MarkAsFavorite
-                                        )
-                                    },
+                            }
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.small))
+                        ItemMetaRow(
+                            dateText = movie.premiereDate?.format(state.dateFormat),
+                            runtimeTicks = movie.runtimeTicks,
+                            officialRating = movie.officialRating,
+                            communityRating = movie.communityRating,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            state.queueStatus?.let { queueStatus ->
+                                QueueBadge(status = queueStatus)
+                            }
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        val deleteDownload: () -> Unit = {
+                            onDownloaderAction(DownloaderAction.DeleteDownload(movie))
+                            Toast.makeText(
+                                    androidContext,
+                                    CoreR.string.download_deleted_toast,
+                                    Toast.LENGTH_SHORT,
                                 )
-                                // Always offered, regardless of Radarr configuration/tmdbId
-                                // presence - a search that can't resolve a target fails with a
-                                // clear toast instead of the entry silently vanishing.
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(CoreR.string.search_episode_automatic))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_radarr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(MovieAction.SearchMovieAutomatic)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(CoreR.string.search_episode_manual))
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(CoreR.drawable.ic_radarr),
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                        )
-                                    },
-                                    onClick = {
-                                        closeMenu()
-                                        onAction(MovieAction.OpenReleasePicker)
-                                    },
-                                )
-                                if (state.videoMetadata != null) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(CoreR.string.info)) },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_info),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            infoDialogOpen = true
-                                        },
-                                    )
-                                }
-                                if (state.canDelete) {
-                                    HorizontalDivider()
+                                .show()
+                        }
+                        val downloadedSource =
+                            if (movie.isDownloaded()) {
+                                movie.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                            } else {
+                                null
+                            }
+                        ItemButtonsBar(
+                            item = movie,
+                            downloaderState = downloaderState,
+                            downloadLocationPreference = downloadLocationPreference,
+                            onPlayClick = { startFromBeginning ->
+                                onAction(MovieAction.Play(startFromBeginning = startFromBeginning))
+                            },
+                            onTrailerClick = { uri -> onAction(MovieAction.PlayTrailer(uri)) },
+                            onDownloadClick = { storageIndex ->
+                                onDownloaderAction(DownloaderAction.Download(movie, storageIndex))
+                            },
+                            onDownloadCancelClick = {
+                                onDownloaderAction(DownloaderAction.CancelDownload(movie))
+                            },
+                            onDownloadForceClick = {
+                                onDownloaderAction(DownloaderAction.ForceDownload)
+                            },
+                            onDownloadPauseClick = {
+                                onDownloaderAction(DownloaderAction.PauseDownload)
+                            },
+                            onDownloadResumeClick = {
+                                onDownloaderAction(DownloaderAction.ResumeDownload)
+                            },
+                            onDownloadDeleteClick = deleteDownload,
+                            onDownloadCardClick =
+                                state.queueStatus
+                                    ?.status
+                                    ?.takeIf {
+                                        it == QueueItemStatus.WARNING ||
+                                            it == QueueItemStatus.FAILED
+                                    }
+                                    ?.let { { onManageImportClick() } },
+                            overflowContent = {
+                                ItemOverflowMenu { closeMenu ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = stringResource(CoreR.string.delete_from_jellyfin),
-                                                color = MaterialTheme.colorScheme.error,
+                                                stringResource(
+                                                    if (movie.played) CoreR.string.unmark_as_played
+                                                    else CoreR.string.mark_as_played
+                                                )
                                             )
                                         },
                                         leadingIcon = {
                                             Icon(
-                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                painter = painterResource(CoreR.drawable.ic_check),
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error,
                                             )
                                         },
                                         onClick = {
                                             closeMenu()
-                                            deleteDialogOpen = true
+                                            onAction(
+                                                if (movie.played) MovieAction.UnmarkAsPlayed
+                                                else MovieAction.MarkAsPlayed
+                                            )
                                         },
                                     )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (movie.favorite)
+                                                        CoreR.string.remove_from_favorites
+                                                    else CoreR.string.add_to_favorites
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter =
+                                                    painterResource(
+                                                        if (movie.favorite)
+                                                            CoreR.drawable.ic_heart_filled
+                                                        else CoreR.drawable.ic_heart
+                                                    ),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(
+                                                if (movie.favorite) MovieAction.UnmarkAsFavorite
+                                                else MovieAction.MarkAsFavorite
+                                            )
+                                        },
+                                    )
+                                    // Always offered, regardless of Radarr configuration/tmdbId
+                                    // presence - a search that can't resolve a target fails with a
+                                    // clear toast instead of the entry silently vanishing.
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    CoreR.string.search_episode_automatic
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_radarr),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(MovieAction.SearchMovieAutomatic)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(stringResource(CoreR.string.search_episode_manual))
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_radarr),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            onAction(MovieAction.OpenReleasePicker)
+                                        },
+                                    )
+                                    if (state.videoMetadata != null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(CoreR.string.info)) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(CoreR.drawable.ic_info),
+                                                    contentDescription = null,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                infoDialogOpen = true
+                                            },
+                                        )
+                                    }
+                                    if (state.canDelete) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text =
+                                                        stringResource(
+                                                            CoreR.string.delete_from_jellyfin
+                                                        ),
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(CoreR.drawable.ic_trash),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
+                                            },
+                                            onClick = {
+                                                closeMenu()
+                                                deleteDialogOpen = true
+                                            },
+                                        )
+                                    }
                                 }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        downloadedSource?.let { source ->
+                            // Size lives on the "Delete download" tile above - only surface this
+                            // caption for a broken (0-byte/missing) download.
+                            if (!source.path.endsWith(".download") && movie.isDownloadBroken()) {
+                                Spacer(Modifier.height(MaterialTheme.spacings.small))
+                                LocalStorageIndicator(
+                                    path = source.path,
+                                    sizeBytes = source.size,
+                                    isBroken = true,
+                                    showSize = false,
+                                )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    downloadedSource?.let { source ->
-                        // Size lives on the "Delete download" tile above - only surface this
-                        // caption for a broken (0-byte/missing) download.
-                        if (!source.path.endsWith(".download") && movie.isDownloadBroken()) {
-                            Spacer(Modifier.height(MaterialTheme.spacings.small))
-                            LocalStorageIndicator(
-                                path = source.path,
-                                sizeBytes = source.size,
-                                isBroken = true,
-                                showSize = false,
+                        }
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        if (infoDialogOpen && state.videoMetadata != null) {
+                            InfoDialog(
+                                videoMetadata = state.videoMetadata!!,
+                                downloadedFilePath =
+                                    downloadedSource?.path?.takeUnless { it.endsWith(".download") },
+                                onDismiss = { infoDialogOpen = false },
                             )
                         }
-                    }
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    if (infoDialogOpen && state.videoMetadata != null) {
-                        InfoDialog(
-                            videoMetadata = state.videoMetadata!!,
-                            downloadedFilePath =
-                                downloadedSource?.path?.takeUnless { it.endsWith(".download") },
-                            onDismiss = { infoDialogOpen = false },
+                        if (deleteDialogOpen) {
+                            val cascadable =
+                                movie.tmdbId != null &&
+                                    (state.radarrConfigured || state.seerrConfigured)
+                            DeleteItemDialog(
+                                message = stringResource(CoreR.string.delete_movie_message),
+                                pvrCascadeLabel =
+                                    if (cascadable) {
+                                        stringResource(CoreR.string.also_remove_from_radarr)
+                                    } else {
+                                        null
+                                    },
+                                pvrCascadeSummary =
+                                    if (cascadable) {
+                                        stringResource(CoreR.string.also_remove_from_radarr_summary)
+                                    } else {
+                                        null
+                                    },
+                                onConfirm = { cascadeToPvr ->
+                                    onAction(MovieAction.DeleteItem(cascadeToPvr))
+                                    deleteDialogOpen = false
+                                },
+                                onDismiss = { deleteDialogOpen = false },
+                            )
+                        }
+                        OverviewText(text = movie.overview, maxCollapsedLines = 3)
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                        InfoText(
+                            genres = movie.genres,
+                            director = state.director,
+                            writers = state.writers,
                         )
+                        Spacer(Modifier.height(MaterialTheme.spacings.medium))
                     }
-                    if (deleteDialogOpen) {
-                        val cascadable =
-                            movie.tmdbId != null &&
-                                (state.radarrConfigured || state.seerrConfigured)
-                        DeleteItemDialog(
-                            message = stringResource(CoreR.string.delete_movie_message),
-                            pvrCascadeLabel =
-                                if (cascadable) {
-                                    stringResource(CoreR.string.also_remove_from_radarr)
-                                } else {
-                                    null
-                                },
-                            pvrCascadeSummary =
-                                if (cascadable) {
-                                    stringResource(CoreR.string.also_remove_from_radarr_summary)
-                                } else {
-                                    null
-                                },
-                            onConfirm = { cascadeToPvr ->
-                                onAction(MovieAction.DeleteItem(cascadeToPvr))
-                                deleteDialogOpen = false
+                    if (state.actors.isNotEmpty()) {
+                        ActorsRow(
+                            actors = state.actors,
+                            onActorClick = { personId ->
+                                onAction(MovieAction.NavigateToPerson(personId))
                             },
-                            onDismiss = { deleteDialogOpen = false },
+                            contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
                         )
                     }
-                    OverviewText(text = movie.overview, maxCollapsedLines = 3)
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
-                    InfoText(
-                        genres = movie.genres,
-                        director = state.director,
-                        writers = state.writers,
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                    Spacer(Modifier.height(paddingBottom))
                 }
-                if (state.actors.isNotEmpty()) {
-                    ActorsRow(
-                        actors = state.actors,
-                        onActorClick = { personId ->
-                            onAction(MovieAction.NavigateToPerson(personId))
-                        },
-                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                    )
-                }
-                Spacer(Modifier.height(paddingBottom))
-            }
-        } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            } ?: run { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
         }
     }
 

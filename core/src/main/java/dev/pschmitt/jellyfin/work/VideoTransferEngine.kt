@@ -13,14 +13,14 @@ import okhttp3.Request
 
 /**
  * The actual byte-shuffling for a video download - streamed via raw OkHttp in fixed-size chunks
- * under our own control rather than delegated to the system DownloadManager (DownloadManager is
- * the root cause of a >4GiB failure elsewhere in this app's history; see git history on the old
+ * under our own control rather than delegated to the system DownloadManager (DownloadManager is the
+ * root cause of a >4GiB failure elsewhere in this app's history; see git history on the old
  * VideoDownloadWorker for the full writeup) - plus the post-download SHA-256 verification pass.
  *
- * Deliberately decoupled from [VideoDownloadService]'s lifecycle/notification/repository
- * concerns (callers get plain progress callbacks) so this can be driven directly from an
- * instrumented test against a local HTTP server, with no Service/WorkManager test harness needed -
- * see VideoTransferEngineLargeFileTest for the >4GiB regression coverage this replaced.
+ * Deliberately decoupled from [VideoDownloadService]'s lifecycle/notification/repository concerns
+ * (callers get plain progress callbacks) so this can be driven directly from an instrumented test
+ * against a local HTTP server, with no Service/WorkManager test harness needed - see
+ * VideoTransferEngineLargeFileTest for the >4GiB regression coverage this replaced.
  */
 internal class VideoTransferEngine {
     /** (downloadedBytes, totalBytes, percent, speedBytesPerSecond) */
@@ -85,7 +85,12 @@ internal class VideoTransferEngine {
                             val bytesSinceLast = downloadedSoFar - bytesAtLastReport
                             val speedBytesPerSecond =
                                 bytesSinceLast.times(1000).div(elapsedMs.coerceAtLeast(1))
-                            onProgress(downloadedSoFar, totalBytes.coerceAtLeast(0), percent, speedBytesPerSecond)
+                            onProgress(
+                                downloadedSoFar,
+                                totalBytes.coerceAtLeast(0),
+                                percent,
+                                speedBytesPerSecond,
+                            )
                             lastReportMs = now
                             bytesAtLastReport = downloadedSoFar
                         }

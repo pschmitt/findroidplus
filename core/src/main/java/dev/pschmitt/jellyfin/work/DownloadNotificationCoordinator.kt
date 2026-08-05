@@ -12,8 +12,8 @@ import dev.pschmitt.jellyfin.utils.formatEta
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Every [VideoDownloadService] transfer reports into this instead of posting its own notification, so
- * downloading a whole season doesn't flood the shade with one ongoing entry per episode - they
+ * Every [VideoDownloadService] transfer reports into this instead of posting its own notification,
+ * so downloading a whole season doesn't flood the shade with one ongoing entry per episode - they
  * all collapse into a single shared notification (NOTIFICATION_ID). With exactly one active
  * download it still shows that item's own name/percent/speed/ETA and Pause/Cancel actions,
  * unchanged from before; with several at once it switches to an aggregate summary and drops the
@@ -46,7 +46,8 @@ internal object DownloadNotificationCoordinator {
         if (entries.isEmpty()) {
             NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
         } else {
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, buildNotification(context))
+            NotificationManagerCompat.from(context)
+                .notify(NOTIFICATION_ID, buildNotification(context))
         }
     }
 
@@ -81,7 +82,11 @@ internal object DownloadNotificationCoordinator {
                 .addAction(
                     CoreR.drawable.ic_x,
                     context.getString(CoreR.string.download_action_cancel),
-                    actionPendingIntent(context, DownloadActionReceiver.ACTION_CANCEL, entry.downloadId),
+                    actionPendingIntent(
+                        context,
+                        DownloadActionReceiver.ACTION_CANCEL,
+                        entry.downloadId,
+                    ),
                 )
             return
         }
@@ -89,13 +94,20 @@ internal object DownloadNotificationCoordinator {
         if (entry.verifying) {
             builder
                 .setContentText(
-                    context.getString(CoreR.string.download_verifying_status, entry.percent.coerceAtLeast(0))
+                    context.getString(
+                        CoreR.string.download_verifying_status,
+                        entry.percent.coerceAtLeast(0),
+                    )
                 )
                 .setProgress(100, entry.percent.coerceAtLeast(0), entry.percent < 0)
                 .addAction(
                     CoreR.drawable.ic_x,
                     context.getString(CoreR.string.download_action_cancel),
-                    actionPendingIntent(context, DownloadActionReceiver.ACTION_CANCEL, entry.downloadId),
+                    actionPendingIntent(
+                        context,
+                        DownloadActionReceiver.ACTION_CANCEL,
+                        entry.downloadId,
+                    ),
                 )
             return
         }
@@ -103,7 +115,8 @@ internal object DownloadNotificationCoordinator {
         val indeterminate = entry.totalBytes <= 0
         val etaSeconds =
             if (entry.speedBytesPerSecond > 0) {
-                (entry.totalBytes - entry.downloadedBytes).coerceAtLeast(0) / entry.speedBytesPerSecond
+                (entry.totalBytes - entry.downloadedBytes).coerceAtLeast(0) /
+                    entry.speedBytesPerSecond
             } else {
                 -1L
             }
@@ -135,11 +148,19 @@ internal object DownloadNotificationCoordinator {
             .addAction(
                 CoreR.drawable.ic_x,
                 context.getString(CoreR.string.download_action_cancel),
-                actionPendingIntent(context, DownloadActionReceiver.ACTION_CANCEL, entry.downloadId),
+                actionPendingIntent(
+                    context,
+                    DownloadActionReceiver.ACTION_CANCEL,
+                    entry.downloadId,
+                ),
             )
     }
 
-    private fun applyAggregate(builder: NotificationCompat.Builder, context: Context, snapshot: List<Entry>) {
+    private fun applyAggregate(
+        builder: NotificationCompat.Builder,
+        context: Context,
+        snapshot: List<Entry>,
+    ) {
         val running = snapshot.filter { !it.queued && it.totalBytes > 0 }
         val downloadedBytes = running.sumOf { it.downloadedBytes }
         val totalBytes = running.sumOf { it.totalBytes }
@@ -164,7 +185,8 @@ internal object DownloadNotificationCoordinator {
                 context.getString(CoreR.string.download_queued)
             }
         val runningNames = running.joinToString(", ") { it.itemName }
-        val collapsedText = if (runningNames.isNotEmpty()) "$runningNames • $progressText" else progressText
+        val collapsedText =
+            if (runningNames.isNotEmpty()) "$runningNames • $progressText" else progressText
 
         builder
             .setContentTitle(
@@ -180,7 +202,11 @@ internal object DownloadNotificationCoordinator {
             .addAction(
                 CoreR.drawable.ic_pause,
                 context.getString(CoreR.string.download_action_pause),
-                actionPendingIntent(context, DownloadActionReceiver.ACTION_PAUSE_ALL, downloadId = -1L),
+                actionPendingIntent(
+                    context,
+                    DownloadActionReceiver.ACTION_PAUSE_ALL,
+                    downloadId = -1L,
+                ),
             )
     }
 
@@ -188,7 +214,8 @@ internal object DownloadNotificationCoordinator {
     fun activeDownloadIds(): List<Long> = entries.values.map { it.downloadId }
 
     /** downloadIds of downloads currently transferring bytes, i.e. holding a slot. */
-    fun runningDownloadIds(): List<Long> = entries.values.filter { !it.queued }.map { it.downloadId }
+    fun runningDownloadIds(): List<Long> =
+        entries.values.filter { !it.queued }.map { it.downloadId }
 
     private fun inboxStyle(
         context: Context,
@@ -217,7 +244,11 @@ internal object DownloadNotificationCoordinator {
         return style
     }
 
-    private fun actionPendingIntent(context: Context, action: String, downloadId: Long): PendingIntent {
+    private fun actionPendingIntent(
+        context: Context,
+        action: String,
+        downloadId: Long,
+    ): PendingIntent {
         val intent =
             Intent(context, DownloadActionReceiver::class.java).apply {
                 this.action = action

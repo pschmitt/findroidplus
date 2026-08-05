@@ -12,18 +12,18 @@ import timber.log.Timber
  * Resolves one [PendingDownloadRequestDto] against the current Jellyfin library and, if the
  * requested season/episode has appeared, enqueues its download. Mirrors
  * [AutoDownloadRuleEvaluator]'s shape/dedup logic, but a pending request is a one-off "download
- * whichever episodes exist the moment this season/episode shows up" rather than a persistent
- * "keep following new episodes" rule (see [dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository]
+ * whichever episodes exist the moment this season/episode shows up" rather than a persistent "keep
+ * following new episodes" rule (see [dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository]
  * for that) - so once resolved, the caller ([dev.pschmitt.jellyfin.work.PendingDownloadWorker])
  * deletes the row regardless of whether anything actually needed downloading.
  */
 class PendingDownloadFulfiller {
     /**
-     * Returns true when [request]'s target season/episode was found in the library (whether or
-     * not a new download was actually needed - it may already be downloaded/queued by other
-     * means) and the row should be deleted; false when it still isn't there yet and the request
-     * should be left in place for the next cycle. [onFulfilled] is invoked with a display title
-     * only when a new download was actually enqueued, so the caller can post a notification.
+     * Returns true when [request]'s target season/episode was found in the library (whether or not
+     * a new download was actually needed - it may already be downloaded/queued by other means) and
+     * the row should be deleted; false when it still isn't there yet and the request should be left
+     * in place for the next cycle. [onFulfilled] is invoked with a display title only when a new
+     * download was actually enqueued, so the caller can post a notification.
      */
     suspend fun fulfill(
         request: PendingDownloadRequestDto,
@@ -58,7 +58,9 @@ class PendingDownloadFulfiller {
         val requestedEpisodeNumber = request.episodeNumber
         val targetEpisodes =
             if (requestedEpisodeNumber != null) {
-                val episode = episodes.firstOrNull { it.indexNumber == requestedEpisodeNumber } ?: return false
+                val episode =
+                    episodes.firstOrNull { it.indexNumber == requestedEpisodeNumber }
+                        ?: return false
                 listOf(episode)
             } else {
                 // Whole-season request: only fulfilled once the season actually has episodes to
@@ -100,7 +102,8 @@ class PendingDownloadFulfiller {
         }
 
         if (queuedAny) {
-            val title = if (requestedEpisodeNumber != null) targetEpisodes.first().name else season.name
+            val title =
+                if (requestedEpisodeNumber != null) targetEpisodes.first().name else season.name
             onFulfilled(title)
         }
         return !capReached

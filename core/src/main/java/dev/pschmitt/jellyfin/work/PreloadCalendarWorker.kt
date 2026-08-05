@@ -33,7 +33,8 @@ constructor(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result =
         withContext(Dispatchers.IO) {
-            appPreferences.getValue(appPreferences.currentServer) ?: return@withContext Result.success()
+            appPreferences.getValue(appPreferences.currentServer)
+                ?: return@withContext Result.success()
             if (calendarCache.isFresh()) return@withContext Result.success()
 
             try {

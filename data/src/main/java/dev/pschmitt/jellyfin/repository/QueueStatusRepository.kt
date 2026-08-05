@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Exposes the current Sonarr/Radarr download queue. [getQueueSnapshotFlow] carries the full queue
  * - including entries that couldn't be matched to a Jellyfin library item (e.g. a torrent added
- * manually on the PVR side) and per-service fetch errors - see `matchSonarr`/`matchRadarr` in
- * `QueueStatusMatching.kt`. The map-shaped flows only cover matched entries, keyed by the
- * Jellyfin item id; items that aren't in either queue right now are simply absent.
+ *   manually on the PVR side) and per-service fetch errors - see `matchSonarr`/`matchRadarr` in
+ *   `QueueStatusMatching.kt`. The map-shaped flows only cover matched entries, keyed by the
+ *   Jellyfin item id; items that aren't in either queue right now are simply absent.
  */
 interface QueueStatusRepository {
     /** Every current queue entry (matched or not, Sonarr-then-Radarr order) plus fetch errors. */

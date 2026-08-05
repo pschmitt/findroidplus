@@ -8,11 +8,11 @@ import java.time.temporal.ChronoUnit
 /**
  * Backup filename shared by [AutoBackupWorker][dev.pschmitt.jellyfin.work.AutoBackupWorker]'s
  * scheduled exports and the manual "Back up now" flow, so the two can't drift apart - e.g.
- * "jollyfin-backup-Pixel-8-2026-07-17T08:58:03+02:00.frb". SAF/Drive accept ':' in display
- * names, so the UTC offset can stay in its readable form.
+ * "jollyfin-backup-Pixel-8-2026-07-17T08:58:03+02:00.frb". SAF/Drive accept ':' in display names,
+ * so the UTC offset can stay in its readable form.
  *
- * Includes the device model so backups from multiple devices sharing one destination folder
- * don't overwrite each other's files.
+ * Includes the device model so backups from multiple devices sharing one destination folder don't
+ * overwrite each other's files.
  */
 object BackupFileNaming {
     fun fileName(): String {

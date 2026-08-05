@@ -1,7 +1,6 @@
 package dev.pschmitt.jellyfin.models
 
 /** UI-facing models for the Seerr/Seerr integration - see `SeerrRepository`. */
-
 enum class SeerrMediaType {
     MOVIE,
     TV,
@@ -78,8 +77,8 @@ data class SeerrMediaDetail(
     val episode: SeerrEpisodeDetail? = null,
     /**
      * Series only. Per-season status, as tracked by Seerr - empty when the show has never been
-     * requested at all (a normal state, not an error). Seasons absent from this list simply have
-     * no status yet (implicitly not-requested).
+     * requested at all (a normal state, not an error). Seasons absent from this list simply have no
+     * status yet (implicitly not-requested).
      */
     val seasons: List<SeerrSeasonInfo> = emptyList(),
 )

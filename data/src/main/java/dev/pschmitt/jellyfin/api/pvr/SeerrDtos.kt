@@ -35,10 +35,10 @@ data class SeerrSearchResult(
 
 /**
  * Seerr's media availability: 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE,
- * 5=AVAILABLE (see `SeerrMediaStatus.fromCode`). The detail endpoints additionally embed the
- * open requests for the media - needed to cancel ("unrequest") from the detail view, since
- * DELETE /request/{id} wants request ids, not TMDB ids. `seasons` is TV-only: Jellyseerr tracks
- * each season's own availability separately from the show-level aggregate `status`.
+ * 5=AVAILABLE (see `SeerrMediaStatus.fromCode`). The detail endpoints additionally embed the open
+ * requests for the media - needed to cancel ("unrequest") from the detail view, since DELETE
+ * /request/{id} wants request ids, not TMDB ids. `seasons` is TV-only: Jellyseerr tracks each
+ * season's own availability separately from the show-level aggregate `status`.
  */
 @Serializable
 data class SeerrMediaInfo(
@@ -104,9 +104,9 @@ data class SeerrRequestMedia(
 // back the dedicated Seerr media detail view.
 
 /**
- * One TMDB-sourced video (trailer/teaser/clip/featurette/...) - `site` is almost always
- * "YouTube", and `url` is already a full playable link (`https://www.youtube.com/watch?v={key}`),
- * not just the bare video id.
+ * One TMDB-sourced video (trailer/teaser/clip/featurette/...) - `site` is almost always "YouTube",
+ * and `url` is already a full playable link (`https://www.youtube.com/watch?v={key}`), not just the
+ * bare video id.
  */
 @Serializable
 data class SeerrRelatedVideo(

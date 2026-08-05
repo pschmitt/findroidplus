@@ -81,9 +81,11 @@ object DownloadSettingsBridge {
         fields.forEach { field -> put(field.name, field.get(appPreferences)) }
     }
 
-    /** Applies every key present in [patch], returning the names actually applied. Unknown keys
-     * are ignored (forward-compatible with a CLI newer than the app) rather than rejecting the
-     * whole patch over one unrecognized field. */
+    /**
+     * Applies every key present in [patch], returning the names actually applied. Unknown keys are
+     * ignored (forward-compatible with a CLI newer than the app) rather than rejecting the whole
+     * patch over one unrecognized field.
+     */
     fun applyPatch(appPreferences: AppPreferences, patch: JsonObject): List<String> {
         val applied = mutableListOf<String>()
         patch.forEach { (name, value) ->

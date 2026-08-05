@@ -49,14 +49,17 @@ constructor(
 
     suspend fun getSeasons(seriesId: UUID): List<FindroidSeason> = repository.getSeasons(seriesId)
 
-    suspend fun getOtherDevices(): List<RemoteDeviceInfo> = remoteConfigRepository.listOtherDevices()
+    suspend fun getOtherDevices(): List<RemoteDeviceInfo> =
+        remoteConfigRepository.listOtherDevices()
 
     fun loadRules() {
         viewModelScope.launch {
             _state.emit(_state.value.copy(isLoading = true, error = null))
             try {
                 val uiModels = fetchUiModels()
-                _state.emit(_state.value.copy(isLoading = false, shows = uiModels ?: _state.value.shows))
+                _state.emit(
+                    _state.value.copy(isLoading = false, shows = uiModels ?: _state.value.shows)
+                )
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(isLoading = false, error = e))
             }
@@ -90,14 +93,16 @@ constructor(
         val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return null
         val userId = repository.getUserId()
         val rules = ruleRepository.getRules(serverId, userId)
-        return rules.groupBy { it.seriesId }.mapNotNull { (seriesId, rulesForShow) ->
-            try {
-                toUiModel(seriesId, rulesForShow)
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to resolve auto-download rules for $seriesId")
-                null
+        return rules
+            .groupBy { it.seriesId }
+            .mapNotNull { (seriesId, rulesForShow) ->
+                try {
+                    toUiModel(seriesId, rulesForShow)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to resolve auto-download rules for $seriesId")
+                    null
+                }
             }
-        }
     }
 
     private suspend fun toUiModel(
@@ -121,7 +126,10 @@ constructor(
                     )
                 else -> {
                     val season = repository.getSeason(scope.seasonIds.first())
-                    UiText.StringResource(CoreR.string.auto_download_rule_season, season.indexNumber)
+                    UiText.StringResource(
+                        CoreR.string.auto_download_rule_season,
+                        season.indexNumber,
+                    )
                 }
             }
         val (downloadedSizeBytes, downloadedSamplePath) = downloadedSize(seriesId, scope.seasonIds)
@@ -151,10 +159,9 @@ constructor(
             val episodes = database.getEpisodesByShowId(seriesId)
             val scoped =
                 if (seasonIds.isEmpty()) episodes else episodes.filter { it.seasonId in seasonIds }
-            val localSources =
-                scoped.flatMap { episode ->
-                    database.getSources(episode.id).filter { it.type == FindroidSourceType.LOCAL }
-                }
+            val localSources = scoped.flatMap { episode ->
+                database.getSources(episode.id).filter { it.type == FindroidSourceType.LOCAL }
+            }
             localSources.sumOf { File(it.path).length() } to localSources.firstOrNull()?.path
         }
 
@@ -191,7 +198,8 @@ constructor(
                 loadRules()
                 republishActiveRulesSummary()
             } else {
-                val deviceName = getOtherDevices().find { it.id == targetDeviceId }?.name ?: targetDeviceId
+                val deviceName =
+                    getOtherDevices().find { it.id == targetDeviceId }?.name ?: targetDeviceId
                 remoteConfigRepository.pushRuleUpdate(
                     targetDeviceId = targetDeviceId,
                     serverId = serverId,

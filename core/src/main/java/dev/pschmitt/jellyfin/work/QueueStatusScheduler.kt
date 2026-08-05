@@ -10,9 +10,10 @@ import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import java.util.concurrent.TimeUnit
 
 /**
- * Schedules [QueueStatusWorker] as a backstop for [dev.pschmitt.jellyfin.repository.
- * QueueStatusRepository]'s in-process poll loop, mirroring [AutoBackupScheduler]'s
- * gate-and-cancel shape. Only kept scheduled while at least one of Sonarr/Radarr is enabled.
+ * Schedules [QueueStatusWorker] as a backstop for
+ * [dev.pschmitt.jellyfin.repository. QueueStatusRepository]'s in-process poll loop, mirroring
+ * [AutoBackupScheduler]'s gate-and-cancel shape. Only kept scheduled while at least one of
+ * Sonarr/Radarr is enabled.
  */
 object QueueStatusScheduler {
     private const val UNIQUE_WORK_NAME = "queueStatusPoll"
@@ -42,7 +43,10 @@ object QueueStatusScheduler {
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
         val periodicRequest =
-            PeriodicWorkRequestBuilder<QueueStatusWorker>(intervalMinutes.toLong(), TimeUnit.MINUTES)
+            PeriodicWorkRequestBuilder<QueueStatusWorker>(
+                    intervalMinutes.toLong(),
+                    TimeUnit.MINUTES,
+                )
                 .setConstraints(constraints)
                 .build()
 

@@ -13,8 +13,8 @@ import timber.log.Timber
  * Movie counterpart of [SonarrSearchRepositoryImpl] - same lambda-injection pattern
  * ([radarrApiKeyProvider] resolves the secret from `SecureCredentialStore` in `core`,
  * [scheduleCompletionCheck] enqueues `dev.pschmitt.jellyfin.work.AutomaticSearchWorker`) and the
- * same per-target release cache. Constructed via `dev.pschmitt.jellyfin.di.RadarrSearchModule`
- * (a Hilt `@Provides`) rather than an `@Inject` constructor, since `data` has no Hilt plugin.
+ * same per-target release cache. Constructed via `dev.pschmitt.jellyfin.di.RadarrSearchModule` (a
+ * Hilt `@Provides`) rather than an `@Inject` constructor, since `data` has no Hilt plugin.
  */
 class RadarrSearchRepositoryImpl(
     private val appPreferences: AppPreferences,
@@ -30,11 +30,10 @@ class RadarrSearchRepositoryImpl(
     private data class CachedReleases(val releases: List<PvrRelease>, val fetchedAtMs: Long)
 
     override suspend fun searchMovieByTmdbId(tmdbId: Int): Result<Unit> {
-        val movieId =
-            runAction { api ->
-                api.getMovie().firstOrNull { it.tmdbId == tmdbId }?.id
-                    ?: throw IllegalArgumentException("Could not find this movie in Radarr")
-            }
+        val movieId = runAction { api ->
+            api.getMovie().firstOrNull { it.tmdbId == tmdbId }?.id
+                ?: throw IllegalArgumentException("Could not find this movie in Radarr")
+        }
         return movieId.fold({ searchMovie(it) }, { Result.failure(it) })
     }
 
@@ -60,7 +59,9 @@ class RadarrSearchRepositoryImpl(
     ): Result<AutomaticSearchOutcome> = runAction { api ->
         var status = api.getCommandStatus(commandId)
         val deadline = System.currentTimeMillis() + PVR_COMMAND_AWAIT_TIMEOUT_MS
-        while (status.status !in PVR_TERMINAL_COMMAND_STATUSES && System.currentTimeMillis() < deadline) {
+        while (
+            status.status !in PVR_TERMINAL_COMMAND_STATUSES && System.currentTimeMillis() < deadline
+        ) {
             delay(PVR_COMMAND_POLL_INTERVAL_MS)
             status = api.getCommandStatus(commandId)
         }
@@ -85,21 +86,21 @@ class RadarrSearchRepositoryImpl(
             }
     }
 
-    override suspend fun grabRelease(release: PvrRelease): Result<Unit> =
-        runAction { it.grabRelease(release.guid, release.indexerId) }
-            .onSuccess {
-                // Don't know which movie this release belonged to from here - clear everything
-                // rather than risk showing a stale list that still offers an already-grabbed release.
-                releaseCache.clear()
-            }
-
-    override suspend fun deleteMovieByTmdbId(tmdbId: String): Result<Unit> =
-        runAction { api ->
-            val movieId =
-                api.getMovie().firstOrNull { it.tmdbId.toString() == tmdbId }?.id
-                    ?: throw IllegalArgumentException("Could not find this movie in Radarr")
-            api.deleteMovie(movieId, deleteFiles = true, addImportExclusion = true)
+    override suspend fun grabRelease(release: PvrRelease): Result<Unit> = runAction {
+        it.grabRelease(release.guid, release.indexerId)
+    }
+        .onSuccess {
+            // Don't know which movie this release belonged to from here - clear everything
+            // rather than risk showing a stale list that still offers an already-grabbed release.
+            releaseCache.clear()
         }
+
+    override suspend fun deleteMovieByTmdbId(tmdbId: String): Result<Unit> = runAction { api ->
+        val movieId =
+            api.getMovie().firstOrNull { it.tmdbId.toString() == tmdbId }?.id
+                ?: throw IllegalArgumentException("Could not find this movie in Radarr")
+        api.deleteMovie(movieId, deleteFiles = true, addImportExclusion = true)
+    }
 
     private suspend fun <T> runAction(block: suspend (RadarrApi) -> T): Result<T> {
         val api = api() ?: return Result.failure(IllegalStateException("Radarr is not configured"))

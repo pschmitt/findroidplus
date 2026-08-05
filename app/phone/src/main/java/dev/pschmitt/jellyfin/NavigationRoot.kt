@@ -44,7 +44,6 @@ import dev.pschmitt.jellyfin.models.FindroidShow
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.presentation.film.AutoDownloadRulesScreen
-import dev.pschmitt.jellyfin.presentation.settings.localaccess.LocalAccessScreen
 import dev.pschmitt.jellyfin.presentation.film.CalendarScreen
 import dev.pschmitt.jellyfin.presentation.film.CollectionScreen
 import dev.pschmitt.jellyfin.presentation.film.DownloadsScreen
@@ -62,6 +61,7 @@ import dev.pschmitt.jellyfin.presentation.settings.SettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.backup.BackupSettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.homelayout.HomeLayoutSettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.integrations.IntegrationsSettingsScreen
+import dev.pschmitt.jellyfin.presentation.settings.localaccess.LocalAccessScreen
 import dev.pschmitt.jellyfin.presentation.settings.qrexport.QrExportScreen
 import dev.pschmitt.jellyfin.presentation.setup.addresses.ServerAddressesScreen
 import dev.pschmitt.jellyfin.presentation.setup.addserver.AddServerScreen
@@ -444,9 +444,7 @@ fun NavigationRoot(
                 // session existed yet - is only computed once at process cold-start. Without this,
                 // logging in or restoring a backup within the same process would leave the
                 // library/Movies/Shows nav tabs permanently empty.
-                LaunchedEffect(Unit) {
-                    if (!isOfflineMode) mediaViewModel.loadData()
-                }
+                LaunchedEffect(Unit) { if (!isOfflineMode) mediaViewModel.loadData() }
                 HomeScreen(
                     onLibraryClick = {
                         navController.safeNavigate(
@@ -776,21 +774,11 @@ fun NavigationRoot(
                     navigateToAutoDownloadRules = {
                         navController.safeNavigate(AutoDownloadRulesRoute)
                     },
-                    navigateToLocalAccess = {
-                        navController.safeNavigate(LocalAccessRoute)
-                    },
-                    navigateToBackupSettings = {
-                        navController.safeNavigate(BackupSettingsRoute)
-                    },
-                    navigateToQrExport = {
-                        navController.safeNavigate(QrExportRoute)
-                    },
-                    navigateToConnections = {
-                        navController.safeNavigate(ConnectionsRoute)
-                    },
-                    navigateToHomeLayout = {
-                        navController.safeNavigate(HomeLayoutSettingsRoute)
-                    },
+                    navigateToLocalAccess = { navController.safeNavigate(LocalAccessRoute) },
+                    navigateToBackupSettings = { navController.safeNavigate(BackupSettingsRoute) },
+                    navigateToQrExport = { navController.safeNavigate(QrExportRoute) },
+                    navigateToConnections = { navController.safeNavigate(ConnectionsRoute) },
+                    navigateToHomeLayout = { navController.safeNavigate(HomeLayoutSettingsRoute) },
                     navigateBack = { navController.safePopBackStack() },
                 )
             }

@@ -18,9 +18,9 @@ import kotlinx.coroutines.withContext
 /**
  * Evaluates auto-download rules for the currently active server/user only. [Downloader] and
  * [JellyfinRepository] are both Hilt singletons scoped to the "current" server (see
- * DownloaderImpl's use of appPreferences.currentServer when tagging downloaded rows), so
- * evaluating any other server here would mis-tag persisted rows. Rules for inactive servers stay
- * correctly persisted and get evaluated whenever the user switches to that server.
+ * DownloaderImpl's use of appPreferences.currentServer when tagging downloaded rows), so evaluating
+ * any other server here would mis-tag persisted rows. Rules for inactive servers stay correctly
+ * persisted and get evaluated whenever the user switches to that server.
  */
 @HiltWorker
 class AutoDownloadWorker
@@ -37,7 +37,8 @@ constructor(
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
             val serverId =
-                appPreferences.getValue(appPreferences.currentServer) ?: return@withContext Result.success()
+                appPreferences.getValue(appPreferences.currentServer)
+                    ?: return@withContext Result.success()
             val userId = jellyfinRepository.getUserId()
 
             val evaluator = AutoDownloadRuleEvaluator()

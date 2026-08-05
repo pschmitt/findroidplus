@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
  * paused once battery saver turns back off, gated behind
  * AppPreferences.pauseDownloadsOnBatterySaver. See Downloader.pauseAllForBatterySaver /
  * resumeBatterySaverPausedDownloads. This broadcast only fires on a state change, so
- * BaseApplication.onCreate() separately checks PowerManager.isPowerSaveMode at startup to cover
- * the case where battery saver is already on when the app launches.
+ * BaseApplication.onCreate() separately checks PowerManager.isPowerSaveMode at startup to cover the
+ * case where battery saver is already on when the app launches.
  */
 @AndroidEntryPoint
 class BatterySaverReceiver : BroadcastReceiver() {

@@ -4,8 +4,8 @@ import android.content.SharedPreferences
 
 /**
  * Minimal in-memory [SharedPreferences] fake for JVM unit tests - avoids pulling in Robolectric
- * just to exercise [SecureCredentialStore]'s get/put/remove/contains logic, which doesn't depend
- * on the real EncryptedSharedPreferences implementation underneath.
+ * just to exercise [SecureCredentialStore]'s get/put/remove/contains logic, which doesn't depend on
+ * the real EncryptedSharedPreferences implementation underneath.
  */
 class FakeSharedPreferences : SharedPreferences {
     private val values = mutableMapOf<String, Any?>()
@@ -23,8 +23,7 @@ class FakeSharedPreferences : SharedPreferences {
 
     override fun getLong(key: String?, defValue: Long): Long = values[key] as? Long ?: defValue
 
-    override fun getFloat(key: String?, defValue: Float): Float =
-        values[key] as? Float ?: defValue
+    override fun getFloat(key: String?, defValue: Float): Float = values[key] as? Float ?: defValue
 
     override fun getBoolean(key: String?, defValue: Boolean): Boolean =
         values[key] as? Boolean ?: defValue

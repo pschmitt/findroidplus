@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 
 /**
- * Extra on the notification's content [PendingIntent] so the host app can navigate straight to
- * the Downloads screen when the user taps a download notification.
+ * Extra on the notification's content [PendingIntent] so the host app can navigate straight to the
+ * Downloads screen when the user taps a download notification.
  */
 const val EXTRA_OPEN_DOWNLOADS = "dev.pschmitt.jellyfin.EXTRA_OPEN_DOWNLOADS"
 

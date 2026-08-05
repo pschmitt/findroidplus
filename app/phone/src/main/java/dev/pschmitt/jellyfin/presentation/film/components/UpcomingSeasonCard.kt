@@ -37,11 +37,11 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
  * A Sonarr-known season not yet in the Jellyfin library - the show-level equivalent of
- * [UpcomingEpisodeCard], shown alongside real [ItemCard] entries in the Show screen's seasons
- * row. Dimmed, same visual language as [UpcomingEpisodeCard]. Shows the real TMDB season poster
- * (see [UpcomingSeason.posterUrl]) once it's resolved, falling back to a calendar icon
- * placeholder while it's loading, unavailable, or Seerr isn't configured. It can still open the
- * Seerr detail view for the season, matching that card's behavior.
+ * [UpcomingEpisodeCard], shown alongside real [ItemCard] entries in the Show screen's seasons row.
+ * Dimmed, same visual language as [UpcomingEpisodeCard]. Shows the real TMDB season poster (see
+ * [UpcomingSeason.posterUrl]) once it's resolved, falling back to a calendar icon placeholder while
+ * it's loading, unavailable, or Seerr isn't configured. It can still open the Seerr detail view for
+ * the season, matching that card's behavior.
  */
 @Composable
 fun UpcomingSeasonCard(

@@ -59,8 +59,10 @@ fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): Findroid
         endDate = endDate,
         trailer = remoteTrailers?.getOrNull(0)?.url,
         images = toFindroidImages(jellyfinRepository),
-        tvdbId = providerIds?.entries?.firstOrNull { it.key.equals("Tvdb", ignoreCase = true) }?.value,
-        tmdbId = providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
+        tvdbId =
+            providerIds?.entries?.firstOrNull { it.key.equals("Tvdb", ignoreCase = true) }?.value,
+        tmdbId =
+            providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
         dateCreated = dateCreated,
     )
 }

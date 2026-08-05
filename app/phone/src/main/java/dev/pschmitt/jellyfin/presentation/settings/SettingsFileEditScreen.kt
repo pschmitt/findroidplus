@@ -47,9 +47,7 @@ fun SettingsFileEditScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(filePath) {
-        viewModel.loadFile(filePath = filePath)
-    }
+    LaunchedEffect(filePath) { viewModel.loadFile(filePath = filePath) }
 
     SettingsFileEditScreenLayout(
         fileName = filePath.split("/").last(),
@@ -73,14 +71,10 @@ private fun SettingsFileEditScreenLayout(
     val textFieldState = rememberTextFieldState()
     val isModified = initialText != textFieldState.text
 
-    LaunchedEffect(initialText) {
-        textFieldState.setTextAndPlaceCursorAtEnd(initialText)
-    }
+    LaunchedEffect(initialText) { textFieldState.setTextAndPlaceCursorAtEnd(initialText) }
 
     var showDiscardDialog by remember { mutableStateOf(false) }
-    BackHandler(isModified) {
-        showDiscardDialog = true
-    }
+    BackHandler(isModified) { showDiscardDialog = true }
 
     Scaffold(
         modifier = Modifier.imePadding(),

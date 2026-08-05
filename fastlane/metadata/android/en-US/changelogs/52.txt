@@ -1,0 +1,5 @@
+New:
+- Backup files now record which app version wrote them, so a future backup-format change can
+  detect and reject an incompatible newer backup with a clear message instead of crashing.
+- Bumped compileSdk to 37 and refreshed dependencies (Kotlin, AGP, Compose, Hilt, Lifecycle,
+  Camera, Core, aboutlibraries, and others) via Renovate.

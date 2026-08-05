@@ -16,9 +16,9 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
 /**
- * The Show/Season counterpart of [InfoDialog] - these are collections, not a single video file,
- * so there's no codec/resolution to show, just how many episodes and how much of them is
- * downloaded to this device.
+ * The Show/Season counterpart of [InfoDialog] - these are collections, not a single video file, so
+ * there's no codec/resolution to show, just how many episodes and how much of them is downloaded to
+ * this device.
  */
 @Composable
 fun AggregateInfoDialog(episodeCount: Int, downloadedSizeBytes: Long, onDismiss: () -> Unit) {

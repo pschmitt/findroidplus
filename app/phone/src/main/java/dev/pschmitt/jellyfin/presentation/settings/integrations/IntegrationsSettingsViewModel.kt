@@ -3,10 +3,10 @@ package dev.pschmitt.jellyfin.presentation.settings.integrations
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.api.pvr.SeerrApi
 import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
 import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
+import dev.pschmitt.jellyfin.api.pvr.SeerrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.DiscoveredServer
@@ -75,13 +75,15 @@ constructor(
                 }
             } ?: false
         val publicUsers =
-            currentServer?.let {
-                try {
-                    setupRepository.getPublicUsers(it.id)
-                } catch (_: Exception) {
-                    emptyList()
+            currentServer
+                ?.let {
+                    try {
+                        setupRepository.getPublicUsers(it.id)
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
                 }
-            }.orEmpty()
+                .orEmpty()
         _state.value =
             _state.value.copy(
                 jellyfinServers = servers,
@@ -93,23 +95,50 @@ constructor(
                 quickConnectEnabled = quickConnectEnabled,
                 sonarrEnabled = appPreferences.getValue(appPreferences.sonarrEnabled),
                 sonarrBaseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty(),
-                sonarrApiKey = secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY).orEmpty(),
-                sonarrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.SONARR_HTTP_HEADERS).orEmpty(),
-                sonarrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME).orEmpty(),
-                sonarrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD).orEmpty(),
+                sonarrApiKey =
+                    secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY).orEmpty(),
+                sonarrHttpHeaders =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.SONARR_HTTP_HEADERS)
+                        .orEmpty(),
+                sonarrBasicAuthUsername =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME)
+                        .orEmpty(),
+                sonarrBasicAuthPassword =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD)
+                        .orEmpty(),
                 radarrEnabled = appPreferences.getValue(appPreferences.radarrEnabled),
                 radarrBaseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty(),
-                radarrApiKey = secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY).orEmpty(),
-                radarrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.RADARR_HTTP_HEADERS).orEmpty(),
-                radarrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME).orEmpty(),
-                radarrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD).orEmpty(),
+                radarrApiKey =
+                    secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY).orEmpty(),
+                radarrHttpHeaders =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.RADARR_HTTP_HEADERS)
+                        .orEmpty(),
+                radarrBasicAuthUsername =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME)
+                        .orEmpty(),
+                radarrBasicAuthPassword =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD)
+                        .orEmpty(),
                 seerrEnabled = appPreferences.getValue(appPreferences.seerrEnabled),
                 seerrBaseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty(),
                 seerrApiKey =
                     secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY).orEmpty(),
-                seerrHttpHeaders = secureCredentialStore.getString(PvrCredentialKeys.SEERR_HTTP_HEADERS).orEmpty(),
-                seerrBasicAuthUsername = secureCredentialStore.getString(PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME).orEmpty(),
-                seerrBasicAuthPassword = secureCredentialStore.getString(PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD).orEmpty(),
+                seerrHttpHeaders =
+                    secureCredentialStore.getString(PvrCredentialKeys.SEERR_HTTP_HEADERS).orEmpty(),
+                seerrBasicAuthUsername =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME)
+                        .orEmpty(),
+                seerrBasicAuthPassword =
+                    secureCredentialStore
+                        .getString(PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD)
+                        .orEmpty(),
                 pvrPollIntervalMinutes =
                     appPreferences.getValue(appPreferences.pvrPollIntervalMinutes),
                 pvrReleaseCacheMinutes =
@@ -120,10 +149,13 @@ constructor(
     fun onAction(action: IntegrationsSettingsAction) {
         when (action) {
             is IntegrationsSettingsAction.OnBackClick -> Unit
-            is IntegrationsSettingsAction.OnJellyfinServerSelected -> selectJellyfinServer(action.serverId)
-            is IntegrationsSettingsAction.OnJellyfinUserSelected -> selectJellyfinUser(action.userId)
+            is IntegrationsSettingsAction.OnJellyfinServerSelected ->
+                selectJellyfinServer(action.serverId)
+            is IntegrationsSettingsAction.OnJellyfinUserSelected ->
+                selectJellyfinUser(action.userId)
             is IntegrationsSettingsAction.OnAddJellyfinServer -> addJellyfinServer(action.address)
-            is IntegrationsSettingsAction.OnDeleteJellyfinServer -> deleteJellyfinServer(action.serverId)
+            is IntegrationsSettingsAction.OnDeleteJellyfinServer ->
+                deleteJellyfinServer(action.serverId)
             is IntegrationsSettingsAction.OnLoginJellyfinUser ->
                 loginJellyfinUser(action.username, action.password)
             is IntegrationsSettingsAction.OnQuickConnectClick -> quickConnect()
@@ -199,7 +231,8 @@ constructor(
                         seerrTestState = PvrTestState.Idle,
                     )
             }
-            is IntegrationsSettingsAction.OnAdvancedSettingsChanged -> updateAdvancedSettings(action)
+            is IntegrationsSettingsAction.OnAdvancedSettingsChanged ->
+                updateAdvancedSettings(action)
             is IntegrationsSettingsAction.OnTestSeerrConnection -> testSeerrConnection()
             is IntegrationsSettingsAction.OnPollIntervalChanged -> {
                 appPreferences.setValue(appPreferences.pvrPollIntervalMinutes, action.minutes)
@@ -229,7 +262,8 @@ constructor(
 
     private fun addJellyfinServer(address: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
+            _state.value =
+                _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
             try {
                 val server = setupRepository.addServer(address)
                 setupRepository.setCurrentServer(server.id)
@@ -243,7 +277,8 @@ constructor(
 
     private fun deleteJellyfinServer(serverId: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
+            _state.value =
+                _state.value.copy(jellyfinOperationInProgress = true, addServerError = null)
             try {
                 setupRepository.deleteServer(serverId)
                 loadState()
@@ -277,29 +312,28 @@ constructor(
             _state.value = _state.value.copy(quickConnectCode = null)
             return
         }
-        quickConnectJob =
-            viewModelScope.launch {
-                _state.value = _state.value.copy(loginError = null)
-                try {
-                    var quickConnectState = setupRepository.initiateQuickConnect()
-                    _state.value = _state.value.copy(quickConnectCode = quickConnectState.code)
+        quickConnectJob = viewModelScope.launch {
+            _state.value = _state.value.copy(loginError = null)
+            try {
+                var quickConnectState = setupRepository.initiateQuickConnect()
+                _state.value = _state.value.copy(quickConnectCode = quickConnectState.code)
 
-                    while (!quickConnectState.authenticated) {
-                        delay(5000L)
-                        quickConnectState =
-                            setupRepository.getQuickConnectState(quickConnectState.secret)
-                    }
-
-                    setupRepository.loginWithSecret(quickConnectState.secret)
-                    _state.value = _state.value.copy(quickConnectCode = null)
-                    loadState()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    _state.value = _state.value.copy(quickConnectCode = null)
-                    showLoginError(e)
+                while (!quickConnectState.authenticated) {
+                    delay(5000L)
+                    quickConnectState =
+                        setupRepository.getQuickConnectState(quickConnectState.secret)
                 }
+
+                setupRepository.loginWithSecret(quickConnectState.secret)
+                _state.value = _state.value.copy(quickConnectCode = null)
+                loadState()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(quickConnectCode = null)
+                showLoginError(e)
             }
+        }
     }
 
     private fun deleteJellyfinUser(userId: java.util.UUID) {
@@ -337,57 +371,64 @@ constructor(
             else -> UiText.DynamicString(message ?: "")
         } ?: UiText.StringResource(CoreR.string.unknown_error)
 
-    private fun updateAdvancedSettings(action: IntegrationsSettingsAction.OnAdvancedSettingsChanged) {
+    private fun updateAdvancedSettings(
+        action: IntegrationsSettingsAction.OnAdvancedSettingsChanged
+    ) {
         val (headersKey, usernameKey, passwordKey) =
             when (action.service) {
-                PvrService.SONARR -> Triple(
-                    PvrCredentialKeys.SONARR_HTTP_HEADERS,
-                    PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
-                    PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
-                )
-                PvrService.RADARR -> Triple(
-                    PvrCredentialKeys.RADARR_HTTP_HEADERS,
-                    PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
-                    PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
-                )
-                PvrService.SEERR -> Triple(
-                    PvrCredentialKeys.SEERR_HTTP_HEADERS,
-                    PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
-                    PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
-                )
+                PvrService.SONARR ->
+                    Triple(
+                        PvrCredentialKeys.SONARR_HTTP_HEADERS,
+                        PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
+                    )
+                PvrService.RADARR ->
+                    Triple(
+                        PvrCredentialKeys.RADARR_HTTP_HEADERS,
+                        PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
+                    )
+                PvrService.SEERR ->
+                    Triple(
+                        PvrCredentialKeys.SEERR_HTTP_HEADERS,
+                        PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
+                        PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
+                    )
             }
         secureCredentialStore.putString(headersKey, action.headers.ifBlank { null })
         secureCredentialStore.putString(usernameKey, action.basicAuthUsername.ifBlank { null })
         secureCredentialStore.putString(passwordKey, action.basicAuthPassword.ifBlank { null })
         _state.value =
             when (action.service) {
-                PvrService.SONARR -> _state.value.copy(
-                    sonarrHttpHeaders = action.headers,
-                    sonarrBasicAuthUsername = action.basicAuthUsername,
-                    sonarrBasicAuthPassword = action.basicAuthPassword,
-                )
-                PvrService.RADARR -> _state.value.copy(
-                    radarrHttpHeaders = action.headers,
-                    radarrBasicAuthUsername = action.basicAuthUsername,
-                    radarrBasicAuthPassword = action.basicAuthPassword,
-                )
-                PvrService.SEERR -> _state.value.copy(
-                    seerrHttpHeaders = action.headers,
-                    seerrBasicAuthUsername = action.basicAuthUsername,
-                    seerrBasicAuthPassword = action.basicAuthPassword,
-                )
+                PvrService.SONARR ->
+                    _state.value.copy(
+                        sonarrHttpHeaders = action.headers,
+                        sonarrBasicAuthUsername = action.basicAuthUsername,
+                        sonarrBasicAuthPassword = action.basicAuthPassword,
+                    )
+                PvrService.RADARR ->
+                    _state.value.copy(
+                        radarrHttpHeaders = action.headers,
+                        radarrBasicAuthUsername = action.basicAuthUsername,
+                        radarrBasicAuthPassword = action.basicAuthPassword,
+                    )
+                PvrService.SEERR ->
+                    _state.value.copy(
+                        seerrHttpHeaders = action.headers,
+                        seerrBasicAuthUsername = action.basicAuthUsername,
+                        seerrBasicAuthPassword = action.basicAuthPassword,
+                    )
             }
     }
 
     private fun persistApiKeyDebounced(credentialKey: String, value: String) {
         dirtyApiKeys.add(credentialKey)
         apiKeyPersistJobs[credentialKey]?.cancel()
-        apiKeyPersistJobs[credentialKey] =
-            viewModelScope.launch {
-                delay(API_KEY_PERSIST_DEBOUNCE_MS)
-                secureCredentialStore.putString(credentialKey, value.ifBlank { null })
-                dirtyApiKeys.remove(credentialKey)
-            }
+        apiKeyPersistJobs[credentialKey] = viewModelScope.launch {
+            delay(API_KEY_PERSIST_DEBOUNCE_MS)
+            secureCredentialStore.putString(credentialKey, value.ifBlank { null })
+            dirtyApiKeys.remove(credentialKey)
+        }
     }
 
     override fun onCleared() {

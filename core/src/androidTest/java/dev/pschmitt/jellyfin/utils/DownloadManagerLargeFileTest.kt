@@ -19,8 +19,8 @@ import org.junit.runner.RunWith
  * Root-cause diagnostic for the >4GiB download failure: drives the system [DownloadManager]
  * directly (the transport DownloaderImpl used before the fix) against a sparse ~4.4GiB local file
  * served over a loopback HTTP server, to determine empirically whether the platform's
- * DownloadManager itself is the failure point on real hardware. The actual regression test for
- * the shipped fix is VideoTransferEngineLargeFileTest, which exercises the new transport.
+ * DownloadManager itself is the failure point on real hardware. The actual regression test for the
+ * shipped fix is VideoTransferEngineLargeFileTest, which exercises the new transport.
  */
 @RunWith(AndroidJUnit4::class)
 class DownloadManagerLargeFileTest {
@@ -92,7 +92,9 @@ class DownloadManagerLargeFileTest {
         )
     }
 
-    /** Polls DownloadManager exactly like DownloaderImpl.getProgress() does, but keeps raw Longs. */
+    /**
+     * Polls DownloadManager exactly like DownloaderImpl.getProgress() does, but keeps raw Longs.
+     */
     private fun pollUntilTerminal(downloadId: Long): Triple<Int, Long, Long> {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
         var status = DownloadManager.STATUS_PENDING
@@ -105,13 +107,18 @@ class DownloadManagerLargeFileTest {
                 assertTrue("Download disappeared from DownloadManager", cursor.moveToFirst())
                 status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                 totalBytes =
-                    cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    cursor.getLong(
+                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    )
                 downloadedBytes =
                     cursor.getLong(
                         cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                     )
             }
-            if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
+            if (
+                status == DownloadManager.STATUS_SUCCESSFUL ||
+                    status == DownloadManager.STATUS_FAILED
+            ) {
                 break
             }
             Thread.sleep(500)

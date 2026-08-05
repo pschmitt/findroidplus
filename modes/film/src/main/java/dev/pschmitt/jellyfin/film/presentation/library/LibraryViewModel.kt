@@ -198,12 +198,11 @@ constructor(
                             seerrError = null,
                         )
                 }
-                searchJob =
-                    viewModelScope.launch {
-                        delay(SEARCH_DEBOUNCE_MS)
-                        loadItems()
-                        searchSeerr(action.query)
-                    }
+                searchJob = viewModelScope.launch {
+                    delay(SEARCH_DEBOUNCE_MS)
+                    loadItems()
+                    searchSeerr(action.query)
+                }
             }
             is LibraryAction.OnRefresh -> {
                 libraryItemsCache.clear()

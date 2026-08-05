@@ -151,29 +151,28 @@ private fun CalendarScreenLayout(
             }
             PullToRefreshBox(isRefreshing = state.isLoading, onRefresh = onRefresh) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (state.serviceErrors.isNotEmpty()) {
-                    item {
-                        PvrErrorBanner(
-                            errors = state.serviceErrors,
-                            modifier =
-                                Modifier.padding(
-                                    horizontal = MaterialTheme.spacings.default,
-                                    vertical = MaterialTheme.spacings.small,
-                                ),
-                        )
+                    if (state.serviceErrors.isNotEmpty()) {
+                        item {
+                            PvrErrorBanner(
+                                errors = state.serviceErrors,
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = MaterialTheme.spacings.default,
+                                        vertical = MaterialTheme.spacings.small,
+                                    ),
+                            )
+                        }
                     }
-                }
-                state.groupedEntries.forEach { (date, entries) ->
-                    stickyHeader { CalendarDateHeader(date = date) }
-                    items(items = entries) { entry ->
-                        CalendarEntryRow(
-                            entry = entry,
-                            clickable =
-                                entry.itemId != null || entry.tmdbId != null,
-                            onClick = { onEntryClick(entry) },
-                        )
+                    state.groupedEntries.forEach { (date, entries) ->
+                        stickyHeader { CalendarDateHeader(date = date) }
+                        items(items = entries) { entry ->
+                            CalendarEntryRow(
+                                entry = entry,
+                                clickable = entry.itemId != null || entry.tmdbId != null,
+                                onClick = { onEntryClick(entry) },
+                            )
+                        }
                     }
-                }
                 }
             }
         }
@@ -219,10 +218,10 @@ private const val CALENDAR_TOMORROW_PLACEHOLDER = "Tomorrow"
 /**
  * A single upcoming Sonarr/Radarr release. Renders the matched item's real poster
  * ([CalendarEntry.images], fetched by [dev.pschmitt.jellyfin.repository.CalendarRepositoryImpl]
- * once [CalendarEntry.itemId] resolves) when available, falling back to a source-based
- * placeholder icon for unmatched entries or if the poster fetch failed. [clickable] is decided
- * by the caller: matched entries navigate into the library, unmatched ones with a TMDB id open
- * the Seerr detail view.
+ * once [CalendarEntry.itemId] resolves) when available, falling back to a source-based placeholder
+ * icon for unmatched entries or if the poster fetch failed. [clickable] is decided by the caller:
+ * matched entries navigate into the library, unmatched ones with a TMDB id open the Seerr detail
+ * view.
  */
 @Composable
 private fun CalendarEntryRow(
@@ -293,7 +292,8 @@ private fun CalendarEntryRow(
             // airDateUtc is a full instant (Radarr release dates are date-only).
             entry.airTime?.let { airTime ->
                 Text(
-                    text = stringResource(CoreR.string.calendar_air_time, formatCalendarTime(airTime)),
+                    text =
+                        stringResource(CoreR.string.calendar_air_time, formatCalendarTime(airTime)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -309,8 +309,8 @@ private fun CalendarEntryRow(
 }
 
 /**
- * The playable Jellyfin item for an entry Sonarr/Radarr already has a file for - null if it
- * hasn't been matched into the library yet ([CalendarEntry.episodeItemId]/[CalendarEntry.itemId]
+ * The playable Jellyfin item for an entry Sonarr/Radarr already has a file for - null if it hasn't
+ * been matched into the library yet ([CalendarEntry.episodeItemId]/[CalendarEntry.itemId]
  * unresolved), in which case there's nothing to play.
  */
 private val CalendarEntry.playbackTarget: Pair<UUID, BaseItemKind>?
@@ -321,10 +321,10 @@ private val CalendarEntry.playbackTarget: Pair<UUID, BaseItemKind>?
         }
 
 /**
- * Launches playback directly (bypassing the detail screen), the same Intent-to-PlayerActivity
- * call MovieScreen/EpisodeScreen use for their own Play actions - a plain checkmark or download
- * icon here would either clash with "watched" elsewhere in the app or read as an on-device
- * download action, so this is an actual shortcut instead of a status glyph.
+ * Launches playback directly (bypassing the detail screen), the same Intent-to-PlayerActivity call
+ * MovieScreen/EpisodeScreen use for their own Play actions - a plain checkmark or download icon
+ * here would either clash with "watched" elsewhere in the app or read as an on-device download
+ * action, so this is an actual shortcut instead of a status glyph.
  */
 @Composable
 private fun CalendarPlayButton(itemId: UUID, itemKind: BaseItemKind) {
@@ -337,7 +337,10 @@ private fun CalendarPlayButton(itemId: UUID, itemKind: BaseItemKind) {
             context.startActivity(intent)
         }
     ) {
-        Icon(painter = painterResource(CoreR.drawable.ic_play), contentDescription = stringResource(CoreR.string.play))
+        Icon(
+            painter = painterResource(CoreR.drawable.ic_play),
+            contentDescription = stringResource(CoreR.string.play),
+        )
     }
 }
 
@@ -385,7 +388,9 @@ private val dummyCalendarEntries: List<Pair<LocalDate, List<CalendarEntry>>> =
 @PreviewScreenSizes
 @Composable
 private fun CalendarScreenLayoutPreview() {
-    FindroidTheme { CalendarScreenLayout(state = CalendarState(groupedEntries = dummyCalendarEntries)) }
+    FindroidTheme {
+        CalendarScreenLayout(state = CalendarState(groupedEntries = dummyCalendarEntries))
+    }
 }
 
 @PreviewScreenSizes

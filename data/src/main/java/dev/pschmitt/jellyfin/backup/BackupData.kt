@@ -9,10 +9,10 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Everything a backup preserves: saved servers/logins, auto-download rules, every app
- * preference, and a manifest of what was downloaded (not the files themselves - those are
- * multi-GB and trivially re-downloadable from the server; the manifest just lets restore offer
- * to re-queue them).
+ * Everything a backup preserves: saved servers/logins, auto-download rules, every app preference,
+ * and a manifest of what was downloaded (not the files themselves - those are multi-GB and
+ * trivially re-downloadable from the server; the manifest just lets restore offer to re-queue
+ * them).
  */
 @Serializable
 data class BackupEnvelope(
@@ -60,7 +60,11 @@ sealed interface PrefValue {
 }
 
 @Serializable
-data class BackupServer(val server: Server, val addresses: List<ServerAddress>, val users: List<User>)
+data class BackupServer(
+    val server: Server,
+    val addresses: List<ServerAddress>,
+    val users: List<User>,
+)
 
 @Serializable
 data class BackupDownloadedItem(val serverId: String, val itemId: String, val itemKind: String)
@@ -81,8 +85,8 @@ object BackupDownloadedItemKind {
 }
 
 /**
- * Restoring downloads requires an active, authenticated session against the right server, which
- * may not exist yet right after restore - so the picked items are stashed as JSON in
+ * Restoring downloads requires an active, authenticated session against the right server, which may
+ * not exist yet right after restore - so the picked items are stashed as JSON in
  * [dev.pschmitt.jellyfin.settings.domain.AppPreferences.pendingRestoreDownloads] and processed
  * later once a session for the matching server is active.
  */

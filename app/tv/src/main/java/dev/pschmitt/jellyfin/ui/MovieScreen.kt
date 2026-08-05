@@ -2,7 +2,6 @@ package dev.pschmitt.jellyfin.ui
 
 import android.os.Environment
 import android.os.StatFs
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -342,23 +340,31 @@ private fun MovieScreenLayout(
                         Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(MaterialTheme.spacings.small),
                         ) {
                             val statusText =
                                 when {
-                                    downloaderState.status == android.app.DownloadManager.STATUS_PENDING ->
+                                    downloaderState.status ==
+                                        android.app.DownloadManager.STATUS_PENDING ->
                                         stringResource(id = CoreR.string.download_queued)
-                                    downloaderState.status == android.app.DownloadManager.STATUS_PAUSED ->
+                                    downloaderState.status ==
+                                        android.app.DownloadManager.STATUS_PAUSED ->
                                         stringResource(id = CoreR.string.download_paused)
-                                    downloaderState.status == DownloadProgress.STATUS_AWAITING_FOREGROUND ->
-                                        stringResource(id = CoreR.string.download_awaiting_foreground)
+                                    downloaderState.status ==
+                                        DownloadProgress.STATUS_AWAITING_FOREGROUND ->
+                                        stringResource(
+                                            id = CoreR.string.download_awaiting_foreground
+                                        )
                                     downloaderState.status == DownloadProgress.STATUS_VERIFYING ->
                                         stringResource(id = CoreR.string.download_verifying)
                                     downloaderState.progress > 0f ->
                                         stringResource(
                                             id = CoreR.string.download_progress_status,
                                             (downloaderState.progress * 100).toInt(),
-                                            formatDownloadSpeed(downloaderState.speedBytesPerSecond),
+                                            formatDownloadSpeed(
+                                                downloaderState.speedBytesPerSecond
+                                            ),
                                             formatEta(downloaderState.etaSeconds),
                                         )
                                     else -> stringResource(id = CoreR.string.download_downloading)
@@ -370,7 +376,9 @@ private fun MovieScreenLayout(
                                     contentDescription = null,
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = stringResource(id = CoreR.string.download_action_cancel))
+                                Text(
+                                    text = stringResource(id = CoreR.string.download_action_cancel)
+                                )
                             }
                         }
                     }

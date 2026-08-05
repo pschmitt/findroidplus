@@ -94,11 +94,11 @@ constructor(
      * session. That session (a process-wide singleton - see `JellyfinApi`'s kdoc) is only ever
      * pointed at *one* server at a time: whichever `AppPreferences.currentServer` is currently
      * active here. A rule belonging to a *different* server than the one currently active on this
-     * device can't be resolved at all - looking it up would just throw (wrong server entirely,
-     * not merely a missing item) - so those are skipped up front rather than attempted and
-     * silently swallowed. Best-effort and concurrent otherwise: a show that fails to resolve for
-     * any other reason (deleted, network hiccup) just renders without a poster, logged for
-     * diagnosis, rather than failing the whole screen.
+     * device can't be resolved at all - looking it up would just throw (wrong server entirely, not
+     * merely a missing item) - so those are skipped up front rather than attempted and silently
+     * swallowed. Best-effort and concurrent otherwise: a show that fails to resolve for any other
+     * reason (deleted, network hiccup) just renders without a poster, logged for diagnosis, rather
+     * than failing the whole screen.
      */
     private suspend fun resolveShowPosters(
         devices: List<RemoteDeviceInfo>
@@ -120,7 +120,12 @@ constructor(
                     try {
                         rule.seriesId to jellyfinRepository.getShow(UUID.fromString(rule.seriesId))
                     } catch (e: Exception) {
-                        Timber.w(e, "Failed to resolve poster for '%s' (%s)", rule.showName, rule.seriesId)
+                        Timber.w(
+                            e,
+                            "Failed to resolve poster for '%s' (%s)",
+                            rule.showName,
+                            rule.seriesId,
+                        )
                         null
                     }
                 }

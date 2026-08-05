@@ -73,16 +73,16 @@ fun ReleasePickerSheet(
             state.releases.isEmpty() ->
                 Text(
                     text = stringResource(CoreR.string.release_picker_empty),
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(MaterialTheme.spacings.medium),
+                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             else ->
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = MaterialTheme.spacings.medium)
                 ) {
-                    itemsIndexed(items = state.releases, key = { _, release -> release.guid }) { index, release ->
+                    itemsIndexed(items = state.releases, key = { _, release -> release.guid }) {
+                        index,
+                        release ->
                         ReleaseRow(release = release, onGrab = { onGrab(release) })
                         if (index != state.releases.lastIndex) {
                             HorizontalDivider()
@@ -112,7 +112,8 @@ private fun ReleaseRow(release: PvrRelease, onGrab: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            val seedersText = stringResource(CoreR.string.release_picker_seeders, release.seeders ?: 0)
+            val seedersText =
+                stringResource(CoreR.string.release_picker_seeders, release.seeders ?: 0)
             val details =
                 listOfNotNull(
                         release.quality?.quality?.name,
@@ -156,7 +157,13 @@ private fun ReleaseRow(release: PvrRelease, onGrab: () -> Unit) {
 @Composable
 @Preview
 private fun ReleasePickerSheetLoadingPreview() {
-    FindroidTheme { ReleasePickerSheet(state = ReleasePickerState(isLoading = true), onGrab = {}, onDismissRequest = {}) }
+    FindroidTheme {
+        ReleasePickerSheet(
+            state = ReleasePickerState(isLoading = true),
+            onGrab = {},
+            onDismissRequest = {},
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,7 +194,7 @@ private fun ReleasePickerSheetContentPreview() {
                                 rejected = true,
                                 rejections = listOf("Not a preferred word"),
                             ),
-                        )
+                        ),
                 ),
             onGrab = {},
             onDismissRequest = {},

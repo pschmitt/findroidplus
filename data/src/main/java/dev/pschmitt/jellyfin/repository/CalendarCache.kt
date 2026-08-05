@@ -6,12 +6,12 @@ import java.util.concurrent.TimeUnit
 /**
  * `CalendarViewModel` is recreated every time the Calendar tab is navigated to (it's a plain
  * `hiltViewModel()` scoped to the Navigation-Compose backstack entry, same as `LibraryViewModel`),
- * so without a wider-scoped cache every reopen re-hit Sonarr/Radarr/Jellyfin from scratch even
- * when the last fetch was only seconds old - reported as "overkill" by the user. `@Singleton`
- * (rather than `LibraryItemsCache`'s `@ApplicationScope`-launched approach) since there's no Flow
- * to keep alive here, just the last successful [CalendarResult] snapshot to hand back instantly
- * while `CalendarViewModel` kicks off a background refresh. Deliberately in-memory only, not
- * persisted to disk - a fresh process still fetches once, same as before this cache existed.
+ * so without a wider-scoped cache every reopen re-hit Sonarr/Radarr/Jellyfin from scratch even when
+ * the last fetch was only seconds old - reported as "overkill" by the user. `@Singleton` (rather
+ * than `LibraryItemsCache`'s `@ApplicationScope`-launched approach) since there's no Flow to keep
+ * alive here, just the last successful [CalendarResult] snapshot to hand back instantly while
+ * `CalendarViewModel` kicks off a background refresh. Deliberately in-memory only, not persisted to
+ * disk - a fresh process still fetches once, same as before this cache existed.
  *
  * Lives in `data` (rather than `modes:film`, where it originally lived) so `core`'s
  * `PreloadCalendarWorker` can share the exact same cache/TTL as `CalendarViewModel` - `core`

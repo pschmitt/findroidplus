@@ -13,8 +13,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeParseException
 
 /**
- * Pure functions matching Sonarr/Radarr calendar entries to Jellyfin item ids - no suspend, no
- * I/O, so they're directly unit-testable without Room/Hilt/Android in the loop.
+ * Pure functions matching Sonarr/Radarr calendar entries to Jellyfin item ids - no suspend, no I/O,
+ * so they're directly unit-testable without Room/Hilt/Android in the loop.
  *
  * Unlike `QueueStatusMatching.kt`, an entry Findroid can't match to a local Jellyfin item is never
  * dropped here - it's still returned with `itemId = null`, since the calendar's whole point is to
@@ -24,11 +24,15 @@ import java.time.format.DateTimeParseException
  * filter but is handled defensively).
  */
 
-/** Sonarr's `series.tvdbId`/Radarr's `tmdbId` default to 0 when the field is absent from the DTO. */
+/**
+ * Sonarr's `series.tvdbId`/Radarr's `tmdbId` default to 0 when the field is absent from the DTO.
+ */
 private const val UNSET_PROVIDER_ID = 0
 
-private fun List<dev.pschmitt.jellyfin.api.pvr.PvrImage>.posterUrl(): String? =
-    firstOrNull { it.coverType.equals("poster", ignoreCase = true) }?.let { it.remoteUrl ?: it.url }
+private fun List<dev.pschmitt.jellyfin.api.pvr.PvrImage>.posterUrl(): String? = firstOrNull {
+    it.coverType.equals("poster", ignoreCase = true)
+}
+    ?.let { it.remoteUrl ?: it.url }
 
 fun matchSonarrCalendar(
     entries: List<SonarrCalendarEntry>,
@@ -102,16 +106,19 @@ fun matchRadarrCalendar(
 }
 
 /**
- * Radarr's calendar entry can carry up to three release dates. Preference order (matching the
- * order these fields are declared/queried elsewhere for Radarr): `digitalRelease`,
- * `physicalRelease`, `inCinemas`. The earliest of these that falls within the requested
- * `[start, end]` window wins (Radarr's calendar endpoint already server-side filters to "any of
- * these in range", so this is just picking which one to display). If none of the non-null dates
- * fall in range - which shouldn't happen given that filter, but is handled defensively - falls
- * back to the first non-null date in preference order. Returns `null` only when all three fields
- * are null/unparseable.
+ * Radarr's calendar entry can carry up to three release dates. Preference order (matching the order
+ * these fields are declared/queried elsewhere for Radarr): `digitalRelease`, `physicalRelease`,
+ * `inCinemas`. The earliest of these that falls within the requested `[start, end]` window wins
+ * (Radarr's calendar endpoint already server-side filters to "any of these in range", so this is
+ * just picking which one to display). If none of the non-null dates fall in range - which shouldn't
+ * happen given that filter, but is handled defensively - falls back to the first non-null date in
+ * preference order. Returns `null` only when all three fields are null/unparseable.
  */
-internal fun selectRadarrDate(entry: RadarrCalendarEntry, start: LocalDate, end: LocalDate): LocalDate? {
+internal fun selectRadarrDate(
+    entry: RadarrCalendarEntry,
+    start: LocalDate,
+    end: LocalDate,
+): LocalDate? {
     val candidates =
         listOfNotNull(
             entry.digitalRelease?.let(::parseFlexibleDate),
@@ -133,11 +140,11 @@ internal fun buildEpisodeSubtitle(seasonNumber: Int, episodeNumber: Int, title: 
 
 /**
  * Sonarr/Radarr calendar date fields are inconsistent in shape across endpoints/versions - plain
- * dates (`"2024-07-24"`, e.g. some `inCinemas` values) and full UTC instants (`"2024-07-24T01:00:00Z"`,
- * e.g. `airDateUtc`) both appear. Tries a plain [LocalDate] first, then falls back to parsing as
- * an [Instant] converted to the system default time zone's local date. Returns `null` if neither
- * parses, rather than throwing - a single malformed date from the PVR side must never take down
- * the whole calendar fetch.
+ * dates (`"2024-07-24"`, e.g. some `inCinemas` values) and full UTC instants
+ * (`"2024-07-24T01:00:00Z"`, e.g. `airDateUtc`) both appear. Tries a plain [LocalDate] first, then
+ * falls back to parsing as an [Instant] converted to the system default time zone's local date.
+ * Returns `null` if neither parses, rather than throwing - a single malformed date from the PVR
+ * side must never take down the whole calendar fetch.
  */
 internal fun parseFlexibleDate(value: String): LocalDate? =
     try {
@@ -151,9 +158,9 @@ internal fun parseFlexibleDate(value: String): LocalDate? =
     }
 
 /**
- * Local-time counterpart of [parseFlexibleDate]: the exact air time in the device's time zone,
- * but only when the value is a full instant - a date-only value carries no real time, so it
- * yields `null` rather than a misleading midnight.
+ * Local-time counterpart of [parseFlexibleDate]: the exact air time in the device's time zone, but
+ * only when the value is a full instant - a date-only value carries no real time, so it yields
+ * `null` rather than a misleading midnight.
  */
 internal fun parseLocalTime(value: String): LocalTime? =
     try {

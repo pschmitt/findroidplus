@@ -11,7 +11,8 @@ import java.util.Locale
 private val calendarDateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
 
-private val calendarTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+private val calendarTimeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
 /**
  * Formats a [LocalDate] for display in calendar-style UI (e.g. the Calendar tab or the ShowScreen
@@ -32,7 +33,11 @@ fun formatCalendarTime(time: LocalTime): String = time.format(calendarTimeFormat
  * relative "5 minutes ago"/"2 days ago" string for the remote-devices management screen.
  */
 fun formatRelativeTime(millis: Long): String =
-    DateUtils.getRelativeTimeSpanString(millis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+    DateUtils.getRelativeTimeSpanString(
+            millis,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS,
+        )
         .toString()
 
 fun getShowDateString(item: FindroidShow): String {

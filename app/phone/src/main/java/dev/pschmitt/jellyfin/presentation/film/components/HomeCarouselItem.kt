@@ -27,9 +27,9 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
  * The same hero banner shape as every detail screen (see [ItemHeader]'s static overload) - full
  * width, 16:9, no clip/rounding/margin - so this reads as the same component, not a bespoke
  * rounded/inset card. The title/genre overlay stays baked into the image (unlike detail screens,
- * which render the title below the banner) since this is a multi-item carousel a user pages
- * through without navigating - each page needs its own extra darkening gradient on top of the
- * shared banner's subtle default one, for legible white text regardless of theme.
+ * which render the title below the banner) since this is a multi-item carousel a user pages through
+ * without navigating - each page needs its own extra darkening gradient on top of the shared
+ * banner's subtle default one, for legible white text regardless of theme.
  */
 @Composable
 fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {

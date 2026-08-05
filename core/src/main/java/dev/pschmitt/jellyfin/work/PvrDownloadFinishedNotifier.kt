@@ -35,7 +35,8 @@ constructor(@ApplicationContext private val context: Context) {
 
         // The title identifies the download well enough - concurrent finishes for different items
         // get their own notifications, a re-download of the same item replaces the previous one.
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_BASE + title.hashCode(), notification)
+        NotificationManagerCompat.from(context)
+            .notify(NOTIFICATION_ID_BASE + title.hashCode(), notification)
     }
 
     private fun openAppPendingIntent(): PendingIntent? {

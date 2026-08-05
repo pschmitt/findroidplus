@@ -18,8 +18,8 @@ interface RemoteConfigRepository {
     /**
      * Enqueues a command that replays [AutoDownloadRuleRepository.reconcileRules]'s exact
      * parameters on [targetDeviceId] the next time it syncs, instead of applying them to this
-     * device's own Room database. Used by the dedicated auto-download rule editor, which only
-     * ever manages persistent rules (no immediate download).
+     * device's own Room database. Used by the dedicated auto-download rule editor, which only ever
+     * manages persistent rules (no immediate download).
      */
     suspend fun pushRuleUpdate(
         targetDeviceId: String,
@@ -38,8 +38,8 @@ interface RemoteConfigRepository {
      * exactly, just directed at [targetDeviceId] instead of this device's own Room/Downloader:
      * enqueues an immediate "download whatever currently matches [seasonIds], right now" command
      * when [seasonIds] isn't empty, and independently enqueues a persistent-rule command when
-     * [alsoFollowNew] or [alsoFutureSeasons] is set - the two aren't mutually exclusive locally,
-     * so they aren't here either.
+     * [alsoFollowNew] or [alsoFutureSeasons] is set - the two aren't mutually exclusive locally, so
+     * they aren't here either.
      */
     suspend fun pushDownloadWithScope(
         targetDeviceId: String,
@@ -70,8 +70,8 @@ interface RemoteConfigRepository {
      * controller remove a rule it (or anyone else) previously pushed, without visiting the target
      * device. When [alsoDeleteDownloads] is set, the *target* device also deletes its own
      * already-downloaded episodes for [seriesId] once it applies the clear - mirrors the local
-     * "also delete downloaded episodes" checkbox, just executed on the other device instead of
-     * this one.
+     * "also delete downloaded episodes" checkbox, just executed on the other device instead of this
+     * one.
      */
     suspend fun pushRemoveRule(
         targetDeviceId: String,
@@ -88,14 +88,16 @@ interface RemoteConfigRepository {
      */
     suspend fun listPendingCommandsFromThisDevice(): List<RemoteConfigCommand>
 
-    /** Removes a still-pending command (by [commandId]) from the shared queue before it's applied. */
+    /**
+     * Removes a still-pending command (by [commandId]) from the shared queue before it's applied.
+     */
     suspend fun cancelPendingCommand(commandId: String)
 
     /**
      * Whether this device currently allows *other* devices to manage it (push to it, list it as a
      * target, see its active rules) - the per-device opt-out. Doesn't affect this device's own
-     * ability to push to others, which is this device's own action rather than something done to
-     * it without consent.
+     * ability to push to others, which is this device's own action rather than something done to it
+     * without consent.
      */
     fun isRemoteManagementEnabled(): Boolean
 
