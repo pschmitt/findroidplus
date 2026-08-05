@@ -1,4 +1,4 @@
-name: Play Store screenshots
+name: Screenshots
 
 # Screenshot capture is intentionally manual. It uses the disposable, pre-baked Jellyfin fixture
 # (ci/jellyfin/) and the same emulator action as other Android CI in this org, then uploads the
@@ -218,5 +218,5 @@ jobs:
           if [ -n "$existing_pr" ]; then
             gh pr comment "$existing_pr" --body "Updated with fresh screenshots from run ${{ github.run_id }}."
           else
-            gh pr create --title "Update Play Store screenshots" --body "Automated screenshot refresh from the \`Play Store screenshots\` workflow (run ${{ github.run_id }}). Review the images before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one." --head "$branch" --base "${{ github.ref_name }}"
+            gh pr create --title "Update Play Store screenshots" --body "Automated screenshot refresh from the \`Screenshots\` workflow (run ${{ github.run_id }}). Review the images before merging. Re-running this workflow with \`open_pr\` updates this same PR instead of opening a new one." --head "$branch" --base "${{ github.ref_name }}"
           fi
