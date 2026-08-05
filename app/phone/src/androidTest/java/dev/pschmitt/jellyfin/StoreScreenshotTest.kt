@@ -106,8 +106,15 @@ class StoreScreenshotTest {
 
     private fun switchToDarkModeAndReturnToHome() {
         clickWithRetry { composeRule.onNodeWithTag("e2e-settings-button") }
-        waitForText("Appearance", 30_000)
-        clickWithRetry { composeRule.onNodeWithText("Appearance") }
+        // The root Settings screen's lone "Appearance" section has both its own section header
+        // and its single category row titled "Appearance" (SettingsViewModel.kt reuses
+        // settings_category_interface for both the PreferenceGroup name and the PreferenceCategory
+        // inside it) - onNodeWithText("Appearance") is therefore ambiguous (found '2' nodes,
+        // confirmed via a real CI run). The category row's description line
+        // (settings_category_interface_summary) is unique and lands the same click, since it's
+        // inside the same clickable card.
+        waitForText("Theme, home screen, playback", 30_000)
+        clickWithRetry { composeRule.onNodeWithText("Theme, home screen, playback") }
 
         waitForText("Theme", 30_000)
         clickWithRetry { composeRule.onNodeWithText("Theme").performScrollTo() }
@@ -139,10 +146,12 @@ class StoreScreenshotTest {
     /**
      * Home has real data once at least one item card has rendered - section titles are
      * data-dependent (library name, whether a resume point exists), so a fixed title/loading text
-     * isn't a reliable wait target here.
+     * isn't a reliable wait target here. 30s wasn't enough for the tenInch emulator profile to get
+     * from login to Home rendering at all (confirmed via a real CI run - a plain
+     * ComposeTimeoutException, not a real bug), so both waits here are generous.
      */
     private fun waitForHomeLoaded() {
-        waitForTag("e2e-home-screen", 30_000)
+        waitForTag("e2e-home-screen", 60_000)
         waitForTag("e2e-item-card", 60_000)
     }
 
