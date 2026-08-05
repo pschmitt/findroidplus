@@ -1648,19 +1648,25 @@ way: each now requires `compileSdk 37` or later, and this project is still pinne
 (`platforms-android-36` is the only Android platform the flake currently provides - see
 `flake.nix`). One shared blocker across all 4 PRs, not four separate problems.
 
-- [ ] Add `platforms-android-37` (and matching `build-tools` if versioned separately) to
-  `flake.nix`'s Android SDK composition.
-- [ ] Bump `compileSdk` in every module's `build.gradle.kts` (leave `targetSdk`/`minSdk` alone -
+- [x] Added `platforms-android-37-0` + `build-tools-37-0-0` to `flake.nix`'s Android SDK
+  composition. Google's API 37 platform packages are versioned `37.0`/`37.1` (no bare `37`
+  package exists, unlike 36) - empirically confirmed `37-0` (not `37-1`) is the one AGP's bare
+  `compileSdk = 37` actually resolves to: the wrong choice fails with "Failed to install ...
+  platforms;android-37.0 ... SDK directory is not writable" since Gradle tries (and fails, since
+  the Nix store is read-only) to auto-install the missing platform at build time.
+- [x] Bumped `Versions.COMPILE_SDK` 36 -> 37. Left `TARGET_SDK`/`MIN_SDK` at 36/28 untouched -
   those change runtime behavior and device compatibility, `compileSdk` only changes which APIs
-  are available at compile time).
-- [ ] Rebuild everything remotely (`assembleLibreDebug`/`assembleLibreRelease` both flavors,
-  `ktfmtCheck`, unit tests) to confirm targeting API 37 doesn't surface new lint/deprecation
-  issues, then merge PRs #15/#16/#17/#21 (`androidx.hilt`, `androidx.lifecycle`, `androidx.core`,
-  `aboutlibraries`).
+  are available at compile time.
+- [x] Rebuilt remotely on rofl-14: `assembleLibreDebug`/`assembleLibreRelease` for both
+  `:app:phone`/`:app:tv`, `:data`/`:core` unit tests, `ktfmtCheck` - all pass. Only pre-existing
+  deprecation warnings (`MasterKey`/`EncryptedSharedPreferences`, `LocalClipboardManager`,
+  `java.util.Locale(String)`), no new errors. `nixfmt`/`statix` also clean on the `flake.nix`
+  change itself.
+- [x] Rebased and merged PRs #15/#16/#17/#21 (`androidx.hilt` 1.4.0, `androidx.lifecycle` 2.11.0,
+  `androidx.core` 1.19.0, `aboutlibraries` 15.0.4) - all green once `compileSdk 37` landed on
+  `main`.
 
-Not done here - bumping the project's compile target is a more deliberate call than a routine
-dependency merge, and depends on whether API 37's SDK platform is even something the user wants
-provisioned in the Nix flake right now. Left the 4 PRs open rather than force-merging past a real
-CI failure.
+**Why:** direct user follow-up the same day, once the compileSdk-37 blocker on 4 Renovate PRs was
+identified and documented.
 
-Status: not started, 2026-08-05.
+Status: **done**, 2026-08-05.
