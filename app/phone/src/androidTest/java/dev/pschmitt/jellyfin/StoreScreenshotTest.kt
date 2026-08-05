@@ -126,12 +126,28 @@ class StoreScreenshotTest {
         waitForText("Dark", 30_000)
         clickWithRetry { composeRule.onNodeWithText("Dark") }
 
-        // SettingsScreen's UpdateTheme event applies immediately (UiModeManager/
-        // AppCompatDelegate), no activity restart needed - two back presses unwind the two nested
-        // Settings destinations pushed above (root Settings, then the Appearance category) back
-        // to Home.
+        // SettingsScreen's UpdateTheme event applies immediately (uiMode is in MainActivity's
+        // configChanges, so this doesn't recreate the Activity) - two back presses unwind the two
+        // nested Settings destinations pushed above (root Settings, then the Appearance category)
+        // back to Home. Firing both immediately back-to-back isn't safe though: a real CI run's
+        // failure screenshot showed only the first press had landed (correctly dark-themed root
+        // Settings screen, not Home) - the second one raced the first pop's 300ms crossfade
+        // transition and got lost. Press, wait for the pop to actually finish, then press again.
         device.pressBack()
-        device.pressBack()
+        waitForHomeOrRetryBack()
+    }
+
+    private fun waitForHomeOrRetryBack(maxPresses: Int = 3) {
+        repeat(maxPresses) {
+            if (
+                composeRule.onAllNodesWithTag("e2e-home-screen").fetchSemanticsNodes().isNotEmpty()
+            ) {
+                waitForHomeLoaded()
+                return
+            }
+            Thread.sleep(500)
+            device.pressBack()
+        }
         waitForHomeLoaded()
     }
 
