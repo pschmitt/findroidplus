@@ -5,13 +5,6 @@ app_package_name("dev.pschmitt.jollyfin.debug")
 tests_package_name("dev.pschmitt.jollyfin.debug.test")
 use_tests_in_classes(["dev.pschmitt.jellyfin.StoreScreenshotTest"])
 
-# screengrab defaults to the plain androidx.test.runner.AndroidJUnitRunner and doesn't
-# auto-detect a custom testInstrumentationRunner - without this it targets an instrumentation
-# component that was never registered (INSTRUMENTATION_FAILED) instead of the actual one, which
-# swaps in HiltTestApplication so @HiltAndroidTest-style Hilt wiring works (see
-# app/phone/build.gradle.kts' testInstrumentationRunner and HiltTestRunner.kt).
-test_instrumentation_runner("dev.pschmitt.jellyfin.HiltTestRunner")
-
 # Built remotely (see justfile/AGENTS.md - Gradle never runs on this machine) for the x86_64
 # emulator ABI; screengrab only installs/drives the prebuilt APKs over adb.
 app_apk_path("dist/phone-libre-x86_64-debug.apk")

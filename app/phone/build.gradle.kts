@@ -25,7 +25,7 @@ android {
         val gitRevision = System.getenv("GIT_REVISION") ?: "unknown"
         buildConfigField("String", "GIT_REVISION", "\"$gitRevision\"")
 
-        testInstrumentationRunner = "dev.pschmitt.jellyfin.HiltTestRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -176,8 +176,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.uiautomator)
-    androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.fastlane.screengrab)
-    kspAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
