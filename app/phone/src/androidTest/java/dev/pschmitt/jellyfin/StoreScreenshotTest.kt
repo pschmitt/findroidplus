@@ -88,13 +88,13 @@ class StoreScreenshotTest {
      */
     private fun connectAndLogIn(baseUrl: String, username: String, password: String) {
         clickWithRetry { composeRule.onNodeWithText("Continue") }
-        clickWithRetry { composeRule.onNodeWithText("Add server") }
+        clickWithRetry { composeRule.onNodeWithTag("e2e-add-server-fab") }
 
         composeRule.onNodeWithTag("e2e-server-url").performTextInput(baseUrl)
         clickWithRetry { composeRule.onNodeWithTag("e2e-connect-button") }
 
-        waitForText("Add user", 30_000)
-        clickWithRetry { composeRule.onNodeWithText("Add user") }
+        waitForTag("e2e-add-user-fab", 30_000)
+        clickWithRetry { composeRule.onNodeWithTag("e2e-add-user-fab") }
 
         waitForTag("e2e-username", 30_000)
         composeRule.onNodeWithTag("e2e-username").performTextInput(username)

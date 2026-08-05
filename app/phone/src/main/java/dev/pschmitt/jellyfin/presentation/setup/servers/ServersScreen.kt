@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -168,7 +169,8 @@ private fun ServersScreenLayout(
             onClick = { onAction(ServersAction.OnAddClick) },
             icon = { Icon(painterResource(CoreR.drawable.ic_plus), contentDescription = null) },
             text = { Text(text = stringResource(SetupR.string.servers_btn_add_server)) },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
+            modifier =
+                Modifier.align(Alignment.BottomEnd).padding(24.dp).testTag("e2e-add-server-fab"),
         )
     }
 
