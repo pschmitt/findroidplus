@@ -91,15 +91,7 @@ class StoreScreenshotTest {
         clickWithRetry { composeRule.onNodeWithTag("e2e-add-server-fab") }
 
         composeRule.onNodeWithTag("e2e-server-url").performTextInput(baseUrl)
-        // performTextInput leaves the field focused, raising the on-screen keyboard - the IME is
-        // a system overlay that sits on top of the app and intercepts touches for whatever screen
-        // area it now covers, so a button pushed underneath it (visually or via resize) never
-        // actually receives the click even though Compose reports it as having "succeeded" (no
-        // exception). Confirmed via a real CI run's failure screenshot: stuck on Login with both
-        // fields correctly filled in and the keyboard still open, having "clicked" e2e-login-button
-        // with no effect. A back-press with the IME visible only dismisses the keyboard (standard
-        // Android behavior), it doesn't navigate away from the screen.
-        device.pressBack()
+        dismissKeyboard()
         clickWithRetry { composeRule.onNodeWithTag("e2e-connect-button") }
 
         waitForTag("e2e-add-user-fab", 30_000)
@@ -108,7 +100,7 @@ class StoreScreenshotTest {
         waitForTag("e2e-username", 30_000)
         composeRule.onNodeWithTag("e2e-username").performTextInput(username)
         composeRule.onNodeWithTag("e2e-password").performTextInput(password)
-        device.pressBack()
+        dismissKeyboard()
         clickWithRetry { composeRule.onNodeWithTag("e2e-login-button") }
 
         waitForHomeLoaded()
@@ -119,12 +111,14 @@ class StoreScreenshotTest {
         // The root Settings screen's lone "Appearance" section has both its own section header
         // and its single category row titled "Appearance" (SettingsViewModel.kt reuses
         // settings_category_interface for both the PreferenceGroup name and the PreferenceCategory
-        // inside it) - onNodeWithText("Appearance") is therefore ambiguous (found '2' nodes,
-        // confirmed via a real CI run). The category row's description line
-        // (settings_category_interface_summary) is unique and lands the same click, since it's
-        // inside the same clickable card.
-        waitForText("Theme, home screen, playback", 30_000)
-        clickWithRetry { composeRule.onNodeWithText("Theme, home screen, playback") }
+        // inside it), so onNodeWithText("Appearance") is ambiguous - and text-matching around it
+        // isn't reliably fixable at all: real CI runs showed "found 2 nodes" on phone but "found 0
+        // nodes" for the same query on the sevenInch/tenInch NavigationRail layout, and even the
+        // supposedly-unique description text vanished the same way there. Uses a dedicated testTag
+        // on the card itself instead (SettingsGroupCard.kt) - the one thing that doesn't depend on
+        // text-matching semantics differing by device/layout.
+        waitForTag("e2e-settings-appearance-category", 30_000)
+        clickWithRetry { composeRule.onNodeWithTag("e2e-settings-appearance-category") }
 
         waitForText("Theme", 30_000)
         clickWithRetry { composeRule.onNodeWithText("Theme").performScrollTo() }
@@ -167,6 +161,23 @@ class StoreScreenshotTest {
 
     private fun captureScreenshot(name: String) {
         Screengrab.screenshot(name)
+    }
+
+    /**
+     * performTextInput leaves the field focused, raising the on-screen keyboard - the IME is a
+     * system overlay that sits on top of the app and intercepts touches for whatever it covers, so
+     * a button left underneath it never actually receives a click even though Compose reports the
+     * click as having "succeeded" (confirmed via a real CI run's failure screenshot: stuck on Login
+     * with both fields correctly filled in, keyboard still open, "logging in" was a no-op). A
+     * back-press with the IME actually visible only dismisses it (standard Android behavior)
+     * without navigating away - but pressing back too early, before the IME's own show animation
+     * has actually finished, performs real back navigation instead (confirmed the hard way: this
+     * exact sequence, without the delay below, once popped AddServer back to an empty Servers
+     * screen instead of just closing the keyboard). Give it a moment to actually show first.
+     */
+    private fun dismissKeyboard() {
+        Thread.sleep(700)
+        device.pressBack()
     }
 
     /**
