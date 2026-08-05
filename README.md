@@ -42,13 +42,24 @@ Managing apps declaratively with [declaroid](https://github.com/pschmitt/declaro
 ## Features
 - Native interface for phone and Android TV, browsing movies, series, seasons, and
   episodes (direct play only, no transcoding)
-- Offline downloads for playback on the road
+- Offline downloads for playback on the road, with auto-download rules that keep watching
+  a show (and auto-delete after watching), plus manual import of files already on disk
 - Playback via ExoPlayer or mpv, with broad codec support (H.264/H.265/H.266, VP8/VP9/AV1,
   DTS/TrueHD/AC-3, styled SSA/ASS subtitles, and more) and optional software decoding fallback
 - Picture-in-picture mode
 - Media chapters with timeline markers and chapter navigation gestures
 - Trickplay (Jellyfin 10.9+) and media segment skip/auto-skip (Jellyfin 10.10+)
 - Sonarr/Radarr integration: upcoming-release calendar and download queue status
+- Jellyseerr/Overseerr integration: discover and request media that isn't in your library yet,
+  right from search
+- Remote management of other JollyFin instances on your account: push auto-download rules or
+  one-off downloads to another of your own devices without touching it directly
+- QR-code device provisioning: scan a code from an already-configured instance to set up a new
+  device's Jellyfin/Sonarr/Radarr/Seerr connection in seconds
+- Encrypted local backup/restore of app configuration
+- `findroid-cli`: a Termux command-line client that talks to a running instance over its local
+  control API — browse libraries, search, and trigger or manage downloads by name from a
+  terminal
 
 ## Reproducible builds
 
