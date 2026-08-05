@@ -1681,3 +1681,86 @@ way: each now requires `compileSdk 37` or later, and this project is still pinne
 identified and documented.
 
 Status: **done**, 2026-08-05 - tagged as `v2.13.1`.
+
+## FINDROID-71: automated Play Store screenshot CI (Jellyfin-only for now)
+
+Requested (2026-08-05): mirror the screenshot-automation CI the sibling `netbox-and-chill`
+project (Nyetbox) built - see that repo's `.github/workflows/screenshots.yaml`,
+`app/src/androidTest/kotlin/dev/pschmitt/nyetbox/StoreScreenshotTest.kt`, `ci/netbox/` fixture,
+and `docs/screenshots.md`. Same shape here: a disposable, seeded backend + an
+`reactivecircus/android-emulator-runner`-driven instrumented test capturing fastlane
+`screengrab` output straight into `fastlane/metadata/android/en-US/images/`, matrixed over
+phone/sevenInch/tenInch, with an opt-in `open_pr` job. Explicit scope for v1, per direct
+instruction: **Jellyfin only** - no Sonarr/Radarr/Seerr screens, and no attempt to also cover
+`app/tv` in the same pass.
+
+Key difference from Nyetbox's NetBox fixture: per explicit instruction, ship the **baked Jellyfin
+config as a committed fixture** (`ci/jellyfin/config/`) rather than scripting Jellyfin's setup
+wizard + library scan fresh on every CI run - Jellyfin has no netbox-docker-style
+`SUPERUSER_*`-env-var auto-provisioning, and its own onboarding wizard + metadata-provider-backed
+library scan is slow and non-deterministic (external TMDB/OMDb calls) if run live in CI every
+time. Baking once and shipping the result sidesteps both.
+
+- [x] Source small, genuinely-CC video files, fetched (not committed) via
+  `ci/jellyfin/fetch-media.sh`/`just jellyfin-fixture-media` - the official small **trailer**
+  encodes for Big Buck Bunny (~3.9MB, iPhone encode) and Sintel (~4.4MB, 480p), both Blender
+  Foundation/CC BY 3.0, plain downloads with no local transcoding. Deliberately *not* the full
+  Caminandes/Pioneer One/etc. lineup the existing hand-captured screenshots show (likely captured
+  against the public `demo.jellyfin.org` "Stable Demo" server previously) - two items is enough
+  for a v1 Home + detail-screen journey, and trailers avoid needing to trim/re-encode a full
+  film locally (heavy CPU work that has no business running on a developer workstation - first
+  approach here did exactly that and got corrected mid-session). Poster art: Wikimedia Commons
+  (the same blender.org-sourced, CC BY 3.0 images each film's Wikipedia article uses), no local
+  image generation needed.
+- [x] Media deliberately gitignored (`ci/jellyfin/media/`) rather than committed - video doesn't
+  compress well in git history; `just jellyfin-fixture-media` reproduces it on demand, in CI and
+  locally alike.
+- [x] Baked the fixture: ran Jellyfin locally via `docker run jellyfin/jellyfin:10.11.11`,
+  completed the startup wizard via its REST API (`POST /Startup/User` **first** - calling it
+  before `/Startup/Configuration` 404s for reasons not fully root-caused, possibly a startup-race
+  on a just-booted container - then `/Startup/Configuration`, `/Startup/RemoteAccess`,
+  `/Startup/Complete`), added the Movies library pointed at `/media/movies` (matching CI's mount
+  path exactly, `EnableInternetProviders: false` at the library level so a hypothetical future
+  live re-scan never depends on TMDB), then ran an explicit per-item
+  `POST /Items/{id}/Refresh?metadataRefreshMode=FullRefresh&imageRefreshMode=FullRefresh&replaceAllImages=true&replaceAllMetadata=true`
+  - confirmed this is what actually triggers a real TMDB lookup regardless of the library's own
+  `EnableInternetProviders` setting (that flag only gates *automatic* scans, not an explicit
+  admin-triggered full refresh) - got real overviews/genres/posters/backdrops/logos for both
+  items this way, better than the originally-planned local-NFO-only approach and no extra work.
+  Exported the resulting `/config` (minus `log/`/`SQLiteBackups/`, ~5MB) as
+  `ci/jellyfin/config-fixture/`. Verified end-to-end from a **fresh** copy (fresh Docker volume,
+  `docker compose up`, zero setup API calls) that login + full metadata/images are immediately
+  available - see `ci/jellyfin/README.md` for the full rationale and regeneration steps.
+- [x] `ci/jellyfin/docker-compose.yml`: a `config-seed` init container copies the read-only
+  `config-fixture/` into a named `jellyfin-config` volume once before `jellyfin` starts (keeps
+  Jellyfin's runtime writes - SQLite WAL, scheduled-task state - out of the git-tracked fixture
+  entirely, in CI's ephemeral checkout and for local use alike). `just jellyfin-fixture-up`/
+  `-down` wrap it for local testing.
+- [ ] Add `testTag()`s to the phone Compose screens needed for automation - `app/phone` currently
+  has **zero** existing `testTag()` usage anywhere, unlike Nyetbox's `e2e-*` tag convention this
+  is modeled on. Add the minimum needed for a reliable login + Home + a movie/show detail screen
+  journey, not a sweep of the whole UI.
+- [ ] `app/phone/src/androidTest/.../StoreScreenshotTest.kt` (new `androidTest` source set -
+  doesn't exist yet either): Compose UI test + fastlane `screengrab`, following Nyetbox's
+  documented gotchas closely (wait on screen-unique facts not generic titles; a separate raw
+  failure-screenshot helper since screengrab drops all captures on test failure; watch for
+  Compose clicks silently not landing on off-screen/occluded nodes; settle delays around
+  snackbar/transition animations). Scope: Home + one movie (or show) detail screen, light + dark,
+  phone/7in/10in via the matrix - no PVR/Sonarr/Radarr/Seerr screens per explicit instruction.
+- [ ] `.github/workflows/screenshots.yaml`: `workflow_dispatch` with an `open_pr` boolean input,
+  matrix over phone/sevenInch/tenInch (`pixel_2`/`Nexus 7`/`medium_tablet`, API 34
+  `google_apis`), `docker compose up` the baked fixture, build debug + androidTest APKs *before*
+  booting the emulator (building while it's up starves it of CPU - confirmed the hard way in
+  Nyetbox's own build-out), grant KVM access, run `screengrab`, upload artifacts, tear the
+  fixture down unconditionally. Second `open-pr` job (gated on `inputs.open_pr` and the matrix
+  job succeeding) flattens the three artifacts into the real fastlane directories and opens/
+  updates a PR on a stable branch name for human review before merge - screenshots never get
+  pushed straight to the live Play Console listing by this workflow itself.
+
+**Why:** direct user request, explicitly modeled on Nyetbox's own proven implementation.
+**How to apply:** see Nyetbox's `docs/screenshots.md` for the full rationale/gotchas write-up this
+entry summarizes - read it before touching the workflow/test file, it documents several
+non-obvious failure modes (ANR dialogs landing in captures, Compose clicks silently missing
+occluded nodes, artifact-download nesting, etc.) already hit and fixed once there.
+
+Status: not started, 2026-08-05.

@@ -1,0 +1,40 @@
+# Disposable Jellyfin fixture for Play Store screenshot capture (FINDROID-71).
+#
+# Ships a pre-baked config (committed under ci/jellyfin/config-fixture/ - admin user, remote
+# access disabled, and a Movies library already scanned with real metadata/artwork) so CI never
+# has to script Jellyfin's setup wizard or wait on a library scan. The actual media bytes are
+# NOT committed - `just jellyfin-fixture-media` (ci/jellyfin/fetch-media.sh) fetches/trims them
+# into ci/jellyfin/media/ (gitignored) at the exact paths the baked fixture already expects.
+#
+# `config-seed` copies the read-only fixture into the `jellyfin-config` named volume once before
+# `jellyfin` starts, rather than bind-mounting ci/jellyfin/config-fixture/ straight to /config -
+# Jellyfin writes to /config at runtime (SQLite WAL journal, scheduled-task state, etc.), and a
+# named volume keeps those writes out of the git-tracked fixture entirely (both for CI's own
+# ephemeral checkout and for anyone running this stack locally to inspect/regenerate the fixture).
+services:
+  config-seed:
+    image: docker.io/library/alpine:3.22
+    volumes:
+      - ./config-fixture:/fixture:ro
+      - jellyfin-config:/config
+    command: ["sh", "-c", "cp -a /fixture/. /config/"]
+
+  jellyfin:
+    image: docker.io/jellyfin/jellyfin:10.11.11
+    depends_on:
+      config-seed:
+        condition: service_completed_successfully
+    ports:
+      - "8096:8096"
+    volumes:
+      - jellyfin-config:/config
+      - ./media:/media:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8096/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  jellyfin-config:

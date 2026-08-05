@@ -42,3 +42,7 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
+
+# Jellyfin screenshot fixture media (FINDROID-71) - fetched on demand via
+# `just jellyfin-fixture-media`, not vendored (see ci/jellyfin/README.md).
+ci/jellyfin/media/

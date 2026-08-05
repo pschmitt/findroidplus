@@ -216,3 +216,20 @@ nix-fmt:
 
 nix-lint:
     nix develop --command statix check
+
+# --- Play Store screenshot fixture (FINDROID-71) ----------------------------
+
+# Fetch the small, official Creative-Commons trailer clips the Jellyfin screenshot fixture
+# needs into ci/jellyfin/media/ (gitignored, not vendored - see ci/jellyfin/README.md). Plain
+# downloads only, no local transcoding.
+jellyfin-fixture-media:
+    ./ci/jellyfin/fetch-media.sh
+
+# Bring up the disposable Jellyfin screenshot fixture (pre-baked config + fetched media) on
+# http://127.0.0.1:8096. Requires `just jellyfin-fixture-media` to have been run at least once.
+jellyfin-fixture-up: jellyfin-fixture-media
+    docker compose -f ci/jellyfin/docker-compose.yml up --detach --wait --wait-timeout 90
+
+# Tear down the screenshot fixture and its volumes.
+jellyfin-fixture-down:
+    docker compose -f ci/jellyfin/docker-compose.yml down --volumes --remove-orphans
