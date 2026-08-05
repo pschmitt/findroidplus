@@ -188,7 +188,19 @@ class StoreScreenshotTest {
         }
     }
 
+    /**
+     * The semantics-tree waits above (tags, content descriptions, isDisplayed) only confirm the
+     * layout has the right nodes - they say nothing about whether Coil has actually finished
+     * decoding and painting poster/backdrop images yet, or whether Home's pull-to-refresh spinner
+     * has fully settled. Confirmed via real captures on the merged PR: a movie detail screenshot
+     * with a plain gray backdrop (image request still in flight) and a Home screenshot still
+     * showing only the "Pending downloads" section with the refresh spinner, no library rows
+     * visible at all, despite every wait above having already passed. A flat settle delay before
+     * every capture is cruder than waiting on a real signal, but there isn't one exposed to grab
+     * onto here (no "images loaded"/"refresh settled" semantics anywhere in the app).
+     */
     private fun captureScreenshot(name: String) {
+        Thread.sleep(1_500)
         Screengrab.screenshot(name)
     }
 
