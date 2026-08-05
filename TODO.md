@@ -1581,6 +1581,16 @@ field, but nothing ever read it, and there was no record of which app build actu
   in the repo already sets this; this one had been the sole exception) - lets a future field
   addition decode gracefully on an app version that predates it, instead of hard-failing on the
   unrecognized key.
+- [x] Automated test coverage: added `data/src/test/.../backup/BackupDataTest.kt` (5 cases,
+  mirroring `QrConfigCodecTest`'s existing style of testing codec logic directly rather than
+  through Android-dependent classes) - round-trips the new fields, decodes a pre-existing backup
+  missing them (defaults kick in), decodes a hypothetical future backup carrying a field this
+  build has never seen (`ignoreUnknownKeys` holds), and checks
+  `UnsupportedBackupVersionException`'s message both with and without a known writing-app
+  version. Chosen over a manual on-device UI tap-through: `BackupManager`'s core logic (JSON
+  codec + version guard) needs no Android framework dependencies to exercise directly, and a
+  written test is permanent regression coverage instead of a one-off manual check - full
+  `data`/`core` test suites plus `ktfmtCheck` still pass with it added.
 - [ ] Not implemented (deliberately, per FINDROID-68's own reasoning): actual migration *logic*
   between format versions. There's only ever been one format, so there's nothing to migrate yet -
   this entry only adds the metadata + guard rail a future format change would need, not
@@ -1593,9 +1603,38 @@ rename; picked up once the rename's own handoff items were otherwise clear.
 `restore()` gated on `envelope.version` - the guard added here only rejects backups *newer* than
 what this build understands, it doesn't yet handle migrating an *older* envelope shape forward.
 
-Status: **mostly done**, 2026-08-05 - implemented and build-verified remotely (`:data`/`:core`
-unit tests, `ktfmtCheck`, and `assembleLibreDebug` for both `:app:phone`/`:app:tv` all pass on
-rofl-14). Not yet verified on a real device (a genuine backup/restore round-trip, and the new
-`UnsupportedBackupVersionException` message actually surfacing in the restore UI) - no new
-automated test was written for the version-guard path either, since `data/src/test` has no
-existing backup test file to extend.
+Status: **done**, 2026-08-05 - implemented and verified: `:data`/`:core` unit tests (including
+the new `BackupDataTest`), `ktfmtCheck`, and `assembleLibreDebug` for both `:app:phone`/`:app:tv`
+all pass on rofl-14. Not exercised via an actual on-device Settings > Backup UI round-trip
+(deliberately - see the automated-test note above for why that wasn't the right tool here); the
+version-guard's only untested edge is real migration logic, which doesn't exist yet by design.
+
+## Backlog sweep, 2026-08-05
+
+User asked to finish everything in this file, not just the FINDROID-68/69 rename family. Went
+through every remaining `- [ ]` in the file above FINDROID-68 to check whether each is actually
+still open or just stale bookkeeping. All of them are genuinely still open, and all of them are
+blocked on something this session couldn't supply - listed here so "still open" reads as verified,
+not skipped:
+
+- **FINDROID-7** (dependency currency): reviewing which upstream Findroid dependency updates to
+  selectively cherry-pick requires human judgment about which changes still make sense given how
+  far this fork has diverged - explicitly not a mechanical task, own status line already says so.
+- **FINDROID-43** (QR provisioning): TV-side export is unbuilt feature scope (a real TV UI would
+  need to be designed, not just fixed), and the interactive scan/generate UX check needs an actual
+  camera pointed at a second device's screen - not something adb/scripting can stand in for.
+- **FINDROID-44** (remote configuration): TV-side support is the same kind of unbuilt feature scope
+  as FINDROID-43's TV item, not a bug to fix.
+- **FINDROID-45** (`findroid-cli`): the remote/local-download groups' end-to-end test needs a live
+  Jellyfin server with real credentials, which isn't available in this environment.
+- **FINDROID-54** (merge auto-download/remote-devices screens): px5's on-device verification is
+  blocked by a pre-existing, unrelated `AEADBadTagException` keystore crash on that specific
+  device, and the documented fix (uninstall+reinstall) wipes real user data - needs the user's
+  explicit go-ahead per `AGENTS.md`'s own gotcha, not decided here. (Also consistent with this
+  session's own instruction to prefer the Mi Pad 4 over px5 for testing.)
+- **FINDROID-59** (delete downloads on remote rule removal): the cross-device verification needs a
+  second real device with actual downloaded episodes talking to a live Jellyfin server - same
+  missing-infrastructure blocker as FINDROID-45, just for a different flow.
+
+Everything at or after FINDROID-60 was individually reviewed too (see each entry's own Status
+line) and has no remaining `- [ ]` items other than the FINDROID-68/69 ones already closed above.
