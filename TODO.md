@@ -1638,3 +1638,29 @@ not skipped:
 
 Everything at or after FINDROID-60 was individually reviewed too (see each entry's own Status
 line) and has no remaining `- [ ]` items other than the FINDROID-68/69 ones already closed above.
+
+## FINDROID-70: bump compileSdk to 37
+
+Renovate (see FINDROID-7's fix earlier today - `schedule:weekly` was blocking every PR from ever
+being created) opened 16 dependency-update PRs. 12 merged clean. 4 (`androidx.hilt` 1.4.0,
+`androidx.lifecycle` 2.11.0, `androidx.core` 1.19.0, `aboutlibraries` 15.0.4) all fail the same
+way: each now requires `compileSdk 37` or later, and this project is still pinned to 36
+(`platforms-android-36` is the only Android platform the flake currently provides - see
+`flake.nix`). One shared blocker across all 4 PRs, not four separate problems.
+
+- [ ] Add `platforms-android-37` (and matching `build-tools` if versioned separately) to
+  `flake.nix`'s Android SDK composition.
+- [ ] Bump `compileSdk` in every module's `build.gradle.kts` (leave `targetSdk`/`minSdk` alone -
+  those change runtime behavior and device compatibility, `compileSdk` only changes which APIs
+  are available at compile time).
+- [ ] Rebuild everything remotely (`assembleLibreDebug`/`assembleLibreRelease` both flavors,
+  `ktfmtCheck`, unit tests) to confirm targeting API 37 doesn't surface new lint/deprecation
+  issues, then merge PRs #15/#16/#17/#21 (`androidx.hilt`, `androidx.lifecycle`, `androidx.core`,
+  `aboutlibraries`).
+
+Not done here - bumping the project's compile target is a more deliberate call than a routine
+dependency merge, and depends on whether API 37's SDK platform is even something the user wants
+provisioned in the Nix flake right now. Left the 4 PRs open rather than force-merging past a real
+CI failure.
+
+Status: not started, 2026-08-05.
