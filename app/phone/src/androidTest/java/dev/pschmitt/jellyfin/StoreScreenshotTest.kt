@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin
 
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -86,33 +87,33 @@ class StoreScreenshotTest {
      * (see NavigationRoot.kt's WelcomeRoute/ServersRoute/UsersRoute wiring).
      */
     private fun connectAndLogIn(baseUrl: String, username: String, password: String) {
-        composeRule.onNodeWithText("Continue").performClick()
-        composeRule.onNodeWithText("Add server").performClick()
+        clickWithRetry { composeRule.onNodeWithText("Continue") }
+        clickWithRetry { composeRule.onNodeWithText("Add server") }
 
         composeRule.onNodeWithTag("e2e-server-url").performTextInput(baseUrl)
-        composeRule.onNodeWithTag("e2e-connect-button").performClick()
+        clickWithRetry { composeRule.onNodeWithTag("e2e-connect-button") }
 
         waitForText("Add user", 30_000)
-        composeRule.onNodeWithText("Add user").performClick()
+        clickWithRetry { composeRule.onNodeWithText("Add user") }
 
         waitForTag("e2e-username", 30_000)
         composeRule.onNodeWithTag("e2e-username").performTextInput(username)
         composeRule.onNodeWithTag("e2e-password").performTextInput(password)
-        composeRule.onNodeWithTag("e2e-login-button").performClick()
+        clickWithRetry { composeRule.onNodeWithTag("e2e-login-button") }
 
         waitForHomeLoaded()
     }
 
     private fun switchToDarkModeAndReturnToHome() {
-        composeRule.onNodeWithTag("e2e-settings-button").performClick()
+        clickWithRetry { composeRule.onNodeWithTag("e2e-settings-button") }
         waitForText("Appearance", 30_000)
-        composeRule.onNodeWithText("Appearance").performClick()
+        clickWithRetry { composeRule.onNodeWithText("Appearance") }
 
         waitForText("Theme", 30_000)
-        composeRule.onNodeWithText("Theme").performScrollTo().performClick()
+        clickWithRetry { composeRule.onNodeWithText("Theme").performScrollTo() }
 
         waitForText("Dark", 30_000)
-        composeRule.onNodeWithText("Dark").performClick()
+        clickWithRetry { composeRule.onNodeWithText("Dark") }
 
         // SettingsScreen's UpdateTheme event applies immediately (UiModeManager/
         // AppCompatDelegate), no activity restart needed - two back presses unwind the two nested
@@ -126,7 +127,7 @@ class StoreScreenshotTest {
     private fun captureJourney(suffix: String) {
         captureScreenshot("01_home$suffix")
 
-        composeRule.onAllNodesWithTag("e2e-item-card").onFirst().performClick()
+        clickWithRetry { composeRule.onAllNodesWithTag("e2e-item-card").onFirst() }
         waitForContentDescription("Play", 30_000)
         waitForTag("e2e-movie-title", 30_000)
         captureScreenshot("02_movie_detail$suffix")
@@ -147,6 +148,27 @@ class StoreScreenshotTest {
 
     private fun captureScreenshot(name: String) {
         Screengrab.screenshot(name)
+    }
+
+    /**
+     * `AssertionError: Failed to inject touch input` showed up twice in real CI runs, both times on
+     * this test's very first click (right after MainActivity's window is created) - neither
+     * android-emulator-runner's own emulator-ready wait nor this repo's `ci/android-e2e-wait.sh`
+     * (full `boot_completed`/`device_provisioned`/package-service readiness) eliminated it, which
+     * points to a transient window-focus race rather than something a longer upfront wait reliably
+     * avoids. Retry the click itself instead - re-querying the node each attempt, since a
+     * `SemanticsNodeInteraction` can go stale across recompositions.
+     */
+    private fun clickWithRetry(attempts: Int = 5, node: () -> SemanticsNodeInteraction) {
+        repeat(attempts - 1) {
+            try {
+                node().performClick()
+                return
+            } catch (e: AssertionError) {
+                Thread.sleep(1_000)
+            }
+        }
+        node().performClick()
     }
 
     private fun waitForText(text: String, timeoutMillis: Long) {
