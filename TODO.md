@@ -1867,5 +1867,31 @@ filename/rbw entry, then "just JollyFin, don't worry about it" for the three loc
 **How to apply:** see FINDROID-68 for the boundary this entry does still respect (upstream
 attribution language, ticket ids).
 
+## FINDROID-73: auto-trigger screenshot capture on a real tagged release
+
+`screenshots.yaml` (FINDROID-71) was entirely manual (`workflow_dispatch` only). Direct user
+request: fire it automatically off `release.yaml`'s real `vX.Y.Z`-tag path (not the rolling
+"latest" prerelease, which republishes on every `main` push - that would make this an
+~90min x3-device emulator job run on every commit instead of once per release). Requested for the
+sibling `augh`/`nyetbox` projects too - see their own repos for the equivalent change.
+
+- [x] Added an `actions: write` permission and a final "Trigger screenshot capture" step to
+  `release.yaml`, gated on `steps.params.outputs.tag_name != 'latest'`, calling
+  `gh workflow run screenshots.yaml --ref main -f open_pr=true`. Uses the default `github.token` -
+  no PAT needed, since `workflow_dispatch` (unlike push/PR events) is explicitly exempted from
+  GitHub's "events triggered by GITHUB_TOKEN don't start a new workflow run" restriction, per
+  GitHub's own docs.
+- [x] `open_pr=true` so the auto-triggered run lands as a reviewable PR (existing behavior from
+  FINDROID-71's `open-pr` job) rather than only a build artifact nobody looks at.
+
+**Why:** direct user request, same session as FINDROID-72.
+**How to apply:** if this ever needs a different ref than `main` (e.g. if `screenshots.yaml` moves
+to reading its own version off the just-pushed tag), update the `--ref` flag - currently pinned to
+`main` since that's guaranteed to have the workflow file's `workflow_dispatch` schema.
+
+Status: **done**, 2026-08-06. Not yet verified by an actual tag push through the full pipeline
+(the trigger step didn't exist yet when v2.13.3 was tagged) - the next real release will be the
+first live test.
+
 Status: **done**, 2026-08-06 - build/test/lint-verified remotely and deployed to all three
 attached devices; not yet tagged as a release build.
