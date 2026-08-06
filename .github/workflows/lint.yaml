@@ -1,14 +1,21 @@
 name: Lint
 
+# Dispatchable on demand in addition to its normal push/PR gating. When ktfmtCheck fails - on any
+# trigger - this also uploads a `ktfmt-diff-patch` artifact containing exactly what
+# `./gradlew ktfmtFormat` would change - see AGENTS.md's note on why `just lint`/`just format`
+# can't be trusted to reproduce CI's verdict locally.
 on:
   push:
     paths:
       - '**.kt'
       - '**.kts'
+      - '.github/workflows/lint.yaml'
   pull_request:
     paths:
       - '**.kt'
       - '**.kts'
+      - '.github/workflows/lint.yaml'
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -25,4 +32,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Check with ktfmt
+        id: ktfmt_check
         run: ./gradlew ktfmtCheck
+      - name: Produce ktfmt diff patch
+        if: ${{ failure() && steps.ktfmt_check.outcome == 'failure' }}
+        run: |
+          ./gradlew ktfmtFormat
+          git diff > /tmp/ktfmt.patch
+      - name: Upload ktfmt diff patch
+        if: ${{ failure() && steps.ktfmt_check.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ktfmt-diff-patch
+          path: /tmp/ktfmt.patch
+          if-no-files-found: error

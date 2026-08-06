@@ -45,7 +45,12 @@ Repository instructions for AI coding agents working on JollyFin.
     hook running the wrong version could "fix" a file into a state that then fails
     CI's real `ktfmtCheck`. This actually happened once: it inserted spurious blank
     lines between every `include()` in `settings.gradle.kts`. Use `just lint` (runs
-    the pinned Gradle plugin remotely) as the authoritative formatting check.
+    the pinned Gradle plugin remotely) as the authoritative formatting check. If `just lint`
+    and CI's `Lint` workflow ever disagree, trust CI: `.github/workflows/lint.yaml`'s ktfmt job
+    auto-uploads a `ktfmt-diff-patch` artifact whenever `ktfmtCheck` fails (also dispatchable on
+    demand via `gh workflow run lint.yaml`), containing exactly what `./gradlew ktfmtFormat`
+    would change in CI's own environment. Download it
+    (`gh run download <run-id> -n ktfmt-diff-patch`) and `git apply` it rather than guessing.
 - Prefer the `justfile` recipes over raw `./gradlew`/`ssh`/`adb` invocations — run
   `just --list` for the full set. It wraps everything below (remote builds, fetching
   APKs, and Mi Pad 4 install/logcat/adb-enable) in composable recipes.
