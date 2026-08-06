@@ -23,6 +23,10 @@ concurrency:
 permissions:
   contents: write
   actions: write
+  # For actions/attest-build-provenance: id-token to mint the OIDC token needed for a Sigstore
+  # signing certificate, attestations to persist the resulting attestation against the repo.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -154,6 +158,16 @@ jobs:
         # fixed value to diff their own output against.
         working-directory: ${{ steps.apks.outputs.dir }}
         run: sha256sum -- *.apk > SHA256SUMS
+
+      - name: Attest build provenance
+        # Signed SLSA build provenance for every APK, keyed off the checksums file just generated
+        # rather than re-hashing each APK separately - one attestation covering every subject.
+        # Runs for both the rolling "latest" prerelease and real tags: provenance is worth having
+        # for whatever gets published, not only tagged releases. Verify with:
+        #   gh attestation verify <apk> --repo pschmitt/jollyfin
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-checksums: ${{ steps.apks.outputs.dir }}/SHA256SUMS
 
       - name: Move tag
         if: steps.params.outputs.move_tag == 'true'
