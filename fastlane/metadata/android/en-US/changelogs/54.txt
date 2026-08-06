@@ -1,0 +1,5 @@
+New:
+- Enlarged the Home header logo so it's easier to see.
+- Renamed the bundled Termux CLI from findroid-cli to jollyfin-cli, matching the app's own name.
+- Fixed the Finnish, Estonian, and Czech privacy notice translations still referencing the old
+  "Findroid" name.
