@@ -53,7 +53,7 @@ fun HomeHeader(
         title = {
             TopBarTitle(
                 text = serverName,
-                iconRes = CoreR.drawable.ic_logo,
+                iconRes = CoreR.drawable.ic_launcher_foreground,
                 modifier = Modifier.clickable(onClick = onServerClick),
                 iconTint = Color.Unspecified,
             )

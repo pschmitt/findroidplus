@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -249,12 +250,132 @@ private fun ShowScreenLayout(
                     )
                     Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Text(
-                            text = show.name,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 3,
-                            style = MaterialTheme.typography.headlineMedium,
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                            Text(
+                                text = show.name,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 3,
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (show.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (show.played) ShowAction.UnmarkAsPlayed
+                                            else ShowAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (show.favorite) {
+                                                    CoreR.string.remove_from_favorites
+                                                } else {
+                                                    CoreR.string.add_to_favorites
+                                                }
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (show.favorite) {
+                                                        CoreR.drawable.ic_heart_filled
+                                                    } else {
+                                                        CoreR.drawable.ic_heart
+                                                    }
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (show.favorite) ShowAction.UnmarkAsFavorite
+                                            else ShowAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
+                                // Always offered, regardless of Sonarr configuration/tmdbId
+                                // presence - a search that can't resolve a target fails with a
+                                // clear toast instead of the entry silently vanishing. No manual/
+                                // interactive counterpart at the series level - Sonarr's release
+                                // picker is per-episode, not per-series.
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_sonarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(ShowAction.SearchSeriesAutomatic)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(CoreR.string.info)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_info),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        infoDialogOpen = true
+                                    },
+                                )
+                                if (state.canDelete) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text =
+                                                    stringResource(
+                                                        CoreR.string.delete_from_jellyfin
+                                                    ),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            deleteDialogOpen = true
+                                        },
+                                    )
+                                }
+                            }
+                        }
                         show.originalTitle?.let { originalTitle ->
                             if (originalTitle != show.name) {
                                 Text(
@@ -346,132 +467,6 @@ private fun ShowScreenLayout(
                                         onClick = { clearShowDownloadsDialogOpen = true },
                                         contentColor = MaterialTheme.colorScheme.error,
                                     )
-                                }
-                            },
-                            overflowContent = {
-                                ItemOverflowMenu { closeMenu ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    if (show.played) CoreR.string.unmark_as_played
-                                                    else CoreR.string.mark_as_played
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_check),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(
-                                                if (show.played) ShowAction.UnmarkAsPlayed
-                                                else ShowAction.MarkAsPlayed
-                                            )
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    if (show.favorite) {
-                                                        CoreR.string.remove_from_favorites
-                                                    } else {
-                                                        CoreR.string.add_to_favorites
-                                                    }
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter =
-                                                    painterResource(
-                                                        if (show.favorite) {
-                                                            CoreR.drawable.ic_heart_filled
-                                                        } else {
-                                                            CoreR.drawable.ic_heart
-                                                        }
-                                                    ),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(
-                                                if (show.favorite) ShowAction.UnmarkAsFavorite
-                                                else ShowAction.MarkAsFavorite
-                                            )
-                                        },
-                                    )
-                                    // Always offered, regardless of Sonarr configuration/tmdbId
-                                    // presence - a search that can't resolve a target fails with a
-                                    // clear toast instead of the entry silently vanishing. No
-                                    // manual/
-                                    // interactive counterpart at the series level - Sonarr's
-                                    // release
-                                    // picker is per-episode, not per-series.
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    CoreR.string.search_episode_automatic
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_sonarr),
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(ShowAction.SearchSeriesAutomatic)
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(CoreR.string.info)) },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_info),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            infoDialogOpen = true
-                                        },
-                                    )
-                                    if (state.canDelete) {
-                                        HorizontalDivider()
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text =
-                                                        stringResource(
-                                                            CoreR.string.delete_from_jellyfin
-                                                        ),
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    painter =
-                                                        painterResource(CoreR.drawable.ic_trash),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
-                                            },
-                                            onClick = {
-                                                closeMenu()
-                                                deleteDialogOpen = true
-                                            },
-                                        )
-                                    }
                                 }
                             },
                         )

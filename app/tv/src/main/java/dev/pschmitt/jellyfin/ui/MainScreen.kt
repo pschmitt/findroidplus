@@ -115,7 +115,7 @@ private fun MainScreenLayout(
                     .padding(horizontal = MaterialTheme.spacings.default)
         ) {
             Icon(
-                painter = painterResource(id = CoreR.drawable.ic_logo),
+                painter = painterResource(id = CoreR.drawable.ic_launcher_foreground),
                 contentDescription = null,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(32.dp).align(Alignment.CenterStart),

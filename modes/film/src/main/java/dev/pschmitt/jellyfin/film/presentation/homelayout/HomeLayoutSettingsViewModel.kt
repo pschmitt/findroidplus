@@ -54,7 +54,7 @@ constructor(
             _state.emit(_state.value.copy(isLoading = true))
 
             val labels = LinkedHashMap<String, SectionInfo>()
-            val jellyfinIcons = listOf(CoreR.drawable.ic_logo)
+            val jellyfinIcons = listOf(CoreR.drawable.ic_launcher_foreground)
 
             // This row shows Sonarr/Radarr's own download-queue data - i.e. the download client
             // they actually hand grabbed releases off to - so it wears a download-client icon

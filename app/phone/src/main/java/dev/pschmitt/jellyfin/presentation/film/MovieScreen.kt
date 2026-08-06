@@ -4,6 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -273,13 +274,144 @@ private fun MovieScreenLayout(
                     )
                     Column(modifier = Modifier.padding(start = paddingStart, end = paddingEnd)) {
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
-                        Text(
-                            text = movie.name,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 3,
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.testTag("e2e-movie-title"),
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                            Text(
+                                text = movie.name,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 3,
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.weight(1f).testTag("e2e-movie-title"),
+                            )
+                            ItemOverflowMenu { closeMenu ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (movie.played) CoreR.string.unmark_as_played
+                                                else CoreR.string.mark_as_played
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_check),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (movie.played) MovieAction.UnmarkAsPlayed
+                                            else MovieAction.MarkAsPlayed
+                                        )
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (movie.favorite)
+                                                    CoreR.string.remove_from_favorites
+                                                else CoreR.string.add_to_favorites
+                                            )
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    if (movie.favorite)
+                                                        CoreR.drawable.ic_heart_filled
+                                                    else CoreR.drawable.ic_heart
+                                                ),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(
+                                            if (movie.favorite) MovieAction.UnmarkAsFavorite
+                                            else MovieAction.MarkAsFavorite
+                                        )
+                                    },
+                                )
+                                // Always offered, regardless of Radarr configuration/tmdbId
+                                // presence - a search that can't resolve a target fails with a
+                                // clear toast instead of the entry silently vanishing.
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_automatic))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_radarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(MovieAction.SearchMovieAutomatic)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CoreR.string.search_episode_manual))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_radarr),
+                                            contentDescription = null,
+                                            tint = Color.Unspecified,
+                                        )
+                                    },
+                                    onClick = {
+                                        closeMenu()
+                                        onAction(MovieAction.OpenReleasePicker)
+                                    },
+                                )
+                                if (state.videoMetadata != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(CoreR.string.info)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_info),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            infoDialogOpen = true
+                                        },
+                                    )
+                                }
+                                if (state.canDelete) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text =
+                                                    stringResource(
+                                                        CoreR.string.delete_from_jellyfin
+                                                    ),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(CoreR.drawable.ic_trash),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            closeMenu()
+                                            deleteDialogOpen = true
+                                        },
+                                    )
+                                }
+                            }
+                        }
                         movie.originalTitle?.let { originalTitle ->
                             if (originalTitle != movie.name) {
                                 Text(
@@ -350,143 +482,6 @@ private fun MovieScreenLayout(
                                             it == QueueItemStatus.FAILED
                                     }
                                     ?.let { { onManageImportClick() } },
-                            overflowContent = {
-                                ItemOverflowMenu { closeMenu ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    if (movie.played) CoreR.string.unmark_as_played
-                                                    else CoreR.string.mark_as_played
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_check),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(
-                                                if (movie.played) MovieAction.UnmarkAsPlayed
-                                                else MovieAction.MarkAsPlayed
-                                            )
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    if (movie.favorite)
-                                                        CoreR.string.remove_from_favorites
-                                                    else CoreR.string.add_to_favorites
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter =
-                                                    painterResource(
-                                                        if (movie.favorite)
-                                                            CoreR.drawable.ic_heart_filled
-                                                        else CoreR.drawable.ic_heart
-                                                    ),
-                                                contentDescription = null,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(
-                                                if (movie.favorite) MovieAction.UnmarkAsFavorite
-                                                else MovieAction.MarkAsFavorite
-                                            )
-                                        },
-                                    )
-                                    // Always offered, regardless of Radarr configuration/tmdbId
-                                    // presence - a search that can't resolve a target fails with a
-                                    // clear toast instead of the entry silently vanishing.
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(
-                                                    CoreR.string.search_episode_automatic
-                                                )
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_radarr),
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(MovieAction.SearchMovieAutomatic)
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(stringResource(CoreR.string.search_episode_manual))
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(CoreR.drawable.ic_radarr),
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                            )
-                                        },
-                                        onClick = {
-                                            closeMenu()
-                                            onAction(MovieAction.OpenReleasePicker)
-                                        },
-                                    )
-                                    if (state.videoMetadata != null) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(CoreR.string.info)) },
-                                            leadingIcon = {
-                                                Icon(
-                                                    painter =
-                                                        painterResource(CoreR.drawable.ic_info),
-                                                    contentDescription = null,
-                                                )
-                                            },
-                                            onClick = {
-                                                closeMenu()
-                                                infoDialogOpen = true
-                                            },
-                                        )
-                                    }
-                                    if (state.canDelete) {
-                                        HorizontalDivider()
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text =
-                                                        stringResource(
-                                                            CoreR.string.delete_from_jellyfin
-                                                        ),
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    painter =
-                                                        painterResource(CoreR.drawable.ic_trash),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
-                                            },
-                                            onClick = {
-                                                closeMenu()
-                                                deleteDialogOpen = true
-                                            },
-                                        )
-                                    }
-                                }
-                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         downloadedSource?.let { source ->

@@ -7,8 +7,8 @@
 
   <!-- Official Jellyfin logo, unmodified (jellyfin/jellyfin-ux, logos/SVG, the icon-color-on-dark
        variant). Used only to credit the upstream service on the home feed's per-section source
-       icons - the app's own identity (ic_logo) stays everywhere else, per the branding guide at
-       https://docs.jellyfin.org/general/contributing/branding.html. -->
+       icons - the app's own identity (ic_launcher_foreground) stays everywhere else, per the
+       branding guide at https://docs.jellyfin.org/general/contributing/branding.html. -->
 
   <path android:pathData="M24.2116,49.1581C22.6599,46.0424 32.8378,27.5879 35.9999,27.5879C39.1666,27.5895 49.3228,46.0764 47.7882,49.1581C46.2536,52.2398 25.7632,52.2738 24.2116,49.1581Z">
     <aapt:attr name="android:fillColor">

@@ -1,0 +1,9 @@
+New:
+- Moved the overflow (⋮) menu on the show/episode/movie screens next to the title, off the
+  download button's row, so the download/progress card isn't cramped for space on mobile.
+- Replaced the app's header icon with the full launcher mascot - the previous cropped version
+  looked too similar to Jellyseerr's logo at a glance.
+- Replaced the generic download-client icon on Home's "Pending downloads" section with the
+  actual Transmission logo.
+- Fixed Home briefly showing only "Pending downloads" with everything else blank right after
+  launch, before the rest of the page had loaded in.
