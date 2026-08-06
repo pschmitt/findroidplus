@@ -22,6 +22,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -208,6 +209,19 @@ jobs:
           files: ${{ steps.apks.outputs.dir }}/*
           prerelease: false
           make_latest: true
+
+      - name: Trigger screenshot capture
+        # A real tagged release is the natural cue to refresh Play Store screenshots - the rolling
+        # "latest" prerelease republishes on every main push, far too often for a ~90min x3-device
+        # emulator job, so this only fires for a real vX.Y.Z tag. workflow_dispatch is one of the
+        # two events (alongside repository_dispatch) explicitly exempted from "GITHUB_TOKEN-caused
+        # events don't trigger new workflow runs", so the default token works here - it just needs
+        # the `actions: write` permission declared above. open_pr=true so the refreshed screenshots
+        # land as a reviewable PR (see screenshots.yaml) instead of only a build artifact.
+        if: steps.params.outputs.tag_name != 'latest'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run screenshots.yaml --repo "$GITHUB_REPOSITORY" --ref main -f open_pr=true
 
       - name: Vacuum stale release assets
         # action-gh-release above overwrites assets whose filenames match what we just uploaded,
