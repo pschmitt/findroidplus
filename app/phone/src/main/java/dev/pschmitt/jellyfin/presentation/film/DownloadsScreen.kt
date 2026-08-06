@@ -88,9 +88,9 @@ import dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsState
 import dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsViewModel
 import dev.pschmitt.jellyfin.film.presentation.downloads.PvrQueueGroup
 import dev.pschmitt.jellyfin.film.presentation.downloads.PvrQueueUiItem
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSource
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSource
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.PvrServiceDiskSpace
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.QueueItemStatus
@@ -106,8 +106,8 @@ import dev.pschmitt.jellyfin.presentation.film.components.PvrErrorBanner
 import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueLoadingPlaceholder
 import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.pschmitt.jellyfin.presentation.film.components.ToggleOptionRow
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.HeaderIconColors
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DeleteProgress
 import dev.pschmitt.jellyfin.utils.DeviceStorageStats
@@ -125,7 +125,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
-    onItemClick: (item: FindroidItem) -> Unit,
+    onItemClick: (item: JollyfinItem) -> Unit,
     onSettingsClick: () -> Unit,
     onShowClick: (UUID) -> Unit = {},
     onMoviesClick: () -> Unit = {},
@@ -186,7 +186,7 @@ fun DownloadsScreen(
     val totalSizeBytes =
         remember(allItems) {
             allItems.sumOf {
-                it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                it.sources.firstOrNull { s -> s.type == JollyfinSourceType.LOCAL }?.size ?: 0L
             }
         }
     val selectedSizeBytes =
@@ -194,14 +194,14 @@ fun DownloadsScreen(
             allItems
                 .filter { it.id in state.selectedIds }
                 .sumOf {
-                    it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                    it.sources.firstOrNull { s -> s.type == JollyfinSourceType.LOCAL }?.size ?: 0L
                 }
         }
     val selectedLocalSources =
         remember(allItems, state.selectedIds) {
             allItems
                 .filter { it.id in state.selectedIds }
-                .mapNotNull { it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL } }
+                .mapNotNull { it.sources.firstOrNull { s -> s.type == JollyfinSourceType.LOCAL } }
         }
 
     DownloadsScreenLayout(
@@ -337,7 +337,7 @@ fun DownloadsScreen(
         val groupSizeBytes =
             remember(group) {
                 group.episodes.sumOf {
-                    it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                    it.sources.firstOrNull { s -> s.type == JollyfinSourceType.LOCAL }?.size ?: 0L
                 }
             }
         DeleteShowDownloadsDialog(
@@ -368,7 +368,7 @@ private fun DownloadsScreenLayout(
     onTrashClick: () -> Unit = {},
     onMigrateClick: () -> Unit = {},
     onClearSelection: () -> Unit = {},
-    onItemClick: (FindroidItem) -> Unit = {},
+    onItemClick: (JollyfinItem) -> Unit = {},
     onToggleSelection: (UUID) -> Unit = {},
     onToggleSelectAll: (Boolean) -> Unit = {},
     onToggleGroupSelection: (Set<UUID>, Boolean) -> Unit = { _, _ -> },
@@ -387,7 +387,7 @@ private fun DownloadsScreenLayout(
     onTogglePvrQueueSelectAll: (Boolean) -> Unit = {},
     onManageImport: (PvrQueueUiItem, PvrSource) -> Unit = { _, _ -> },
     onRefresh: () -> Unit = {},
-    onRedownloadRequest: (FindroidItem) -> Unit = {},
+    onRedownloadRequest: (JollyfinItem) -> Unit = {},
     onRedownloadAllBrokenClick: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -399,7 +399,7 @@ private fun DownloadsScreenLayout(
     val localSources =
         remember(state.movies, state.showGroups) {
             (state.movies + state.showGroups.flatMap { it.episodes }).mapNotNull {
-                it.sources.firstOrNull { s -> s.type == FindroidSourceType.LOCAL }
+                it.sources.firstOrNull { s -> s.type == JollyfinSourceType.LOCAL }
             }
         }
     val totalLocalSizeBytes = remember(localSources) { localSources.sumOf { it.size } }
@@ -727,7 +727,7 @@ private fun DownloadsScreenLayout(
                                     onSwipeDeleteRequest = {
                                         val source =
                                             movie.sources.firstOrNull {
-                                                it.type == FindroidSourceType.LOCAL
+                                                it.type == JollyfinSourceType.LOCAL
                                             }
                                         onSwipeDeleteRequest(
                                             movie.id,
@@ -804,7 +804,7 @@ private fun DownloadsScreenLayout(
                                 onSwipeDeleteRequest = {
                                     val source =
                                         episode.sources.firstOrNull {
-                                            it.type == FindroidSourceType.LOCAL
+                                            it.type == JollyfinSourceType.LOCAL
                                         }
                                     onSwipeDeleteRequest(
                                         episode.id,
@@ -960,7 +960,7 @@ private fun BrokenDownloadsBanner(
  */
 @Composable
 private fun DownloadsStorageSummaryCard(
-    localSources: List<FindroidSource>,
+    localSources: List<JollyfinSource>,
     deviceStorages: List<DeviceStorageStats>,
     pvrStorage: PvrServiceDiskSpace?,
     modifier: Modifier = Modifier,
@@ -989,7 +989,7 @@ private fun DownloadsStorageSummaryCard(
                 // The bar reflects the *whole volume's* used space (system + every other app),
                 // not just what this app downloaded - localUsedBytes is only highlighted as a
                 // sub-segment within that, so the bar answers "how full is this storage" rather
-                // than silently implying Findroid's downloads are the only thing using space.
+                // than silently implying Jollyfin's downloads are the only thing using space.
                 val deviceUsedBytes = (device.totalBytes - device.availableBytes).coerceAtLeast(0L)
                 StorageUsageBar(
                     iconRes =
@@ -1307,7 +1307,7 @@ private fun ShowGroupHeader(
     val downloadedSizeBytes =
         remember(group.episodes) {
             group.episodes.sumOf { episode ->
-                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.size ?: 0L
+                episode.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }?.size ?: 0L
             }
         }
     // Only set when every episode agrees on the same volume - a show split across storage
@@ -1316,7 +1316,7 @@ private fun ShowGroupHeader(
         remember(group.episodes, deviceStorages) {
             group.episodes
                 .mapNotNull { episode ->
-                    episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.path
+                    episode.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }?.path
                 }
                 .map { storageIconFor(it, deviceStorages) }
                 .distinct()
@@ -1403,7 +1403,7 @@ private fun ShowGroupHeader(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun DownloadRow(
-    item: FindroidItem,
+    item: JollyfinItem,
     title: String,
     checked: Boolean,
     selectionMode: Boolean,
@@ -1432,7 +1432,7 @@ private fun DownloadRow(
     // legitimately incomplete/absent right now) - a resting completed source is never
     // legitimately 0 bytes, so outside those states it means the file vanished from disk.
     val isBroken = activeProgress == null && !isMigrating && item.isDownloadBroken()
-    val localSource = item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+    val localSource = item.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
     val sizeBytes = localSource?.size ?: 0L
     val storageIcon =
         remember(localSource?.path, deviceStorages) {
@@ -1997,7 +1997,7 @@ private fun SwipeToDeleteContainer(
  */
 @Composable
 private fun MigrateDownloadsDialog(
-    selectedSources: List<FindroidSource>,
+    selectedSources: List<JollyfinSource>,
     deviceStorages: List<DeviceStorageStats>,
     onConfirm: (toStorageIndex: Int) -> Unit,
     onDismiss: () -> Unit,
@@ -2393,7 +2393,7 @@ private val dummyPvrQueueGroups =
 @PreviewScreenSizes
 @Composable
 private fun DownloadsScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloadsScreenLayout(
             state =
                 DownloadsState(
@@ -2415,5 +2415,5 @@ private fun DownloadsScreenLayoutPreview() {
 @PreviewScreenSizes
 @Composable
 private fun DownloadsScreenLayoutEmptyPreview() {
-    FindroidTheme { DownloadsScreenLayout(state = DownloadsState()) }
+    JollyfinTheme { DownloadsScreenLayout(state = DownloadsState()) }
 }

@@ -3,10 +3,10 @@ package dev.pschmitt.jellyfin.repository
 import dev.pschmitt.jellyfin.api.pvr.RadarrCalendarEntry
 import dev.pschmitt.jellyfin.api.pvr.SonarrCalendarEntry
 import dev.pschmitt.jellyfin.api.pvr.SonarrCalendarSeries
-import dev.pschmitt.jellyfin.models.FindroidImages
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinImages
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.PvrSource
 import java.time.LocalDate
 import java.util.TimeZone
@@ -392,8 +392,8 @@ class CalendarMatchingTest {
 
     // endregion
 
-    private fun testSeason(id: UUID, seriesId: UUID, indexNumber: Int): FindroidSeason =
-        FindroidSeason(
+    private fun testSeason(id: UUID, seriesId: UUID, indexNumber: Int): JollyfinSeason =
+        JollyfinSeason(
             id = id,
             name = "Season $indexNumber",
             seriesId = seriesId,
@@ -408,16 +408,16 @@ class CalendarMatchingTest {
             canPlay = true,
             canDownload = false,
             unplayedItemCount = null,
-            images = FindroidImages(),
+            images = JollyfinImages(),
         )
 
     private fun testShow(
         id: UUID,
         tvdbId: String?,
         name: String,
-        seasons: List<FindroidSeason> = emptyList(),
-    ): FindroidShow =
-        FindroidShow(
+        seasons: List<JollyfinSeason> = emptyList(),
+    ): JollyfinShow =
+        JollyfinShow(
             id = id,
             name = name,
             originalTitle = null,
@@ -438,12 +438,12 @@ class CalendarMatchingTest {
             productionYear = null,
             endDate = null,
             trailer = null,
-            images = FindroidImages(),
+            images = JollyfinImages(),
             tvdbId = tvdbId,
         )
 
-    private fun testMovie(id: UUID, tmdbId: String?, name: String): FindroidMovie =
-        FindroidMovie(
+    private fun testMovie(id: UUID, tmdbId: String?, name: String): JollyfinMovie =
+        JollyfinMovie(
             id = id,
             name = name,
             originalTitle = null,
@@ -464,7 +464,7 @@ class CalendarMatchingTest {
             productionYear = null,
             endDate = null,
             trailer = null,
-            images = FindroidImages(),
+            images = JollyfinImages(),
             chapters = emptyList(),
             trickplayInfo = null,
             tmdbId = tmdbId,

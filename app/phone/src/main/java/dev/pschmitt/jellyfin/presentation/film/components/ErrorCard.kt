@@ -18,7 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -67,5 +67,5 @@ fun ErrorCard(
 @Preview
 @Composable
 private fun ErrorCardPreview() {
-    FindroidTheme { ErrorCard(onShowStacktrace = {}, onRetryClick = {}) }
+    JollyfinTheme { ErrorCard(onShowStacktrace = {}, onRetryClick = {}) }
 }

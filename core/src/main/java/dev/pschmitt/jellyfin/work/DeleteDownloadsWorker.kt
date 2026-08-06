@@ -15,11 +15,11 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSourceType
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
-import dev.pschmitt.jellyfin.models.toFindroidMovie
-import dev.pschmitt.jellyfin.models.toFindroidSource
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinMovie
+import dev.pschmitt.jellyfin.models.toJollyfinSource
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.utils.Downloader
 import java.util.UUID
@@ -57,14 +57,14 @@ constructor(
 
                 itemIds.forEachIndexed { index, itemId ->
                     try {
-                        val item = findFindroidItem(itemId)
+                        val item = findJollyfinItem(itemId)
                         val source = item?.let {
                             database.getSources(itemId).firstOrNull {
-                                it.type == FindroidSourceType.LOCAL
+                                it.type == JollyfinSourceType.LOCAL
                             }
                         }
                         if (item != null && source != null) {
-                            downloader.deleteItem(item, source.toFindroidSource(database))
+                            downloader.deleteItem(item, source.toJollyfinSource(database))
                         }
                     } catch (e: Exception) {
                         Timber.e(e, "Failed to delete download for item $itemId")
@@ -82,13 +82,13 @@ constructor(
             }
         }
 
-    private fun findFindroidItem(itemId: UUID): FindroidItem? {
+    private fun findJollyfinItem(itemId: UUID): JollyfinItem? {
         val userId = jellyfinRepository.getUserId()
         return try {
-            database.getMovie(itemId).toFindroidMovie(database, userId)
+            database.getMovie(itemId).toJollyfinMovie(database, userId)
         } catch (_: Exception) {
             try {
-                database.getEpisode(itemId).toFindroidEpisode(database, userId)
+                database.getEpisode(itemId).toJollyfinEpisode(database, userId)
             } catch (_: Exception) {
                 null
             }

@@ -17,10 +17,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
 import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -32,7 +32,7 @@ import dev.pschmitt.jellyfin.presentation.theme.spacings
  * banner's subtle default one, for legible white text regardless of theme.
  */
 @Composable
-fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
+fun HomeCarouselItem(item: JollyfinItem, onAction: (HomeAction) -> Unit) {
     val colorStops =
         arrayOf(
             0.0f to Color.Black.copy(alpha = 0.1f),
@@ -58,8 +58,8 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
             ) {
                 val genres =
                     when (item) {
-                        is FindroidMovie -> item.genres
-                        is FindroidShow -> item.genres
+                        is JollyfinMovie -> item.genres
+                        is JollyfinShow -> item.genres
                         else -> emptyList()
                     }
                 Text(
@@ -84,5 +84,5 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
 @Composable
 @Preview(showBackground = true)
 private fun HomeCarouselItemPreview() {
-    FindroidTheme { HomeCarouselItem(item = dummyMovie, onAction = {}) }
+    JollyfinTheme { HomeCarouselItem(item = dummyMovie, onAction = {}) }
 }

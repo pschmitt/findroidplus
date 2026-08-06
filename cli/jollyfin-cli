@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# findroid-cli - configure the real, running JollyFin app on this same
+# jollyfin-cli - configure the real, running JollyFin app on this same
 # device from Termux: read/write its actual download settings, browse the
 # Jellyfin/Sonarr/Radarr/Seerr libraries, trigger real downloads (by item id
 # or by show/movie name) through its own Downloader, and debug-proxy
@@ -28,12 +28,12 @@
 set -euo pipefail
 
 # Bump on every meaningful change to this script (new command, changed flag/behavior, bugfix
-# worth being able to tell apart) - "findroid-cli version" reports this alongside the app's own
+# worth being able to tell apart) - "jollyfin-cli version" reports this alongside the app's own
 # versionName/versionCode/gitRevision, so a mismatch between what a user has installed and what's
 # current is visible at a glance.
 CLI_VERSION="1.2.0"
 
-CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/findroid-cli"
+CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/jollyfin-cli"
 TOKEN_FILE="${CONFIG_DIR}/local_token"
 # Used by "start" (the app isn't running yet, so there's nothing to ask over the local control
 # API - this has to go through Android's activity manager instead), and now also to pick the
@@ -142,7 +142,7 @@ Enable it in the app first: Settings > Downloads > Local CLI access.
                                               "pm grant" can hand out, even as root) - this asks
                                               the app to exit itself instead, so no root is needed
                                               either
-  update [--force]                            Self-update: fetch the app's bundled findroid-cli
+  update [--force]                            Self-update: fetch the app's bundled jollyfin-cli
                                               script (GET /cli, no token needed) and replace this
                                               installed copy with it in place. Skips if already
                                               current; --force re-fetches/rewrites anyway
@@ -634,7 +634,7 @@ cmd_seerr_search() {
   render_seerr_search_table "${response}"
 }
 
-# findroid-cli download list [--active|--completed] - one row per downloaded source (movies and,
+# jollyfin-cli download list [--active|--completed] - one row per downloaded source (movies and,
 # unlike the app's own getDownloads() alone, every downloaded episode too). --active shows only
 # in-progress transfers (with live percent/speed/eta); --completed shows only finished ones;
 # neither flag shows both.
@@ -683,7 +683,7 @@ cmd_download_list() {
   } | print_table
 }
 
-# findroid-cli download cancel DOWNLOAD_ID - stops an in-progress transfer (from "download list"'s
+# jollyfin-cli download cancel DOWNLOAD_ID - stops an in-progress transfer (from "download list"'s
 # DOWNLOAD_ID column) and cleans up its partial file, same as the app's own Downloads screen.
 cmd_download_cancel() {
   local download_id="${1:-}"
@@ -708,7 +708,7 @@ cmd_download_cancel() {
   printf 'Cancelled download %s\n' "${download_id}"
 }
 
-# findroid-cli download remove ITEM_ID [ITEM_ID...] - deletes an already-downloaded item (from
+# jollyfin-cli download remove ITEM_ID [ITEM_ID...] - deletes an already-downloaded item (from
 # "download list"'s ITEM_ID column), same cascade as the app's own Downloads screen delete. For an
 # in-progress download, use "download cancel" instead.
 cmd_download_remove() {
@@ -769,7 +769,7 @@ cmd_download_trigger() {
   } | print_table
 }
 
-# findroid-cli download NAME [SEASON] [EPISODE] [--all] - resolves a movie/show by name (and,
+# jollyfin-cli download NAME [SEASON] [EPISODE] [--all] - resolves a movie/show by name (and,
 # for a show, a season/episode by number or name) and triggers the matching download(s). A bare
 # show name with no season needs --all, so a typo/too-broad match can't silently kick off
 # downloading an entire series.
@@ -882,7 +882,7 @@ cmd_debug() {
   jq -r '.body.body // .body.error // empty' <<< "${response}"
 }
 
-# findroid-cli version - always shows this script's own CLI_VERSION, even with no token
+# jollyfin-cli version - always shows this script's own CLI_VERSION, even with no token
 # configured or the app unreachable (useful on its own for "am I up to date" checks), then
 # attempts GET /info for the running app's own versionName/versionCode/gitRevision. Reaching the
 # app failing (no token, app not running/local control disabled) is reported on stderr by
@@ -900,7 +900,7 @@ cmd_version() {
     return 0
   fi
 
-  printf 'findroid-cli: %s\n' "${CLI_VERSION}"
+  printf 'jollyfin-cli: %s\n' "${CLI_VERSION}"
 
   local response
   if ! response=$(local_request "GET" "/info")
@@ -917,7 +917,7 @@ cmd_version() {
   } | print_table
 }
 
-# findroid-cli start - launches the app via "am start". There's nothing running yet to ask over
+# jollyfin-cli start - launches the app via "am start". There's nothing running yet to ask over
 # the local control API in this case (that's the whole point), so this is the one command that
 # doesn't go through local_request at all - it shells out to Android's own activity manager
 # directly, exactly like tapping the launcher icon would. Plain "am start" from an unprivileged
@@ -934,7 +934,7 @@ cmd_start() {
   printf 'Started %s\n' "${PACKAGE_NAME}"
 }
 
-# findroid-cli stop - there's no OS-level way for an unprivileged process to force-stop another
+# jollyfin-cli stop - there's no OS-level way for an unprivileged process to force-stop another
 # app (android.permission.FORCE_STOP_PACKAGES is signature/privileged-only - confirmed even "pm
 # grant" as root refuses it, same wall the old ContentProvider transport hit for
 # ACCESS_CONTENT_PROVIDERS_EXTERNALLY). POST /app/stop instead asks the running app to exit
@@ -952,9 +952,9 @@ cmd_stop() {
   printf 'Stopping %s\n' "${PACKAGE_NAME}"
 }
 
-# findroid-cli update - self-update by fetching the app's own bundled findroid-cli script over
+# jollyfin-cli update - self-update by fetching the app's own bundled jollyfin-cli script over
 # the local control server's one unauthenticated route (GET /cli - LocalControlServer.CLI_PATH,
-# the exact asset "curl .../cli -o findroid-cli" bootstraps from, copied from this very file at
+# the exact asset "curl .../cli -o jollyfin-cli" bootstraps from, copied from this very file at
 # build time). Like "start", this bypasses local_request entirely - no token needed, and the
 # response is a plain script, not JSON. Trusted only after it looks like a real script (shebang +
 # a CLI_VERSION= line), and skipped entirely if that version already matches this process's own
@@ -982,7 +982,7 @@ cmd_update() {
 
   if [[ "${body}" != '#!'* ]] || ! grep -q '^CLI_VERSION=' <<< "${body}"
   then
-    printf 'Update failed: response from %s/cli does not look like findroid-cli\n' "${BASE_URL}" >&2
+    printf 'Update failed: response from %s/cli does not look like jollyfin-cli\n' "${BASE_URL}" >&2
     return 1
   fi
 
@@ -1017,7 +1017,7 @@ cmd_update() {
     jq -n --arg from "${CLI_VERSION}" --arg to "${new_version}" --arg path "${self_path}" \
       '{updated: true, from: $from, to: $to, path: $path}'
   else
-    printf 'Upgraded findroid-cli from %s to %s (%s)\n' "${CLI_VERSION}" "${new_version}" "${self_path}"
+    printf 'Upgraded jollyfin-cli from %s to %s (%s)\n' "${CLI_VERSION}" "${new_version}" "${self_path}"
   fi
 }
 
@@ -1042,7 +1042,7 @@ render_autodownload_rules_table() {
   } | print_table
 }
 
-# findroid-cli autodownload list - this device's own local auto-download rules (evaluated by its
+# jollyfin-cli autodownload list - this device's own local auto-download rules (evaluated by its
 # own WorkManager), not the app's separate cross-device rule-push feature.
 cmd_autodownload_list() {
   local response
@@ -1056,7 +1056,7 @@ cmd_autodownload_list() {
   render_autodownload_rules_table "${response}"
 }
 
-# findroid-cli autodownload add NAME_OR_ID [--season S[,S...]|--all-seasons|--future-seasons]
+# jollyfin-cli autodownload add NAME_OR_ID [--season S[,S...]|--all-seasons|--future-seasons]
 #                                [--only-new] [--only-unwatched]
 # Adds/replaces this device's local auto-download rule for a show - resolves NAME_OR_ID exactly
 # like "download NAME" (a UUID-shaped argument routes straight to seriesId instead of a name
@@ -1143,7 +1143,7 @@ cmd_autodownload_add() {
   render_autodownload_rules_table "${response}"
 }
 
-# findroid-cli autodownload remove NAME_OR_ID - removes every local auto-download rule for a show
+# jollyfin-cli autodownload remove NAME_OR_ID - removes every local auto-download rule for a show
 # at once (mirrors the app's own delete action: clears every season/future-seasons row for that
 # show, not just one). Use "autodownload remove-id" instead to remove just a single rule row.
 cmd_autodownload_remove() {
@@ -1175,7 +1175,7 @@ cmd_autodownload_remove() {
   printf 'Removed %s rule(s)\n' "$(jq -r '.body.removed' <<< "${response}")"
 }
 
-# findroid-cli autodownload remove-id RULE_ID - removes a single rule row by numeric id (from
+# jollyfin-cli autodownload remove-id RULE_ID - removes a single rule row by numeric id (from
 # "autodownload list"'s ID column), rather than every rule for its show.
 cmd_autodownload_remove_id() {
   local rule_id="${1:-}"

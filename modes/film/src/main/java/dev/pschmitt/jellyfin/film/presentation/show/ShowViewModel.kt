@@ -11,14 +11,14 @@ import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.di.ApplicationScope
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
 import dev.pschmitt.jellyfin.models.CalendarEntry
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.SeerrMediaType
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.CalendarRepository
@@ -134,7 +134,7 @@ constructor(
     private suspend fun loadMissingSeasons(
         seriesTvdbId: String?,
         seriesTmdbId: Int?,
-        knownSeasons: List<FindroidSeason>,
+        knownSeasons: List<JollyfinSeason>,
     ) {
         val missing =
             if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
@@ -334,7 +334,7 @@ constructor(
             database.getEpisodesByShowId(showId).sumOf { episode ->
                 database
                     .getSources(episode.id)
-                    .filter { it.type == FindroidSourceType.LOCAL }
+                    .filter { it.type == JollyfinSourceType.LOCAL }
                     .sumOf { File(it.path).length() }
             }
         }
@@ -343,7 +343,7 @@ constructor(
      * Real per-season episode counts from the server - the local Room cache only has episodes that
      * were downloaded or individually visited, not the show's true total.
      */
-    private suspend fun totalEpisodeCount(showId: UUID, seasons: List<FindroidSeason>): Int =
+    private suspend fun totalEpisodeCount(showId: UUID, seasons: List<JollyfinSeason>): Int =
         withContext(Dispatchers.IO) {
             seasons.sumOf { season -> repository.getEpisodes(showId, season.id).size }
         }
@@ -354,7 +354,7 @@ constructor(
             val episodes =
                 withContext(Dispatchers.IO) {
                     database.getEpisodesByShowId(showId).map {
-                        it.toFindroidEpisode(database, userId)
+                        it.toJollyfinEpisode(database, userId)
                     }
                 }
             clearDownloads(episodes, database, downloader)
@@ -409,7 +409,7 @@ constructor(
             val episodes =
                 withContext(Dispatchers.IO) {
                     database.getEpisodesByShowId(showId).map {
-                        it.toFindroidEpisode(database, userId)
+                        it.toJollyfinEpisode(database, userId)
                     }
                 }
             clearDownloads(episodes, database, downloader)
@@ -432,7 +432,7 @@ constructor(
         }
     }
 
-    private suspend fun getNextUp(showId: UUID): FindroidEpisode? {
+    private suspend fun getNextUp(showId: UUID): JollyfinEpisode? {
         val nextUpItems = repository.getNextUp(showId)
         return nextUpItems.getOrNull(0)
     }
@@ -449,19 +449,19 @@ constructor(
         }
     }
 
-    private suspend fun getActors(item: FindroidShow): List<FindroidItemPerson> {
+    private suspend fun getActors(item: JollyfinShow): List<JollyfinItemPerson> {
         return withContext(Dispatchers.Default) {
             item.people.filter { it.type == PersonKind.ACTOR }
         }
     }
 
-    private suspend fun getDirector(item: FindroidShow): FindroidItemPerson? {
+    private suspend fun getDirector(item: JollyfinShow): JollyfinItemPerson? {
         return withContext(Dispatchers.Default) {
             item.people.firstOrNull { it.type == PersonKind.DIRECTOR }
         }
     }
 
-    private suspend fun getWriters(item: FindroidShow): List<FindroidItemPerson> {
+    private suspend fun getWriters(item: JollyfinShow): List<JollyfinItemPerson> {
         return withContext(Dispatchers.Default) {
             item.people.filter { it.type == PersonKind.WRITER }
         }

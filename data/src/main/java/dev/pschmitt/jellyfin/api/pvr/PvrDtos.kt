@@ -3,7 +3,7 @@ package dev.pschmitt.jellyfin.api.pvr
 import kotlinx.serialization.Serializable
 
 /**
- * Response DTOs for the Sonarr/Radarr v3 REST APIs. Only the fields Findroid actually needs are
+ * Response DTOs for the Sonarr/Radarr v3 REST APIs. Only the fields Jollyfin actually needs are
  * modeled - both APIs return many more fields per record, so every DTO here relies on the caller
  * decoding with `ignoreUnknownKeys = true` (see [PvrJson]).
  */
@@ -220,7 +220,7 @@ data class SonarrEpisodeDetail(
 // POST /api/v3/release
 // GET lists candidate releases (interactive/manual search) without grabbing anything; POSTing a
 // release's guid+indexerId back grabs that specific one. Sonarr and Radarr use the same release
-// resource shape, so one set of DTOs serves both. Only the fields Findroid's release picker needs
+// resource shape, so one set of DTOs serves both. Only the fields Jollyfin's release picker needs
 // are modeled - the release resource has many more.
 
 @Serializable data class PvrGrabReleaseRequest(val guid: String, val indexerId: Int)
@@ -300,7 +300,7 @@ data class RadarrCalendarEntry(
 // the ManualImport DTOs' kdoc for the exact request that produced them.
 //
 // The GET response's `quality`/`languages` objects are round-tripped back verbatim in the POST
-// command below (Sonarr/Radarr's own web UI does the same) - Findroid doesn't attempt to
+// command below (Sonarr/Radarr's own web UI does the same) - Jollyfin doesn't attempt to
 // second-guess quality/language detection, only which episode(s)/movie a file maps to and
 // whether to import it at all.
 

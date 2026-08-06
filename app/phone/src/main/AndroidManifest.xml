@@ -27,7 +27,7 @@
         android:localeConfig="@xml/locales_config"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Findroid">
+        android:theme="@style/Theme.Jollyfin">
 
         <activity
             android:name=".PlayerActivity"
@@ -36,7 +36,7 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:autoRemoveFromRecents="true"
-            android:theme="@style/Theme.Findroid.Player" />
+            android:theme="@style/Theme.Jollyfin.Player" />
 
         <activity
             android:name=".MainActivity"

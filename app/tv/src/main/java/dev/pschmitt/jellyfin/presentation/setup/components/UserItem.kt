@@ -28,7 +28,7 @@ import coil3.compose.AsyncImage
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyUser
 import dev.pschmitt.jellyfin.models.User
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import org.jellyfin.sdk.model.api.ImageType
 
@@ -78,5 +78,5 @@ fun UserItem(
 @Preview
 @Composable
 private fun UserComponentPreview() {
-    FindroidTheme { UserItem(user = dummyUser) }
+    JollyfinTheme { UserItem(user = dummyUser) }
 }

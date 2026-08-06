@@ -12,7 +12,7 @@ interface CalendarRepository {
     /**
      * Returns upcoming calendar entries from [daysBack] days ago through [daysForward] days from
      * now, sorted by date ascending, plus per-service fetch errors (an unreachable Sonarr should
-     * read as "Sonarr is unreachable", not as an empty calendar). Entries Findroid couldn't match
+     * read as "Sonarr is unreachable", not as an empty calendar). Entries Jollyfin couldn't match
      * to a local Jellyfin item are still included (with a `null` item id) rather than dropped.
      */
     suspend fun getUpcoming(daysBack: Int = 3, daysForward: Int = 30): CalendarResult

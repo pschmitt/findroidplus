@@ -1,16 +1,16 @@
 package dev.pschmitt.jellyfin.core.presentation.dummy
 
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidImages
-import dev.pschmitt.jellyfin.models.FindroidMediaStream
-import dev.pschmitt.jellyfin.models.FindroidSource
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinImages
+import dev.pschmitt.jellyfin.models.JollyfinMediaStream
+import dev.pschmitt.jellyfin.models.JollyfinSource
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import java.time.LocalDateTime
 import java.util.UUID
 import org.jellyfin.sdk.model.api.MediaStreamType
 
 val dummyEpisode =
-    FindroidEpisode(
+    JollyfinEpisode(
         id = UUID.randomUUID(),
         name = "Mother and Children",
         originalTitle = null,
@@ -21,15 +21,15 @@ val dummyEpisode =
         parentIndexNumber = 1,
         sources =
             listOf(
-                FindroidSource(
+                JollyfinSource(
                     id = "",
                     name = "",
-                    type = FindroidSourceType.REMOTE,
+                    type = JollyfinSourceType.REMOTE,
                     path = "",
                     size = 0L,
                     mediaStreams =
                         listOf(
-                            FindroidMediaStream(
+                            JollyfinMediaStream(
                                 title = "",
                                 displayTitle = "",
                                 language = "en",
@@ -59,7 +59,7 @@ val dummyEpisode =
         seasonName = "Season 1",
         communityRating = 9.2f,
         people = emptyList(),
-        images = FindroidImages(),
+        images = JollyfinImages(),
         chapters = emptyList(),
         trickplayInfo = null,
     )

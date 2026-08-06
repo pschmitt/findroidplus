@@ -1,15 +1,15 @@
 package dev.pschmitt.jellyfin.utils
 
 import androidx.paging.PagingData
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidPerson
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidSegment
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.models.FindroidSource
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinPerson
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinSegment
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.models.JollyfinSource
 import dev.pschmitt.jellyfin.models.SortBy
 import dev.pschmitt.jellyfin.models.SortOrder
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -23,14 +23,14 @@ import org.jellyfin.sdk.model.api.UserConfiguration
 
 /** Minimal test double covering only what [AutoDownloadRuleEvaluator] exercises. */
 class FakeJellyfinRepository(
-    private val seasons: List<FindroidSeason> = emptyList(),
-    private val episodesBySeasonId: Map<UUID, List<FindroidEpisode>> = emptyMap(),
+    private val seasons: List<JollyfinSeason> = emptyList(),
+    private val episodesBySeasonId: Map<UUID, List<JollyfinEpisode>> = emptyMap(),
     private val userId: UUID = UUID.randomUUID(),
 ) : JellyfinRepository {
-    override suspend fun getSeasons(seriesId: UUID, offline: Boolean): List<FindroidSeason> =
+    override suspend fun getSeasons(seriesId: UUID, offline: Boolean): List<JollyfinSeason> =
         seasons
 
-    override suspend fun getSeason(itemId: UUID): FindroidSeason = seasons.first { it.id == itemId }
+    override suspend fun getSeason(itemId: UUID): JollyfinSeason = seasons.first { it.id == itemId }
 
     override suspend fun getEpisodes(
         seriesId: UUID,
@@ -39,7 +39,7 @@ class FakeJellyfinRepository(
         startItemId: UUID?,
         limit: Int?,
         offline: Boolean,
-    ): List<FindroidEpisode> = episodesBySeasonId[seasonId].orEmpty()
+    ): List<JollyfinEpisode> = episodesBySeasonId[seasonId].orEmpty()
 
     override fun getUserId(): UUID = userId
 
@@ -47,15 +47,15 @@ class FakeJellyfinRepository(
 
     override suspend fun getUserViews(): List<BaseItemDto> = error("not used in test")
 
-    override suspend fun getEpisode(itemId: UUID): FindroidEpisode = error("not used in test")
+    override suspend fun getEpisode(itemId: UUID): JollyfinEpisode = error("not used in test")
 
-    override suspend fun getMovie(itemId: UUID): FindroidMovie = error("not used in test")
+    override suspend fun getMovie(itemId: UUID): JollyfinMovie = error("not used in test")
 
-    override suspend fun getShow(itemId: UUID): FindroidShow = error("not used in test")
+    override suspend fun getShow(itemId: UUID): JollyfinShow = error("not used in test")
 
-    override suspend fun getLibraries(): List<FindroidCollection> = error("not used in test")
+    override suspend fun getLibraries(): List<JollyfinCollection> = error("not used in test")
 
-    override suspend fun getItem(itemId: UUID): FindroidItem? = error("not used in test")
+    override suspend fun getItem(itemId: UUID): JollyfinItem? = error("not used in test")
 
     override suspend fun getItems(
         parentId: UUID?,
@@ -66,7 +66,7 @@ class FakeJellyfinRepository(
         startIndex: Int?,
         limit: Int?,
         searchTerm: String?,
-    ): List<FindroidItem> = error("not used in test")
+    ): List<JollyfinItem> = error("not used in test")
 
     override suspend fun getItemsPaging(
         parentId: UUID?,
@@ -75,40 +75,40 @@ class FakeJellyfinRepository(
         sortBy: SortBy,
         sortOrder: SortOrder,
         searchTerm: String?,
-    ): Flow<PagingData<FindroidItem>> = error("not used in test")
+    ): Flow<PagingData<JollyfinItem>> = error("not used in test")
 
-    override suspend fun getPerson(personId: UUID): FindroidPerson = error("not used in test")
+    override suspend fun getPerson(personId: UUID): JollyfinPerson = error("not used in test")
 
     override suspend fun getPersonItems(
         personIds: List<UUID>,
         includeTypes: List<BaseItemKind>?,
         recursive: Boolean,
-    ): List<FindroidItem> = error("not used in test")
+    ): List<JollyfinItem> = error("not used in test")
 
-    override suspend fun getFavoriteItems(): List<FindroidItem> = error("not used in test")
+    override suspend fun getFavoriteItems(): List<JollyfinItem> = error("not used in test")
 
-    override suspend fun getSearchItems(query: String): List<FindroidItem> =
+    override suspend fun getSearchItems(query: String): List<JollyfinItem> =
         error("not used in test")
 
-    override suspend fun getSuggestions(): List<FindroidItem> = error("not used in test")
+    override suspend fun getSuggestions(): List<JollyfinItem> = error("not used in test")
 
-    override suspend fun getResumeItems(): List<FindroidItem> = error("not used in test")
+    override suspend fun getResumeItems(): List<JollyfinItem> = error("not used in test")
 
-    override suspend fun getLatestMedia(parentId: UUID): List<FindroidItem> =
+    override suspend fun getLatestMedia(parentId: UUID): List<JollyfinItem> =
         error("not used in test")
 
-    override suspend fun getNextUp(seriesId: UUID?): List<FindroidEpisode> =
+    override suspend fun getNextUp(seriesId: UUID?): List<JollyfinEpisode> =
         error("not used in test")
 
     override suspend fun getMediaSources(
         itemId: UUID,
         includePath: Boolean,
-    ): List<FindroidSource> = error("not used in test")
+    ): List<JollyfinSource> = error("not used in test")
 
     override suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String =
         error("not used in test")
 
-    override suspend fun getSegments(itemId: UUID): List<FindroidSegment> =
+    override suspend fun getSegments(itemId: UUID): List<JollyfinSegment> =
         error("not used in test")
 
     override suspend fun getTrickplayData(itemId: UUID, width: Int, index: Int): ByteArray? =
@@ -150,5 +150,5 @@ class FakeJellyfinRepository(
 
     override suspend fun getUserConfiguration(): UserConfiguration? = error("not used in test")
 
-    override suspend fun getDownloads(): List<FindroidItem> = error("not used in test")
+    override suspend fun getDownloads(): List<JollyfinItem> = error("not used in test")
 }

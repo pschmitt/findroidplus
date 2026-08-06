@@ -5,9 +5,9 @@ import android.content.Intent
 import android.content.res.Resources
 import android.util.Base64
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.View
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
@@ -16,7 +16,7 @@ import java.util.Locale
 import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 
-fun BaseItemDto.toView(items: List<FindroidItem>): View {
+fun BaseItemDto.toView(items: List<JollyfinItem>): View {
     return View(
         id = id,
         name = name ?: "",
@@ -57,10 +57,10 @@ fun ByteArray.toBase64Str(): String {
 // For episodes/seasons, `.name` alone ("Pilot", "Season 1") is ambiguous out of context - this
 // adds the show (and, for episodes, season/episode number) so delete confirmations read
 // unambiguously, e.g. "Breaking Bad • S1E1 • Pilot".
-fun FindroidItem.displayNameWithContext(): String =
+fun JollyfinItem.displayNameWithContext(): String =
     when (this) {
-        is FindroidEpisode -> "$seriesName • S${parentIndexNumber}E$indexNumber • $name"
-        is FindroidSeason -> "$seriesName • $name"
+        is JollyfinEpisode -> "$seriesName • S${parentIndexNumber}E$indexNumber • $name"
+        is JollyfinSeason -> "$seriesName • $name"
         else -> name
     }
 

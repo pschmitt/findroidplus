@@ -10,7 +10,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 @Composable
 fun PlayedBadge(modifier: Modifier = Modifier) {
@@ -27,5 +27,5 @@ fun PlayedBadge(modifier: Modifier = Modifier) {
 @Composable
 @Preview
 private fun PlayedBadgePreview() {
-    FindroidTheme { PlayedBadge() }
+    JollyfinTheme { PlayedBadge() }
 }

@@ -39,13 +39,13 @@ import dev.pschmitt.jellyfin.core.presentation.dummy.dummyPersonDetail
 import dev.pschmitt.jellyfin.film.presentation.person.PersonAction
 import dev.pschmitt.jellyfin.film.presentation.person.PersonState
 import dev.pschmitt.jellyfin.film.presentation.person.PersonViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidPerson
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinPerson
 import dev.pschmitt.jellyfin.presentation.film.components.Direction
 import dev.pschmitt.jellyfin.presentation.film.components.ItemCard
 import dev.pschmitt.jellyfin.presentation.film.components.ItemDetailScaffold
 import dev.pschmitt.jellyfin.presentation.film.components.OverviewText
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import java.util.UUID
@@ -55,7 +55,7 @@ fun PersonScreen(
     personId: UUID,
     navigateBack: () -> Unit,
     navigateHome: () -> Unit,
-    navigateToItem: (item: FindroidItem) -> Unit,
+    navigateToItem: (item: JollyfinItem) -> Unit,
     navigateToSettings: () -> Unit,
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
@@ -216,7 +216,7 @@ private fun PersonScreenLayout(
 }
 
 @Composable
-private fun PersonImage(person: FindroidPerson, modifier: Modifier = Modifier) {
+private fun PersonImage(person: JollyfinPerson, modifier: Modifier = Modifier) {
     AsyncImage(
         model = person.images.primary,
         contentDescription = null,
@@ -233,7 +233,7 @@ private fun PersonImage(person: FindroidPerson, modifier: Modifier = Modifier) {
 @PreviewScreenSizes
 @Composable
 private fun PersonScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         PersonScreenLayout(
             state = PersonState(person = dummyPersonDetail, starredInMovies = dummyMovies),
             onAction = {},

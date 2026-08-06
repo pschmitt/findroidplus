@@ -8,9 +8,9 @@ import dev.pschmitt.jellyfin.api.pvr.RadarrQueueItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrManualImportItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrQueueItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrSeries
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.ManualImportCandidate
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
 import dev.pschmitt.jellyfin.models.PvrSource
@@ -34,10 +34,10 @@ private const val UNSET_PROVIDER_ID = 0
 fun matchSonarr(
     series: List<SonarrSeries>,
     queue: List<SonarrQueueItem>,
-    jellyfinShows: List<FindroidShow>,
-    episodesByShowId: Map<UUID, List<FindroidEpisode>>,
+    jellyfinShows: List<JollyfinShow>,
+    episodesByShowId: Map<UUID, List<JollyfinEpisode>>,
 ): List<PvrQueueEntry> {
-    val showByTvdbId: Map<String, FindroidShow> =
+    val showByTvdbId: Map<String, JollyfinShow> =
         jellyfinShows.mapNotNull { show -> show.tvdbId?.let { it to show } }.toMap()
     val seriesById: Map<Int, SonarrSeries> = series.associateBy { it.id }
 
@@ -74,9 +74,9 @@ fun matchSonarr(
 fun matchRadarr(
     movies: List<RadarrMovie>,
     queue: List<RadarrQueueItem>,
-    jellyfinMovies: List<FindroidMovie>,
+    jellyfinMovies: List<JollyfinMovie>,
 ): List<PvrQueueEntry> {
-    val movieByTmdbId: Map<String, FindroidMovie> =
+    val movieByTmdbId: Map<String, JollyfinMovie> =
         jellyfinMovies.mapNotNull { movie -> movie.tmdbId?.let { it to movie } }.toMap()
     val radarrMovieById: Map<Int, RadarrMovie> = movies.associateBy { it.id }
 

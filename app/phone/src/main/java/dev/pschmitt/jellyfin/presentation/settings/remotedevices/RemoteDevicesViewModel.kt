@@ -3,7 +3,7 @@ package dev.pschmitt.jellyfin.presentation.settings.remotedevices
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.repository.RemoteConfigRepository
@@ -90,7 +90,7 @@ constructor(
 
     /**
      * `RemoteActiveRuleSummary` only carries a seriesId + name, not enough to render a poster -
-     * this device resolves the real [FindroidShow] itself via its own live [jellyfinRepository]
+     * this device resolves the real [JollyfinShow] itself via its own live [jellyfinRepository]
      * session. That session (a process-wide singleton - see `JellyfinApi`'s kdoc) is only ever
      * pointed at *one* server at a time: whichever `AppPreferences.currentServer` is currently
      * active here. A rule belonging to a *different* server than the one currently active on this
@@ -102,7 +102,7 @@ constructor(
      */
     private suspend fun resolveShowPosters(
         devices: List<RemoteDeviceInfo>
-    ): Map<String, FindroidShow> = coroutineScope {
+    ): Map<String, JollyfinShow> = coroutineScope {
         val currentServerId = appPreferences.getValue(appPreferences.currentServer)
         val rules = devices.flatMap { it.activeRules }.distinctBy { it.seriesId }
         rules

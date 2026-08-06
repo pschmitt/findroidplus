@@ -37,7 +37,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsState
 import dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsViewModel
 import dev.pschmitt.jellyfin.models.isMarkedForAutoDeletion
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.Direction
 import dev.pschmitt.jellyfin.ui.components.ItemCard
@@ -192,5 +192,5 @@ private fun DownloadsScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun DownloadsScreenLayoutPreview() {
-    FindroidTheme { DownloadsScreenLayout(state = DownloadsState()) }
+    JollyfinTheme { DownloadsScreenLayout(state = DownloadsState()) }
 }

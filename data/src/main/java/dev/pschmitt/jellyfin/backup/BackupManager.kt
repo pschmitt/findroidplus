@@ -5,7 +5,7 @@ import android.net.Uri
 import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -124,7 +124,7 @@ class BackupManager(
         val items = mutableListOf<BackupDownloadedItem>()
         for (server in database.getAllServersSync()) {
             for (movie in database.getMoviesByServerId(server.id)) {
-                if (database.getSources(movie.id).any { it.type == FindroidSourceType.LOCAL }) {
+                if (database.getSources(movie.id).any { it.type == JollyfinSourceType.LOCAL }) {
                     items.add(
                         BackupDownloadedItem(
                             serverId = server.id,
@@ -135,7 +135,7 @@ class BackupManager(
                 }
             }
             for (episode in database.getEpisodesByServerId(server.id)) {
-                if (database.getSources(episode.id).any { it.type == FindroidSourceType.LOCAL }) {
+                if (database.getSources(episode.id).any { it.type == JollyfinSourceType.LOCAL }) {
                     items.add(
                         BackupDownloadedItem(
                             serverId = server.id,

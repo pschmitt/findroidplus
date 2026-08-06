@@ -2,7 +2,7 @@ package dev.pschmitt.jellyfin.film.presentation.season
 
 import dev.pschmitt.jellyfin.api.pvr.PvrRelease
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
@@ -34,7 +34,7 @@ sealed interface SeasonAction {
 
     data object OnSettingsClick : SeasonAction
 
-    data class NavigateToItem(val item: FindroidItem) : SeasonAction
+    data class NavigateToItem(val item: JollyfinItem) : SeasonAction
 
     data class NavigateToSeries(val seriesId: UUID) : SeasonAction
 

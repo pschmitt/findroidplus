@@ -3,8 +3,8 @@ package dev.pschmitt.jellyfin.repository
 import dev.pschmitt.jellyfin.api.pvr.RadarrCalendarEntry
 import dev.pschmitt.jellyfin.api.pvr.SonarrCalendarEntry
 import dev.pschmitt.jellyfin.models.CalendarEntry
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.PvrSource
 import java.time.Instant
 import java.time.LocalDate
@@ -16,7 +16,7 @@ import java.time.format.DateTimeParseException
  * Pure functions matching Sonarr/Radarr calendar entries to Jellyfin item ids - no suspend, no I/O,
  * so they're directly unit-testable without Room/Hilt/Android in the loop.
  *
- * Unlike `QueueStatusMatching.kt`, an entry Findroid can't match to a local Jellyfin item is never
+ * Unlike `QueueStatusMatching.kt`, an entry Jollyfin can't match to a local Jellyfin item is never
  * dropped here - it's still returned with `itemId = null`, since the calendar's whole point is to
  * surface "something is coming" even before the item exists in the Jellyfin library. Because of
  * this, both functions map every input entry to at most one output entry (they can only skip an
@@ -36,9 +36,9 @@ private fun List<dev.pschmitt.jellyfin.api.pvr.PvrImage>.posterUrl(): String? = 
 
 fun matchSonarrCalendar(
     entries: List<SonarrCalendarEntry>,
-    jellyfinShows: List<FindroidShow>,
+    jellyfinShows: List<JollyfinShow>,
 ): List<CalendarEntry> {
-    val showByTvdbId: Map<String, FindroidShow> =
+    val showByTvdbId: Map<String, JollyfinShow> =
         jellyfinShows.mapNotNull { show -> show.tvdbId?.let { it to show } }.toMap()
 
     return entries.mapNotNull { entry ->
@@ -77,11 +77,11 @@ fun matchSonarrCalendar(
 
 fun matchRadarrCalendar(
     entries: List<RadarrCalendarEntry>,
-    jellyfinMovies: List<FindroidMovie>,
+    jellyfinMovies: List<JollyfinMovie>,
     start: LocalDate,
     end: LocalDate,
 ): List<CalendarEntry> {
-    val movieByTmdbId: Map<String, FindroidMovie> =
+    val movieByTmdbId: Map<String, JollyfinMovie> =
         jellyfinMovies.mapNotNull { movie -> movie.tmdbId?.let { it to movie } }.toMap()
 
     return entries.mapNotNull { entry ->

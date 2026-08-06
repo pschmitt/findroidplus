@@ -7,16 +7,16 @@ import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.PlayAccess
 
-data class FindroidSeason(
+data class JollyfinSeason(
     override val id: UUID,
     override val name: String,
     val seriesId: UUID,
     val seriesName: String,
     override val originalTitle: String?,
     override val overview: String,
-    override val sources: List<FindroidSource>,
+    override val sources: List<JollyfinSource>,
     val indexNumber: Int,
-    val episodes: Collection<FindroidEpisode>,
+    val episodes: Collection<JollyfinEpisode>,
     override val played: Boolean,
     override val favorite: Boolean,
     override val canPlay: Boolean,
@@ -24,13 +24,13 @@ data class FindroidSeason(
     override val runtimeTicks: Long = 0L,
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int?,
-    override val images: FindroidImages,
-    override val chapters: List<FindroidChapter> = emptyList(),
+    override val images: JollyfinImages,
+    override val chapters: List<JollyfinChapter> = emptyList(),
     override val dateCreated: DateTime? = null,
-) : FindroidItem
+) : JollyfinItem
 
-fun BaseItemDto.toFindroidSeason(jellyfinRepository: JellyfinRepository): FindroidSeason {
-    return FindroidSeason(
+fun BaseItemDto.toJollyfinSeason(jellyfinRepository: JellyfinRepository): JollyfinSeason {
+    return JollyfinSeason(
         id = id,
         name = name.orEmpty(),
         originalTitle = originalTitle,
@@ -45,13 +45,13 @@ fun BaseItemDto.toFindroidSeason(jellyfinRepository: JellyfinRepository): Findro
         episodes = emptyList(),
         seriesId = seriesId!!,
         seriesName = seriesName.orEmpty(),
-        images = toFindroidImages(jellyfinRepository),
+        images = toJollyfinImages(jellyfinRepository),
     )
 }
 
-fun FindroidSeasonDto.toFindroidSeason(database: ServerDatabaseDao, userId: UUID): FindroidSeason {
+fun JollyfinSeasonDto.toJollyfinSeason(database: ServerDatabaseDao, userId: UUID): JollyfinSeason {
     val userData = database.getUserDataOrCreateNew(id, userId)
-    return FindroidSeason(
+    return JollyfinSeason(
         id = id,
         name = name,
         originalTitle = null,
@@ -66,6 +66,6 @@ fun FindroidSeasonDto.toFindroidSeason(database: ServerDatabaseDao, userId: UUID
         episodes = emptyList(),
         seriesId = seriesId,
         seriesName = seriesName,
-        images = toLocalFindroidImages(itemId = id),
+        images = toLocalJollyfinImages(itemId = id),
     )
 }

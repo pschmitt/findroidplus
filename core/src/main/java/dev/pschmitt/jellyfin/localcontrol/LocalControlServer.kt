@@ -72,7 +72,7 @@ constructor(
     fun isRunning(): Boolean = isAlive
 
     override fun serve(session: IHTTPSession): Response {
-        // The one unauthenticated route: `findroid-cli` itself is a public script, not user data
+        // The one unauthenticated route: `jollyfin-cli` itself is a public script, not user data
         // (same script anyone could get from the repo), so gating it behind the bearer token would
         // only block the bootstrap step of getting the token-consuming client onto the device in
         // the first place - checked before the token check below, same as a health-check route
@@ -141,9 +141,9 @@ constructor(
         newFixedLengthResponse(status, "application/json", body)
 
     /**
-     * Serves the bundled `findroid-cli` script (an asset copied from `cli/findroid-cli` at build
+     * Serves the bundled `jollyfin-cli` script (an asset copied from `cli/jollyfin-cli` at build
      * time - see `core/build.gradle.kts` - not read from a live git checkout) so a plain `curl
-     * http://127.0.0.1:<port>/cli -o findroid-cli` from Termux works with zero setup, the same way
+     * http://127.0.0.1:<port>/cli -o jollyfin-cli` from Termux works with zero setup, the same way
      * Shizuku's `rish` client is downloadable straight from the Shizuku app. `<port>` is
      * [BASE_PORT] for a release install, [portFor] for debug/staging - see the Settings > Local CLI
      * access screen for the exact command for whichever variant is actually installed.
@@ -161,8 +161,8 @@ constructor(
                     addHeader("Content-Disposition", "attachment; filename=\"$CLI_ASSET_NAME\"")
                 }
         } catch (e: IOException) {
-            Timber.e(e, "Failed to read bundled findroid-cli asset")
-            jsonResponse(Response.Status.INTERNAL_ERROR, errorBody("findroid-cli asset missing"))
+            Timber.e(e, "Failed to read bundled jollyfin-cli asset")
+            jsonResponse(Response.Status.INTERNAL_ERROR, errorBody("jollyfin-cli asset missing"))
         }
 
     /**
@@ -195,7 +195,7 @@ constructor(
         const val BIND_ADDRESS = "127.0.0.1"
         const val BASE_PORT = 48411
         const val CLI_PATH = "/cli"
-        const val CLI_ASSET_NAME = "findroid-cli"
+        const val CLI_ASSET_NAME = "jollyfin-cli"
         private const val SOCKET_READ_TIMEOUT = 30_000
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -211,7 +211,7 @@ constructor(
          *
          * Keyed off the actual runtime `applicationId` suffix (".debug"/".staging"), not a Gradle
          * `BuildConfig` flag - `core` has no per-flavor `BuildConfig` of its own, and this needs no
-         * plumbing through both `app/phone` and `app/tv`'s separate flavor setups. `findroid-cli`'s
+         * plumbing through both `app/phone` and `app/tv`'s separate flavor setups. `jollyfin-cli`'s
          * `JOLLYFIN_LOCAL_URL` override exists for exactly this: point it at whichever of these
          * three ports the variant you're scripting against actually bound.
          */

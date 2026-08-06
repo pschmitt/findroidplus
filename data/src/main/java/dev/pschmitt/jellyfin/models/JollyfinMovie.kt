@@ -7,12 +7,12 @@ import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.PlayAccess
 
-data class FindroidMovie(
+data class JollyfinMovie(
     override val id: UUID,
     override val name: String,
     override val originalTitle: String?,
     override val overview: String,
-    override val sources: List<FindroidSource>,
+    override val sources: List<JollyfinSource>,
     override val played: Boolean,
     override val favorite: Boolean,
     override val canPlay: Boolean,
@@ -20,7 +20,7 @@ data class FindroidMovie(
     override val runtimeTicks: Long,
     override val playbackPositionTicks: Long,
     val premiereDate: LocalDateTime?,
-    val people: List<FindroidItemPerson>,
+    val people: List<JollyfinItemPerson>,
     val genres: List<String>,
     val communityRating: Float?,
     val officialRating: String?,
@@ -29,23 +29,23 @@ data class FindroidMovie(
     val endDate: LocalDateTime?,
     val trailer: String?,
     override val unplayedItemCount: Int? = null,
-    override val images: FindroidImages,
-    override val chapters: List<FindroidChapter>,
-    override val trickplayInfo: Map<String, FindroidTrickplayInfo>?,
+    override val images: JollyfinImages,
+    override val chapters: List<JollyfinChapter>,
+    override val trickplayInfo: Map<String, JollyfinTrickplayInfo>?,
     val tmdbId: String? = null,
     override val dateCreated: LocalDateTime? = null,
-) : FindroidItem, FindroidSources
+) : JollyfinItem, JollyfinSources
 
-suspend fun BaseItemDto.toFindroidMovie(
+suspend fun BaseItemDto.toJollyfinMovie(
     jellyfinRepository: JellyfinRepository,
     serverDatabase: ServerDatabaseDao? = null,
-): FindroidMovie {
-    val sources = mutableListOf<FindroidSource>()
-    sources.addAll(mediaSources?.map { it.toFindroidSource(jellyfinRepository, id) } ?: emptyList())
+): JollyfinMovie {
+    val sources = mutableListOf<JollyfinSource>()
+    sources.addAll(mediaSources?.map { it.toJollyfinSource(jellyfinRepository, id) } ?: emptyList())
     if (serverDatabase != null) {
-        sources.addAll(serverDatabase.getSources(id).map { it.toFindroidSource(serverDatabase) })
+        sources.addAll(serverDatabase.getSources(id).map { it.toJollyfinSource(serverDatabase) })
     }
-    return FindroidMovie(
+    return JollyfinMovie(
         id = id,
         name = name.orEmpty(),
         originalTitle = originalTitle,
@@ -60,37 +60,37 @@ suspend fun BaseItemDto.toFindroidMovie(
         premiereDate = premiereDate,
         communityRating = communityRating,
         genres = genres ?: emptyList(),
-        people = people?.map { it.toFindroidPerson(jellyfinRepository) } ?: emptyList(),
+        people = people?.map { it.toJollyfinPerson(jellyfinRepository) } ?: emptyList(),
         officialRating = officialRating,
         status = status ?: "Ended",
         productionYear = productionYear,
         endDate = endDate,
         trailer = remoteTrailers?.getOrNull(0)?.url,
-        images = toFindroidImages(jellyfinRepository),
-        chapters = toFindroidChapters(),
+        images = toJollyfinImages(jellyfinRepository),
+        chapters = toJollyfinChapters(),
         trickplayInfo =
-            trickplay?.mapValues { it.value[it.value.keys.max()]!!.toFindroidTrickplayInfo() },
+            trickplay?.mapValues { it.value[it.value.keys.max()]!!.toJollyfinTrickplayInfo() },
         tmdbId =
             providerIds?.entries?.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value,
         dateCreated = dateCreated,
     )
 }
 
-fun FindroidMovieDto.toFindroidMovie(database: ServerDatabaseDao, userId: UUID): FindroidMovie {
+fun JollyfinMovieDto.toJollyfinMovie(database: ServerDatabaseDao, userId: UUID): JollyfinMovie {
     val userData = database.getUserDataOrCreateNew(id, userId)
     // NOTE: `sources` was previously recomputed a second time (with an identical, redundant
-    // `database.getSources(id)` call) inline in the FindroidMovie(...) constructor call below,
+    // `database.getSources(id)` call) inline in the JollyfinMovie(...) constructor call below,
     // discarding this one - doubling the getSources query, the per-source getMediaStreamsBySourceId
     // query and the per-source File(path).length() stat for every movie mapped this way. Reusing
     // the already-computed `sources` fixes that.
-    val sources = database.getSources(id).map { it.toFindroidSource(database) }
-    val trickplayInfos = mutableMapOf<String, FindroidTrickplayInfo>()
+    val sources = database.getSources(id).map { it.toJollyfinSource(database) }
+    val trickplayInfos = mutableMapOf<String, JollyfinTrickplayInfo>()
     for (source in sources) {
-        database.getTrickplayInfo(source.id)?.toFindroidTrickplayInfo()?.let {
+        database.getTrickplayInfo(source.id)?.toJollyfinTrickplayInfo()?.let {
             trickplayInfos[source.id] = it
         }
     }
-    return FindroidMovie(
+    return JollyfinMovie(
         id = id,
         name = name,
         originalTitle = originalTitle,
@@ -111,7 +111,7 @@ fun FindroidMovieDto.toFindroidMovie(database: ServerDatabaseDao, userId: UUID):
         canPlay = true,
         sources = sources,
         trailer = null,
-        images = toLocalFindroidImages(itemId = id),
+        images = toLocalJollyfinImages(itemId = id),
         chapters = chapters ?: emptyList(),
         trickplayInfo = trickplayInfos,
         tmdbId = tmdbId,
@@ -119,7 +119,7 @@ fun FindroidMovieDto.toFindroidMovie(database: ServerDatabaseDao, userId: UUID):
 }
 
 /**
- * Batch equivalent of [toFindroidMovie] for mapping a whole list of DB rows at once. The singular
+ * Batch equivalent of [toJollyfinMovie] for mapping a whole list of DB rows at once. The singular
  * function above does one `getUserDataOrCreateNew`/`getSources`/`getTrickplayInfo` (plus one
  * `getMediaStreamsBySourceId` per source) round trip *per movie*, which is an N+1 query pattern -
  * fine for a single item, but for a list of M movies it's roughly 3+ DB queries times M, run
@@ -128,10 +128,10 @@ fun FindroidMovieDto.toFindroidMovie(database: ServerDatabaseDao, userId: UUID):
  * [dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsViewModel] uses to load the Downloads
  * screen's local list without a per-row DB round trip.
  */
-fun List<FindroidMovieDto>.toFindroidMovies(
+fun List<JollyfinMovieDto>.toJollyfinMovies(
     database: ServerDatabaseDao,
     userId: UUID,
-): List<FindroidMovie> {
+): List<JollyfinMovie> {
     if (isEmpty()) return emptyList()
     val itemIds = map { it.id }
 
@@ -140,7 +140,7 @@ fun List<FindroidMovieDto>.toFindroidMovies(
     for (itemId in itemIds) {
         if (itemId !in userDataByItemId) {
             val created =
-                FindroidUserDataDto(
+                JollyfinUserDataDto(
                     userId = userId,
                     itemId = itemId,
                     played = false,
@@ -163,18 +163,18 @@ fun List<FindroidMovieDto>.toFindroidMovies(
         val userData = userDataByItemId.getValue(dto.id)
         val sources =
             (sourcesByItemId[dto.id] ?: emptyList()).map { sourceDto ->
-                sourceDto.toFindroidSource(mediaStreamsBySourceId[sourceDto.id] ?: emptyList())
+                sourceDto.toJollyfinSource(mediaStreamsBySourceId[sourceDto.id] ?: emptyList())
             }
         val trickplayInfo =
             sources
                 .mapNotNull { source ->
-                    trickplayBySourceId[source.id]?.toFindroidTrickplayInfo()?.let {
+                    trickplayBySourceId[source.id]?.toJollyfinTrickplayInfo()?.let {
                         source.id to it
                     }
                 }
                 .toMap()
 
-        FindroidMovie(
+        JollyfinMovie(
             id = dto.id,
             name = dto.name,
             originalTitle = dto.originalTitle,
@@ -195,7 +195,7 @@ fun List<FindroidMovieDto>.toFindroidMovies(
             canPlay = true,
             sources = sources,
             trailer = null,
-            images = dto.toLocalFindroidImages(itemId = dto.id),
+            images = dto.toLocalJollyfinImages(itemId = dto.id),
             chapters = dto.chapters ?: emptyList(),
             trickplayInfo = trickplayInfo,
             tmdbId = dto.tmdbId,

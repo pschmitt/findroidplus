@@ -9,15 +9,15 @@ import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.api.pvr.SeerrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidBoxSet
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidFolder
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinBoxSet
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinFolder
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -123,7 +123,7 @@ constructor(
         }
 
     /**
-     * `findroid-cli version`'s app-side half - the app's own build metadata, sourced from
+     * `jollyfin-cli version`'s app-side half - the app's own build metadata, sourced from
      * [AppVersionInfo] since [LocalControlRouter] (in `core`) can't reference `app/phone`'s own
      * generated `BuildConfig` directly.
      */
@@ -138,7 +138,7 @@ constructor(
         )
 
     /**
-     * `findroid-cli stop` - there's no OS-level way for a plain, unprivileged Termux process to
+     * `jollyfin-cli stop` - there's no OS-level way for a plain, unprivileged Termux process to
      * force-stop another app (`android.permission.FORCE_STOP_PACKAGES` is signature/privileged-only
      * - `pm grant` refuses it even as root, the same wall FINDROID-45's original ContentProvider
      *   transport hit for `ACCESS_CONTENT_PROVIDERS_EXTERNALLY`). Asking the app to exit itself
@@ -181,21 +181,21 @@ constructor(
     /**
      * Flattens every downloaded (LOCAL) source - movies plus, unlike
      * [JellyfinRepository.getDownloads] itself, every downloaded episode too
-     * ([FindroidShow.sources] is always empty - a show has no media source of its own, only its
+     * ([JollyfinShow.sources] is always empty - a show has no media source of its own, only its
      * episodes do - so `getDownloads()` alone silently drops every TV download; expanding each
      * show's seasons/episodes via the `offline = true` DB-backed reads mirrors what
      * [DownloadsViewModel][dev.pschmitt.jellyfin.film.presentation.downloads.DownloadsViewModel]'s
      * own Downloads screen already does). One row per source, with a `status`
-     * ("downloading"/"completed", from the `.download` suffix [FindroidItem.isDownloading] already
+     * ("downloading"/"completed", from the `.download` suffix [JollyfinItem.isDownloading] already
      * uses) and, for an in-progress one, a live progress snapshot. `status` query param filters to
      * just one or the other.
      */
     private suspend fun listDownloads(queryParams: Map<String, String>): LocalControlResponse {
         val statusFilter = queryParams["status"]
 
-        val flatItems = mutableListOf<FindroidItem>()
+        val flatItems = mutableListOf<JollyfinItem>()
         jellyfinRepository.getDownloads().forEach { item ->
-            if (item is FindroidShow) {
+            if (item is JollyfinShow) {
                 jellyfinRepository.getSeasons(item.id, offline = true).forEach { season ->
                     flatItems += jellyfinRepository.getEpisodes(item.id, season.id, offline = true)
                 }
@@ -207,7 +207,7 @@ constructor(
         val body = buildJsonArray {
             flatItems.forEach { item ->
                 item.sources
-                    .filter { it.type == FindroidSourceType.LOCAL }
+                    .filter { it.type == JollyfinSourceType.LOCAL }
                     .forEach { source ->
                         val status =
                             if (source.path.endsWith(".download")) "downloading" else "completed"
@@ -216,7 +216,7 @@ constructor(
                             buildJsonObject {
                                 put("itemId", item.id.toString())
                                 put("name", item.name)
-                                if (item is FindroidEpisode) {
+                                if (item is JollyfinEpisode) {
                                     put("seriesName", item.seriesName)
                                     put("seasonNumber", item.parentIndexNumber)
                                     put("episodeNumber", item.indexNumber)
@@ -384,9 +384,9 @@ constructor(
                 )
 
         return when (match) {
-            is FindroidMovie -> triggerSingleAsResponse(match)
-            is FindroidEpisode -> triggerSingleAsResponse(match)
-            is FindroidShow -> triggerShowDownloadByName(match, seasonQuery, episodeQuery, all)
+            is JollyfinMovie -> triggerSingleAsResponse(match)
+            is JollyfinEpisode -> triggerSingleAsResponse(match)
+            is JollyfinShow -> triggerShowDownloadByName(match, seasonQuery, episodeQuery, all)
             else ->
                 LocalControlResponse(
                     LocalControlStatus.BAD_REQUEST,
@@ -400,14 +400,14 @@ constructor(
      * to tell apart e.g. two different shows' episodes both called "Pilot", so episodes (and
      * seasons) are qualified with their series name.
      */
-    private fun FindroidItem.describeForAmbiguity(): String =
+    private fun JollyfinItem.describeForAmbiguity(): String =
         when (this) {
-            is FindroidEpisode -> "$name ($seriesName S${parentIndexNumber}E$indexNumber)"
-            is FindroidSeason -> "$name ($seriesName)"
+            is JollyfinEpisode -> "$name ($seriesName S${parentIndexNumber}E$indexNumber)"
+            is JollyfinSeason -> "$name ($seriesName)"
             else -> name
         }
 
-    private suspend fun triggerSingleAsResponse(item: FindroidItem): LocalControlResponse {
+    private suspend fun triggerSingleAsResponse(item: JollyfinItem): LocalControlResponse {
         val (downloadId, error) = triggerSingle(item)
         return LocalControlResponse(
             if (error == null) LocalControlStatus.OK else LocalControlStatus.CONFLICT,
@@ -423,7 +423,7 @@ constructor(
     }
 
     private suspend fun triggerShowDownloadByName(
-        show: FindroidShow,
+        show: JollyfinShow,
         seasonQuery: String?,
         episodeQuery: String?,
         all: Boolean,
@@ -468,7 +468,7 @@ constructor(
                 )
             }
 
-        val episodes = mutableListOf<FindroidEpisode>()
+        val episodes = mutableListOf<JollyfinEpisode>()
         for (season in targetSeasons) {
             val seasonEpisodes = jellyfinRepository.getEpisodes(show.id, season.id)
             episodes +=
@@ -507,7 +507,7 @@ constructor(
      * returning the download id or a human-readable error instead of a [LocalControlResponse] -
      * shared by the single-movie and per-episode paths in [triggerDownloadByName].
      */
-    private suspend fun triggerSingle(item: FindroidItem): Pair<Long?, String?> {
+    private suspend fun triggerSingle(item: JollyfinItem): Pair<Long?, String?> {
         val sourceId = item.sources.firstOrNull()?.id ?: return null to "No media source"
         val (downloadId, error) =
             downloader.downloadItem(item, sourceId, downloader.resolvePreferredStorageIndex())
@@ -559,7 +559,7 @@ constructor(
         LocalControlResponse(
             LocalControlStatus.OK,
             buildJsonArray {
-                jellyfinRepository.getLibraries().forEach { add(findroidItemToJson(it)) }
+                jellyfinRepository.getLibraries().forEach { add(jollyfinItemToJson(it)) }
             },
         )
 
@@ -584,7 +584,7 @@ constructor(
             )
         return LocalControlResponse(
             LocalControlStatus.OK,
-            buildJsonArray { items.forEach { add(findroidItemToJson(it)) } },
+            buildJsonArray { items.forEach { add(jollyfinItemToJson(it)) } },
         )
     }
 
@@ -611,38 +611,38 @@ constructor(
             .ifEmpty { null }
     }
 
-    private fun findroidItemToJson(item: FindroidItem): JsonObject = buildJsonObject {
+    private fun jollyfinItemToJson(item: JollyfinItem): JsonObject = buildJsonObject {
         put("id", item.id.toString())
         put("name", item.name)
-        put("type", findroidItemType(item))
+        put("type", jollyfinItemType(item))
         when (item) {
-            is FindroidMovie -> item.tmdbId?.let { put("tmdbId", it) }
-            is FindroidShow -> item.tmdbId?.let { put("tmdbId", it) }
-            is FindroidSeason -> {
+            is JollyfinMovie -> item.tmdbId?.let { put("tmdbId", it) }
+            is JollyfinShow -> item.tmdbId?.let { put("tmdbId", it) }
+            is JollyfinSeason -> {
                 put("seasonNumber", item.indexNumber)
                 put("seriesId", item.seriesId.toString())
                 put("seriesName", item.seriesName)
             }
-            is FindroidEpisode -> {
+            is JollyfinEpisode -> {
                 put("seasonNumber", item.parentIndexNumber)
                 put("episodeNumber", item.indexNumber)
                 put("seriesId", item.seriesId.toString())
                 put("seriesName", item.seriesName)
             }
-            is FindroidCollection -> put("collectionType", item.type.type)
+            is JollyfinCollection -> put("collectionType", item.type.type)
             else -> Unit
         }
     }
 
-    private fun findroidItemType(item: FindroidItem): String =
+    private fun jollyfinItemType(item: JollyfinItem): String =
         when (item) {
-            is FindroidMovie -> "movie"
-            is FindroidShow -> "show"
-            is FindroidSeason -> "season"
-            is FindroidEpisode -> "episode"
-            is FindroidCollection -> "collection"
-            is FindroidBoxSet -> "boxset"
-            is FindroidFolder -> "folder"
+            is JollyfinMovie -> "movie"
+            is JollyfinShow -> "show"
+            is JollyfinSeason -> "season"
+            is JollyfinEpisode -> "episode"
+            is JollyfinCollection -> "collection"
+            is JollyfinBoxSet -> "boxset"
+            is JollyfinFolder -> "folder"
             else -> "unknown"
         }
 
@@ -754,7 +754,7 @@ constructor(
     private suspend fun resolveSeries(
         seriesIdParam: String?,
         queryParam: String?,
-    ): Pair<FindroidShow?, LocalControlResponse?> {
+    ): Pair<JollyfinShow?, LocalControlResponse?> {
         if (!seriesIdParam.isNullOrBlank()) {
             val uuid =
                 runCatching { UUID.fromString(seriesIdParam) }.getOrNull()
@@ -805,7 +805,7 @@ constructor(
                         ),
                     )
         val show =
-            match as? FindroidShow
+            match as? JollyfinShow
                 ?: return null to
                     LocalControlResponse(
                         LocalControlStatus.BAD_REQUEST,
@@ -1054,7 +1054,7 @@ constructor(
         try {
             remoteConfigRepository.syncNow()
         } catch (e: Exception) {
-            Timber.w(e, "Failed to republish active-rules summary after a findroid-cli rule change")
+            Timber.w(e, "Failed to republish active-rules summary after a jollyfin-cli rule change")
         }
     }
 

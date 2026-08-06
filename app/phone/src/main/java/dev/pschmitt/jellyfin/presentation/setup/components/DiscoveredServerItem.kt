@@ -21,7 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 @Composable
 fun DiscoveredServerItem(name: String, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
@@ -50,5 +50,5 @@ fun DiscoveredServerItem(name: String, modifier: Modifier = Modifier, onClick: (
 @Composable
 @Preview
 private fun DiscoveredServerItemPreview() {
-    FindroidTheme { DiscoveredServerItem(name = "Jellyfin Server") }
+    JollyfinTheme { DiscoveredServerItem(name = "Jellyfin Server") }
 }

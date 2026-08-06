@@ -18,7 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 
 /** Static overlay shown on ItemCard/EpisodeCard posters for downloaded/downloading items. */
@@ -74,7 +74,7 @@ fun DownloadingBadge(progress: DownloadProgress, modifier: Modifier = Modifier) 
 
 /**
  * Static overlay shown on ItemCard/EpisodeCard posters for episodes the auto-delete-watched worker
- * will remove soon - see FindroidEpisode.isMarkedForAutoDeletion.
+ * will remove soon - see JollyfinEpisode.isMarkedForAutoDeletion.
  */
 @Composable
 fun MarkedForDeletionBadge(modifier: Modifier = Modifier) {
@@ -98,13 +98,13 @@ private fun BaseBadge(modifier: Modifier = Modifier, content: @Composable () -> 
 @Composable
 @Preview
 private fun DownloadedBadgePreview() {
-    FindroidTheme { DownloadedBadge() }
+    JollyfinTheme { DownloadedBadge() }
 }
 
 @Composable
 @Preview
 private fun DownloadingBadgePreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloadingBadge(
             progress = DownloadProgress(status = DownloadManager.STATUS_RUNNING, percent = 42)
         )
@@ -114,5 +114,5 @@ private fun DownloadingBadgePreview() {
 @Composable
 @Preview
 private fun MarkedForDeletionBadgePreview() {
-    FindroidTheme { MarkedForDeletionBadge() }
+    JollyfinTheme { MarkedForDeletionBadge() }
 }

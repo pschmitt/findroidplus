@@ -1,16 +1,16 @@
 package dev.pschmitt.jellyfin.core.presentation.dummy
 
-import dev.pschmitt.jellyfin.models.FindroidImages
-import dev.pschmitt.jellyfin.models.FindroidMediaStream
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSource
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinImages
+import dev.pschmitt.jellyfin.models.JollyfinMediaStream
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSource
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import java.time.LocalDateTime
 import java.util.UUID
 import org.jellyfin.sdk.model.api.MediaStreamType
 
 val dummyMovie =
-    FindroidMovie(
+    JollyfinMovie(
         id = UUID.randomUUID(),
         name = "Alita: Battle Angel",
         originalTitle = null,
@@ -18,15 +18,15 @@ val dummyMovie =
             "When Alita awakens with no memory of who she is in a future world she does not recognize, she is taken in by Ido, a compassionate doctor who realizes that somewhere in this abandoned cyborg shell is the heart and soul of a young woman with an extraordinary past.",
         sources =
             listOf(
-                FindroidSource(
+                JollyfinSource(
                     id = "",
                     name = "",
-                    type = FindroidSourceType.REMOTE,
+                    type = JollyfinSourceType.REMOTE,
                     path = "",
                     size = 0L,
                     mediaStreams =
                         listOf(
-                            FindroidMediaStream(
+                            JollyfinMediaStream(
                                 title = "",
                                 displayTitle = "",
                                 language = "en",
@@ -58,7 +58,7 @@ val dummyMovie =
         productionYear = 2019,
         endDate = null,
         trailer = "https://www.youtube.com/watch?v=puKWa8hrvA8",
-        images = FindroidImages(),
+        images = JollyfinImages(),
         chapters = emptyList(),
         trickplayInfo = null,
     )

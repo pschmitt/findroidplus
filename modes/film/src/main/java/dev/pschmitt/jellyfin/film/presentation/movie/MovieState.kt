@@ -1,18 +1,18 @@
 package dev.pschmitt.jellyfin.film.presentation.movie
 
 import dev.pschmitt.jellyfin.core.presentation.search.ReleasePickerState
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinMovie
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.VideoMetadata
 
 data class MovieState(
-    val movie: FindroidMovie? = null,
+    val movie: JollyfinMovie? = null,
     val videoMetadata: VideoMetadata? = null,
-    val actors: List<FindroidItemPerson> = emptyList(),
-    val director: FindroidItemPerson? = null,
-    val writers: List<FindroidItemPerson> = emptyList(),
+    val actors: List<JollyfinItemPerson> = emptyList(),
+    val director: JollyfinItemPerson? = null,
+    val writers: List<JollyfinItemPerson> = emptyList(),
     val dateFormat: String = "system",
     val releasePicker: ReleasePickerState? = null,
     val queueStatus: QueueStatus? = null,

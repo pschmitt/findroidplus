@@ -7,9 +7,9 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.isMarkedForAutoDeletion
-import dev.pschmitt.jellyfin.models.toFindroidEpisodes
+import dev.pschmitt.jellyfin.models.toJollyfinEpisodes
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
@@ -26,7 +26,7 @@ import timber.log.Timber
  * once per downloaded episode, which was both a needless network round trip per item and a
  * different eligibility check than the one the "marked for deletion" UI badge uses (the badge reads
  * local DB state), so the two could disagree.
- * [FindroidUserDataDto.lastPlayedDate][dev.pschmitt.jellyfin.models.FindroidUserDataDto] is kept in
+ * [JollyfinUserDataDto.lastPlayedDate][dev.pschmitt.jellyfin.models.JollyfinUserDataDto] is kept in
  * sync locally by every `setPlayed` call site (see `JellyfinRepositoryImpl`/
  * `JellyfinRepositoryOfflineImpl`), so the local copy is authoritative.
  */
@@ -53,13 +53,13 @@ constructor(
             val userId = jellyfinRepository.getUserId()
 
             val episodes =
-                database.getEpisodesByServerId(serverId).toFindroidEpisodes(database, userId)
+                database.getEpisodesByServerId(serverId).toJollyfinEpisodes(database, userId)
 
             for (episode in episodes) {
                 if (!episode.isMarkedForAutoDeletion(hours)) continue
                 try {
                     val source =
-                        episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                        episode.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
                             ?: continue
                     downloader.deleteItem(episode, source)
                 } catch (e: Exception) {

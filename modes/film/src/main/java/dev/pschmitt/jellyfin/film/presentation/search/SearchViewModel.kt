@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pschmitt.jellyfin.film.presentation.home.HomeCache
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.tmdbIdOrNull
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -96,11 +96,11 @@ constructor(
     // Watching/Favorites/latest-library rows, reusing HomeCache's snapshot instead of issuing
     // fresh repository calls - this is just a "less empty" placeholder, not search results, so
     // slightly-stale content is fine.
-    private fun suggestedItems(): List<FindroidItem> {
+    private fun suggestedItems(): List<JollyfinItem> {
         val snapshot = homeCache.snapshot ?: return emptyList()
         val seenIds = mutableSetOf<UUID>()
-        val suggestions = mutableListOf<FindroidItem>()
-        fun addAll(items: List<FindroidItem>) {
+        val suggestions = mutableListOf<JollyfinItem>()
+        fun addAll(items: List<JollyfinItem>) {
             items.forEach { if (seenIds.add(it.id)) suggestions.add(it) }
         }
         addAll(snapshot.resumeSection?.homeSection?.items.orEmpty())

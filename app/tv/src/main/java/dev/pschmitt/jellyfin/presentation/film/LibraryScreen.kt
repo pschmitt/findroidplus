@@ -38,12 +38,12 @@ import dev.pschmitt.jellyfin.film.presentation.library.LibraryAction
 import dev.pschmitt.jellyfin.film.presentation.library.LibraryState
 import dev.pschmitt.jellyfin.film.presentation.library.LibraryViewModel
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.models.FindroidFolder
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinFolder
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.presentation.film.components.SortByDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.Direction
 import dev.pschmitt.jellyfin.ui.components.ItemCard
@@ -80,9 +80,9 @@ fun LibraryScreen(
             when (action) {
                 is LibraryAction.OnItemClick -> {
                     when (action.item) {
-                        is FindroidMovie -> navigateToMovie(action.item.id)
-                        is FindroidShow -> navigateToShow(action.item.id)
-                        is FindroidFolder ->
+                        is JollyfinMovie -> navigateToMovie(action.item.id)
+                        is JollyfinShow -> navigateToShow(action.item.id)
+                        is JollyfinFolder ->
                             navigateToLibrary(action.item.id, action.item.name, libraryType)
                     }
                 }
@@ -167,8 +167,8 @@ private fun LibraryScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun LibraryScreenLayoutPreview() {
-    val items: Flow<PagingData<FindroidItem>> = flowOf(PagingData.from(dummyMovies))
-    FindroidTheme {
+    val items: Flow<PagingData<JollyfinItem>> = flowOf(PagingData.from(dummyMovies))
+    JollyfinTheme {
         LibraryScreenLayout(
             libraryName = "Movies",
             state = LibraryState(items = items),

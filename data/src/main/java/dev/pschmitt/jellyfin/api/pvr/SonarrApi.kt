@@ -31,7 +31,7 @@ class SonarrApi(private val baseUrl: String, private val apiKey: String) {
         withContext(Dispatchers.IO) {
             // Sonarr paginates the queue endpoint (default page size 10-20); requesting a large
             // pageSize is the standard workaround to get everything in a single call rather than
-            // looping through pages. includeEpisode=true embeds the episode number, which Findroid
+            // looping through pages. includeEpisode=true embeds the episode number, which Jollyfin
             // needs to resolve the matching Jellyfin episode (see SonarrQueueItem/SonarrEpisode).
             val url =
                 buildUrl(

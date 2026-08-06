@@ -28,17 +28,17 @@ import dev.pschmitt.jellyfin.film.presentation.collection.CollectionAction
 import dev.pschmitt.jellyfin.film.presentation.collection.CollectionState
 import dev.pschmitt.jellyfin.film.presentation.collection.CollectionViewModel
 import dev.pschmitt.jellyfin.models.CollectionSection
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.presentation.film.components.CollectionGrid
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import java.util.UUID
 
 @Composable
 fun CollectionScreen(
     collectionId: UUID,
     collectionName: String,
-    onItemClick: (item: FindroidItem) -> Unit,
+    onItemClick: (item: JollyfinItem) -> Unit,
     navigateBack: () -> Unit,
     viewModel: CollectionViewModel = hiltViewModel(),
 ) {
@@ -96,7 +96,7 @@ fun CollectionScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun CollectionScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         CollectionScreenLayout(
             collectionName = "Marvel",
             state =

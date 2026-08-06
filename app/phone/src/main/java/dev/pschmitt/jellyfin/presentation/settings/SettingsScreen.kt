@@ -47,7 +47,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.settings.components.DownloadLocationChangeDialog
 import dev.pschmitt.jellyfin.presentation.settings.components.SettingsGroupCard
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.plus
 import dev.pschmitt.jellyfin.settings.R as SettingsR
@@ -276,7 +276,7 @@ private fun RelocateProgressCard(progress: RelocateDownloadsProgress) {
 @PreviewScreenSizes
 @Composable
 private fun SettingsScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsScreenLayout(
             title = CoreR.string.title_settings,
             state =

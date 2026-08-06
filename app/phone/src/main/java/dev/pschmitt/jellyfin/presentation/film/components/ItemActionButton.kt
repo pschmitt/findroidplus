@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -99,7 +99,7 @@ fun ItemActionButton(
 @Composable
 @Preview(showBackground = true)
 private fun ItemActionButtonPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ItemActionButton(
             icon = painterResource(CoreR.drawable.ic_download),
             label = "Download",

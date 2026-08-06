@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.BaseDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -51,7 +51,7 @@ fun StorageSelectionDialog(
 @Composable
 @Preview
 private fun StorageSelectionDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         StorageSelectionDialog(
             storageLocations = listOf("Internal", "External"),
             onSelect = {},

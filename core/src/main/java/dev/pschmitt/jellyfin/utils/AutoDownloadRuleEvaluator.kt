@@ -3,7 +3,7 @@ package dev.pschmitt.jellyfin.utils
 import dev.pschmitt.jellyfin.core.Constants
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisode
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import java.time.Instant
@@ -122,7 +122,7 @@ class AutoDownloadRuleEvaluator {
  */
 fun coversEpisode(
     rule: AutoDownloadRuleDto,
-    episode: FindroidEpisode,
+    episode: JollyfinEpisode,
     effectiveOnlyUnwatched: Boolean = rule.onlyUnwatched,
 ): Boolean {
     if (!rule.enabled) return false

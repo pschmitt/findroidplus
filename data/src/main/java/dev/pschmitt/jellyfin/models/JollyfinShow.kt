@@ -7,13 +7,13 @@ import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.PlayAccess
 
-data class FindroidShow(
+data class JollyfinShow(
     override val id: UUID,
     override val name: String,
     override val originalTitle: String?,
     override val overview: String,
-    override val sources: List<FindroidSource>,
-    val seasons: List<FindroidSeason>,
+    override val sources: List<JollyfinSource>,
+    val seasons: List<JollyfinSeason>,
     override val played: Boolean,
     override val favorite: Boolean,
     override val canPlay: Boolean,
@@ -21,7 +21,7 @@ data class FindroidShow(
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int?,
     val genres: List<String>,
-    val people: List<FindroidItemPerson>,
+    val people: List<JollyfinItemPerson>,
     override val runtimeTicks: Long,
     val communityRating: Float?,
     val officialRating: String?,
@@ -29,15 +29,15 @@ data class FindroidShow(
     val productionYear: Int?,
     val endDate: DateTime?,
     val trailer: String?,
-    override val images: FindroidImages,
-    override val chapters: List<FindroidChapter> = emptyList(),
+    override val images: JollyfinImages,
+    override val chapters: List<JollyfinChapter> = emptyList(),
     val tvdbId: String? = null,
     val tmdbId: String? = null,
     override val dateCreated: DateTime? = null,
-) : FindroidItem
+) : JollyfinItem
 
-fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): FindroidShow {
-    return FindroidShow(
+fun BaseItemDto.toJollyfinShow(jellyfinRepository: JellyfinRepository): JollyfinShow {
+    return JollyfinShow(
         id = id,
         name = name.orEmpty(),
         originalTitle = originalTitle,
@@ -50,7 +50,7 @@ fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): Findroid
         sources = emptyList(),
         seasons = emptyList(),
         genres = genres ?: emptyList(),
-        people = people?.map { it.toFindroidPerson(jellyfinRepository) } ?: emptyList(),
+        people = people?.map { it.toJollyfinPerson(jellyfinRepository) } ?: emptyList(),
         runtimeTicks = runTimeTicks ?: 0,
         communityRating = communityRating,
         officialRating = officialRating,
@@ -58,7 +58,7 @@ fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): Findroid
         productionYear = productionYear,
         endDate = endDate,
         trailer = remoteTrailers?.getOrNull(0)?.url,
-        images = toFindroidImages(jellyfinRepository),
+        images = toJollyfinImages(jellyfinRepository),
         tvdbId =
             providerIds?.entries?.firstOrNull { it.key.equals("Tvdb", ignoreCase = true) }?.value,
         tmdbId =
@@ -67,9 +67,9 @@ fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): Findroid
     )
 }
 
-fun FindroidShowDto.toFindroidShow(database: ServerDatabaseDao, userId: UUID): FindroidShow {
+fun JollyfinShowDto.toJollyfinShow(database: ServerDatabaseDao, userId: UUID): JollyfinShow {
     val userData = database.getUserDataOrCreateNew(id, userId)
-    return FindroidShow(
+    return JollyfinShow(
         id = id,
         name = name,
         originalTitle = originalTitle,
@@ -90,7 +90,7 @@ fun FindroidShowDto.toFindroidShow(database: ServerDatabaseDao, userId: UUID): F
         productionYear = productionYear,
         endDate = endDate,
         trailer = null,
-        images = toLocalFindroidImages(itemId = id),
+        images = toLocalJollyfinImages(itemId = id),
         tvdbId = tvdbId,
     )
 }

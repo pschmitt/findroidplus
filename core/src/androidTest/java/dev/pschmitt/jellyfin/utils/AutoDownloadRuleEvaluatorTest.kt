@@ -8,9 +8,9 @@ import dev.pschmitt.jellyfin.core.presentation.dummy.dummySeason
 import dev.pschmitt.jellyfin.database.ServerDatabase
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidSource
-import dev.pschmitt.jellyfin.models.FindroidSourceDto
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSource
+import dev.pschmitt.jellyfin.models.JollyfinSourceDto
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
@@ -45,10 +45,10 @@ class AutoDownloadRuleEvaluatorTest {
     }
 
     private fun source(id: String) =
-        FindroidSource(
+        JollyfinSource(
             id = id,
             name = id,
-            type = FindroidSourceType.REMOTE,
+            type = JollyfinSourceType.REMOTE,
             path = "https://example.com/$id",
             size = 0L,
             mediaStreams = emptyList(),
@@ -149,11 +149,11 @@ class AutoDownloadRuleEvaluatorTest {
         // since all three states are represented the same way in this codebase (see
         // AutoDownloadRuleEvaluator's doc comment).
         dao.insertSource(
-            FindroidSourceDto(
+            JollyfinSourceDto(
                 id = "existing",
                 itemId = episode1.id,
                 name = "existing",
-                type = FindroidSourceType.LOCAL,
+                type = JollyfinSourceType.LOCAL,
                 path = "/tmp/existing",
             )
         )

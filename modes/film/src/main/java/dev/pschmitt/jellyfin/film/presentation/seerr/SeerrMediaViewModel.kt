@@ -157,7 +157,7 @@ constructor(
                 val show =
                     jellyfinRepository
                         .getItems(includeTypes = listOf(BaseItemKind.SERIES), recursive = true)
-                        .filterIsInstance<dev.pschmitt.jellyfin.models.FindroidShow>()
+                        .filterIsInstance<dev.pschmitt.jellyfin.models.JollyfinShow>()
                         .firstOrNull { it.tmdbId == detail.tmdbId.toString() }
                         ?: return@runCatching Triple(null, null, null)
                 val seasonNumber = detail.episode?.seasonNumber ?: detail.season?.seasonNumber

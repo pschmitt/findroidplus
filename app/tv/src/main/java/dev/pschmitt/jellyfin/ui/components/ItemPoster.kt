@@ -8,9 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.tv.material3.MaterialTheme
 import coil3.compose.AsyncImage
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
 
 enum class Direction {
     HORIZONTAL,
@@ -18,16 +18,16 @@ enum class Direction {
 }
 
 @Composable
-fun ItemPoster(item: FindroidItem, direction: Direction, modifier: Modifier = Modifier) {
+fun ItemPoster(item: JollyfinItem, direction: Direction, modifier: Modifier = Modifier) {
     var imageUri = item.images.primary
 
     when (direction) {
         Direction.HORIZONTAL -> {
-            if (item is FindroidMovie) imageUri = item.images.backdrop
+            if (item is JollyfinMovie) imageUri = item.images.backdrop
         }
         Direction.VERTICAL -> {
             when (item) {
-                is FindroidEpisode -> imageUri = item.images.showPrimary
+                is JollyfinEpisode -> imageUri = item.images.showPrimary
             }
         }
     }

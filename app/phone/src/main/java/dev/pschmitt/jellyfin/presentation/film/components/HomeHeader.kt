@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.utils.LocalOfflineMode
 
 /**
@@ -105,7 +105,7 @@ fun HomeHeader(
 @Composable
 @Preview(showBackground = true)
 private fun HomeHeaderLoadingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeHeader(
             serverName = "Jellyfin",
             isLoading = true,
@@ -122,7 +122,7 @@ private fun HomeHeaderLoadingPreview() {
 @Composable
 @Preview(showBackground = true)
 private fun HomeHeaderErrorPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeHeader(
             serverName = "Jellyfin",
             isLoading = false,

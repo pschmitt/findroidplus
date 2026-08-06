@@ -27,18 +27,18 @@ import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.core.R
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.isDownloaded
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 
 @Composable
 fun ItemCard(
-    item: FindroidItem,
+    item: JollyfinItem,
     direction: Direction,
-    onClick: (FindroidItem) -> Unit,
+    onClick: (JollyfinItem) -> Unit,
     modifier: Modifier = Modifier,
     downloadProgress: DownloadProgress? = null,
     isMarkedForDeletion: Boolean = false,
@@ -110,12 +110,12 @@ fun ItemCard(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
         Text(
-            text = if (item is FindroidEpisode) item.seriesName else item.name,
+            text = if (item is JollyfinEpisode) item.seriesName else item.name,
             style = MaterialTheme.typography.titleMedium,
             maxLines = if (direction == Direction.HORIZONTAL) 1 else 2,
             overflow = TextOverflow.Ellipsis,
         )
-        if (item is FindroidEpisode) {
+        if (item is JollyfinEpisode) {
             Text(
                 text =
                     stringResource(
@@ -136,17 +136,17 @@ fun ItemCard(
 @Preview
 @Composable
 private fun ItemCardPreviewMovie() {
-    FindroidTheme { ItemCard(item = dummyMovie, direction = Direction.HORIZONTAL, onClick = {}) }
+    JollyfinTheme { ItemCard(item = dummyMovie, direction = Direction.HORIZONTAL, onClick = {}) }
 }
 
 @Preview
 @Composable
 private fun ItemCardPreviewMovieVertical() {
-    FindroidTheme { ItemCard(item = dummyMovie, direction = Direction.VERTICAL, onClick = {}) }
+    JollyfinTheme { ItemCard(item = dummyMovie, direction = Direction.VERTICAL, onClick = {}) }
 }
 
 @Preview
 @Composable
 private fun ItemCardPreviewEpisode() {
-    FindroidTheme { ItemCard(item = dummyEpisode, direction = Direction.HORIZONTAL, onClick = {}) }
+    JollyfinTheme { ItemCard(item = dummyEpisode, direction = Direction.HORIZONTAL, onClick = {}) }
 }

@@ -3,7 +3,7 @@ package dev.pschmitt.jellyfin.film.presentation.library
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import dev.pschmitt.jellyfin.film.presentation.di.ApplicationScope
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,12 +20,12 @@ import kotlinx.coroutines.flow.Flow
  */
 @Singleton
 class LibraryItemsCache @Inject constructor(@ApplicationScope private val scope: CoroutineScope) {
-    private val cache = ConcurrentHashMap<String, Flow<PagingData<FindroidItem>>>()
+    private val cache = ConcurrentHashMap<String, Flow<PagingData<JollyfinItem>>>()
 
     suspend fun get(
         key: String,
-        factory: suspend () -> Flow<PagingData<FindroidItem>>,
-    ): Flow<PagingData<FindroidItem>> {
+        factory: suspend () -> Flow<PagingData<JollyfinItem>>,
+    ): Flow<PagingData<JollyfinItem>> {
         return cache[key] ?: factory().cachedIn(scope).also { cache[key] = it }
     }
 

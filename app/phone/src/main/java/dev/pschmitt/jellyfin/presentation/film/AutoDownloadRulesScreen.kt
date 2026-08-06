@@ -59,7 +59,7 @@ import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesAct
 import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesState
 import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadRulesViewModel
 import dev.pschmitt.jellyfin.film.presentation.autodownload.AutoDownloadShowRuleUiModel
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.presentation.film.components.ClearDownloadsDialog
@@ -74,7 +74,7 @@ import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesAc
 import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesState
 import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteDevicesViewModel
 import dev.pschmitt.jellyfin.presentation.settings.remotedevices.RemoteManagementToggleRow
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
 import java.util.UUID
@@ -170,7 +170,7 @@ private fun AutoDownloadRulesScreenLayout(
     onDevicesAction: (RemoteDevicesAction) -> Unit,
     onBackClick: () -> Unit = {},
     onNavigateToDownloadSettings: () -> Unit = {},
-    getSeasons: suspend (UUID) -> List<FindroidSeason> = { emptyList() },
+    getSeasons: suspend (UUID) -> List<JollyfinSeason> = { emptyList() },
     getOtherDevices: suspend () -> List<RemoteDeviceInfo> = { emptyList() },
     onRefresh: () -> Unit = {},
 ) {
@@ -308,7 +308,7 @@ private fun AutoDownloadRulesScreenLayout(
 private fun AutoDownloadShowRuleRow(
     show: AutoDownloadShowRuleUiModel,
     onAction: (AutoDownloadRulesAction) -> Unit,
-    getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getSeasons: suspend (UUID) -> List<JollyfinSeason>,
     getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
 ) {
     val context = LocalContext.current
@@ -429,7 +429,7 @@ private fun AutoDownloadShowRuleRow(
 @Composable
 private fun EditRuleDialog(
     show: AutoDownloadShowRuleUiModel,
-    getSeasons: suspend (UUID) -> List<FindroidSeason>,
+    getSeasons: suspend (UUID) -> List<JollyfinSeason>,
     getOtherDevices: suspend () -> List<RemoteDeviceInfo>,
     onConfirm:
         (
@@ -441,7 +441,7 @@ private fun EditRuleDialog(
         ) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+    var seasons by remember { mutableStateOf<List<JollyfinSeason>?>(null) }
     var otherDevices by remember { mutableStateOf<List<RemoteDeviceInfo>>(emptyList()) }
     var selectedSeasonIds by remember { mutableStateOf(show.seasonIds) }
     var alsoFutureSeasons by remember { mutableStateOf(show.alsoFutureSeasons) }
@@ -598,7 +598,7 @@ private fun EditRuleDialog(
 @PreviewScreenSizes
 @Composable
 private fun AutoDownloadRulesScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         AutoDownloadRulesScreenLayout(
             rulesState =
                 AutoDownloadRulesState(

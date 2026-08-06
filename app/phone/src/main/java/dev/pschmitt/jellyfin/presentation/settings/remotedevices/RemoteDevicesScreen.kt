@@ -26,7 +26,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.RemoteActiveRuleSummary
 import dev.pschmitt.jellyfin.models.RemoteConfigCommand
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
@@ -72,7 +72,7 @@ fun RemoteManagementToggleRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
 @Composable
 fun DeviceSection(
     device: RemoteDeviceInfo,
-    showsBySeriesId: Map<String, FindroidShow>,
+    showsBySeriesId: Map<String, JollyfinShow>,
     onAction: (RemoteDevicesAction) -> Unit,
 ) {
     Column(
@@ -116,7 +116,7 @@ fun DeviceSection(
 private fun ActiveRuleRow(
     device: RemoteDeviceInfo,
     rule: RemoteActiveRuleSummary,
-    show: FindroidShow?,
+    show: JollyfinShow?,
     onAction: (RemoteDevicesAction) -> Unit,
 ) {
     var confirmOpen by remember { mutableStateOf(false) }

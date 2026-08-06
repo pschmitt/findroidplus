@@ -5,7 +5,7 @@ import java.util.UUID
 import org.jellyfin.sdk.model.DateTime
 import org.jellyfin.sdk.model.api.BaseItemDto
 
-data class FindroidBoxSet(
+data class JollyfinBoxSet(
     override val id: UUID,
     override val name: String,
     override val originalTitle: String? = null,
@@ -14,19 +14,19 @@ data class FindroidBoxSet(
     override val favorite: Boolean = false,
     override val canPlay: Boolean = false,
     override val canDownload: Boolean = false,
-    override val sources: List<FindroidSource> = emptyList(),
+    override val sources: List<JollyfinSource> = emptyList(),
     override val runtimeTicks: Long = 0L,
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int? = null,
-    override val images: FindroidImages,
-    override val chapters: List<FindroidChapter> = emptyList(),
+    override val images: JollyfinImages,
+    override val chapters: List<JollyfinChapter> = emptyList(),
     override val dateCreated: DateTime? = null,
-) : FindroidItem
+) : JollyfinItem
 
-fun BaseItemDto.toFindroidBoxSet(jellyfinRepository: JellyfinRepository): FindroidBoxSet {
-    return FindroidBoxSet(
+fun BaseItemDto.toJollyfinBoxSet(jellyfinRepository: JellyfinRepository): JollyfinBoxSet {
+    return JollyfinBoxSet(
         id = id,
         name = name.orEmpty(),
-        images = toFindroidImages(jellyfinRepository),
+        images = toJollyfinImages(jellyfinRepository),
     )
 }

@@ -9,14 +9,14 @@ import androidx.room.PrimaryKey
     foreignKeys =
         [
             ForeignKey(
-                entity = FindroidSourceDto::class,
+                entity = JollyfinSourceDto::class,
                 parentColumns = arrayOf("id"),
                 childColumns = arrayOf("sourceId"),
                 onDelete = ForeignKey.CASCADE,
             )
         ],
 )
-data class FindroidTrickplayInfoDto(
+data class JollyfinTrickplayInfoDto(
     @PrimaryKey val sourceId: String,
     val width: Int,
     val height: Int,
@@ -27,8 +27,8 @@ data class FindroidTrickplayInfoDto(
     val bandwidth: Int,
 )
 
-fun FindroidTrickplayInfo.toFindroidTrickplayInfoDto(sourceId: String): FindroidTrickplayInfoDto {
-    return FindroidTrickplayInfoDto(
+fun JollyfinTrickplayInfo.toJollyfinTrickplayInfoDto(sourceId: String): JollyfinTrickplayInfoDto {
+    return JollyfinTrickplayInfoDto(
         sourceId = sourceId,
         width = width,
         height = height,

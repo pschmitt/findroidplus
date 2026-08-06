@@ -10,9 +10,9 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.film.R as FilmR
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.models.FindroidItem
 import dev.pschmitt.jellyfin.models.HomeItem
 import dev.pschmitt.jellyfin.models.HomeSection
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -222,14 +222,14 @@ constructor(
         for (item in matching) {
             try {
                 val itemId = UUID.fromString(item.itemId)
-                val findroidItem: FindroidItem? =
+                val jollyfinItem: JollyfinItem? =
                     when (item.itemKind) {
                         BackupDownloadedItemKind.MOVIE -> repository.getMovie(itemId)
                         BackupDownloadedItemKind.EPISODE -> repository.getEpisode(itemId)
                         else -> null
                     }
-                val sourceId = findroidItem?.sources?.firstOrNull()?.id ?: continue
-                downloader.downloadItem(findroidItem, sourceId)
+                val sourceId = jollyfinItem?.sources?.firstOrNull()?.id ?: continue
+                downloader.downloadItem(jollyfinItem, sourceId)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to queue restored download for item ${item.itemId}")
             }

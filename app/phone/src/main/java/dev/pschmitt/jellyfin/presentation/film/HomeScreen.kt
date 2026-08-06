@@ -58,8 +58,8 @@ import dev.pschmitt.jellyfin.film.presentation.home.HomeViewModel
 import dev.pschmitt.jellyfin.film.presentation.search.SearchAction
 import dev.pschmitt.jellyfin.film.presentation.search.SearchState
 import dev.pschmitt.jellyfin.film.presentation.search.SearchViewModel
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
 import dev.pschmitt.jellyfin.presentation.film.components.FilmSearchScreen
@@ -71,7 +71,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.HomeView
 import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
 import dev.pschmitt.jellyfin.presentation.film.components.ServerSelectionBottomSheet
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.HomeSectionKeys
@@ -81,10 +81,10 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun HomeScreen(
-    onLibraryClick: (library: FindroidCollection) -> Unit,
+    onLibraryClick: (library: JollyfinCollection) -> Unit,
     onSettingsClick: () -> Unit,
     onManageServers: () -> Unit,
-    onItemClick: (item: FindroidItem) -> Unit,
+    onItemClick: (item: JollyfinItem) -> Unit,
     onSeerrItemClick: (item: SeerrSearchItem) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
@@ -421,7 +421,7 @@ private fun HomeDownloadProgress(
 @PreviewScreenSizes
 @Composable
 private fun HomeScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeScreenLayout(
             state =
                 HomeState(

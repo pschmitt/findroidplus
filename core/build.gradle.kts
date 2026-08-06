@@ -36,13 +36,13 @@ android {
     buildFeatures { compose = true }
 }
 
-// Bundles `cli/findroid-cli` as an asset so LocalControlServer's `GET /cli` route can serve it
+// Bundles `cli/jollyfin-cli` as an asset so LocalControlServer's `GET /cli` route can serve it
 // verbatim (see LocalControlServer.serveCliScript) - copied at build time instead of hand-
 // duplicating the script into a second file that could drift out of sync. Registered as a
 // generated asset directory via the variant API (rather than writing straight into
 // src/main/assets and hoping every consumer - merge, lint-vital, packaging - happens to depend on
 // it) so AGP wires the task dependency correctly for all of them on its own.
-abstract class CopyFindroidCliAsset
+abstract class CopyJollyfinCliAsset
 @Inject
 constructor(private val fileSystemOperations: FileSystemOperations) : DefaultTask() {
     @get:InputFile abstract val cliScript: RegularFileProperty
@@ -58,17 +58,17 @@ constructor(private val fileSystemOperations: FileSystemOperations) : DefaultTas
     }
 }
 
-val copyFindroidCliAsset =
-    tasks.register<CopyFindroidCliAsset>("copyFindroidCliAsset") {
-        cliScript.set(rootProject.file("cli/findroid-cli"))
-        outputDir.set(layout.buildDirectory.dir("generated/findroidCliAssets"))
+val copyJollyfinCliAsset =
+    tasks.register<CopyJollyfinCliAsset>("copyJollyfinCliAsset") {
+        cliScript.set(rootProject.file("cli/jollyfin-cli"))
+        outputDir.set(layout.buildDirectory.dir("generated/jollyfinCliAssets"))
     }
 
 androidComponents {
     onVariants { variant ->
         variant.sources.assets?.addGeneratedSourceDirectory(
-            copyFindroidCliAsset,
-            CopyFindroidCliAsset::outputDir,
+            copyJollyfinCliAsset,
+            CopyJollyfinCliAsset::outputDir,
         )
     }
 }

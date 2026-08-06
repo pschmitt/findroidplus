@@ -7,7 +7,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 
 /**
@@ -63,7 +63,7 @@ fun DownloadLocationChangeDialog(
 @Composable
 @Preview
 private fun DownloadLocationChangeDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloadLocationChangeDialog(
             from = "internal",
             to = "external",

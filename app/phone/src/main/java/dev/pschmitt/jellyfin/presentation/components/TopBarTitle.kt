@@ -17,12 +17,12 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Top-app-bar title with an optional leading icon identifying the view. The icon is pinned to
- * [iconSize] (default 32dp) regardless of the drawable's own intrinsic size - `ic_launcher_foreground`
- * (Home's icon) is a 108dp asset meant for a launcher/splash context, so without this it rendered at
- * that full size instead of a normal title icon. [iconTint] defaults to the surrounding text color
- * like any other single-color icon, but Home passes `Color.Unspecified` for `ic_launcher_foreground`
- * so its own brand gradient isn't flattened to a silhouette - same override [ItemActionButton] already
- * has for exactly this.
+ * [iconSize] (default 32dp) regardless of the drawable's own intrinsic size -
+ * `ic_launcher_foreground` (Home's icon) is a 108dp asset meant for a launcher/splash context, so
+ * without this it rendered at that full size instead of a normal title icon. [iconTint] defaults to
+ * the surrounding text color like any other single-color icon, but Home passes `Color.Unspecified`
+ * for `ic_launcher_foreground` so its own brand gradient isn't flattened to a silhouette - same
+ * override [ItemActionButton] already has for exactly this.
  */
 @Composable
 fun TopBarTitle(

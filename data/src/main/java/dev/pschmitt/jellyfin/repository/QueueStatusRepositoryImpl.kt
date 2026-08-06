@@ -6,9 +6,9 @@ import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrManualImportFile
 import dev.pschmitt.jellyfin.api.pvr.SonarrQueueItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrSeries
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.ManualImportCandidate
 import dev.pschmitt.jellyfin.models.PvrFetchError
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
@@ -517,7 +517,7 @@ class QueueStatusRepositoryImpl(
     private suspend fun loadQueueReferencedShowsAndEpisodes(
         series: List<SonarrSeries>,
         queue: List<SonarrQueueItem>,
-    ): Pair<List<FindroidShow>, Map<UUID, List<FindroidEpisode>>> = coroutineScope {
+    ): Pair<List<JollyfinShow>, Map<UUID, List<JollyfinEpisode>>> = coroutineScope {
         val tvdbIdBySeriesId: Map<Int, String> =
             series.filter { it.tvdbId != 0 }.associate { it.id to it.tvdbId.toString() }
         val seasonNumbersByTvdbId: Map<String, Set<Int>> =
@@ -528,13 +528,13 @@ class QueueStatusRepositoryImpl(
                 .groupBy({ it.first }, { it.second })
                 .mapValues { (_, seasonNumbers) -> seasonNumbers.toSet() }
         if (seasonNumbersByTvdbId.isEmpty()) {
-            return@coroutineScope emptyList<FindroidShow>() to emptyMap()
+            return@coroutineScope emptyList<JollyfinShow>() to emptyMap()
         }
 
         val shows =
             jellyfinRepository
                 .getItems(includeTypes = listOf(BaseItemKind.SERIES), recursive = true)
-                .filterIsInstance<FindroidShow>()
+                .filterIsInstance<JollyfinShow>()
                 .filter { it.tvdbId in seasonNumbersByTvdbId.keys }
 
         val episodesByShowId =
@@ -564,10 +564,10 @@ class QueueStatusRepositoryImpl(
         shows to episodesByShowId
     }
 
-    private suspend fun loadJellyfinMovies(): List<FindroidMovie> =
+    private suspend fun loadJellyfinMovies(): List<JollyfinMovie> =
         jellyfinRepository
             .getItems(includeTypes = listOf(BaseItemKind.MOVIE), recursive = true)
-            .filterIsInstance<FindroidMovie>()
+            .filterIsInstance<JollyfinMovie>()
 
     private fun fetchError(source: PvrSource, serviceName: String, e: Exception): PvrFetchError =
         PvrFetchError(

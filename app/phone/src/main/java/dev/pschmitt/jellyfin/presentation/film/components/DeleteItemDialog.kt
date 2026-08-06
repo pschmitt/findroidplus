@@ -26,7 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -126,7 +126,7 @@ fun DeleteItemDialog(
 @Composable
 @Preview
 private fun DeleteItemDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DeleteItemDialog(
             message = stringResource(CoreR.string.delete_movie_message),
             onConfirm = {},

@@ -6,7 +6,7 @@ import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.ImageType
 
-data class FindroidImages(
+data class JollyfinImages(
     val primary: Uri? = null,
     val backdrop: Uri? = null,
     val logo: Uri? = null,
@@ -15,7 +15,7 @@ data class FindroidImages(
     val showLogo: Uri? = null,
 )
 
-fun BaseItemDto.toFindroidImages(jellyfinRepository: JellyfinRepository): FindroidImages {
+fun BaseItemDto.toJollyfinImages(jellyfinRepository: JellyfinRepository): JollyfinImages {
     val baseUrl = Uri.parse(jellyfinRepository.getBaseUrl())
     val primary =
         imageTags?.get(ImageType.PRIMARY)?.let { tag ->
@@ -63,7 +63,7 @@ fun BaseItemDto.toFindroidImages(jellyfinRepository: JellyfinRepository): Findro
             .build()
     }
 
-    return FindroidImages(
+    return JollyfinImages(
         primary = primary,
         backdrop = backdrop,
         logo = logo,
@@ -73,22 +73,22 @@ fun BaseItemDto.toFindroidImages(jellyfinRepository: JellyfinRepository): Findro
     )
 }
 
-fun FindroidMovieDto.toLocalFindroidImages(itemId: UUID): FindroidImages {
-    return FindroidImages(
+fun JollyfinMovieDto.toLocalJollyfinImages(itemId: UUID): JollyfinImages {
+    return JollyfinImages(
         primary = Uri.Builder().appendEncodedPath("images/$itemId/primary").build(),
         backdrop = Uri.Builder().appendEncodedPath("images/$itemId/backdrop").build(),
     )
 }
 
-fun FindroidShowDto.toLocalFindroidImages(itemId: UUID): FindroidImages {
-    return FindroidImages(
+fun JollyfinShowDto.toLocalJollyfinImages(itemId: UUID): JollyfinImages {
+    return JollyfinImages(
         primary = Uri.Builder().appendEncodedPath("images/$itemId/primary").build(),
         backdrop = Uri.Builder().appendEncodedPath("images/$itemId/backdrop").build(),
     )
 }
 
-fun FindroidSeasonDto.toLocalFindroidImages(itemId: UUID): FindroidImages {
-    return FindroidImages(
+fun JollyfinSeasonDto.toLocalJollyfinImages(itemId: UUID): JollyfinImages {
+    return JollyfinImages(
         primary = Uri.Builder().appendEncodedPath("images/$itemId/primary").build(),
         backdrop = Uri.Builder().appendEncodedPath("images/$itemId/backdrop").build(),
         showPrimary = Uri.Builder().appendEncodedPath("images/$seriesId/primary").build(),
@@ -96,8 +96,8 @@ fun FindroidSeasonDto.toLocalFindroidImages(itemId: UUID): FindroidImages {
     )
 }
 
-fun FindroidEpisodeDto.toLocalFindroidImages(itemId: UUID): FindroidImages {
-    return FindroidImages(
+fun JollyfinEpisodeDto.toLocalJollyfinImages(itemId: UUID): JollyfinImages {
+    return JollyfinImages(
         primary = Uri.Builder().appendEncodedPath("images/$itemId/primary").build(),
         backdrop = Uri.Builder().appendEncodedPath("images/$itemId/backdrop").build(),
         showPrimary = Uri.Builder().appendEncodedPath("images/$seriesId/primary").build(),

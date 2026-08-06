@@ -67,11 +67,11 @@ import dev.pschmitt.jellyfin.core.presentation.theme.Yellow
 import dev.pschmitt.jellyfin.film.presentation.show.ShowAction
 import dev.pschmitt.jellyfin.film.presentation.show.ShowState
 import dev.pschmitt.jellyfin.film.presentation.show.ShowViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.UpcomingSeason
 import dev.pschmitt.jellyfin.presentation.film.components.DownloadScopeDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.Direction
 import dev.pschmitt.jellyfin.ui.components.ItemCard
@@ -82,7 +82,7 @@ import java.util.UUID
 @Composable
 fun ShowScreen(
     showId: UUID,
-    navigateToItem: (item: FindroidItem) -> Unit,
+    navigateToItem: (item: JollyfinItem) -> Unit,
     navigateToPlayer: (itemId: UUID) -> Unit,
     viewModel: ShowViewModel = hiltViewModel(),
 ) {
@@ -508,20 +508,20 @@ private fun ShowScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun ShowScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ShowScreenLayout(state = ShowState(show = dummyShow, nextUp = dummyEpisode), onAction = {})
     }
 }
 
 /**
- * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
+ * Merges real [JollyfinSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
  * seasons row can be sorted by season number instead of showing all missing seasons appended after
  * every real one regardless of number.
  */
 private sealed interface SeasonRowItem {
     val seasonNumber: Int
 
-    data class Real(val season: FindroidSeason) : SeasonRowItem {
+    data class Real(val season: JollyfinSeason) : SeasonRowItem {
         override val seasonNumber: Int
             get() = season.indexNumber
     }

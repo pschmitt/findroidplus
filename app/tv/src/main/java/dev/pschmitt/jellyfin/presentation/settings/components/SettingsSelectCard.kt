@@ -27,7 +27,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.domain.models.Preference
@@ -106,7 +106,7 @@ fun SettingsSelectCard(
 @Preview
 @Composable
 private fun SettingsSelectCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsSelectCard(
             preference =
                 PreferenceSelect(

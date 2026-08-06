@@ -34,7 +34,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.UpcomingSeason
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -141,7 +141,7 @@ fun UpcomingSeasonCard(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun UpcomingSeasonCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         UpcomingSeasonCard(
             season = UpcomingSeason(seasonNumber = 4, episodeCount = 10, monitored = true)
         )

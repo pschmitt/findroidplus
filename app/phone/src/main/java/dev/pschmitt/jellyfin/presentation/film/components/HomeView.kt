@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.film.R as FilmR
 import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidImages
 import dev.pschmitt.jellyfin.models.HomeItem
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinImages
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -55,10 +55,10 @@ fun HomeView(
                 onClick = {
                     onAction(
                         HomeAction.OnLibraryClick(
-                            FindroidCollection(
+                            JollyfinCollection(
                                 id = view.view.id,
                                 name = view.view.name,
-                                images = FindroidImages(),
+                                images = JollyfinImages(),
                                 type = view.view.type,
                             )
                         )

@@ -26,7 +26,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyServer
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyServerAddress
 import dev.pschmitt.jellyfin.models.ServerWithAddresses
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.setup.presentation.servers.ServersAction
 import dev.pschmitt.jellyfin.setup.presentation.servers.ServersEvent
@@ -109,7 +109,7 @@ private fun ServerSelectionBottomSheetLayout(
 @Composable
 @Preview
 private fun ServerSelectionBottomSheetPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ServerSelectionBottomSheetLayout(
             currentServerId = "",
             state =

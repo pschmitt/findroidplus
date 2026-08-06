@@ -8,10 +8,10 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.pschmitt.jellyfin.api.JellyfinApi
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.User
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
-import dev.pschmitt.jellyfin.models.toFindroidMovie
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinMovie
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,11 +53,11 @@ constructor(
                     }
                     val movies =
                         database.getMoviesByServerId(server.id).map {
-                            it.toFindroidMovie(database, user.id)
+                            it.toJollyfinMovie(database, user.id)
                         }
                     val episodes =
                         database.getEpisodesByServerId(server.id).map {
-                            it.toFindroidEpisode(database, user.id)
+                            it.toJollyfinEpisode(database, user.id)
                         }
 
                     syncUserData(jellyfinApi, user, movies)
@@ -72,7 +72,7 @@ constructor(
     private suspend fun syncUserData(
         jellyfinApi: JellyfinApi,
         user: User,
-        items: List<FindroidItem>,
+        items: List<JollyfinItem>,
     ) {
         for (item in items) {
             val userData = database.getUserDataToBeSynced(user.id, item.id) ?: continue

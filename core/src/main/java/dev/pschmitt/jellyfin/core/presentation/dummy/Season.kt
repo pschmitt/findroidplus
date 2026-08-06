@@ -1,11 +1,11 @@
 package dev.pschmitt.jellyfin.core.presentation.dummy
 
-import dev.pschmitt.jellyfin.models.FindroidImages
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinImages
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import java.util.UUID
 
 val dummySeason =
-    FindroidSeason(
+    JollyfinSeason(
         id = UUID.randomUUID(),
         name = "Season 1",
         seriesId = UUID.randomUUID(),
@@ -20,5 +20,5 @@ val dummySeason =
         canPlay = true,
         canDownload = false,
         unplayedItemCount = null,
-        images = FindroidImages(),
+        images = JollyfinImages(),
     )

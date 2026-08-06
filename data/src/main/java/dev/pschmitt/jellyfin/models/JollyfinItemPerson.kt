@@ -7,11 +7,11 @@ import org.jellyfin.sdk.model.api.BaseItemPerson
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.PersonKind
 
-data class FindroidItemPersonImage(val uri: Uri?, val blurHash: String?)
+data class JollyfinItemPersonImage(val uri: Uri?, val blurHash: String?)
 
-fun BaseItemPerson.toFindroidImage(repository: JellyfinRepository): FindroidItemPersonImage {
+fun BaseItemPerson.toJollyfinImage(repository: JellyfinRepository): JollyfinItemPersonImage {
     val baseUrl = Uri.parse(repository.getBaseUrl())
-    return FindroidItemPersonImage(
+    return JollyfinItemPersonImage(
         uri =
             primaryImageTag?.let { tag ->
                 baseUrl
@@ -24,20 +24,20 @@ fun BaseItemPerson.toFindroidImage(repository: JellyfinRepository): FindroidItem
     )
 }
 
-data class FindroidItemPerson(
+data class JollyfinItemPerson(
     val id: UUID,
     val name: String,
     val type: PersonKind,
     val role: String,
-    val image: FindroidItemPersonImage,
+    val image: JollyfinItemPersonImage,
 )
 
-fun BaseItemPerson.toFindroidPerson(repository: JellyfinRepository): FindroidItemPerson {
-    return FindroidItemPerson(
+fun BaseItemPerson.toJollyfinPerson(repository: JellyfinRepository): JollyfinItemPerson {
+    return JollyfinItemPerson(
         id = id,
         name = name.orEmpty(),
         type = type,
         role = role.orEmpty(),
-        image = toFindroidImage(repository),
+        image = toJollyfinImage(repository),
     )
 }

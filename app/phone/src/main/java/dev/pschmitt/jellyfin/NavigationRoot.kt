@@ -33,14 +33,14 @@ import androidx.window.core.layout.WindowSizeClass
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.film.presentation.media.MediaViewModel
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.models.FindroidBoxSet
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidFolder
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinBoxSet
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinFolder
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.presentation.film.AutoDownloadRulesScreen
@@ -178,7 +178,7 @@ private fun libraryIcon(type: CollectionType): Int =
         else -> CoreR.drawable.ic_library
     }
 
-private fun libraryTab(library: FindroidCollection) =
+private fun libraryTab(library: JollyfinCollection) =
     TabBarItem(
         titleText = library.name,
         icon = libraryIcon(library.type),
@@ -828,18 +828,18 @@ private fun navigateHome(navController: NavHostController) {
     }
 }
 
-private fun navigateToItem(navController: NavHostController, item: FindroidItem) {
+private fun navigateToItem(navController: NavHostController, item: JollyfinItem) {
     when (item) {
-        is FindroidBoxSet ->
+        is JollyfinBoxSet ->
             navController.safeNavigate(
                 CollectionRoute(collectionId = item.id.toString(), collectionName = item.name)
             )
-        is FindroidMovie -> navController.safeNavigate(MovieRoute(movieId = item.id.toString()))
-        is FindroidShow -> navController.safeNavigate(ShowRoute(showId = item.id.toString()))
-        is FindroidSeason -> navController.safeNavigate(SeasonRoute(seasonId = item.id.toString()))
-        is FindroidEpisode ->
+        is JollyfinMovie -> navController.safeNavigate(MovieRoute(movieId = item.id.toString()))
+        is JollyfinShow -> navController.safeNavigate(ShowRoute(showId = item.id.toString()))
+        is JollyfinSeason -> navController.safeNavigate(SeasonRoute(seasonId = item.id.toString()))
+        is JollyfinEpisode ->
             navController.safeNavigate(EpisodeRoute(episodeId = item.id.toString()))
-        is FindroidCollection ->
+        is JollyfinCollection ->
             navController.safeNavigate(
                 LibraryRoute(
                     libraryId = item.id.toString(),
@@ -847,7 +847,7 @@ private fun navigateToItem(navController: NavHostController, item: FindroidItem)
                     libraryType = item.type,
                 )
             )
-        is FindroidFolder ->
+        is JollyfinFolder ->
             navController.safeNavigate(
                 LibraryRoute(
                     libraryId = item.id.toString(),

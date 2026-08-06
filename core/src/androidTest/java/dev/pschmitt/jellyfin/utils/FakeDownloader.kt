@@ -1,7 +1,7 @@
 package dev.pschmitt.jellyfin.utils
 
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSource
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSource
 import dev.pschmitt.jellyfin.models.UiText
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -10,7 +10,7 @@ class FakeDownloader : Downloader {
     val downloadedItemIds = mutableListOf<String>()
 
     override suspend fun downloadItem(
-        item: FindroidItem,
+        item: JollyfinItem,
         sourceId: String,
         storageIndex: Int,
     ): Pair<Long, UiText?> {
@@ -32,7 +32,7 @@ class FakeDownloader : Downloader {
 
     override suspend fun forceDownloadGroup(downloadIds: List<Long>) = error("not used")
 
-    override suspend fun deleteItem(item: FindroidItem, source: FindroidSource) = error("not used")
+    override suspend fun deleteItem(item: JollyfinItem, source: JollyfinSource) = error("not used")
 
     override fun getProgressFlow(downloadId: Long): Flow<DownloadProgress> = error("not used")
 

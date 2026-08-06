@@ -12,13 +12,13 @@ import java.util.UUID
     foreignKeys =
         [
             ForeignKey(
-                entity = FindroidSeasonDto::class,
+                entity = JollyfinSeasonDto::class,
                 parentColumns = arrayOf("id"),
                 childColumns = arrayOf("seasonId"),
                 onDelete = ForeignKey.CASCADE,
             ),
             ForeignKey(
-                entity = FindroidShowDto::class,
+                entity = JollyfinShowDto::class,
                 parentColumns = arrayOf("id"),
                 childColumns = arrayOf("seriesId"),
                 onDelete = ForeignKey.CASCADE,
@@ -26,7 +26,7 @@ import java.util.UUID
         ],
     indices = [Index("seasonId"), Index("seriesId")],
 )
-data class FindroidEpisodeDto(
+data class JollyfinEpisodeDto(
     @PrimaryKey val id: UUID,
     val serverId: String?,
     val seasonId: UUID,
@@ -40,11 +40,11 @@ data class FindroidEpisodeDto(
     val runtimeTicks: Long,
     val premiereDate: LocalDateTime?,
     val communityRating: Float?,
-    val chapters: List<FindroidChapter>?,
+    val chapters: List<JollyfinChapter>?,
 )
 
-fun FindroidEpisode.toFindroidEpisodeDto(serverId: String? = null): FindroidEpisodeDto {
-    return FindroidEpisodeDto(
+fun JollyfinEpisode.toJollyfinEpisodeDto(serverId: String? = null): JollyfinEpisodeDto {
+    return JollyfinEpisodeDto(
         id = id,
         serverId = serverId,
         seasonId = seasonId,

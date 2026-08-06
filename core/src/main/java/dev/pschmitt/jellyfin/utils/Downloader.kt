@@ -1,21 +1,21 @@
 package dev.pschmitt.jellyfin.utils
 
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSource
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSource
 import dev.pschmitt.jellyfin.models.UiText
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
 interface Downloader {
     suspend fun downloadItem(
-        item: FindroidItem,
+        item: JollyfinItem,
         sourceId: String,
         storageIndex: Int = 0,
     ): Pair<Long, UiText?>
 
-    // Looks the item/source up via the DB itself rather than taking a FindroidItem, so callers
+    // Looks the item/source up via the DB itself rather than taking a JollyfinItem, so callers
     // that only have a downloadId (e.g. a notification action BroadcastReceiver) can cancel
-    // without having to reconstruct a FindroidItem first.
+    // without having to reconstruct a JollyfinItem first.
     suspend fun cancelDownload(downloadId: Long)
 
     // "Pausing" is just cancelling the transfer without running deleteItem() - the partial
@@ -45,7 +45,7 @@ interface Downloader {
     // prioritize a whole show's queued episodes over other shows'.
     suspend fun forceDownloadGroup(downloadIds: List<Long>)
 
-    suspend fun deleteItem(item: FindroidItem, source: FindroidSource)
+    suspend fun deleteItem(item: JollyfinItem, source: JollyfinSource)
 
     fun getProgressFlow(downloadId: Long): Flow<DownloadProgress>
 
@@ -90,7 +90,7 @@ interface Downloader {
     fun getAllStorageStats(): List<DeviceStorageStats>
 
     // Total on-disk size of every downloaded (LOCAL) source across all storage volumes, read live
-    // from each file rather than a stored column (mirrors FindroidItem.isDownloadBroken()) - used
+    // from each file rather than a stored column (mirrors JollyfinItem.isDownloadBroken()) - used
     // to gate auto-downloads against AppPreferences.maxDownloadSizeGb once it's enabled.
     fun getTotalDownloadedBytes(): Long
 

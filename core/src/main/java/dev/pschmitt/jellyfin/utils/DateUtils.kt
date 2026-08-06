@@ -1,7 +1,7 @@
 package dev.pschmitt.jellyfin.utils
 
 import android.text.format.DateUtils
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -40,7 +40,7 @@ fun formatRelativeTime(millis: Long): String =
         )
         .toString()
 
-fun getShowDateString(item: FindroidShow): String {
+fun getShowDateString(item: JollyfinShow): String {
     val dateRange: MutableList<String> = mutableListOf()
     item.productionYear?.let { dateRange.add(it.toString()) }
     when (item.status) {

@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.domain.models.Preference
@@ -99,7 +99,7 @@ fun SettingsSelectCard(
 @Preview
 @Composable
 private fun SettingsSelectCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsSelectCard(
             preference =
                 PreferenceSelect(

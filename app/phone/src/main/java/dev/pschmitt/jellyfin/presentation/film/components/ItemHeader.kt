@@ -23,15 +23,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.parallaxLayoutModifier
 
 @Composable
 fun ItemHeader(
-    item: FindroidItem,
+    item: JollyfinItem,
     scrollState: ScrollState,
     showLogo: Boolean = false,
     content: @Composable (BoxScope.() -> Unit) = {},
@@ -39,7 +39,7 @@ fun ItemHeader(
     val context = LocalContext.current
     var backdropUri =
         when (item) {
-            is FindroidEpisode -> item.images.primary
+            is JollyfinEpisode -> item.images.primary
             else -> item.images.backdrop
         }
 
@@ -79,7 +79,7 @@ fun ItemHeader(
  */
 @Composable
 fun ItemHeader(
-    item: FindroidItem,
+    item: JollyfinItem,
     modifier: Modifier = Modifier,
     showLogo: Boolean = false,
     content: @Composable (BoxScope.() -> Unit) = {},
@@ -87,7 +87,7 @@ fun ItemHeader(
     val context = LocalContext.current
     var backdropUri =
         when (item) {
-            is FindroidEpisode -> item.images.primary
+            is JollyfinEpisode -> item.images.primary
             else -> item.images.backdrop
         }
 
@@ -119,7 +119,7 @@ fun ItemHeader(
 
 @Composable
 fun ItemHeader(
-    item: FindroidItem,
+    item: JollyfinItem,
     lazyListState: LazyListState,
     showLogo: Boolean = false,
     content: @Composable (BoxScope.() -> Unit) = {},
@@ -127,8 +127,8 @@ fun ItemHeader(
     val context = LocalContext.current
     var backdropUri =
         when (item) {
-            is FindroidEpisode -> item.images.primary
-            is FindroidSeason -> item.images.showBackdrop
+            is JollyfinEpisode -> item.images.primary
+            is JollyfinSeason -> item.images.showBackdrop
             else -> item.images.backdrop
         }
 
@@ -161,7 +161,7 @@ fun ItemHeader(
 
 @Composable
 private fun ItemHeaderBase(
-    item: FindroidItem?,
+    item: JollyfinItem?,
     modifier: Modifier = Modifier,
     showLogo: Boolean = false,
     backdropImage: @Composable (() -> Unit),
@@ -171,7 +171,7 @@ private fun ItemHeaderBase(
 
     val logoUri =
         when (item) {
-            is FindroidEpisode -> item.images.showLogo
+            is JollyfinEpisode -> item.images.showLogo
             null -> null
             else -> item.images.logo
         }
@@ -208,9 +208,9 @@ private fun ItemHeaderBase(
 }
 
 /**
- * Same hero-banner shape as the [FindroidItem] overloads above, for screens whose backdrop isn't a
+ * Same hero-banner shape as the [JollyfinItem] overloads above, for screens whose backdrop isn't a
  * Jellyfin server image at all (e.g. SeerrMediaScreen, which only has a plain TMDB CDN URL, not a
- * [FindroidItem]/[Uri]-based one to resolve). No parallax/logo support - neither has been needed by
+ * [JollyfinItem]/[Uri]-based one to resolve). No parallax/logo support - neither has been needed by
  * a non-Jellyfin caller yet.
  */
 @Composable

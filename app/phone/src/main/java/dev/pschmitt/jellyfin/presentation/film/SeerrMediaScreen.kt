@@ -63,7 +63,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.pschmitt.jellyfin.presentation.film.components.PvrSearchButton
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.pschmitt.jellyfin.presentation.film.components.SeerrStatusChip
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
@@ -573,7 +573,7 @@ private fun seerrDateText(
 @PreviewScreenSizes
 @Composable
 private fun SeerrMediaScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SeerrMediaScreenLayout(
             state =
                 SeerrMediaState(

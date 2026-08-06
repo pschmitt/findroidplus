@@ -45,7 +45,7 @@ import dev.pschmitt.jellyfin.models.User
 import dev.pschmitt.jellyfin.presentation.film.DownloadsScreen
 import dev.pschmitt.jellyfin.presentation.film.HomeScreen
 import dev.pschmitt.jellyfin.presentation.film.MediaScreen
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.LoadingIndicator
 import dev.pschmitt.jellyfin.ui.components.PillBorderIndicator
@@ -212,7 +212,7 @@ private fun MainScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun MainScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         MainScreenLayout(
             uiState = MainViewModel.UiState.Normal(server = dummyServer, user = dummyUser),
             navigateToSettings = {},

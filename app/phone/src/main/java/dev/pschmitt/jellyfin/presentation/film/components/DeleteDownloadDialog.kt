@@ -17,7 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
@@ -94,5 +94,5 @@ fun DeleteDownloadDialog(
 @Composable
 @Preview
 private fun CancelDownloadDialogPreview() {
-    FindroidTheme { DeleteDownloadDialog(onDelete = {}, onDismiss = {}) }
+    JollyfinTheme { DeleteDownloadDialog(onDelete = {}, onDismiss = {}) }
 }

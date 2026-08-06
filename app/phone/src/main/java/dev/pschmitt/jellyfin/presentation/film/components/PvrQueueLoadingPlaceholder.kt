@@ -17,7 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -55,5 +55,5 @@ fun PvrQueueLoadingPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 @Preview
 private fun PvrQueueLoadingPlaceholderPreview() {
-    FindroidTheme { PvrQueueLoadingPlaceholder() }
+    JollyfinTheme { PvrQueueLoadingPlaceholder() }
 }

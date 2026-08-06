@@ -1,13 +1,13 @@
 package dev.pschmitt.jellyfin.film.presentation.library
 
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.SeerrRequestItem
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
 import dev.pschmitt.jellyfin.models.SortBy
 import dev.pschmitt.jellyfin.models.SortOrder
 
 sealed interface LibraryAction {
-    data class OnItemClick(val item: FindroidItem) : LibraryAction
+    data class OnItemClick(val item: JollyfinItem) : LibraryAction
 
     data object OnBackClick : LibraryAction
 

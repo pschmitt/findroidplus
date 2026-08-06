@@ -45,7 +45,7 @@ import dev.pschmitt.jellyfin.film.presentation.downloads.ManualImportSheetState
 import dev.pschmitt.jellyfin.models.ManualImportCandidate
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.presentation.components.MessageDetailsDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
@@ -424,7 +424,7 @@ private fun ManualImportRow(
 @Composable
 @Preview
 private fun ManualImportSheetLoadingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ManualImportSheet(
             state =
                 ManualImportSheetState(
@@ -452,7 +452,7 @@ private fun ManualImportSheetLoadingPreview() {
 @Composable
 @Preview
 private fun ManualImportSheetContentPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ManualImportSheet(
             state =
                 ManualImportSheetState(

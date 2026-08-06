@@ -26,17 +26,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyEpisode
-import dev.pschmitt.jellyfin.models.FindroidEpisode
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.isDownloaded
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 
 @Composable
 fun EpisodeCard(
-    episode: FindroidEpisode,
+    episode: JollyfinEpisode,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     downloadProgress: DownloadProgress? = null,
@@ -125,5 +125,5 @@ fun EpisodeCard(
 @Preview(showBackground = true)
 @Composable
 private fun EpisodeCardPreview() {
-    FindroidTheme { EpisodeCard(episode = dummyEpisode, onClick = {}) }
+    JollyfinTheme { EpisodeCard(episode = dummyEpisode, onClick = {}) }
 }

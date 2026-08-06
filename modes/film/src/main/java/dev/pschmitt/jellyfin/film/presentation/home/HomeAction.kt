@@ -1,16 +1,16 @@
 package dev.pschmitt.jellyfin.film.presentation.home
 
-import dev.pschmitt.jellyfin.models.FindroidCollection
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinCollection
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
 
 sealed interface HomeAction {
-    data class OnItemClick(val item: FindroidItem) : HomeAction
+    data class OnItemClick(val item: JollyfinItem) : HomeAction
 
     /** A discovery-row item - not in the library, opens the Seerr media detail view. */
     data class OnSeerrItemClick(val item: SeerrSearchItem) : HomeAction
 
-    data class OnLibraryClick(val library: FindroidCollection) : HomeAction
+    data class OnLibraryClick(val library: JollyfinCollection) : HomeAction
 
     data object OnRetryClick : HomeAction
 

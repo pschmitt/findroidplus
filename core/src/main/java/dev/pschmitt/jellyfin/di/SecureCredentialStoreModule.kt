@@ -12,7 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import dev.pschmitt.jellyfin.security.EncryptedPrefs
 import javax.inject.Singleton
 
-private const val ENCRYPTED_PREFS_FILE_NAME = "findroid_secure_prefs"
+private const val ENCRYPTED_PREFS_FILE_NAME = "jollyfin_secure_prefs"
 
 @Module
 @InstallIn(SingletonComponent::class)

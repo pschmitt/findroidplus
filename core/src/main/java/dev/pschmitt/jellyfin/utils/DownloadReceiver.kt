@@ -6,10 +6,10 @@ import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
-import dev.pschmitt.jellyfin.models.toFindroidMovie
-import dev.pschmitt.jellyfin.models.toFindroidSource
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinMovie
+import dev.pschmitt.jellyfin.models.toJollyfinSource
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import java.io.File
 import javax.inject.Inject
@@ -37,15 +37,15 @@ class DownloadReceiver : BroadcastReceiver() {
                     if (successfulRename) {
                         database.setSourcePath(source.id, path)
                     } else {
-                        val items = mutableListOf<FindroidItem>()
+                        val items = mutableListOf<JollyfinItem>()
                         items.addAll(
                             database.getMovies().map {
-                                it.toFindroidMovie(database, repository.getUserId())
+                                it.toJollyfinMovie(database, repository.getUserId())
                             }
                         )
                         items.addAll(
                             database.getEpisodes().map {
-                                it.toFindroidEpisode(database, repository.getUserId())
+                                it.toJollyfinEpisode(database, repository.getUserId())
                             }
                         )
 
@@ -53,7 +53,7 @@ class DownloadReceiver : BroadcastReceiver() {
                             .firstOrNull { it.id == source.itemId }
                             ?.let {
                                 CoroutineScope(Dispatchers.IO).launch {
-                                    downloader.deleteItem(it, source.toFindroidSource(database))
+                                    downloader.deleteItem(it, source.toJollyfinSource(database))
                                 }
                             }
                     }

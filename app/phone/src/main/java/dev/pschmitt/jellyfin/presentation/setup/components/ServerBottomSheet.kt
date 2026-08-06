@@ -24,7 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.setup.R as SetupR
 
@@ -86,7 +86,7 @@ private fun ServerBottomSheetItem(
 @Preview
 @Composable
 private fun ServerBottomSheetPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ServerBottomSheet(
             name = "Jellyfin Server",
             address = "http://192.168.0.10:8096",
@@ -101,7 +101,7 @@ private fun ServerBottomSheetPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun ServerBottomSheetItemPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ServerBottomSheetItem(
             icon = painterResource(CoreR.drawable.ic_globe),
             text = stringResource(SetupR.string.addresses),

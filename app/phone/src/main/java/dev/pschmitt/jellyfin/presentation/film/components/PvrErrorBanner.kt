@@ -28,7 +28,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.PvrFetchError
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.presentation.components.MessageDetailsDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /**
@@ -87,7 +87,7 @@ fun PvrErrorBanner(errors: List<PvrFetchError>, modifier: Modifier = Modifier) {
 @Composable
 @Preview
 private fun PvrErrorBannerPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         PvrErrorBanner(
             errors =
                 listOf(

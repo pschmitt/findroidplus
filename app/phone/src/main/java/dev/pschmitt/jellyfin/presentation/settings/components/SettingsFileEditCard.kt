@@ -16,7 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.presentation.models.PreferenceFileEdit
@@ -62,7 +62,7 @@ fun SettingsFileEditCard(preference: PreferenceFileEdit, modifier: Modifier = Mo
 @Preview
 @Composable
 private fun SettingsFileEditCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsFileEditCard(
             preference =
                 PreferenceFileEdit(
@@ -76,7 +76,7 @@ private fun SettingsFileEditCardPreview() {
 @Preview
 @Composable
 private fun SettingsFileEditCardDescriptionPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsFileEditCard(
             preference =
                 PreferenceFileEdit(
@@ -91,7 +91,7 @@ private fun SettingsFileEditCardDescriptionPreview() {
 @Preview
 @Composable
 private fun SettingsFileEditCardIconPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsFileEditCard(
             preference =
                 PreferenceFileEdit(

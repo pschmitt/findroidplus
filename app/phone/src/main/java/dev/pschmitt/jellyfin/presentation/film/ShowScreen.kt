@@ -54,8 +54,8 @@ import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.show.ShowAction
 import dev.pschmitt.jellyfin.film.presentation.show.ShowState
 import dev.pschmitt.jellyfin.film.presentation.show.ShowViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.UpcomingSeason
 import dev.pschmitt.jellyfin.presentation.film.components.ActorsRow
@@ -75,7 +75,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.ItemPoster
 import dev.pschmitt.jellyfin.presentation.film.components.OverviewText
 import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.UpcomingSeasonCard
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
@@ -91,7 +91,7 @@ fun ShowScreen(
     showId: UUID,
     navigateBack: () -> Unit,
     navigateHome: () -> Unit,
-    navigateToItem: (item: FindroidItem) -> Unit,
+    navigateToItem: (item: JollyfinItem) -> Unit,
     navigateToPerson: (personId: UUID) -> Unit,
     navigateToSeerr: (tmdbId: Int, seasonNumber: Int) -> Unit,
     navigateToSettings: () -> Unit,
@@ -674,11 +674,11 @@ private fun ShowScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun EpisodeScreenLayoutPreview() {
-    FindroidTheme { ShowScreenLayout(state = ShowState(show = dummyShow), onAction = {}) }
+    JollyfinTheme { ShowScreenLayout(state = ShowState(show = dummyShow), onAction = {}) }
 }
 
 /**
- * Merges real [FindroidSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
+ * Merges real [JollyfinSeason]s and Sonarr-known [UpcomingSeason] placeholders into one list so the
  * seasons row can be sorted by season number - rendering real seasons first and missing ones
  * appended at the end (as two separate `items()` blocks previously did) put a show's e.g. season 4
  * placeholder after 1-3 but ahead of a real season 5, wherever one existed.
@@ -686,7 +686,7 @@ private fun EpisodeScreenLayoutPreview() {
 private sealed interface SeasonRowItem {
     val seasonNumber: Int
 
-    data class Real(val season: FindroidSeason) : SeasonRowItem {
+    data class Real(val season: JollyfinSeason) : SeasonRowItem {
         override val seasonNumber: Int
             get() = season.indexNumber
     }

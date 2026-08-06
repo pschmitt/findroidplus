@@ -30,7 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -193,7 +193,7 @@ fun MessageDetailsDialog(
 @Preview
 @Composable
 private fun ErrorDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ErrorDialog(exception = Exception("Error loading data"), onDismissRequest = {})
     }
 }
@@ -201,7 +201,7 @@ private fun ErrorDialogPreview() {
 @Preview
 @Composable
 private fun MessageDetailsDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         MessageDetailsDialog(
             title = "Manual import failed",
             message =

@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 /**
  * A Netflix-style play affordance overlaid on the item's header image, replacing the old dedicated
@@ -33,7 +33,7 @@ import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
  */
 @Composable
 fun PlayOverlayButton(
-    item: FindroidItem,
+    item: JollyfinItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -89,11 +89,11 @@ fun PlayOverlayButton(
 @Preview(showBackground = true)
 @Composable
 private fun PlayOverlayButtonMoviePreview() {
-    FindroidTheme { PlayOverlayButton(item = dummyMovie, onClick = {}) }
+    JollyfinTheme { PlayOverlayButton(item = dummyMovie, onClick = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun PlayOverlayButtonEpisodePreview() {
-    FindroidTheme { PlayOverlayButton(item = dummyEpisode, onClick = {}) }
+    JollyfinTheme { PlayOverlayButton(item = dummyEpisode, onClick = {}) }
 }

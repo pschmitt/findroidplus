@@ -18,7 +18,7 @@ import timber.log.Timber
 /**
  * Handles the "Download" action on a new-item notification (see [NewItemNotifier]). The
  * notification only carries an item id + movie/episode flag, not a full
- * [dev.pschmitt.jellyfin.models.FindroidItem] (Intent extras aren't the place for that), so this
+ * [dev.pschmitt.jellyfin.models.JollyfinItem] (Intent extras aren't the place for that), so this
  * re-fetches the item from the server before downloading it - the same round trip the app would do
  * opening the item's own detail page and tapping Download there.
  */

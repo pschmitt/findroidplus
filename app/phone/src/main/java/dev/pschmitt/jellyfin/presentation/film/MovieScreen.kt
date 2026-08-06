@@ -50,7 +50,7 @@ import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieAction
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieState
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieViewModel
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.isDownloadBroken
 import dev.pschmitt.jellyfin.models.isDownloaded
@@ -69,7 +69,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.OverviewText
 import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.QueueBadge
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.LocalOfflineMode
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
@@ -446,7 +446,7 @@ private fun MovieScreenLayout(
                         }
                         val downloadedSource =
                             if (movie.isDownloaded()) {
-                                movie.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                                movie.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
                             } else {
                                 null
                             }
@@ -567,7 +567,7 @@ private fun MovieScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun EpisodeScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         MovieScreenLayout(
             state = MovieState(movie = dummyMovie, videoMetadata = dummyVideoMetadata),
             downloaderState = DownloaderState(),

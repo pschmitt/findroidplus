@@ -1,8 +1,8 @@
 package dev.pschmitt.jellyfin.film.presentation.season
 
 import dev.pschmitt.jellyfin.core.presentation.search.ReleasePickerState
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.UpcomingEpisode
 import dev.pschmitt.jellyfin.repository.ExistingAutoDownloadScope
@@ -10,8 +10,8 @@ import dev.pschmitt.jellyfin.utils.DownloadProgress
 import java.util.UUID
 
 data class SeasonState(
-    val season: FindroidSeason? = null,
-    val episodes: List<FindroidEpisode> = emptyList(),
+    val season: JollyfinSeason? = null,
+    val episodes: List<JollyfinEpisode> = emptyList(),
     // Sonarr-known episodes of this season not yet in the Jellyfin library - always empty unless
     // Sonarr is configured and the show is matched (see SeasonEpisodesRepository). Rendered as
     // greyed-out placeholder rows after the real episodes, see SeasonScreen.

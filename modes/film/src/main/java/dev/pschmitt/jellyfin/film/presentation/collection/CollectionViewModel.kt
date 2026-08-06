@@ -6,9 +6,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pschmitt.jellyfin.core.Constants
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.CollectionSection
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.SortBy
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
@@ -39,7 +39,7 @@ class CollectionViewModel @Inject constructor(private val repository: JellyfinRe
                     CollectionSection(
                             Constants.FAVORITE_TYPE_MOVIES,
                             UiText.StringResource(CoreR.string.movies_label),
-                            items.filterIsInstance<FindroidMovie>(),
+                            items.filterIsInstance<JollyfinMovie>(),
                         )
                         .let {
                             if (it.items.isNotEmpty()) {
@@ -49,7 +49,7 @@ class CollectionViewModel @Inject constructor(private val repository: JellyfinRe
                     CollectionSection(
                             Constants.FAVORITE_TYPE_SHOWS,
                             UiText.StringResource(CoreR.string.shows_label),
-                            items.filterIsInstance<FindroidShow>(),
+                            items.filterIsInstance<JollyfinShow>(),
                         )
                         .let {
                             if (it.items.isNotEmpty()) {
@@ -59,7 +59,7 @@ class CollectionViewModel @Inject constructor(private val repository: JellyfinRe
                     CollectionSection(
                             Constants.FAVORITE_TYPE_EPISODES,
                             UiText.StringResource(CoreR.string.episodes_label),
-                            items.filterIsInstance<FindroidEpisode>(),
+                            items.filterIsInstance<JollyfinEpisode>(),
                         )
                         .let {
                             if (it.items.isNotEmpty()) {

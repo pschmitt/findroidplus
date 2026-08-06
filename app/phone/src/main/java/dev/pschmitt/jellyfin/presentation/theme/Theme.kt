@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import dev.pschmitt.jellyfin.core.presentation.theme.Spacings
 
 @Composable
-fun FindroidTheme(
+fun JollyfinTheme(
     darkTheme: Boolean? = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,

@@ -4,8 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import java.net.URLDecoder
 import java.util.UUID
@@ -23,7 +23,7 @@ import timber.log.Timber
 @HiltViewModel
 class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepository) :
     ViewModel() {
-    private val _target = MutableStateFlow<FindroidItem?>(null)
+    private val _target = MutableStateFlow<JollyfinItem?>(null)
     val target = _target.asStateFlow()
 
     fun resolve(uri: Uri) {
@@ -57,7 +57,7 @@ class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepo
         }
     }
 
-    private suspend fun resolveUri(uri: Uri): FindroidItem? {
+    private suspend fun resolveUri(uri: Uri): JollyfinItem? {
         if (uri.scheme != "jellyfin") return null
 
         val segments = uri.pathSegments.map { decode(it) }
@@ -67,11 +67,11 @@ class DeepLinkViewModel @Inject constructor(private val repository: JellyfinRepo
         }
     }
 
-    private suspend fun resolveShowPath(segments: List<String>): FindroidItem? {
+    private suspend fun resolveShowPath(segments: List<String>): JollyfinItem? {
         val showQuery = segments.getOrNull(0) ?: return null
         val show =
             findBestMatch(
-                repository.getSearchItems(showQuery).filterIsInstance<FindroidShow>(),
+                repository.getSearchItems(showQuery).filterIsInstance<JollyfinShow>(),
                 showQuery,
             ) {
                 it.name

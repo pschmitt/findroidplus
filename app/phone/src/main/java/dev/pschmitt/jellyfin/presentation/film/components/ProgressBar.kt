@@ -12,11 +12,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovie
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 @Composable
-fun ProgressBar(item: FindroidItem, width: Int, modifier: Modifier = Modifier) {
+fun ProgressBar(item: JollyfinItem, width: Int, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Box(
             modifier =
@@ -36,5 +36,5 @@ fun ProgressBar(item: FindroidItem, width: Int, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun ProgressBarPreview() {
-    FindroidTheme { ProgressBar(item = dummyMovie, width = 142) }
+    JollyfinTheme { ProgressBar(item = dummyMovie, width = 142) }
 }

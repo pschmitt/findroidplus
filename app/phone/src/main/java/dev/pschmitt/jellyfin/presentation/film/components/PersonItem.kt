@@ -18,12 +18,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyPerson
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
-fun PersonItem(person: FindroidItemPerson, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PersonItem(person: JollyfinItemPerson, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier =
             modifier.width(110.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick)
@@ -59,5 +59,5 @@ fun PersonItem(person: FindroidItemPerson, onClick: () -> Unit, modifier: Modifi
 @Composable
 @Preview(showBackground = true)
 private fun PersonItemPreview() {
-    FindroidTheme { PersonItem(person = dummyPerson, onClick = {}) }
+    JollyfinTheme { PersonItem(person = dummyPerson, onClick = {}) }
 }

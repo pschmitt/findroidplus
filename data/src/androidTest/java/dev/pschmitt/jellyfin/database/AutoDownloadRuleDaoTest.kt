@@ -4,11 +4,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisodeDto
-import dev.pschmitt.jellyfin.models.FindroidSeasonDto
-import dev.pschmitt.jellyfin.models.FindroidShowDto
-import dev.pschmitt.jellyfin.models.FindroidSourceDto
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisodeDto
+import dev.pschmitt.jellyfin.models.JollyfinSeasonDto
+import dev.pschmitt.jellyfin.models.JollyfinShowDto
+import dev.pschmitt.jellyfin.models.JollyfinSourceDto
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.Server
 import dev.pschmitt.jellyfin.models.User
 import java.util.UUID
@@ -118,7 +118,7 @@ class AutoDownloadRuleDaoTest {
 
     private fun insertShowAndSeason(seriesId: UUID, seasonId: UUID) {
         dao.insertShow(
-            FindroidShowDto(
+            JollyfinShowDto(
                 id = seriesId,
                 serverId = serverA,
                 name = "Show",
@@ -133,7 +133,7 @@ class AutoDownloadRuleDaoTest {
             )
         )
         dao.insertSeason(
-            FindroidSeasonDto(
+            JollyfinSeasonDto(
                 id = seasonId,
                 seriesId = seriesId,
                 name = "Season 1",
@@ -151,7 +151,7 @@ class AutoDownloadRuleDaoTest {
         val seriesId = UUID.randomUUID()
         insertShowAndSeason(seriesId, seasonId)
         dao.insertEpisode(
-            FindroidEpisodeDto(
+            JollyfinEpisodeDto(
                 id = itemId,
                 serverId = serverA,
                 seasonId = seasonId,
@@ -169,11 +169,11 @@ class AutoDownloadRuleDaoTest {
             )
         )
         dao.insertSource(
-            FindroidSourceDto(
+            JollyfinSourceDto(
                 id = "source-1",
                 itemId = itemId,
                 name = "source",
-                type = FindroidSourceType.LOCAL,
+                type = JollyfinSourceType.LOCAL,
                 path = "/tmp/does-not-matter",
             )
         )
@@ -193,7 +193,7 @@ class AutoDownloadRuleDaoTest {
         val seriesId = UUID.randomUUID()
         insertShowAndSeason(seriesId, seasonId)
         dao.insertEpisode(
-            FindroidEpisodeDto(
+            JollyfinEpisodeDto(
                 id = itemId,
                 serverId = serverA,
                 seasonId = seasonId,
@@ -211,11 +211,11 @@ class AutoDownloadRuleDaoTest {
             )
         )
         dao.insertSource(
-            FindroidSourceDto(
+            JollyfinSourceDto(
                 id = "source-1",
                 itemId = itemId,
                 name = "source",
-                type = FindroidSourceType.LOCAL,
+                type = JollyfinSourceType.LOCAL,
                 path = "/tmp/does-not-matter",
             )
         )

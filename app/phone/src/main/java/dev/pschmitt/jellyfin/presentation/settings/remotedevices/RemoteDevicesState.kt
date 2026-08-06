@@ -1,6 +1,6 @@
 package dev.pschmitt.jellyfin.presentation.settings.remotedevices
 
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.RemoteConfigCommand
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 
@@ -19,7 +19,7 @@ data class RemoteDevicesState(
     // RemoteActiveRuleSummary only carries an id + name, not enough to render a poster, so this
     // device resolves the real show via its own Jellyfin session (best-effort; a seriesId missing
     // here just means its row renders without a poster rather than failing to load at all).
-    val showsBySeriesId: Map<String, FindroidShow> = emptyMap(),
+    val showsBySeriesId: Map<String, JollyfinShow> = emptyMap(),
     val error: Exception? = null,
 )
 

@@ -11,12 +11,12 @@ import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.di.ApplicationScope
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.isDownloading
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.ExistingAutoDownloadScope
@@ -127,7 +127,7 @@ constructor(
     private suspend fun loadUpcomingEpisodes(
         seriesTvdbId: String?,
         seasonNumber: Int,
-        knownEpisodes: List<FindroidEpisode>,
+        knownEpisodes: List<JollyfinEpisode>,
     ) {
         val upcoming =
             if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
@@ -247,7 +247,7 @@ constructor(
         }
     }
 
-    private fun observeQueueStatus(episodes: List<FindroidEpisode>) {
+    private fun observeQueueStatus(episodes: List<JollyfinEpisode>) {
         val episodeIds = episodes.map { it.id }.toSet()
         queueStatusJob?.cancel()
         queueStatusJob = viewModelScope.launch {
@@ -260,7 +260,7 @@ constructor(
         }
     }
 
-    private fun reconcileDownloadProgress(episodes: List<FindroidEpisode>) {
+    private fun reconcileDownloadProgress(episodes: List<JollyfinEpisode>) {
         val trackedEpisodes = episodes.filter { it.isDownloading() }
         val desiredIds = trackedEpisodes.map { it.id }.toSet()
 
@@ -273,7 +273,7 @@ constructor(
         trackedEpisodes.forEach { episode ->
             if (progressJobs.containsKey(episode.id)) return@forEach
             val downloadId =
-                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.downloadId
+                episode.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }?.downloadId
                     ?: return@forEach
             downloadIdsByEpisode[episode.id] = downloadId
             progressJobs[episode.id] = viewModelScope.launch {
@@ -304,7 +304,7 @@ constructor(
             .toExistingScope()
     }
 
-    suspend fun getSeasons(): List<FindroidSeason> {
+    suspend fun getSeasons(): List<JollyfinSeason> {
         val seriesId = seriesId ?: return emptyList()
         return repository.getSeasons(seriesId)
     }
@@ -415,7 +415,7 @@ constructor(
             database.getEpisodesBySeasonId(seasonId).sumOf { episode ->
                 database
                     .getSources(episode.id)
-                    .filter { it.type == FindroidSourceType.LOCAL }
+                    .filter { it.type == JollyfinSourceType.LOCAL }
                     .sumOf { File(it.path).length() }
             }
         }
@@ -427,7 +427,7 @@ constructor(
             val episodes =
                 withContext(Dispatchers.IO) {
                     database.getEpisodesBySeasonId(seasonId).map {
-                        it.toFindroidEpisode(database, userId)
+                        it.toJollyfinEpisode(database, userId)
                     }
                 }
             clearDownloads(episodes, database, downloader)

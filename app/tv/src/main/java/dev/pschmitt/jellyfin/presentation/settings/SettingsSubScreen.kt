@@ -33,7 +33,7 @@ import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.presentation.settings.components.SettingsGroupCard
 import dev.pschmitt.jellyfin.presentation.settings.components.SettingsMultiSelectDetailsCard
 import dev.pschmitt.jellyfin.presentation.settings.components.SettingsSelectDetailsCard
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.domain.models.Preference
@@ -71,7 +71,7 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToServers -> navigateToServers()
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
-            // Local CLI access (findroid-cli pairing) is phone-only for this pass - nothing for
+            // Local CLI access (jollyfin-cli pairing) is phone-only for this pass - nothing for
             // TV to react to.
             is SettingsEvent.NavigateToLocalAccess -> Unit
             is SettingsEvent.NavigateToBackupSettings -> Unit
@@ -216,7 +216,7 @@ private fun SettingsSubScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun SettingsSubScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsSubScreenLayout(
             title = SettingsR.string.title_settings,
             state =

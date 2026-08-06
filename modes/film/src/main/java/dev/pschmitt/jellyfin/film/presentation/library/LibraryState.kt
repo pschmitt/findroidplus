@@ -1,7 +1,7 @@
 package dev.pschmitt.jellyfin.film.presentation.library
 
 import androidx.paging.PagingData
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.SeerrRequestItem
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 data class LibraryState(
-    val items: Flow<PagingData<FindroidItem>> = emptyFlow(),
+    val items: Flow<PagingData<JollyfinItem>> = emptyFlow(),
     val sortBy: SortBy = SortBy.NAME,
     val sortOrder: SortOrder = SortOrder.ASCENDING,
     val isLoading: Boolean = false,

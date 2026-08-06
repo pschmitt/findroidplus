@@ -57,7 +57,7 @@ Managing apps declaratively with [declaroid](https://github.com/pschmitt/declaro
 - QR-code device provisioning: scan a code from an already-configured instance to set up a new
   device's Jellyfin/Sonarr/Radarr/Seerr connection in seconds
 - Encrypted local backup/restore of app configuration
-- `findroid-cli`: a Termux command-line client that talks to a running instance over its local
+- `jollyfin-cli`: a Termux command-line client that talks to a running instance over its local
   control API — browse libraries, search, and trigger or manage downloads by name from a
   terminal
 

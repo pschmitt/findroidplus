@@ -13,10 +13,10 @@ import dev.pschmitt.jellyfin.api.pvr.SonarrManualImportItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrManualImportSeriesRef
 import dev.pschmitt.jellyfin.api.pvr.SonarrQueueItem
 import dev.pschmitt.jellyfin.api.pvr.SonarrSeries
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidImages
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinImages
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import java.util.UUID
@@ -562,8 +562,8 @@ class QueueStatusMatchingTest {
 
     // endregion
 
-    private fun testShow(id: UUID, tvdbId: String?): FindroidShow =
-        FindroidShow(
+    private fun testShow(id: UUID, tvdbId: String?): JollyfinShow =
+        JollyfinShow(
             id = id,
             name = "Show $id",
             originalTitle = null,
@@ -584,12 +584,12 @@ class QueueStatusMatchingTest {
             productionYear = null,
             endDate = null,
             trailer = null,
-            images = FindroidImages(),
+            images = JollyfinImages(),
             tvdbId = tvdbId,
         )
 
-    private fun testEpisode(id: UUID, seriesId: UUID, season: Int, index: Int): FindroidEpisode =
-        FindroidEpisode(
+    private fun testEpisode(id: UUID, seriesId: UUID, season: Int, index: Int): JollyfinEpisode =
+        JollyfinEpisode(
             id = id,
             name = "Episode $id",
             originalTitle = null,
@@ -611,13 +611,13 @@ class QueueStatusMatchingTest {
             seasonName = null,
             communityRating = null,
             people = emptyList(),
-            images = FindroidImages(),
+            images = JollyfinImages(),
             chapters = emptyList(),
             trickplayInfo = null,
         )
 
-    private fun testMovie(id: UUID, tmdbId: String?): FindroidMovie =
-        FindroidMovie(
+    private fun testMovie(id: UUID, tmdbId: String?): JollyfinMovie =
+        JollyfinMovie(
             id = id,
             name = "Movie $id",
             originalTitle = null,
@@ -638,7 +638,7 @@ class QueueStatusMatchingTest {
             productionYear = null,
             endDate = null,
             trailer = null,
-            images = FindroidImages(),
+            images = JollyfinImages(),
             chapters = emptyList(),
             trickplayInfo = null,
             tmdbId = tmdbId,

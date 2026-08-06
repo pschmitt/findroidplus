@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -29,5 +29,5 @@ fun NewBadge(modifier: Modifier = Modifier) {
 @Composable
 @Preview
 private fun NewBadgePreview() {
-    FindroidTheme { NewBadge() }
+    JollyfinTheme { NewBadge() }
 }

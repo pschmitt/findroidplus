@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.util.fastForEachIndexed
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.domain.models.Preference
@@ -148,7 +148,7 @@ fun SettingsGroupCard(
 @Preview
 @Composable
 private fun SettingsGroupCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsGroupCard(
             group =
                 PreferenceGroup(

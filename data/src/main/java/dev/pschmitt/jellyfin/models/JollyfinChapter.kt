@@ -4,15 +4,15 @@ import kotlinx.serialization.Serializable
 import org.jellyfin.sdk.model.api.BaseItemDto
 
 @Serializable
-data class FindroidChapter(
+data class JollyfinChapter(
     /** The start position. */
     val startPosition: Long,
     /** The name. */
     val name: String? = null,
 )
 
-fun BaseItemDto.toFindroidChapters(): List<FindroidChapter> {
+fun BaseItemDto.toJollyfinChapters(): List<JollyfinChapter> {
     return chapters?.map { chapter ->
-        FindroidChapter(startPosition = chapter.startPositionTicks / 10000, name = chapter.name)
+        JollyfinChapter(startPosition = chapter.startPositionTicks / 10000, name = chapter.name)
     } ?: emptyList()
 }

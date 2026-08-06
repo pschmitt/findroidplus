@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSizeEstimate
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 import dev.pschmitt.jellyfin.utils.resolveDownloadStorageIndex
@@ -66,7 +66,7 @@ import kotlinx.coroutines.coroutineScope
  */
 @Composable
 fun DownloadScopeDialog(
-    seasons: List<FindroidSeason>?,
+    seasons: List<JollyfinSeason>?,
     showEpisodeOption: Boolean,
     initialSelection: DownloadSelection = DownloadSelection(),
     initialAlsoFollowNew: Boolean = false,
@@ -428,7 +428,7 @@ internal fun ToggleOptionRow(
 @Composable
 @Preview
 private fun DownloadScopeDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloadScopeDialog(
             seasons = emptyList(),
             showEpisodeOption = true,

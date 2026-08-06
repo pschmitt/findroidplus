@@ -27,7 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.presentation.components.BaseDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.domain.models.Preference as PreferenceBackend
@@ -175,7 +175,7 @@ fun SettingsNumberInputDialog(
 @Preview
 @Composable
 private fun SettingsNumberInputDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsNumberInputDialog(
             preference =
                 PreferenceIntInput(

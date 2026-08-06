@@ -2,7 +2,7 @@ package dev.pschmitt.jellyfin.repository
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.SortBy
 import dev.pschmitt.jellyfin.models.SortOrder
 import java.util.UUID
@@ -17,8 +17,8 @@ class ItemsPagingSource(
     private val sortBy: SortBy,
     private val sortOrder: SortOrder,
     private val searchTerm: String? = null,
-) : PagingSource<Int, FindroidItem>() {
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FindroidItem> {
+) : PagingSource<Int, JollyfinItem>() {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, JollyfinItem> {
         val position = params.key ?: 0
 
         Timber.d("Retrieving position: $position")
@@ -45,7 +45,7 @@ class ItemsPagingSource(
         }
     }
 
-    override fun getRefreshKey(state: PagingState<Int, FindroidItem>): Int {
+    override fun getRefreshKey(state: PagingState<Int, JollyfinItem>): Int {
         return 0
     }
 }

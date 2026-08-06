@@ -23,7 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
@@ -112,7 +112,7 @@ fun ClearDownloadsDialog(
 @Composable
 @Preview
 private fun ClearDownloadsDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ClearDownloadsDialog(
             title = stringResource(CoreR.string.clear_all_downloads),
             message = stringResource(CoreR.string.clear_all_downloads_message),

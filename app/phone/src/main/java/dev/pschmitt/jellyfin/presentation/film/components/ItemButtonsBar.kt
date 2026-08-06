@@ -38,14 +38,14 @@ import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSizeEstimate
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.isDownloaded
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.displayNameWithContext
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
@@ -54,7 +54,7 @@ import java.util.UUID
 
 @Composable
 fun ItemButtonsBar(
-    item: FindroidItem,
+    item: JollyfinItem,
     onPlayClick: (startFromBeginning: Boolean) -> Unit,
     onDownloadClick: (storageIndex: Int) -> Unit,
     onDownloadCancelClick: () -> Unit,
@@ -71,7 +71,7 @@ fun ItemButtonsBar(
     initialSelection: DownloadSelection = DownloadSelection(),
     initialAlsoFollowNew: Boolean = false,
     initialOnlyUnwatched: Boolean = false,
-    getSeasons: (suspend () -> List<FindroidSeason>)? = null,
+    getSeasons: (suspend () -> List<JollyfinSeason>)? = null,
     getSeasonSize: (suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate)? =
         null,
     hasActiveDownloadOrRule: Boolean = false,
@@ -106,10 +106,10 @@ fun ItemButtonsBar(
 
     val trailerUri =
         when (item) {
-            is FindroidMovie -> {
+            is JollyfinMovie -> {
                 item.trailer
             }
-            is FindroidShow -> {
+            is JollyfinShow -> {
                 item.trailer
             }
             else -> null
@@ -117,7 +117,7 @@ fun ItemButtonsBar(
 
     val downloadedSource =
         if (item.isDownloaded()) {
-            item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+            item.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
         } else {
             null
         }
@@ -244,7 +244,7 @@ fun ItemButtonsBar(
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                 } else if (
                     !downloaderState.isDeleting &&
-                        (item.canDownload || item is FindroidShow || item is FindroidSeason)
+                        (item.canDownload || item is JollyfinShow || item is JollyfinSeason)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         FilledTonalButton(
@@ -328,7 +328,7 @@ fun ItemButtonsBar(
         )
     }
     if (downloadScopeDialogOpen) {
-        var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+        var seasons by remember { mutableStateOf<List<JollyfinSeason>?>(null) }
         var otherDevices by remember { mutableStateOf<List<RemoteDeviceInfo>>(emptyList()) }
         LaunchedEffect(Unit) { seasons = getSeasons?.invoke() ?: emptyList() }
         LaunchedEffect(Unit) { otherDevices = getOtherDevices?.invoke() ?: emptyList() }
@@ -379,7 +379,7 @@ fun ItemButtonsBar(
 @Preview(showBackground = true)
 @Composable
 private fun ItemButtonsBarPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ItemButtonsBar(
             item = dummyEpisode,
             onPlayClick = {},
@@ -394,7 +394,7 @@ private fun ItemButtonsBarPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun ItemButtonsBarDownloadingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ItemButtonsBar(
             item = dummyEpisode,
             downloaderState =

@@ -19,11 +19,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.utils.LocalOfflineMode
 import dev.pschmitt.jellyfin.viewmodels.DeepLinkViewModel
 import dev.pschmitt.jellyfin.viewmodels.MainViewModel
@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
             val state by viewModel.state.collectAsStateWithLifecycle()
             val deepLinkTarget by deepLinkViewModel.target.collectAsStateWithLifecycle()
 
-            FindroidTheme(dynamicColor = state.isDynamicColors) {
+            JollyfinTheme(dynamicColor = state.isDynamicColors) {
                 val navController = rememberNavController()
                 if (!state.isLoading) {
                     CompositionLocalProvider(LocalOfflineMode provides state.isOfflineMode) {
@@ -79,15 +79,15 @@ class MainActivity : AppCompatActivity() {
                     }
                     LaunchedEffect(deepLinkTarget) {
                         when (val target = deepLinkTarget) {
-                            is FindroidShow ->
+                            is JollyfinShow ->
                                 navController.navigate(ShowRoute(showId = target.id.toString()))
-                            is FindroidSeason ->
+                            is JollyfinSeason ->
                                 navController.navigate(SeasonRoute(seasonId = target.id.toString()))
-                            is FindroidEpisode ->
+                            is JollyfinEpisode ->
                                 navController.navigate(
                                     EpisodeRoute(episodeId = target.id.toString())
                                 )
-                            is FindroidMovie ->
+                            is JollyfinMovie ->
                                 navController.navigate(MovieRoute(movieId = target.id.toString()))
                             else -> Unit
                         }

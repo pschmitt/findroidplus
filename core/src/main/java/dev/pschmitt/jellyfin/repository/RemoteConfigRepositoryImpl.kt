@@ -6,7 +6,7 @@ import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
 import dev.pschmitt.jellyfin.models.RemoteActiveRuleSummary
 import dev.pschmitt.jellyfin.models.RemoteConfigCommand
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.AutoDownloadRuleEvaluator
 import dev.pschmitt.jellyfin.utils.Downloader
@@ -347,7 +347,7 @@ class RemoteConfigRepositoryImpl(
         ) {
             val episodes =
                 database.getEpisodesByShowId(seriesId).map {
-                    it.toFindroidEpisode(database, userId)
+                    it.toJollyfinEpisode(database, userId)
                 }
             clearDownloads(episodes, database, downloader)
         }

@@ -61,7 +61,7 @@ import dev.pschmitt.jellyfin.film.presentation.movie.MovieAction
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieState
 import dev.pschmitt.jellyfin.film.presentation.movie.MovieViewModel
 import dev.pschmitt.jellyfin.models.isDownloaded
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
@@ -525,7 +525,7 @@ private fun MovieScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun MovieScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         MovieScreenLayout(
             state = MovieState(movie = dummyMovie, videoMetadata = dummyVideoMetadata),
             onAction = {},

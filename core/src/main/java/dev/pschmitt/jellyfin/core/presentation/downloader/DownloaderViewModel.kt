@@ -4,8 +4,8 @@ import android.app.DownloadManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.isDownloading
 import dev.pschmitt.jellyfin.repository.RemoteConfigRepository
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
@@ -40,11 +40,11 @@ constructor(
 
     private var progressJob: Job? = null
 
-    fun update(item: FindroidItem) {
+    fun update(item: JollyfinItem) {
         viewModelScope.launch {
             if (item.isDownloading()) {
                 val source =
-                    item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                    item.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
                         ?: return@launch
                 val downloadId = source.downloadId ?: return@launch
                 this@DownloaderViewModel.downloadId = downloadId
@@ -53,7 +53,7 @@ constructor(
         }
     }
 
-    private fun download(item: FindroidItem, storageIndex: Int = 0) {
+    private fun download(item: JollyfinItem, storageIndex: Int = 0) {
         viewModelScope.launch {
             _state.emit(DownloaderState(status = DownloadManager.STATUS_PENDING))
             val (downloadId, uiText) =
@@ -73,7 +73,7 @@ constructor(
         }
     }
 
-    private fun pushDownload(item: FindroidItem, targetDeviceId: String) {
+    private fun pushDownload(item: JollyfinItem, targetDeviceId: String) {
         viewModelScope.launch {
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
             remoteConfigRepository.pushItemDownload(
@@ -98,12 +98,12 @@ constructor(
         }
     }
 
-    private fun deleteDownload(item: FindroidItem) {
+    private fun deleteDownload(item: JollyfinItem) {
         viewModelScope.launch {
             _state.emit(DownloaderState(isDeleting = true))
             downloader.deleteItem(
                 item = item,
-                source = item.sources.first { it.type == FindroidSourceType.LOCAL },
+                source = item.sources.first { it.type == JollyfinSourceType.LOCAL },
             )
             _state.emit(DownloaderState())
             eventsChannel.send(DownloaderEvent.Deleted)

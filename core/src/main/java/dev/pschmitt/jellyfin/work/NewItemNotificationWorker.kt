@@ -8,9 +8,9 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
 import dev.pschmitt.jellyfin.models.SortBy
 import dev.pschmitt.jellyfin.models.SortOrder
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
@@ -118,7 +118,7 @@ constructor(
             .orEmpty()
 
     private fun toNotifyItem(
-        item: FindroidItem,
+        item: JollyfinItem,
         enabledRules: List<AutoDownloadRuleDto>,
     ): NewItemNotifier.NewItem {
         // A sources row already exists the moment a download is enqueued (before it finishes),
@@ -131,14 +131,14 @@ constructor(
                 when (item) {
                     // Auto-download rules are series/season scoped only - movies are never
                     // covered by one, so every downloadable new movie is eligible.
-                    is FindroidMovie -> true
-                    is FindroidEpisode -> enabledRules.none { coversEpisode(it, item) }
+                    is JollyfinMovie -> true
+                    is JollyfinEpisode -> enabledRules.none { coversEpisode(it, item) }
                     else -> false
                 }
 
         val title =
             when (item) {
-                is FindroidEpisode ->
+                is JollyfinEpisode ->
                     "${item.seriesName} · S${item.parentIndexNumber}E${item.indexNumber} · ${item.name}"
                 else -> item.name
             }
@@ -146,7 +146,7 @@ constructor(
         return NewItemNotifier.NewItem(
             id = item.id,
             title = title,
-            isMovie = item is FindroidMovie,
+            isMovie = item is JollyfinMovie,
             downloadEligible = downloadEligible,
         )
     }

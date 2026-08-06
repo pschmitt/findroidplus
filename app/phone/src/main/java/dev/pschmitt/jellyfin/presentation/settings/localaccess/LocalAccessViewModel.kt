@@ -37,7 +37,7 @@ constructor(
                     token = localControlAuth.getOrCreateToken(),
                     cliDownloadCommand =
                         "curl http://${LocalControlServer.BIND_ADDRESS}:${localControlServer.port}" +
-                            "${LocalControlServer.CLI_PATH} -o findroid-cli && chmod +x findroid-cli",
+                            "${LocalControlServer.CLI_PATH} -o jollyfin-cli && chmod +x jollyfin-cli",
                 )
             )
         }

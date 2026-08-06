@@ -1,17 +1,17 @@
 package dev.pschmitt.jellyfin.film.presentation.episode
 
 import dev.pschmitt.jellyfin.core.presentation.search.ReleasePickerState
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.VideoMetadata
 import dev.pschmitt.jellyfin.repository.ExistingAutoDownloadScope
 
 data class EpisodeState(
-    val episode: FindroidEpisode? = null,
+    val episode: JollyfinEpisode? = null,
     val videoMetadata: VideoMetadata? = null,
-    val actors: List<FindroidItemPerson> = emptyList(),
+    val actors: List<JollyfinItemPerson> = emptyList(),
     val dateFormat: String = "system",
     val existingScope: ExistingAutoDownloadScope = ExistingAutoDownloadScope(),
     val seriesTvdbId: String? = null,

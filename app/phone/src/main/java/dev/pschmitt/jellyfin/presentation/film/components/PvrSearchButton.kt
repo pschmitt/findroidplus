@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.PvrSource
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 /**
  * A button that opens a small menu offering Sonarr/Radarr's two search modes: an automatic search
@@ -107,7 +107,7 @@ private fun PvrSearchMenu(
 @Composable
 @Preview
 private fun PvrSearchButtonPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         PvrSearchButton(service = PvrSource.SONARR, onAutomaticSearch = {}, onManualSearch = {})
     }
 }
@@ -115,7 +115,7 @@ private fun PvrSearchButtonPreview() {
 @Composable
 @Preview
 private fun PvrSearchButtonLabeledPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         PvrSearchButton(
             service = PvrSource.RADARR,
             onAutomaticSearch = {},

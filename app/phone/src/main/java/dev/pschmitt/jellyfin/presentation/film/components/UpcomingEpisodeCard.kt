@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.UpcomingEpisode
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatCalendarDate
 import dev.pschmitt.jellyfin.utils.formatCalendarTime
@@ -146,7 +146,7 @@ fun UpcomingEpisodeCard(
 @Preview(showBackground = true)
 @Composable
 private fun UpcomingEpisodeCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         UpcomingEpisodeCard(
             episode =
                 UpcomingEpisode(

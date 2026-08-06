@@ -14,7 +14,7 @@ import dev.pschmitt.jellyfin.models.UpcomingSeason
 interface SeasonEpisodesRepository {
     /**
      * [seriesTvdbId] identifies the show (from the matching
-     * [dev.pschmitt.jellyfin.models.FindroidShow.tvdbId]), [seasonNumber] the season, and
+     * [dev.pschmitt.jellyfin.models.JollyfinShow.tvdbId]), [seasonNumber] the season, and
      * [knownEpisodeNumbers] the episode numbers already present in the Jellyfin library for that
      * season - anything Sonarr knows about beyond that set is returned. Empty (not an error) when
      * Sonarr isn't configured, the show isn't tracked by Sonarr, or nothing is missing.

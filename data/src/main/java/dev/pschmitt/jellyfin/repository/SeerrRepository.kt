@@ -7,7 +7,7 @@ import dev.pschmitt.jellyfin.models.SeerrSearchItem
 
 /**
  * Discover/request flows backed by a Seerr/Seerr instance - the "add new content" side of the PVR
- * integration. Seerr owns the Sonarr/Radarr routing (quality profiles, root folders), so Findroid
+ * integration. Seerr owns the Sonarr/Radarr routing (quality profiles, root folders), so Jollyfin
  * only ever searches and files requests. All calls are user-initiated, so failures are surfaced via
  * [Result] rather than swallowed, same as the search repositories.
  */

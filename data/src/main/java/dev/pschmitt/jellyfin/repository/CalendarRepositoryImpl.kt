@@ -4,8 +4,8 @@ import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrCalendarEntry
 import dev.pschmitt.jellyfin.models.CalendarResult
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.PvrFetchError
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.SeerrMediaType
@@ -134,7 +134,7 @@ class CalendarRepositoryImpl(
         )
 
     /**
-     * [jellyfinRepository.getItems] never populates [FindroidShow.seasons] (it always defaults to
+     * [jellyfinRepository.getItems] never populates [JollyfinShow.seasons] (it always defaults to
      * empty - true of every mapping path, not just this one), so [matchSonarrCalendar]'s season
      * lookup would silently never resolve, leaving every entry's `itemId` null and the calendar row
      * permanently unclickable. Fetches seasons only for shows the calendar actually references
@@ -142,9 +142,9 @@ class CalendarRepositoryImpl(
      * request per show.
      */
     private suspend fun attachSeasons(
-        shows: List<FindroidShow>,
+        shows: List<JollyfinShow>,
         entries: List<SonarrCalendarEntry>,
-    ): List<FindroidShow> = coroutineScope {
+    ): List<JollyfinShow> = coroutineScope {
         val referencedTvdbIds =
             entries
                 .mapNotNull { it.series?.tvdbId?.takeIf { id -> id != 0 } }
@@ -171,13 +171,13 @@ class CalendarRepositoryImpl(
         withSeasons + rest
     }
 
-    private suspend fun loadJellyfinShows(): List<FindroidShow> =
+    private suspend fun loadJellyfinShows(): List<JollyfinShow> =
         jellyfinRepository
             .getItems(includeTypes = listOf(BaseItemKind.SERIES), recursive = true)
-            .filterIsInstance<FindroidShow>()
+            .filterIsInstance<JollyfinShow>()
 
-    private suspend fun loadJellyfinMovies(): List<FindroidMovie> =
+    private suspend fun loadJellyfinMovies(): List<JollyfinMovie> =
         jellyfinRepository
             .getItems(includeTypes = listOf(BaseItemKind.MOVIE), recursive = true)
-            .filterIsInstance<FindroidMovie>()
+            .filterIsInstance<JollyfinMovie>()
 }

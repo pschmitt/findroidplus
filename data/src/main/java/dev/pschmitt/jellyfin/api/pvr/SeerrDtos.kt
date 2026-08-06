@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 // DTOs for the Seerr/Seerr API (/api/v1) - the media request manager sitting in front of
-// Sonarr/Radarr. Only the fields Findroid's Discover screen needs are modeled; `ignoreUnknownKeys`
+// Sonarr/Radarr. Only the fields Jollyfin's Discover screen needs are modeled; `ignoreUnknownKeys`
 // drops the (large) rest. Search results are TMDB resources, so `id` is a TMDB id everywhere.
 
 // region GET /api/v1/search?query=X&page=N

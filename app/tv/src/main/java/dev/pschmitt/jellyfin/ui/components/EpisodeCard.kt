@@ -27,16 +27,16 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyEpisode
-import dev.pschmitt.jellyfin.models.FindroidEpisode
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
 import dev.pschmitt.jellyfin.models.isDownloaded
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 
 @Composable
 fun EpisodeCard(
-    episode: FindroidEpisode,
-    onClick: (FindroidEpisode) -> Unit,
+    episode: JollyfinEpisode,
+    onClick: (JollyfinEpisode) -> Unit,
     downloadProgress: DownloadProgress? = null,
     isMarkedForDeletion: Boolean = false,
 ) {
@@ -119,5 +119,5 @@ fun EpisodeCard(
 @Preview
 @Composable
 private fun ItemCardPreviewEpisode() {
-    FindroidTheme { EpisodeCard(episode = dummyEpisode, onClick = {}) }
+    JollyfinTheme { EpisodeCard(episode = dummyEpisode, onClick = {}) }
 }

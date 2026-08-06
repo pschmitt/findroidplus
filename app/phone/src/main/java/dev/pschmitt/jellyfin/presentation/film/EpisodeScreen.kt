@@ -51,8 +51,8 @@ import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeAction
 import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeState
 import dev.pschmitt.jellyfin.film.presentation.episode.EpisodeViewModel
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.isDownloadBroken
@@ -72,7 +72,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.ManualImportSheet
 import dev.pschmitt.jellyfin.presentation.film.components.OverviewText
 import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.LocalOfflineMode
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
@@ -234,7 +234,7 @@ private fun EpisodeScreenLayout(
     downloaderState: DownloaderState,
     downloadLocationPreference: String = "ask",
     onRefresh: () -> Unit = {},
-    getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
+    getSeasons: suspend () -> List<JollyfinSeason> = { emptyList() },
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
         { _, _ ->
             DownloadSizeEstimate()
@@ -300,7 +300,7 @@ private fun EpisodeScreenLayout(
                         Spacer(Modifier.height(MaterialTheme.spacings.small))
                         val downloadedSource =
                             if (episode.isDownloaded()) {
-                                episode.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                                episode.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }
                             } else {
                                 null
                             }
@@ -695,7 +695,7 @@ private fun EpisodeScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun EpisodeScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         EpisodeScreenLayout(
             state = EpisodeState(episode = dummyEpisode, videoMetadata = dummyVideoMetadata),
             downloaderState = DownloaderState(),

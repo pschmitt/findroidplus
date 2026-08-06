@@ -1786,3 +1786,85 @@ run (no local Gradle/emulator per this repo's remote-build split) - dispatch the
 captures blind. If the click choreography needs fixes, `docs/screenshots.md`-style debugging
 (readable failure-screenshot pulls, `waitFor*` on screen-unique facts) is already wired in via
 `captureE2eScreenshot`/the workflow's failure-screenshot pull step.
+
+## FINDROID-72: rename `Findroid*` model classes, `FindroidTheme`, `cli/findroid-cli`, and the CI
+keystore/rbw entry to Jollyfin
+
+FINDROID-68 deliberately left several things alone as "internal architecture naming, not this
+app's own branding": the `Findroid*`-prefixed Kotlin model classes (`FindroidItem`,
+`FindroidMovie`, etc.), `FindroidTheme` and the `Theme.Findroid`/`ShapeAppearance.Findroid*` style
+resource names it wraps, and `cli/findroid-cli`'s own command name - the latter explicitly flagged
+as "a decision rather than guessing." Direct user request (2026-08-06), given incrementally over
+the course of the session: make those decisions - rename all of it to Jollyfin now, including (a
+follow-up ask mid-task) the `findroid-ci*` filenames and the `Findroid CI Signing Keystore` rbw
+vault entry itself. The "fork of Findroid" upstream-attribution language (README, PRIVACY,
+`sync-upstream.yaml`, `jarnedemeulemeester/findroid` URLs) and every `FINDROID-N` ticket id are
+still out of scope - not asked for this time either, same boundary FINDROID-68 drew.
+
+- [x] `data/.../models/Findroid*.kt` (26 files) -> `Jollyfin*.kt`, renaming every declared type
+  (`FindroidItem` -> `JollyfinItem`, etc.) and every `toFindroidX`/`findroidX`-style
+  function/parameter name that referenced them, across every module (`data`, `core`, `modes`,
+  `app/phone`, `app/tv`, `settings`, `player`) - not just the model files themselves. Done via a
+  word-boundary-safe sweep (`Findroid(?!Theme)` -> `Jollyfin`, `findroid` -> `jollyfin`) over every
+  tracked `.kt`/`.kts` file, so it also caught the same self-referential-prose and CLI-name
+  mentions the next two items describe - those weren't separate passes in practice.
+- [x] `FindroidTheme` -> `JollyfinTheme` (~128 files, mostly `@Preview` call sites) plus the style
+  resources it wraps: `Theme.Findroid`/`Theme.Findroid.Player`/`Base.Theme.Findroid` ->
+  `Theme.Jollyfin*` (`core`/`app/tv` `themes.xml`, both `AndroidManifest.xml`s),
+  `ShapeAppearance.Findroid.Corner.*`/`ShapeAppearanceOverlay.Findroid.Image` ->
+  `ShapeAppearance.Jollyfin.*` (`shape.xml`), `ThemeOverlay.Findroid.Amoled` -> `ThemeOverlay.
+  Jollyfin.Amoled` (`values-night/themes.xml`, currently unreferenced but renamed for consistency).
+  Explicitly confirmed with the user before doing this - FINDROID-68 had drawn this exact boundary
+  twice already, so it warranted asking rather than assuming "even bigger" meant this too.
+- [x] `cli/findroid-cli` -> `cli/jollyfin-cli`: the script's own header, `CONFIG_DIR`, `version`
+  output, and self-update messaging, plus every live reference to the old path/name (`README.md`,
+  `AGENTS.md`, `core/build.gradle.kts`'s asset-bundling task/class/output-dir names,
+  `LocalControlServer.CLI_ASSET_NAME` and its comments, `LocalAccessViewModel`/
+  `LocalAccessScreen`'s curl snippets, and the `local_access_*` strings in `core`/`settings`).
+  `TODO.md`'s own historical `findroid-cli` mentions left as-is, same house style as FINDROID-68's
+  historical sweep.
+- [x] Follow-up ask mid-task: renamed the CI signing keystore's rbw vault entry itself -
+  `Findroid CI Signing Keystore` -> `Jollyfin CI Signing Keystore` (`rbw set --name`), and its two
+  attachments `findroid-ci.jks`/`findroid-ci-keystore.env` -> `jollyfin-ci.jks`/
+  `jollyfin-ci-keystore.env` (rbw has no attachment-rename primitive, so: downloaded both under the
+  new names to a scratch dir, uploaded them as new attachments via `rbw attachment create`, removed
+  the old-named attachments via `rbw attachment rm`, then `shred -u` + `rmdir` the scratch copies).
+  Updated `justfile`'s `build` recipe (rbw entry/attachment names, `.findroid-ci-tmp` ->
+  `.jollyfin-ci-tmp`) and `.github/workflows/release.yaml`'s `fileName: 'findroid-ci.jks'` (a CI-
+  runner-local temp filename only, unrelated to rbw - trivial rename, no coordination needed).
+  Verified end-to-end: `just build-fetch --release` fetched the renamed rbw entry, signed
+  successfully, and the resulting APK installed with `adb install -r` over the previous
+  CI-signed release on all three attached devices with no `INSTALL_FAILED_UPDATE_INCOMPATIBLE` -
+  confirms the signing cert is unchanged, only the vault entry/attachment names moved.
+- [x] Incidental cleanup caught by the same sweep: stray self-referential "Findroid" code comments
+  in `PvrDtos.kt`, `SonarrApi.kt`, `CalendarEntry.kt`, `CalendarRepository.kt`,
+  `PvrDiskSpaceRepository.kt`, `SonarrSearchRepository.kt`, `SeerrRepository.kt`,
+  `CalendarMatching.kt` (FINDROID-68's sweep grepped for `findroidplus`/`Findroid+`, not bare
+  `Findroid`, and missed these) -> "Jollyfin". Also `QrCodecTest.kt`'s arbitrary
+  `"findroid-qr-setup:"` test payload -> `"jollyfin-qr-setup:"` (not a real prefix anywhere, just
+  sample data).
+- [x] Build-verified remotely: `assembleLibreDebug` for `app/phone`+`app/tv` (after the model-class
+  rename), then again after the `FindroidTheme`/style-resource rename together with
+  `:data:testDebugUnitTest`/`:core:testLibreDebugUnitTest` - all green. `just lint` (remote, CI's
+  pinned ktfmt) caught 6 files ktfmt wanted reformatted as a side effect of the renames; fixed via
+  `just gradle rofl-13 ktfmtFormat` + manually `rsync`ing the reformatted files back (no
+  local-ktfmt-vs-CI-ktfmt version mismatch risk, since this ran the actual pinned remote plugin,
+  not nixpkgs' newer standalone binary) - `just lint` clean afterward. Built and deployed the
+  release APK (post keystore-rename) to all three attached devices (ASUS phone, Mi Pad 4, px5) with
+  no install errors.
+- [ ] **Known gap, flagged rather than guessed at:** three locale `strings.xml` translations
+  (`values-fi`, `values-et`, `values-cs-rCZ`) still say bare "Findroid" in `privacy_policy_notice`
+  in *inflected/declined* form ("Findroidia"/"Findroidi"/"Findroidu" - partitive/genitive cases),
+  missed by FINDROID-68's literal-string sweep. Left untouched here: a mechanical substring replace
+  would produce "Jollyfinia"/etc., and grammatical correctness of a declined "JollyFin" in
+  Finnish/Estonian/Czech needs a native speaker's judgment, not a guess.
+
+**Why:** direct user request, resolving the items FINDROID-68 explicitly deferred, expanded
+mid-session ("we can do even bigger", the `FindroidTheme` FYI, then explicit asks for the keystore
+filename and rbw entry).
+**How to apply:** see FINDROID-68 for the boundary this entry does still respect (upstream
+attribution language, ticket ids). The three untranslated locale strings above are the one
+remaining known gap.
+
+Status: **done**, 2026-08-06 - build/test/lint-verified remotely and deployed to all three
+attached devices; not yet tagged as a release build.

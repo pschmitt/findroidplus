@@ -36,7 +36,7 @@ import dev.pschmitt.jellyfin.film.presentation.home.HomeDiscoverSection
 import dev.pschmitt.jellyfin.models.SeerrMediaStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.models.SeerrSearchItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 /** A Seerr-backed discovery row (trending/popular) with tappable poster cards. */
@@ -140,7 +140,7 @@ private fun DiscoverCard(
 @Preview(showBackground = true)
 @Composable
 private fun HomeDiscoverSectionPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeDiscoverSection(
             section =
                 HomeDiscoverSection(

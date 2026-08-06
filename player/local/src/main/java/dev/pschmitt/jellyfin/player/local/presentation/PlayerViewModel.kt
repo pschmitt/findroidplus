@@ -17,8 +17,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pschmitt.jellyfin.models.FindroidSegment
-import dev.pschmitt.jellyfin.models.FindroidSegmentType
+import dev.pschmitt.jellyfin.models.JollyfinSegment
+import dev.pschmitt.jellyfin.models.JollyfinSegmentType
 import dev.pschmitt.jellyfin.player.core.domain.models.PlayerChapter
 import dev.pschmitt.jellyfin.player.core.domain.models.PlayerItem
 import dev.pschmitt.jellyfin.player.core.domain.models.Trickplay
@@ -75,7 +75,7 @@ constructor(
 
     data class UiState(
         val currentItemTitle: String,
-        val currentSegment: FindroidSegment?,
+        val currentSegment: JollyfinSegment?,
         val currentSkipButtonStringRes: Int,
         val currentTrickplay: Trickplay?,
         val currentChapters: List<PlayerChapter>,
@@ -88,7 +88,7 @@ constructor(
     var playWhenReady = true
     private var currentMediaItemIndex = savedStateHandle["mediaItemIndex"] ?: 0
     private var playbackPosition: Long = savedStateHandle["position"] ?: 0
-    private var currentMediaItemSegments: List<FindroidSegment> = emptyList()
+    private var currentMediaItemSegments: List<JollyfinSegment> = emptyList()
 
     // Segments preferences
     var segmentsSkipButton: Boolean = false
@@ -541,7 +541,7 @@ constructor(
         }
     }
 
-    fun skipSegment(segment: FindroidSegment) {
+    fun skipSegment(segment: JollyfinSegment) {
         if (shouldSkipToNextEpisode(segment)) {
             player.seekToNextMediaItem()
         } else {
@@ -551,8 +551,8 @@ constructor(
     }
 
     // Check if the outro segment's end time is within n milliseconds of the player's total duration
-    private fun shouldSkipToNextEpisode(segment: FindroidSegment): Boolean {
-        return if (segment.type == FindroidSegmentType.OUTRO && player.hasNextMediaItem()) {
+    private fun shouldSkipToNextEpisode(segment: JollyfinSegment): Boolean {
+        return if (segment.type == JollyfinSegmentType.OUTRO && player.hasNextMediaItem()) {
             val segmentEndTimeMillis = segment.endTicks
             val playerDurationMillis = player.duration
             val thresholdMillis =
@@ -565,16 +565,16 @@ constructor(
         }
     }
 
-    private fun getSkipButtonTextStringId(segment: FindroidSegment): Int {
+    private fun getSkipButtonTextStringId(segment: JollyfinSegment): Int {
         return when (shouldSkipToNextEpisode(segment)) {
             true -> R.string.player_controls_next_episode
             false ->
                 when (segment.type) {
-                    FindroidSegmentType.INTRO -> R.string.player_controls_skip_intro
-                    FindroidSegmentType.OUTRO -> R.string.player_controls_skip_outro
-                    FindroidSegmentType.RECAP -> R.string.player_controls_skip_recap
-                    FindroidSegmentType.COMMERCIAL -> R.string.player_controls_skip_commercial
-                    FindroidSegmentType.PREVIEW -> R.string.player_controls_skip_preview
+                    JollyfinSegmentType.INTRO -> R.string.player_controls_skip_intro
+                    JollyfinSegmentType.OUTRO -> R.string.player_controls_skip_outro
+                    JollyfinSegmentType.RECAP -> R.string.player_controls_skip_recap
+                    JollyfinSegmentType.COMMERCIAL -> R.string.player_controls_skip_commercial
+                    JollyfinSegmentType.PREVIEW -> R.string.player_controls_skip_preview
                     else -> R.string.player_controls_skip_unknown
                 }
         }

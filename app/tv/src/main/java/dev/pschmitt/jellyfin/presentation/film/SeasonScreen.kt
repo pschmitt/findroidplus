@@ -41,10 +41,10 @@ import dev.pschmitt.jellyfin.core.presentation.dummy.dummySeason
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonAction
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonState
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonViewModel
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.isMarkedForAutoDeletion
 import dev.pschmitt.jellyfin.presentation.film.components.DownloadScopeDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.EpisodeCard
 import dev.pschmitt.jellyfin.ui.components.UpcomingEpisodeCard
@@ -78,7 +78,7 @@ fun SeasonScreen(
 private fun SeasonScreenLayout(
     state: SeasonState,
     onAction: (SeasonAction) -> Unit,
-    getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
+    getSeasons: suspend () -> List<JollyfinSeason> = { emptyList() },
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
         { _, _ ->
             DownloadSizeEstimate()
@@ -164,7 +164,7 @@ private fun SeasonScreenLayout(
     }
 
     if (downloadScopeDialogOpen) {
-        var seasons by remember { mutableStateOf<List<FindroidSeason>?>(null) }
+        var seasons by remember { mutableStateOf<List<JollyfinSeason>?>(null) }
         LaunchedEffect(Unit) { seasons = getSeasons() }
         DownloadScopeDialog(
             seasons = seasons,
@@ -219,7 +219,7 @@ private fun SeasonScreenLayout(
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun SeasonScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SeasonScreenLayout(
             state = SeasonState(season = dummySeason, episodes = dummyEpisodes),
             onAction = {},

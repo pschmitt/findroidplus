@@ -7,14 +7,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
 fun InfoText(
     genres: List<String>,
-    director: FindroidItemPerson?,
-    writers: List<FindroidItemPerson>,
+    director: JollyfinItemPerson?,
+    writers: List<JollyfinItemPerson>,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
         if (genres.isNotEmpty()) {

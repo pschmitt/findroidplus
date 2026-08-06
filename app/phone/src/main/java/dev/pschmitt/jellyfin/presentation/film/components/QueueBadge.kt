@@ -27,7 +27,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.QueueStatus
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 import dev.pschmitt.jellyfin.utils.formatDownloadSpeed
@@ -174,7 +174,7 @@ private fun QueueStatusDetailDialog(status: QueueStatus, onDismiss: () -> Unit) 
 @Composable
 @Preview
 private fun QueueBadgeQueuedPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(status = QueueStatus(source = PvrSource.SONARR, status = QueueItemStatus.QUEUED))
     }
 }
@@ -182,7 +182,7 @@ private fun QueueBadgeQueuedPreview() {
 @Composable
 @Preview
 private fun QueueBadgeDownloadingPercentPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(
             status =
                 QueueStatus(
@@ -197,7 +197,7 @@ private fun QueueBadgeDownloadingPercentPreview() {
 @Composable
 @Preview
 private fun QueueBadgeDownloadingIndeterminatePreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(
             status =
                 QueueStatus(
@@ -212,7 +212,7 @@ private fun QueueBadgeDownloadingIndeterminatePreview() {
 @Composable
 @Preview
 private fun QueueBadgeImportingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(
             status = QueueStatus(source = PvrSource.SONARR, status = QueueItemStatus.IMPORTING)
         )
@@ -222,7 +222,7 @@ private fun QueueBadgeImportingPreview() {
 @Composable
 @Preview
 private fun QueueBadgeWarningPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(
             status =
                 QueueStatus(
@@ -237,7 +237,7 @@ private fun QueueBadgeWarningPreview() {
 @Composable
 @Preview
 private fun QueueBadgeFailedPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         QueueBadge(
             status =
                 QueueStatus(

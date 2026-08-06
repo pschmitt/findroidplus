@@ -5,7 +5,7 @@ import java.util.UUID
 import org.jellyfin.sdk.model.DateTime
 
 @Entity(tableName = "userdata", primaryKeys = ["userId", "itemId"])
-data class FindroidUserDataDto(
+data class JollyfinUserDataDto(
     val userId: UUID,
     val itemId: UUID,
     val played: Boolean,
@@ -19,8 +19,8 @@ data class FindroidUserDataDto(
     val lastPlayedDate: DateTime? = null,
 )
 
-fun FindroidItem.toFindroidUserDataDto(userId: UUID): FindroidUserDataDto {
-    return FindroidUserDataDto(
+fun JollyfinItem.toJollyfinUserDataDto(userId: UUID): JollyfinUserDataDto {
+    return JollyfinUserDataDto(
         userId = userId,
         itemId = id,
         played = played,

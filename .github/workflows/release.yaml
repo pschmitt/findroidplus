@@ -50,7 +50,7 @@ jobs:
         id: ci_keystore
         uses: timheuer/base64-to-file@v2
         with:
-          fileName: 'findroid-ci.jks'
+          fileName: 'jollyfin-ci.jks'
           encodedString: ${{ secrets.CI_KEYSTORE_BASE64 }}
 
       - name: Determine release parameters

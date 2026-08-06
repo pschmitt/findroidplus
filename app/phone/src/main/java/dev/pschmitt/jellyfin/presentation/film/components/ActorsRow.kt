@@ -14,13 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import java.util.UUID
 
 @Composable
 fun ActorsRow(
-    actors: List<FindroidItemPerson>,
+    actors: List<JollyfinItemPerson>,
     onActorClick: (personId: UUID) -> Unit,
     contentPadding: PaddingValues,
 ) {

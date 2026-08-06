@@ -43,7 +43,7 @@ import dev.pschmitt.jellyfin.models.ServerWithAddresses
 import dev.pschmitt.jellyfin.presentation.setup.components.RootLayout
 import dev.pschmitt.jellyfin.presentation.setup.components.ServerBottomSheet
 import dev.pschmitt.jellyfin.presentation.setup.components.ServerItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.setup.R as SetupR
 import dev.pschmitt.jellyfin.setup.presentation.servers.ServersAction
 import dev.pschmitt.jellyfin.setup.presentation.servers.ServersEvent
@@ -230,7 +230,7 @@ private fun ServersScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun ServersScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ServersScreenLayout(
             state =
                 ServersState(

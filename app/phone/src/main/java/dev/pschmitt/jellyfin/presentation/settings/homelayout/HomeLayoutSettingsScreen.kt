@@ -38,7 +38,7 @@ import dev.pschmitt.jellyfin.film.presentation.homelayout.HomeLayoutSettingsView
 import dev.pschmitt.jellyfin.models.UiText
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 
@@ -230,7 +230,7 @@ private fun HomeLayoutRowItem(
 @Preview(showBackground = true)
 @Composable
 private fun HomeLayoutSettingsScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeLayoutSettingsScreenLayout(
             state =
                 HomeLayoutSettingsState(

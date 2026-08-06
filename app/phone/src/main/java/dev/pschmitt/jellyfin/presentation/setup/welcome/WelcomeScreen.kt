@@ -27,7 +27,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.setup.components.RootLayout
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.setup.R as SetupR
 import dev.pschmitt.jellyfin.setup.presentation.welcome.WelcomeAction
@@ -141,5 +141,5 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
 @PreviewScreenSizes
 @Composable
 private fun WelcomeScreenLayoutPreview() {
-    FindroidTheme { WelcomeScreenLayout(onAction = {}) }
+    JollyfinTheme { WelcomeScreenLayout(onAction = {}) }
 }

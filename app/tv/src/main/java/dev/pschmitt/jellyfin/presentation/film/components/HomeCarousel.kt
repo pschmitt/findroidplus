@@ -14,13 +14,13 @@ import androidx.tv.material3.Carousel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovies
 import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeCarousel(
-    items: List<FindroidItem>,
+    items: List<JollyfinItem>,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -38,5 +38,5 @@ fun HomeCarousel(
 @Composable
 @Preview(showBackground = true)
 private fun HomeCarouselPreview() {
-    FindroidTheme { HomeCarousel(items = dummyMovies, onAction = {}) }
+    JollyfinTheme { HomeCarousel(items = dummyMovies, onAction = {}) }
 }

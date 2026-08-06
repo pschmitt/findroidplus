@@ -1,18 +1,18 @@
 package dev.pschmitt.jellyfin.film.presentation.show
 
 import dev.pschmitt.jellyfin.models.CalendarEntry
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.UpcomingSeason
 import dev.pschmitt.jellyfin.repository.ExistingAutoDownloadScope
 
 data class ShowState(
-    val show: FindroidShow? = null,
-    val nextUp: FindroidEpisode? = null,
+    val show: JollyfinShow? = null,
+    val nextUp: JollyfinEpisode? = null,
     val nextAiring: CalendarEntry? = null,
-    val seasons: List<FindroidSeason> = emptyList(),
+    val seasons: List<JollyfinSeason> = emptyList(),
     // Sonarr-known seasons of this show not yet in the Jellyfin library - always empty unless
     // Sonarr is configured and the show is matched (see SeasonEpisodesRepository). Rendered as
     // dimmed placeholder cards after the real seasons, see ShowScreen.
@@ -21,9 +21,9 @@ data class ShowState(
     // queued (see PendingDownloadRequestDto) - drives the queued/not-queued icon state on
     // UpcomingSeasonCard.
     val queuedSeasonNumbers: Set<Int> = emptySet(),
-    val actors: List<FindroidItemPerson> = emptyList(),
-    val director: FindroidItemPerson? = null,
-    val writers: List<FindroidItemPerson> = emptyList(),
+    val actors: List<JollyfinItemPerson> = emptyList(),
+    val director: JollyfinItemPerson? = null,
+    val writers: List<JollyfinItemPerson> = emptyList(),
     val autoDownloadEnabled: Boolean = false,
     val existingScope: ExistingAutoDownloadScope = ExistingAutoDownloadScope(),
     val hasDownloads: Boolean = false,

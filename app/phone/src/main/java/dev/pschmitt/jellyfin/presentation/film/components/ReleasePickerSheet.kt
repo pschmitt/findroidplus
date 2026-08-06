@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.api.pvr.PvrRelease
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.search.ReleasePickerState
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
@@ -157,7 +157,7 @@ private fun ReleaseRow(release: PvrRelease, onGrab: () -> Unit) {
 @Composable
 @Preview
 private fun ReleasePickerSheetLoadingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ReleasePickerSheet(
             state = ReleasePickerState(isLoading = true),
             onGrab = {},
@@ -170,7 +170,7 @@ private fun ReleasePickerSheetLoadingPreview() {
 @Composable
 @Preview
 private fun ReleasePickerSheetContentPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         ReleasePickerSheet(
             state =
                 ReleasePickerState(

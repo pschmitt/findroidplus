@@ -28,8 +28,8 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyMovies
 import dev.pschmitt.jellyfin.film.R as FilmR
 import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import kotlinx.coroutines.delay
 
@@ -49,7 +49,7 @@ private val dynamicPageSize =
 
 @Composable
 fun HomeCarousel(
-    items: List<FindroidItem>,
+    items: List<JollyfinItem>,
     itemsPadding: PaddingValues,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -107,7 +107,7 @@ fun HomeCarousel(
 @Composable
 @Preview(showBackground = true)
 private fun HomeCarouselPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeCarousel(
             items = dummyMovies,
             itemsPadding = PaddingValues(horizontal = 0.dp),

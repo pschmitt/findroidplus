@@ -11,7 +11,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
 
@@ -55,7 +55,7 @@ fun AggregateInfoDialog(episodeCount: Int, downloadedSizeBytes: Long, onDismiss:
 @Composable
 @Preview
 private fun AggregateInfoDialogPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         AggregateInfoDialog(episodeCount = 12, downloadedSizeBytes = 4_500_000_000L, onDismiss = {})
     }
 }

@@ -7,23 +7,23 @@ import java.util.UUID
 import org.jellyfin.sdk.model.api.MediaProtocol
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 
-data class FindroidSource(
+data class JollyfinSource(
     val id: String,
     val name: String,
-    val type: FindroidSourceType,
+    val type: JollyfinSourceType,
     val path: String,
     val size: Long,
-    val mediaStreams: List<FindroidMediaStream>,
+    val mediaStreams: List<JollyfinMediaStream>,
     val downloadId: Long? = null,
     val checksum: String? = null,
     val excludeFromAutoDelete: Boolean = false,
 )
 
-suspend fun MediaSourceInfo.toFindroidSource(
+suspend fun MediaSourceInfo.toJollyfinSource(
     jellyfinRepository: JellyfinRepository,
     itemId: UUID,
     includePath: Boolean = false,
-): FindroidSource {
+): JollyfinSource {
     val path =
         when (protocol) {
             MediaProtocol.FILE -> {
@@ -36,41 +36,41 @@ suspend fun MediaSourceInfo.toFindroidSource(
             MediaProtocol.HTTP -> this.path.orEmpty()
             else -> ""
         }
-    return FindroidSource(
+    return JollyfinSource(
         id = id.orEmpty(),
         name = name.orEmpty(),
-        type = FindroidSourceType.REMOTE,
+        type = JollyfinSourceType.REMOTE,
         path = path,
         size = size ?: 0,
         mediaStreams =
-            mediaStreams?.map { it.toFindroidMediaStream(jellyfinRepository) } ?: emptyList(),
+            mediaStreams?.map { it.toJollyfinMediaStream(jellyfinRepository) } ?: emptyList(),
     )
 }
 
-fun FindroidSourceDto.toFindroidSource(serverDatabaseDao: ServerDatabaseDao): FindroidSource {
-    return toFindroidSource(serverDatabaseDao.getMediaStreamsBySourceId(id))
+fun JollyfinSourceDto.toJollyfinSource(serverDatabaseDao: ServerDatabaseDao): JollyfinSource {
+    return toJollyfinSource(serverDatabaseDao.getMediaStreamsBySourceId(id))
 }
 
 /**
- * Same mapping as [toFindroidSource], but takes an already-fetched media-stream list instead of
- * doing its own DB query - lets batch callers (see `toFindroidMovies`/`toFindroidEpisodes`) fetch
+ * Same mapping as [toJollyfinSource], but takes an already-fetched media-stream list instead of
+ * doing its own DB query - lets batch callers (see `toJollyfinMovies`/`toJollyfinEpisodes`) fetch
  * media streams for every source in one query instead of one query per source.
  */
-fun FindroidSourceDto.toFindroidSource(mediaStreams: List<FindroidMediaStreamDto>): FindroidSource {
-    return FindroidSource(
+fun JollyfinSourceDto.toJollyfinSource(mediaStreams: List<JollyfinMediaStreamDto>): JollyfinSource {
+    return JollyfinSource(
         id = id,
         name = name,
         type = type,
         path = path,
         size = File(path).length(),
-        mediaStreams = mediaStreams.map { it.toFindroidMediaStream() },
+        mediaStreams = mediaStreams.map { it.toJollyfinMediaStream() },
         downloadId = downloadId,
         checksum = checksum,
         excludeFromAutoDelete = excludeFromAutoDelete,
     )
 }
 
-enum class FindroidSourceType {
+enum class JollyfinSourceType {
     REMOTE,
     LOCAL,
 }

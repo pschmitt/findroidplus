@@ -15,10 +15,10 @@ import dev.pschmitt.jellyfin.film.domain.VideoMetadataParser
 import dev.pschmitt.jellyfin.film.presentation.downloads.ManualImportController
 import dev.pschmitt.jellyfin.film.presentation.downloads.PendingImportRef
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
@@ -239,13 +239,13 @@ constructor(
         }
     }
 
-    private suspend fun getActors(item: FindroidEpisode): List<FindroidItemPerson> {
+    private suspend fun getActors(item: JollyfinEpisode): List<JollyfinItemPerson> {
         return withContext(Dispatchers.Default) {
             item.people.filter { it.type == PersonKind.ACTOR }
         }
     }
 
-    suspend fun getSeasons(): List<FindroidSeason> {
+    suspend fun getSeasons(): List<JollyfinSeason> {
         val seriesId = _state.value.episode?.seriesId ?: return emptyList()
         return repository.getSeasons(seriesId)
     }
@@ -406,7 +406,7 @@ constructor(
 
     private fun toggleExcludeFromAutoDelete() {
         val source =
-            _state.value.episode?.sources?.firstOrNull { it.type == FindroidSourceType.LOCAL }
+            _state.value.episode?.sources?.firstOrNull { it.type == JollyfinSourceType.LOCAL }
                 ?: return
         viewModelScope.launch {
             database.setSourceExcludeFromAutoDelete(source.id, !source.excludeFromAutoDelete)

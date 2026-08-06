@@ -23,7 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.presentation.settings.components.SettingsGroupCard
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.presentation.enums.DeviceType
@@ -58,7 +58,7 @@ fun SettingsScreen(
             is SettingsEvent.NavigateToServers -> navigateToServers()
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
-            // Local CLI access (findroid-cli pairing) is phone-only for this pass - nothing for
+            // Local CLI access (jollyfin-cli pairing) is phone-only for this pass - nothing for
             // TV to react to.
             is SettingsEvent.NavigateToLocalAccess -> Unit
             is SettingsEvent.NavigateToBackupSettings -> Unit
@@ -134,7 +134,7 @@ private fun SettingsScreenLayout(state: SettingsState, onAction: (SettingsAction
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun SettingsScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsScreenLayout(
             state =
                 SettingsState(

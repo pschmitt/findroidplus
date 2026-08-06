@@ -42,7 +42,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -294,14 +294,14 @@ private fun CliDownloadSection(command: String, onCopy: () -> Unit) {
 @PreviewScreenSizes
 @Composable
 private fun LocalAccessScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         LocalAccessScreenLayout(
             state =
                 LocalAccessState(
                     localControlEnabled = true,
                     token = "abcDEF123-example-token_xyz",
                     cliDownloadCommand =
-                        "curl http://127.0.0.1:48411/cli -o findroid-cli && chmod +x findroid-cli",
+                        "curl http://127.0.0.1:48411/cli -o jollyfin-cli && chmod +x jollyfin-cli",
                 ),
             onAction = {},
         )

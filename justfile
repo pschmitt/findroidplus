@@ -44,7 +44,7 @@ gradle host=remote_host *tasks: (sync host)
 
 # Build an APK remotely. Flags: --tv/--phone (default phone), --debug/--release (default debug), --host=<host>
 # Release builds are signed with the persistent CI keystore (fetched from the rbw entry
-# "Findroid CI Signing Keystore" and staged on the build host only for the duration of the
+# "Jollyfin CI Signing Keystore" and staged on the build host only for the duration of the
 # build). Without CI_KEYSTORE_*, Gradle silently signs with the host's throwaway
 # ~/.android/debug.keystore and devices carrying CI-signed installs (GitHub releases /
 # Obtainium) reject the APK with INSTALL_FAILED_UPDATE_INCOMPATIBLE.
@@ -65,20 +65,20 @@ build *flags:
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
     git_revision=$(git describe --always --abbrev=12 --dirty)
-    rbw attachment get "Findroid CI Signing Keystore" --attachment findroid-ci.jks --output "$tmpdir/findroid-ci.jks"
-    rbw attachment get "Findroid CI Signing Keystore" --attachment findroid-ci-keystore.env --output "$tmpdir/findroid-ci-keystore.env"
+    rbw attachment get "Jollyfin CI Signing Keystore" --attachment jollyfin-ci.jks --output "$tmpdir/jollyfin-ci.jks"
+    rbw attachment get "Jollyfin CI Signing Keystore" --attachment jollyfin-ci-keystore.env --output "$tmpdir/jollyfin-ci-keystore.env"
     just sync "$host"
-    ssh "$host" 'mkdir -p ~/.findroid-ci-tmp && chmod 700 ~/.findroid-ci-tmp'
-    scp -q "$tmpdir/findroid-ci.jks" "$tmpdir/findroid-ci-keystore.env" "$host:.findroid-ci-tmp/"
+    ssh "$host" 'mkdir -p ~/.jollyfin-ci-tmp && chmod 700 ~/.jollyfin-ci-tmp'
+    scp -q "$tmpdir/jollyfin-ci.jks" "$tmpdir/jollyfin-ci-keystore.env" "$host:.jollyfin-ci-tmp/"
     # The keystore is shredded on the host whether or not the build succeeds.
     ssh "$host" "
       artifact={{remote_path}}/app/${variant}/build/outputs/apk/libre/${flavor}/${variant}-libre-${abi}-${flavor}.apk
       previous_mtime=0
       [[ -f \"\$artifact\" ]] && previous_mtime=\$(stat -c %Y \"\$artifact\")
       set -a
-      . ~/.findroid-ci-tmp/findroid-ci-keystore.env
+      . ~/.jollyfin-ci-tmp/jollyfin-ci-keystore.env
       set +a
-      export CI_KEYSTORE_PATH=\$HOME/.findroid-ci-tmp/findroid-ci.jks
+      export CI_KEYSTORE_PATH=\$HOME/.jollyfin-ci-tmp/jollyfin-ci.jks
       export GIT_REVISION='$git_revision'
       cd {{remote_path}} && nix develop --command ./gradlew ':app:${variant}:assembleLibre${flavor^}' --rerun-tasks 2>&1 | tee ~/jollyfin-release-build.log
       rc=\$?
@@ -92,8 +92,8 @@ build *flags:
         echo "release APK does not contain expected revision: \$GIT_REVISION" >&2
         rc=1
       fi
-      shred -u ~/.findroid-ci-tmp/* 2>/dev/null || true
-      rmdir ~/.findroid-ci-tmp 2>/dev/null || true
+      shred -u ~/.jollyfin-ci-tmp/* 2>/dev/null || true
+      rmdir ~/.jollyfin-ci-tmp 2>/dev/null || true
       exit \$rc
     "
 

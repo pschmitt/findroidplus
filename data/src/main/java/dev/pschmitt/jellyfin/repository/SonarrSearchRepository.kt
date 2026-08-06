@@ -19,8 +19,8 @@ interface SonarrSearchRepository {
 
     /**
      * Resolves Sonarr's internal numeric episode id for a show/season/episode, needed by callers
-     * that only have a [dev.pschmitt.jellyfin.models.FindroidEpisode] (whose tvdb id and
-     * season/episode numbers are the only thing Findroid can match against Sonarr) rather than a
+     * that only have a [dev.pschmitt.jellyfin.models.JollyfinEpisode] (whose tvdb id and
+     * season/episode numbers are the only thing Jollyfin can match against Sonarr) rather than a
      * cached Sonarr id (see [dev.pschmitt.jellyfin.models.UpcomingEpisode.episodeId]/
      * [dev.pschmitt.jellyfin.models.CalendarEntry.episodeId]). `null` when Sonarr isn't configured
      * or doesn't know the episode.

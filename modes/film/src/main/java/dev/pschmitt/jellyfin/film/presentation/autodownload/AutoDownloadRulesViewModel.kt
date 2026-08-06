@@ -6,11 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidSeason
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinSeason
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.models.UiText
-import dev.pschmitt.jellyfin.models.toFindroidEpisode
+import dev.pschmitt.jellyfin.models.toJollyfinEpisode
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.repository.RemoteConfigRepository
@@ -47,7 +47,7 @@ constructor(
     private val eventsChannel = Channel<AutoDownloadRuleEvent>()
     val events = eventsChannel.receiveAsFlow()
 
-    suspend fun getSeasons(seriesId: UUID): List<FindroidSeason> = repository.getSeasons(seriesId)
+    suspend fun getSeasons(seriesId: UUID): List<JollyfinSeason> = repository.getSeasons(seriesId)
 
     suspend fun getOtherDevices(): List<RemoteDeviceInfo> =
         remoteConfigRepository.listOtherDevices()
@@ -160,7 +160,7 @@ constructor(
             val scoped =
                 if (seasonIds.isEmpty()) episodes else episodes.filter { it.seasonId in seasonIds }
             val localSources = scoped.flatMap { episode ->
-                database.getSources(episode.id).filter { it.type == FindroidSourceType.LOCAL }
+                database.getSources(episode.id).filter { it.type == JollyfinSourceType.LOCAL }
             }
             localSources.sumOf { File(it.path).length() } to localSources.firstOrNull()?.path
         }
@@ -223,7 +223,7 @@ constructor(
                 val episodes =
                     withContext(Dispatchers.IO) {
                         database.getEpisodesByShowId(seriesId).map {
-                            it.toFindroidEpisode(database, userId)
+                            it.toJollyfinEpisode(database, userId)
                         }
                     }
                 clearDownloads(episodes, database, downloader)

@@ -49,7 +49,7 @@ import dev.pschmitt.jellyfin.BuildConfig
 import dev.pschmitt.jellyfin.R
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 
@@ -200,5 +200,5 @@ fun AboutScreen(navigateBack: () -> Unit) {
 @Composable
 @PreviewScreenSizes
 private fun AboutScreenPreview() {
-    FindroidTheme { AboutScreen(navigateBack = {}) }
+    JollyfinTheme { AboutScreen(navigateBack = {}) }
 }

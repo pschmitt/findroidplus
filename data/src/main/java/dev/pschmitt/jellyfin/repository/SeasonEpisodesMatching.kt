@@ -31,7 +31,7 @@ fun matchUpcomingEpisodes(
 
 /**
  * Pure function, same rationale as [matchUpcomingEpisodes] - the show-level equivalent, used by the
- * Show screen to surface seasons Sonarr knows about that have no matching [FindroidSeason] in the
+ * Show screen to surface seasons Sonarr knows about that have no matching [JollyfinSeason] in the
  * Jellyfin library yet. Season 0 ("Specials" in Sonarr's convention) is deliberately excluded: it
  * exists for virtually every series and is usually unmonitored, so surfacing it as a requestable
  * placeholder on every show would be noise rather than signal.

@@ -16,7 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.settings.presentation.models.PreferenceCategory
@@ -60,7 +60,7 @@ fun SettingsCategoryCard(preference: PreferenceCategory, modifier: Modifier = Mo
 @Preview
 @Composable
 private fun SettingsCategoryCardPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsCategoryCard(
             preference =
                 PreferenceCategory(nameStringResource = SettingsR.string.settings_category_player)
@@ -71,7 +71,7 @@ private fun SettingsCategoryCardPreview() {
 @Preview
 @Composable
 private fun SettingsCategoryCardDescriptionPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsCategoryCard(
             preference =
                 PreferenceCategory(
@@ -85,7 +85,7 @@ private fun SettingsCategoryCardDescriptionPreview() {
 @Preview
 @Composable
 private fun SettingsCategoryCardIconPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         SettingsCategoryCard(
             preference =
                 PreferenceCategory(

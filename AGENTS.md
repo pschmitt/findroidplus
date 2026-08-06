@@ -19,7 +19,7 @@ Repository instructions for AI coding agents working on JollyFin.
 
 ## CLI parity
 
-- `cli/findroid-cli` (see FINDROID-45/FINDROID-49) talks to the app over its local control API
+- `cli/jollyfin-cli` (see FINDROID-45/FINDROID-49) talks to the app over its local control API
   (`core/.../localcontrol/`) and is meant to eventually cover most of what the app itself can do
   or configure. When adding new app functionality that has a CLI-shaped equivalent (a setting,
   an action like triggering a download, something worth scripting or inspecting from Termux),

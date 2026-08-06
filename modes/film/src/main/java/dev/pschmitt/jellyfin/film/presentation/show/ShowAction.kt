@@ -1,7 +1,7 @@
 package dev.pschmitt.jellyfin.film.presentation.show
 
 import dev.pschmitt.jellyfin.core.presentation.downloader.DownloadSelection
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import java.util.UUID
 
 sealed interface ShowAction {
@@ -42,7 +42,7 @@ sealed interface ShowAction {
 
     data object OnSettingsClick : ShowAction
 
-    data class NavigateToItem(val item: FindroidItem) : ShowAction
+    data class NavigateToItem(val item: JollyfinItem) : ShowAction
 
     data class NavigateToPerson(val personId: UUID) : ShowAction
 

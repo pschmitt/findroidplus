@@ -11,8 +11,8 @@ import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.film.domain.VideoMetadataParser
 import dev.pschmitt.jellyfin.film.presentation.downloads.ManualImportController
 import dev.pschmitt.jellyfin.film.presentation.downloads.PendingImportRef
-import dev.pschmitt.jellyfin.models.FindroidItemPerson
-import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.JollyfinItemPerson
+import dev.pschmitt.jellyfin.models.JollyfinMovie
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
@@ -225,19 +225,19 @@ constructor(
         }
     }
 
-    private suspend fun getActors(item: FindroidMovie): List<FindroidItemPerson> {
+    private suspend fun getActors(item: JollyfinMovie): List<JollyfinItemPerson> {
         return withContext(Dispatchers.Default) {
             item.people.filter { it.type == PersonKind.ACTOR }
         }
     }
 
-    private suspend fun getDirector(item: FindroidMovie): FindroidItemPerson? {
+    private suspend fun getDirector(item: JollyfinMovie): JollyfinItemPerson? {
         return withContext(Dispatchers.Default) {
             item.people.firstOrNull { it.type == PersonKind.DIRECTOR }
         }
     }
 
-    private suspend fun getWriters(item: FindroidMovie): List<FindroidItemPerson> {
+    private suspend fun getWriters(item: JollyfinMovie): List<JollyfinItemPerson> {
         return withContext(Dispatchers.Default) {
             item.people.filter { it.type == PersonKind.WRITER }
         }

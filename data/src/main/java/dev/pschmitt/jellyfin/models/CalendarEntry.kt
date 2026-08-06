@@ -9,7 +9,7 @@ import java.util.UUID
  * a real Jellyfin item id by [dev.pschmitt.jellyfin.repository.CalendarRepository] - see
  * `matchSonarrCalendar`/`matchRadarrCalendar` in `CalendarMatching.kt`.
  *
- * Unlike [QueueStatus], an entry Findroid couldn't match to a local Jellyfin item is still included
+ * Unlike [QueueStatus], an entry Jollyfin couldn't match to a local Jellyfin item is still included
  * here (with [itemId] `null`) rather than dropped - the point of the calendar is to show "something
  * is coming" even before the show/movie has been added to the Jellyfin library.
  */
@@ -31,10 +31,10 @@ data class CalendarEntry(
     val episodeItemId: UUID? = null,
     val hasFile: Boolean,
     val monitored: Boolean,
-    // Carried over from the matched FindroidShow/FindroidMovie at match time (see
+    // Carried over from the matched JollyfinShow/JollyfinMovie at match time (see
     // matchSonarrCalendar/matchRadarrCalendar in CalendarMatching.kt) - null for unmatched
     // entries.
-    val images: FindroidImages? = null,
+    val images: JollyfinImages? = null,
     /** Seerr or PVR artwork for entries not yet present in Jellyfin. */
     val posterUrl: String? = null,
     // Sonarr's own numeric episode id (Sonarr's /calendar endpoint returns episode resources) -

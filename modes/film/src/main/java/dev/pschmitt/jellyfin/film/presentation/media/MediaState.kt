@@ -1,9 +1,9 @@
 package dev.pschmitt.jellyfin.film.presentation.media
 
-import dev.pschmitt.jellyfin.models.FindroidCollection
+import dev.pschmitt.jellyfin.models.JollyfinCollection
 
 data class MediaState(
-    val libraries: List<FindroidCollection> = emptyList(),
+    val libraries: List<JollyfinCollection> = emptyList(),
     val isLoading: Boolean = false,
     val error: Exception? = null,
     // Whether Sonarr or Radarr is enabled *and* has a base URL configured - the Calendar tab has

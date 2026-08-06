@@ -51,8 +51,8 @@ import dev.pschmitt.jellyfin.core.presentation.search.SearchEvent
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonAction
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonState
 import dev.pschmitt.jellyfin.film.presentation.season.SeasonViewModel
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidSeason
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.RemoteDeviceInfo
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.film.components.AggregateInfoDialog
@@ -69,7 +69,7 @@ import dev.pschmitt.jellyfin.presentation.film.components.ItemPoster
 import dev.pschmitt.jellyfin.presentation.film.components.PlayOverlayButton
 import dev.pschmitt.jellyfin.presentation.film.components.ReleasePickerSheet
 import dev.pschmitt.jellyfin.presentation.film.components.UpcomingEpisodeCard
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
@@ -83,7 +83,7 @@ fun SeasonScreen(
     seasonId: UUID,
     navigateBack: () -> Unit,
     navigateHome: () -> Unit,
-    navigateToItem: (item: FindroidItem) -> Unit,
+    navigateToItem: (item: JollyfinItem) -> Unit,
     navigateToSeries: (seriesId: UUID) -> Unit,
     navigateToSeerr:
         (
@@ -187,7 +187,7 @@ private fun SeasonScreenLayout(
     state: SeasonState,
     onAction: (SeasonAction) -> Unit,
     onRefresh: () -> Unit = {},
-    getSeasons: suspend () -> List<FindroidSeason> = { emptyList() },
+    getSeasons: suspend () -> List<JollyfinSeason> = { emptyList() },
     getSeasonSize: suspend (seasonId: UUID, onlyUnwatched: Boolean) -> DownloadSizeEstimate =
         { _, _ ->
             DownloadSizeEstimate()
@@ -563,5 +563,5 @@ private fun SeasonScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun SeasonScreenLayoutPreview() {
-    FindroidTheme { SeasonScreenLayout(state = SeasonState(season = dummySeason), onAction = {}) }
+    JollyfinTheme { SeasonScreenLayout(state = SeasonState(season = dummySeason), onAction = {}) }
 }

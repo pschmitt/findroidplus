@@ -47,7 +47,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.setup.components.DiscoveredServerItem
 import dev.pschmitt.jellyfin.presentation.setup.components.LoadingButton
 import dev.pschmitt.jellyfin.presentation.setup.components.RootLayout
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.setup.R as SetupR
 import dev.pschmitt.jellyfin.setup.presentation.addserver.AddServerAction
 import dev.pschmitt.jellyfin.setup.presentation.addserver.AddServerEvent
@@ -185,5 +185,5 @@ private fun AddServerScreenLayout(state: AddServerState, onAction: (AddServerAct
 @PreviewScreenSizes
 @Composable
 private fun AddServerScreenLayoutPreview() {
-    FindroidTheme { AddServerScreenLayout(state = AddServerState(), onAction = {}) }
+    JollyfinTheme { AddServerScreenLayout(state = AddServerState(), onAction = {}) }
 }

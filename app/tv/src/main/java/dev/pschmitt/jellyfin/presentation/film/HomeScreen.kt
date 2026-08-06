@@ -20,13 +20,13 @@ import dev.pschmitt.jellyfin.core.presentation.dummy.dummyHomeView
 import dev.pschmitt.jellyfin.film.presentation.home.HomeAction
 import dev.pschmitt.jellyfin.film.presentation.home.HomeState
 import dev.pschmitt.jellyfin.film.presentation.home.HomeViewModel
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidShow
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.presentation.film.components.HomeCarousel
 import dev.pschmitt.jellyfin.presentation.film.components.HomeSection
 import dev.pschmitt.jellyfin.presentation.film.components.HomeView
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -51,9 +51,9 @@ fun HomeScreen(
             when (action) {
                 is HomeAction.OnItemClick -> {
                     when (action.item) {
-                        is FindroidMovie -> navigateToMovie(action.item.id)
-                        is FindroidShow -> navigateToShow(action.item.id)
-                        is FindroidEpisode -> {
+                        is JollyfinMovie -> navigateToMovie(action.item.id)
+                        is JollyfinShow -> navigateToShow(action.item.id)
+                        is JollyfinEpisode -> {
                             navigateToPlayer(action.item.id, BaseItemKind.EPISODE)
                         }
                     }
@@ -121,7 +121,7 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun HomeScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         HomeScreenLayout(
             state =
                 HomeState(

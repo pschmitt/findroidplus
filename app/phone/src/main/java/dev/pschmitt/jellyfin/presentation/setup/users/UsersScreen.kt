@@ -38,7 +38,7 @@ import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.models.User
 import dev.pschmitt.jellyfin.presentation.setup.components.RootLayout
 import dev.pschmitt.jellyfin.presentation.setup.components.UserItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.setup.R as SetupR
 import dev.pschmitt.jellyfin.setup.presentation.users.UsersAction
 import dev.pschmitt.jellyfin.setup.presentation.users.UsersEvent
@@ -212,7 +212,7 @@ private fun UsersScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun UsersScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         UsersScreenLayout(
             state =
                 UsersState(

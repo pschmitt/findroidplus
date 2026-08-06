@@ -6,11 +6,11 @@ import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(tableName = "sources")
-data class FindroidSourceDto(
+data class JollyfinSourceDto(
     @PrimaryKey val id: String,
     val itemId: UUID,
     val name: String,
-    val type: FindroidSourceType,
+    val type: JollyfinSourceType,
     val path: String,
     val downloadId: Long? = null,
     // SHA-256 hex digest computed once the download finishes, used to detect corruption after a
@@ -22,16 +22,16 @@ data class FindroidSourceDto(
     // DownloaderImpl.pauseAllForBatterySaver/resumeBatterySaverPausedDownloads.
     @ColumnInfo(defaultValue = "0") val pausedByBatterySaver: Boolean = false,
     // User-set "keep" pin - excludes this download from AutoDeleteWatchedWorker even once it's
-    // watched and past the configured threshold. See FindroidEpisode.isMarkedForAutoDeletion.
+    // watched and past the configured threshold. See JollyfinEpisode.isMarkedForAutoDeletion.
     @ColumnInfo(defaultValue = "0") val excludeFromAutoDelete: Boolean = false,
 )
 
-fun FindroidSource.toFindroidSourceDto(itemId: UUID, path: String): FindroidSourceDto {
-    return FindroidSourceDto(
+fun JollyfinSource.toJollyfinSourceDto(itemId: UUID, path: String): JollyfinSourceDto {
+    return JollyfinSourceDto(
         id = id,
         itemId = itemId,
         name = name,
-        type = FindroidSourceType.LOCAL,
+        type = JollyfinSourceType.LOCAL,
         path = path,
     )
 }

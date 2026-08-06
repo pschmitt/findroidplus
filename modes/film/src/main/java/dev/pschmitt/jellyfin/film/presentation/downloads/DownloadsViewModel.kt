@@ -4,16 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
-import dev.pschmitt.jellyfin.models.FindroidSourceType
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
+import dev.pschmitt.jellyfin.models.JollyfinSourceType
 import dev.pschmitt.jellyfin.models.PvrQueueEntry
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.models.isDownloadBroken
 import dev.pschmitt.jellyfin.models.isDownloading
-import dev.pschmitt.jellyfin.models.toFindroidEpisodes
-import dev.pschmitt.jellyfin.models.toFindroidMovies
+import dev.pschmitt.jellyfin.models.toJollyfinEpisodes
+import dev.pschmitt.jellyfin.models.toJollyfinMovies
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.repository.PvrDiskSpaceRepository
@@ -168,17 +168,17 @@ constructor(
             val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return
             val userId = repository.getUserId()
 
-            // toFindroidMovies/toFindroidEpisodes batch-fetch user data, sources, media streams
+            // toJollyfinMovies/toJollyfinEpisodes batch-fetch user data, sources, media streams
             // and trickplay info for the whole list up front (a handful of queries total) instead
-            // of the per-row N+1 query pattern the singular toFindroidMovie/toFindroidEpisode do -
-            // see their kdoc in FindroidMovie.kt/FindroidEpisode.kt for why that mattered here.
+            // of the per-row N+1 query pattern the singular toJollyfinMovie/toJollyfinEpisode do -
+            // see their kdoc in JollyfinMovie.kt/JollyfinEpisode.kt for why that mattered here.
             val movies =
                 withContext(Dispatchers.Default) {
-                    database.getMoviesByServerId(serverId).toFindroidMovies(database, userId)
+                    database.getMoviesByServerId(serverId).toJollyfinMovies(database, userId)
                 }
             val episodes =
                 withContext(Dispatchers.Default) {
-                    database.getEpisodesByServerId(serverId).toFindroidEpisodes(database, userId)
+                    database.getEpisodesByServerId(serverId).toJollyfinEpisodes(database, userId)
                 }
             val showGroups =
                 withContext(Dispatchers.Default) {
@@ -246,10 +246,10 @@ constructor(
     }
 
     private fun reconcileDownloadProgress(
-        movies: List<FindroidMovie>,
-        episodes: List<FindroidEpisode>,
+        movies: List<JollyfinMovie>,
+        episodes: List<JollyfinEpisode>,
     ) {
-        val trackedItems: List<Pair<UUID, FindroidItem>> =
+        val trackedItems: List<Pair<UUID, JollyfinItem>> =
             movies.filter { it.isDownloading() }.map { it.id to it } +
                 episodes.filter { it.isDownloading() }.map { it.id to it }
         val desiredIds = trackedItems.map { it.first }.toSet()
@@ -263,7 +263,7 @@ constructor(
         trackedItems.forEach { (id, item) ->
             if (progressJobs.containsKey(id)) return@forEach
             val downloadId =
-                item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.downloadId
+                item.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }?.downloadId
                     ?: return@forEach
             downloadIdsByItem[id] = downloadId
             progressJobs[id] = viewModelScope.launch {
@@ -400,7 +400,7 @@ constructor(
      * `OnConflictStrategy.REPLACE`) rather than erroring on the stale one, so no explicit
      * delete-first step is needed.
      */
-    fun redownloadItem(item: FindroidItem) {
+    fun redownloadItem(item: JollyfinItem) {
         viewModelScope.launch {
             redownload(item, downloader.resolvePreferredStorageIndex())
             refreshDownloads()
@@ -421,9 +421,9 @@ constructor(
         }
     }
 
-    private suspend fun redownload(item: FindroidItem, storageIndex: Int) {
+    private suspend fun redownload(item: JollyfinItem, storageIndex: Int) {
         val sourceId =
-            item.sources.firstOrNull { it.type == FindroidSourceType.LOCAL }?.id ?: return
+            item.sources.firstOrNull { it.type == JollyfinSourceType.LOCAL }?.id ?: return
         downloader.downloadItem(item, sourceId, storageIndex)
     }
 
@@ -598,7 +598,7 @@ constructor(
 
 /**
  * Maps [QueueStatusRepository]'s queue-entry snapshot into the UI-facing [PvrQueueGroup] list.
- * Matched entries carry the live-library [FindroidItem][dev.pschmitt.jellyfin.models.FindroidItem]
+ * Matched entries carry the live-library [JollyfinItem][dev.pschmitt.jellyfin.models.JollyfinItem]
  * the repository resolved (poster + click-through); unmatched entries (e.g. a torrent added
  * manually on the PVR side for something not yet in Jellyfin) become title-only rows using the
  * PVR-side title the repository built.
@@ -621,7 +621,7 @@ internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGro
                         PvrQueueUiItem(
                             itemId = entry.item?.id,
                             title = entry.item.toQueueTitle(fallback = entry.title),
-                            subtitle = (entry.item as? FindroidEpisode)?.name,
+                            subtitle = (entry.item as? JollyfinEpisode)?.name,
                             item = entry.item,
                             posterUrl = entry.posterUrl,
                             tmdbId = entry.tmdbId,
@@ -636,10 +636,10 @@ internal fun buildPvrQueueGroups(entries: List<PvrQueueEntry>): List<PvrQueueGro
             )
         }
 
-private fun FindroidItem?.toQueueTitle(fallback: String): String =
+private fun JollyfinItem?.toQueueTitle(fallback: String): String =
     when (this) {
-        is FindroidEpisode -> "$seriesName - S${parentIndexNumber}E$indexNumber"
-        is FindroidMovie -> name
+        is JollyfinEpisode -> "$seriesName - S${parentIndexNumber}E$indexNumber"
+        is JollyfinMovie -> name
         null -> fallback
         else -> name
     }

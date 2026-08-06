@@ -21,7 +21,7 @@ import dev.pschmitt.jellyfin.film.presentation.media.MediaAction
 import dev.pschmitt.jellyfin.film.presentation.media.MediaState
 import dev.pschmitt.jellyfin.film.presentation.media.MediaViewModel
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.ui.components.Direction
 import dev.pschmitt.jellyfin.ui.components.ItemCard
@@ -85,7 +85,7 @@ private fun LibrariesScreenLayout(state: MediaState, onAction: (MediaAction) -> 
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun LibrariesScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         LibrariesScreenLayout(state = MediaState(libraries = dummyCollections), onAction = {})
     }
 }

@@ -199,12 +199,12 @@
     <string name="remote_devices_allow_management_title">Allow remote management</string>
     <string name="remote_devices_allow_management_summary">Let your other devices push auto-download rules and downloads to this one</string>
     <string name="local_access_title">Local CLI access</string>
-    <string name="local_access_summary">Let a local CLI (e.g. findroid-cli in Termux) configure downloads on this device</string>
+    <string name="local_access_summary">Let a local CLI (e.g. jollyfin-cli in Termux) configure downloads on this device</string>
     <string name="local_access_enable_title">Allow local control</string>
     <string name="local_access_enable_summary">Let a local CLI with this token read/write download settings and trigger downloads on this device</string>
     <string name="local_access_start_failed">Couldn\'t start local control - check logs, or try toggling this off and on again</string>
     <string name="local_access_token_title">Access token</string>
-    <string name="local_access_token_summary">Copy this into findroid-cli\'s config to authenticate local commands</string>
+    <string name="local_access_token_summary">Copy this into jollyfin-cli\'s config to authenticate local commands</string>
     <string name="local_access_show_token">Show token</string>
     <string name="local_access_hide_token">Hide token</string>
     <string name="local_access_regenerate_token">Regenerate</string>
@@ -212,7 +212,7 @@
     <string name="local_access_regenerate_confirm_message">Any CLI already configured with the current token will stop working until you update it with the new one.</string>
     <string name="local_access_token_copied_toast">Token copied</string>
     <string name="local_access_token_regenerated_toast">Token regenerated</string>
-    <string name="local_access_cli_title">Get findroid-cli</string>
+    <string name="local_access_cli_title">Get jollyfin-cli</string>
     <string name="local_access_cli_summary">Download the CLI itself onto this device with curl - no separate clone/copy from the repo needed</string>
     <string name="local_access_cli_copied_toast">Command copied</string>
     <string name="download_settings">Download settings</string>

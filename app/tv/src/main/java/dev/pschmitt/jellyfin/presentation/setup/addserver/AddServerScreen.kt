@@ -44,7 +44,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.core.presentation.dummy.dummyDiscoveredServer
 import dev.pschmitt.jellyfin.presentation.setup.components.DiscoveredServerItem
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.setup.R
 import dev.pschmitt.jellyfin.setup.presentation.addserver.AddServerAction
@@ -168,13 +168,13 @@ private fun AddServerScreenLayout(state: AddServerState, onAction: (AddServerAct
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun AddServerScreenLayoutPreview() {
-    FindroidTheme { AddServerScreenLayout(state = AddServerState(), onAction = {}) }
+    JollyfinTheme { AddServerScreenLayout(state = AddServerState(), onAction = {}) }
 }
 
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun AddServerScreenLayoutDiscoveredPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         AddServerScreenLayout(
             state = AddServerState(discoveredServers = listOf(dummyDiscoveredServer)),
             onAction = {},

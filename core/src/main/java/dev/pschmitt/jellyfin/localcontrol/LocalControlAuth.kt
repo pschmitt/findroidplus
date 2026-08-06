@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 /**
  * A single bearer token for the local control API ([LocalControlProvider]) - shown once in
- * Settings > Local CLI access for the user to copy into `findroid-cli`'s config, and regeneratable
+ * Settings > Local CLI access for the user to copy into `jollyfin-cli`'s config, and regeneratable
  * at will (invalidating whatever was copied out before). Deliberately not a per-client pairing
  * scheme: this app has no reliable way to identify *which* process is calling it (a
  * `ContentProvider.call()` from a shell command reports the shell's own uid, not something

@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 
 @Composable
 fun LoadingButton(
@@ -35,5 +35,5 @@ fun LoadingButton(
 @Composable
 @Preview
 private fun LoadingButtonPreview() {
-    FindroidTheme { LoadingButton(text = "Connect", onClick = {}, isLoading = true) }
+    JollyfinTheme { LoadingButton(text = "Connect", onClick = {}, isLoading = true) }
 }

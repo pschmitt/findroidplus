@@ -68,7 +68,7 @@ import dev.pschmitt.jellyfin.film.presentation.library.LibraryState
 import dev.pschmitt.jellyfin.film.presentation.library.LibraryViewModel
 import dev.pschmitt.jellyfin.film.presentation.library.MediaFilter
 import dev.pschmitt.jellyfin.models.CollectionType
-import dev.pschmitt.jellyfin.models.FindroidItem
+import dev.pschmitt.jellyfin.models.JollyfinItem
 import dev.pschmitt.jellyfin.models.SeerrMediaStatus
 import dev.pschmitt.jellyfin.models.SeerrMediaType
 import dev.pschmitt.jellyfin.models.SeerrRequestItem
@@ -81,8 +81,8 @@ import dev.pschmitt.jellyfin.presentation.film.components.ItemCard
 import dev.pschmitt.jellyfin.presentation.film.components.SeerrRequestRow
 import dev.pschmitt.jellyfin.presentation.film.components.SeerrResultRow
 import dev.pschmitt.jellyfin.presentation.film.components.SortByDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.HeaderIconColors
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.pschmitt.jellyfin.presentation.utils.plus
@@ -97,7 +97,7 @@ fun LibraryScreen(
     libraryId: UUID?,
     libraryName: String,
     libraryType: CollectionType,
-    onItemClick: (item: FindroidItem) -> Unit,
+    onItemClick: (item: JollyfinItem) -> Unit,
     navigateBack: () -> Unit,
     onSettingsClick: () -> Unit = {},
     // Opens the dedicated Seerr detail screen for a search result or recent request row.
@@ -542,8 +542,8 @@ private fun ErrorGroup(
 @PreviewScreenSizes
 @Composable
 private fun LibraryScreenLayoutPreview() {
-    val items: Flow<PagingData<FindroidItem>> = flowOf(PagingData.from(dummyMovies))
-    FindroidTheme {
+    val items: Flow<PagingData<JollyfinItem>> = flowOf(PagingData.from(dummyMovies))
+    JollyfinTheme {
         LibraryScreenLayout(
             libraryName = "Movies",
             state = LibraryState(items = items),

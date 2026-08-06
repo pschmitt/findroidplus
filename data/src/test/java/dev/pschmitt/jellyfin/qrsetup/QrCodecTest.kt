@@ -37,7 +37,7 @@ class QrCodecTest {
 
     @Test
     fun `encoded payload decodes back to the same text`() {
-        val payload = "findroid-qr-setup:" + "x".repeat(200)
+        val payload = "jollyfin-qr-setup:" + "x".repeat(200)
         val matrix = QrCodec.encode(payload)
         val decoded = QrCodec.decode(toBinaryBitmap(matrix))
         assertEquals(payload, decoded)

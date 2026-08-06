@@ -20,7 +20,7 @@ object AppModule {
         return app as BaseApplication
     }
 
-    // Backs LocalControlRouter's GET /info (findroid-cli version) - core can't reference
+    // Backs LocalControlRouter's GET /info (jollyfin-cli version) - core can't reference
     // app/phone's own generated BuildConfig directly (wrong module, and app/tv has a separate one
     // it doesn't use local control), so this binds AppVersionInfo from it here instead.
     @Singleton

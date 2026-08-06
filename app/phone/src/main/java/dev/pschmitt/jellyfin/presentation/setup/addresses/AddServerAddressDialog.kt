@@ -22,7 +22,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.BaseDialog
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.setup.R as SetupR
 
 @Composable
@@ -64,5 +64,5 @@ fun AddServerAddressDialog(onAdd: (address: String) -> Unit, onDismiss: () -> Un
 @Preview
 @Composable
 private fun AddServerAddressDialogPreview() {
-    FindroidTheme { AddServerAddressDialog(onAdd = {}, onDismiss = {}) }
+    JollyfinTheme { AddServerAddressDialog(onAdd = {}, onDismiss = {}) }
 }

@@ -7,15 +7,15 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
-import dev.pschmitt.jellyfin.models.FindroidEpisodeDto
-import dev.pschmitt.jellyfin.models.FindroidMediaStreamDto
-import dev.pschmitt.jellyfin.models.FindroidMovieDto
-import dev.pschmitt.jellyfin.models.FindroidSeasonDto
-import dev.pschmitt.jellyfin.models.FindroidSegmentDto
-import dev.pschmitt.jellyfin.models.FindroidShowDto
-import dev.pschmitt.jellyfin.models.FindroidSourceDto
-import dev.pschmitt.jellyfin.models.FindroidTrickplayInfoDto
-import dev.pschmitt.jellyfin.models.FindroidUserDataDto
+import dev.pschmitt.jellyfin.models.JollyfinEpisodeDto
+import dev.pschmitt.jellyfin.models.JollyfinMediaStreamDto
+import dev.pschmitt.jellyfin.models.JollyfinMovieDto
+import dev.pschmitt.jellyfin.models.JollyfinSeasonDto
+import dev.pschmitt.jellyfin.models.JollyfinSegmentDto
+import dev.pschmitt.jellyfin.models.JollyfinShowDto
+import dev.pschmitt.jellyfin.models.JollyfinSourceDto
+import dev.pschmitt.jellyfin.models.JollyfinTrickplayInfoDto
+import dev.pschmitt.jellyfin.models.JollyfinUserDataDto
 import dev.pschmitt.jellyfin.models.PendingDownloadRequestDto
 import dev.pschmitt.jellyfin.models.Server
 import dev.pschmitt.jellyfin.models.ServerAddress
@@ -98,29 +98,29 @@ interface ServerDatabaseDao {
     )
     fun getServerCurrentAddress(serverId: String): ServerAddress?
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertMovie(movie: FindroidMovieDto)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertMovie(movie: JollyfinMovieDto)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSource(source: FindroidSourceDto)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSource(source: JollyfinSourceDto)
 
-    @Query("SELECT * FROM movies WHERE id = :id") fun getMovie(id: UUID): FindroidMovieDto
+    @Query("SELECT * FROM movies WHERE id = :id") fun getMovie(id: UUID): JollyfinMovieDto
 
     @Query(
         "SELECT * FROM movies JOIN sources ON movies.id = sources.itemId ORDER BY movies.name ASC"
     )
-    fun getMoviesAndSources(): Map<FindroidMovieDto, List<FindroidSourceDto>>
+    fun getMoviesAndSources(): Map<JollyfinMovieDto, List<JollyfinSourceDto>>
 
     @Query("SELECT * FROM sources WHERE itemId = :itemId")
-    fun getSources(itemId: UUID): List<FindroidSourceDto>
+    fun getSources(itemId: UUID): List<JollyfinSourceDto>
 
     // Batch variant of getSources, used to avoid an N+1 query pattern when mapping a whole list of
-    // rows at once (see toFindroidMovies/toFindroidEpisodes in the models package).
+    // rows at once (see toJollyfinMovies/toJollyfinEpisodes in the models package).
     @Query("SELECT * FROM sources WHERE itemId IN (:itemIds)")
-    fun getSourcesForItems(itemIds: List<UUID>): List<FindroidSourceDto>
+    fun getSourcesForItems(itemIds: List<UUID>): List<JollyfinSourceDto>
 
-    @Query("SELECT * FROM sources") fun getAllSources(): List<FindroidSourceDto>
+    @Query("SELECT * FROM sources") fun getAllSources(): List<JollyfinSourceDto>
 
     @Query("SELECT * FROM sources WHERE downloadId = :downloadId")
-    fun getSourceByDownloadId(downloadId: Long): FindroidSourceDto?
+    fun getSourceByDownloadId(downloadId: Long): JollyfinSourceDto?
 
     @Query("UPDATE sources SET downloadId = :downloadId WHERE id = :id")
     fun setSourceDownloadId(id: String, downloadId: Long)
@@ -147,17 +147,17 @@ interface ServerDatabaseDao {
     fun setPlaybackPositionTicks(itemId: UUID, userId: UUID, playbackPositionTicks: Long)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertMediaStream(mediaStream: FindroidMediaStreamDto)
+    fun insertMediaStream(mediaStream: JollyfinMediaStreamDto)
 
     @Query("SELECT * FROM mediastreams WHERE sourceId = :sourceId")
-    fun getMediaStreamsBySourceId(sourceId: String): List<FindroidMediaStreamDto>
+    fun getMediaStreamsBySourceId(sourceId: String): List<JollyfinMediaStreamDto>
 
     // Batch variant of getMediaStreamsBySourceId, see getSourcesForItems.
     @Query("SELECT * FROM mediastreams WHERE sourceId IN (:sourceIds)")
-    fun getMediaStreamsForSources(sourceIds: List<String>): List<FindroidMediaStreamDto>
+    fun getMediaStreamsForSources(sourceIds: List<String>): List<JollyfinMediaStreamDto>
 
     @Query("SELECT * FROM mediastreams WHERE downloadId = :downloadId")
-    fun getMediaStreamByDownloadId(downloadId: Long): FindroidMediaStreamDto?
+    fun getMediaStreamByDownloadId(downloadId: Long): JollyfinMediaStreamDto?
 
     @Query("UPDATE mediastreams SET downloadId = :downloadId WHERE id = :id")
     fun setMediaStreamDownloadId(id: UUID, downloadId: Long)
@@ -181,82 +181,82 @@ interface ServerDatabaseDao {
     @Query("UPDATE userdata SET favorite = :favorite WHERE userId = :userId AND itemId = :itemId")
     fun setFavorite(userId: UUID, itemId: UUID, favorite: Boolean)
 
-    @Query("SELECT * FROM movies ORDER BY name ASC") fun getMovies(): List<FindroidMovieDto>
+    @Query("SELECT * FROM movies ORDER BY name ASC") fun getMovies(): List<JollyfinMovieDto>
 
     @Query("SELECT * FROM movies WHERE serverId = :serverId ORDER BY name ASC")
-    fun getMoviesByServerId(serverId: String): List<FindroidMovieDto>
+    fun getMoviesByServerId(serverId: String): List<JollyfinMovieDto>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertShow(show: FindroidShowDto)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertShow(show: JollyfinShowDto)
 
-    @Query("SELECT * FROM shows WHERE id = :id") fun getShow(id: UUID): FindroidShowDto
+    @Query("SELECT * FROM shows WHERE id = :id") fun getShow(id: UUID): JollyfinShowDto
 
-    @Query("SELECT * FROM shows ORDER BY name ASC") fun getShows(): List<FindroidShowDto>
+    @Query("SELECT * FROM shows ORDER BY name ASC") fun getShows(): List<JollyfinShowDto>
 
     @Query("SELECT * FROM shows WHERE serverId = :serverId ORDER BY name ASC")
-    fun getShowsByServerId(serverId: String): List<FindroidShowDto>
+    fun getShowsByServerId(serverId: String): List<JollyfinShowDto>
 
     @Query("DELETE FROM shows WHERE id = :id") fun deleteShow(id: UUID)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertSeason(show: FindroidSeasonDto)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertSeason(show: JollyfinSeasonDto)
 
-    @Query("SELECT * FROM seasons WHERE id = :id") fun getSeason(id: UUID): FindroidSeasonDto
+    @Query("SELECT * FROM seasons WHERE id = :id") fun getSeason(id: UUID): JollyfinSeasonDto
 
     @Query("SELECT * FROM seasons WHERE seriesId = :seriesId ORDER BY indexNumber ASC")
-    fun getSeasonsByShowId(seriesId: UUID): List<FindroidSeasonDto>
+    fun getSeasonsByShowId(seriesId: UUID): List<JollyfinSeasonDto>
 
     @Query("DELETE FROM seasons WHERE id = :id") fun deleteSeason(id: UUID)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertEpisode(episode: FindroidEpisodeDto)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertEpisode(episode: JollyfinEpisodeDto)
 
-    @Query("SELECT * FROM episodes WHERE id = :id") fun getEpisode(id: UUID): FindroidEpisodeDto
+    @Query("SELECT * FROM episodes WHERE id = :id") fun getEpisode(id: UUID): JollyfinEpisodeDto
 
     @Query(
         "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC"
     )
-    fun getEpisodesByShowId(seriesId: UUID): List<FindroidEpisodeDto>
+    fun getEpisodesByShowId(seriesId: UUID): List<JollyfinEpisodeDto>
 
     @Query("SELECT * FROM episodes WHERE seasonId = :seasonId ORDER BY indexNumber ASC")
-    fun getEpisodesBySeasonId(seasonId: UUID): List<FindroidEpisodeDto>
+    fun getEpisodesBySeasonId(seasonId: UUID): List<JollyfinEpisodeDto>
 
     @Query(
         "SELECT * FROM episodes WHERE serverId = :serverId ORDER BY seriesName ASC, parentIndexNumber ASC, indexNumber ASC"
     )
-    fun getEpisodesByServerId(serverId: String): List<FindroidEpisodeDto>
+    fun getEpisodesByServerId(serverId: String): List<JollyfinEpisodeDto>
 
     @Query(
         "SELECT episodes.id, episodes.serverId, episodes.seasonId, episodes.seriesId, episodes.name, episodes.seriesName, episodes.overview, episodes.indexNumber, episodes.indexNumberEnd, episodes.parentIndexNumber, episodes.runtimeTicks, episodes.premiereDate, episodes.communityRating, episodes.chapters FROM episodes INNER JOIN userdata ON episodes.id = userdata.itemId WHERE serverId = :serverId AND playbackPositionTicks > 0 ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
     )
-    fun getEpisodeResumeItems(serverId: String): List<FindroidEpisodeDto>
+    fun getEpisodeResumeItems(serverId: String): List<JollyfinEpisodeDto>
 
     @Query("DELETE FROM episodes WHERE id = :id") fun deleteEpisode(id: UUID)
 
     @Query("DELETE FROM episodes WHERE seasonId = :seasonId")
     fun deleteEpisodesBySeasonId(seasonId: UUID)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSegment(segment: FindroidSegmentDto)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertSegment(segment: JollyfinSegmentDto)
 
     @Query("SELECT * FROM segments WHERE itemId = :itemId")
-    fun getSegments(itemId: UUID): List<FindroidSegmentDto>
+    fun getSegments(itemId: UUID): List<JollyfinSegmentDto>
 
-    @Query("SELECT * FROM seasons") fun getSeasons(): List<FindroidSeasonDto>
+    @Query("SELECT * FROM seasons") fun getSeasons(): List<JollyfinSeasonDto>
 
-    @Query("SELECT * FROM episodes") fun getEpisodes(): List<FindroidEpisodeDto>
+    @Query("SELECT * FROM episodes") fun getEpisodes(): List<JollyfinEpisodeDto>
 
     @Query("SELECT * FROM userdata WHERE itemId = :itemId AND userId = :userId")
-    fun getUserData(itemId: UUID, userId: UUID): FindroidUserDataDto?
+    fun getUserData(itemId: UUID, userId: UUID): JollyfinUserDataDto?
 
     // Batch variant of getUserData, see getSourcesForItems.
     @Query("SELECT * FROM userdata WHERE itemId IN (:itemIds) AND userId = :userId")
-    fun getUserDataForItems(itemIds: List<UUID>, userId: UUID): List<FindroidUserDataDto>
+    fun getUserDataForItems(itemIds: List<UUID>, userId: UUID): List<JollyfinUserDataDto>
 
     @Transaction
-    fun getUserDataOrCreateNew(itemId: UUID, userId: UUID): FindroidUserDataDto {
+    fun getUserDataOrCreateNew(itemId: UUID, userId: UUID): JollyfinUserDataDto {
         var userData = getUserData(itemId, userId)
 
         // Create user data when there is none
         if (userData == null) {
             userData =
-                FindroidUserDataDto(
+                JollyfinUserDataDto(
                     userId = userId,
                     itemId = itemId,
                     played = false,
@@ -270,12 +270,12 @@ interface ServerDatabaseDao {
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertUserData(userData: FindroidUserDataDto)
+    fun insertUserData(userData: JollyfinUserDataDto)
 
     @Query("DELETE FROM userdata WHERE itemId = :itemId") fun deleteUserData(itemId: UUID)
 
     @Query("SELECT * FROM userdata WHERE userId = :userId AND itemId = :itemId AND toBeSynced = 1")
-    fun getUserDataToBeSynced(userId: UUID, itemId: UUID): FindroidUserDataDto?
+    fun getUserDataToBeSynced(userId: UUID, itemId: UUID): JollyfinUserDataDto?
 
     @Query(
         "UPDATE userdata SET toBeSynced = :toBeSynced WHERE itemId = :itemId AND userId = :userId"
@@ -283,23 +283,23 @@ interface ServerDatabaseDao {
     fun setUserDataToBeSynced(userId: UUID, itemId: UUID, toBeSynced: Boolean)
 
     @Query("SELECT * FROM movies WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
-    fun searchMovies(serverId: String, name: String): List<FindroidMovieDto>
+    fun searchMovies(serverId: String, name: String): List<JollyfinMovieDto>
 
     @Query("SELECT * FROM shows WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
-    fun searchShows(serverId: String, name: String): List<FindroidShowDto>
+    fun searchShows(serverId: String, name: String): List<JollyfinShowDto>
 
     @Query("SELECT * FROM episodes WHERE serverId = :serverId AND name LIKE '%' || :name || '%'")
-    fun searchEpisodes(serverId: String, name: String): List<FindroidEpisodeDto>
+    fun searchEpisodes(serverId: String, name: String): List<JollyfinEpisodeDto>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertTrickplayInfo(trickplayInfoDto: FindroidTrickplayInfoDto)
+    fun insertTrickplayInfo(trickplayInfoDto: JollyfinTrickplayInfoDto)
 
     @Query("SELECT * FROM trickplayInfos WHERE sourceId = :sourceId")
-    fun getTrickplayInfo(sourceId: String): FindroidTrickplayInfoDto?
+    fun getTrickplayInfo(sourceId: String): JollyfinTrickplayInfoDto?
 
     // Batch variant of getTrickplayInfo, see getSourcesForItems.
     @Query("SELECT * FROM trickplayInfos WHERE sourceId IN (:sourceIds)")
-    fun getTrickplayInfoForSources(sourceIds: List<String>): List<FindroidTrickplayInfoDto>
+    fun getTrickplayInfoForSources(sourceIds: List<String>): List<JollyfinTrickplayInfoDto>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAutoDownloadRule(rule: AutoDownloadRuleDto): Long

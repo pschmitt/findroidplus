@@ -50,7 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.setup.components.LoadingButton
 import dev.pschmitt.jellyfin.presentation.setup.components.RootLayout
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.setup.R as SetupR
 import dev.pschmitt.jellyfin.setup.presentation.login.LoginAction
 import dev.pschmitt.jellyfin.setup.presentation.login.LoginEvent
@@ -263,7 +263,7 @@ private fun LoginScreenLayout(
 @PreviewScreenSizes
 @Composable
 private fun AddServerScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         LoginScreenLayout(
             state =
                 LoginState(

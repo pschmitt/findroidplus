@@ -54,8 +54,8 @@ import dev.pschmitt.jellyfin.models.CalendarEntry
 import dev.pschmitt.jellyfin.models.PvrSource
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.film.components.PvrErrorBanner
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
 import dev.pschmitt.jellyfin.presentation.theme.HeaderIconColors
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.formatCalendarTime
 import java.time.LocalDate
@@ -388,7 +388,7 @@ private val dummyCalendarEntries: List<Pair<LocalDate, List<CalendarEntry>>> =
 @PreviewScreenSizes
 @Composable
 private fun CalendarScreenLayoutPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         CalendarScreenLayout(state = CalendarState(groupedEntries = dummyCalendarEntries))
     }
 }
@@ -396,5 +396,5 @@ private fun CalendarScreenLayoutPreview() {
 @PreviewScreenSizes
 @Composable
 private fun CalendarScreenLayoutEmptyPreview() {
-    FindroidTheme { CalendarScreenLayout(state = CalendarState()) }
+    JollyfinTheme { CalendarScreenLayout(state = CalendarState()) }
 }

@@ -1,8 +1,8 @@
 package dev.pschmitt.jellyfin.film.presentation.downloads
 
-import dev.pschmitt.jellyfin.models.FindroidEpisode
-import dev.pschmitt.jellyfin.models.FindroidItem
-import dev.pschmitt.jellyfin.models.FindroidMovie
+import dev.pschmitt.jellyfin.models.JollyfinEpisode
+import dev.pschmitt.jellyfin.models.JollyfinItem
+import dev.pschmitt.jellyfin.models.JollyfinMovie
 import dev.pschmitt.jellyfin.models.ManualImportCandidate
 import dev.pschmitt.jellyfin.models.PvrDiskSpaceResult
 import dev.pschmitt.jellyfin.models.PvrFetchError
@@ -19,7 +19,7 @@ data class DownloadsState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: Exception? = null,
-    val movies: List<FindroidMovie> = emptyList(),
+    val movies: List<JollyfinMovie> = emptyList(),
     val showGroups: List<DownloadShowGroup> = emptyList(),
     val selectedIds: Set<UUID> = emptySet(),
     val downloadProgress: Map<UUID, DownloadProgress> = emptyMap(),
@@ -46,7 +46,7 @@ data class DownloadsState(
     // internal storage.
     val deviceStorages: List<DeviceStorageStats> = emptyList(),
     // Mirrors AppPreferences.autoDeleteWatched/autoDeleteWatchedHours - read once per refresh so
-    // DownloadRow can compute FindroidEpisode.isMarkedForAutoDeletion() without injecting
+    // DownloadRow can compute JollyfinEpisode.isMarkedForAutoDeletion() without injecting
     // AppPreferences into the Compose layer, and so the "keep" pin toggle only renders while the
     // feature is actually on (nothing to protect against otherwise).
     val autoDeleteWatchedEnabled: Boolean = false,
@@ -65,7 +65,7 @@ data class DownloadsState(
 data class DownloadShowGroup(
     val seriesId: UUID,
     val seriesName: String,
-    val episodes: List<FindroidEpisode>,
+    val episodes: List<JollyfinEpisode>,
 )
 
 /**
@@ -78,11 +78,11 @@ data class PvrQueueUiItem(
     val itemId: UUID?,
     val title: String,
     // The episode's own title (e.g. "The Red Dragon and the Gold"), distinct from [title], which
-    // is "Series - S3E6"-shaped. Only available once matched to a Jellyfin FindroidEpisode -
+    // is "Series - S3E6"-shaped. Only available once matched to a Jellyfin JollyfinEpisode -
     // Sonarr/Radarr's queue APIs don't return an episode title for unmatched entries, and movies
     // have no separate subtitle concept at all (their title already is the movie title).
     val subtitle: String? = null,
-    val item: FindroidItem? = null,
+    val item: JollyfinItem? = null,
     val posterUrl: String? = null,
     val tmdbId: Int? = null,
     val sonarrEpisodeId: Int? = null,

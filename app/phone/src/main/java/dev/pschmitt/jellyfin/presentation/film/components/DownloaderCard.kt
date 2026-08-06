@@ -31,7 +31,7 @@ import dev.pschmitt.jellyfin.core.presentation.downloader.DownloaderState
 import dev.pschmitt.jellyfin.models.QueueItemStatus
 import dev.pschmitt.jellyfin.models.QueueStatus
 import dev.pschmitt.jellyfin.models.UiText
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.utils.DownloadProgress
 import dev.pschmitt.jellyfin.utils.formatBinaryFileSize
@@ -309,7 +309,7 @@ fun PvrQueueDownloadCard(
 @Composable
 @Preview
 private fun DownloaderCardPendingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloaderCard(
             state = DownloaderState(status = DownloadManager.STATUS_PENDING),
             onCancelClick = {},
@@ -321,7 +321,7 @@ private fun DownloaderCardPendingPreview() {
 @Composable
 @Preview
 private fun DownloaderCardDownloadingPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloaderCard(
             state = DownloaderState(status = DownloadManager.STATUS_RUNNING, progress = 0.5f),
             onCancelClick = {},
@@ -333,7 +333,7 @@ private fun DownloaderCardDownloadingPreview() {
 @Composable
 @Preview
 private fun DownloaderCardFailedPreview() {
-    FindroidTheme {
+    JollyfinTheme {
         DownloaderCard(
             state =
                 DownloaderState(

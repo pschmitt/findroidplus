@@ -6,7 +6,7 @@ import java.util.UUID
 import org.jellyfin.sdk.model.api.MediaStreamType
 
 @Entity(tableName = "mediastreams")
-data class FindroidMediaStreamDto(
+data class JollyfinMediaStreamDto(
     @PrimaryKey val id: UUID,
     val sourceId: String,
     val title: String,
@@ -24,12 +24,12 @@ data class FindroidMediaStreamDto(
     val downloadId: Long? = null,
 )
 
-fun FindroidMediaStream.toFindroidMediaStreamDto(
+fun JollyfinMediaStream.toJollyfinMediaStreamDto(
     id: UUID,
     sourceId: String,
     path: String,
-): FindroidMediaStreamDto {
-    return FindroidMediaStreamDto(
+): JollyfinMediaStreamDto {
+    return JollyfinMediaStreamDto(
         id = id,
         sourceId = sourceId,
         title = title,

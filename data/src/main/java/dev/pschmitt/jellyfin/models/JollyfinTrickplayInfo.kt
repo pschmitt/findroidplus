@@ -2,7 +2,7 @@ package dev.pschmitt.jellyfin.models
 
 import org.jellyfin.sdk.model.api.TrickplayInfoDto
 
-data class FindroidTrickplayInfo(
+data class JollyfinTrickplayInfo(
     val width: Int,
     val height: Int,
     val tileWidth: Int,
@@ -12,8 +12,8 @@ data class FindroidTrickplayInfo(
     val bandwidth: Int,
 )
 
-fun TrickplayInfoDto.toFindroidTrickplayInfo(): FindroidTrickplayInfo {
-    return FindroidTrickplayInfo(
+fun TrickplayInfoDto.toJollyfinTrickplayInfo(): JollyfinTrickplayInfo {
+    return JollyfinTrickplayInfo(
         width = width,
         height = height,
         tileWidth = tileWidth,
@@ -24,8 +24,8 @@ fun TrickplayInfoDto.toFindroidTrickplayInfo(): FindroidTrickplayInfo {
     )
 }
 
-fun FindroidTrickplayInfoDto.toFindroidTrickplayInfo(): FindroidTrickplayInfo {
-    return FindroidTrickplayInfo(
+fun JollyfinTrickplayInfoDto.toJollyfinTrickplayInfo(): JollyfinTrickplayInfo {
+    return JollyfinTrickplayInfo(
         width = width,
         height = height,
         tileWidth = tileWidth,

@@ -26,7 +26,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import dev.pschmitt.jellyfin.core.R
-import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
+import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.setup.presentation.welcome.WelcomeAction
 
@@ -99,5 +99,5 @@ private fun WelcomeScreenLayout(onAction: (WelcomeAction) -> Unit) {
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun WelcomeScreenLayoutPreview() {
-    FindroidTheme { WelcomeScreenLayout(onAction = {}) }
+    JollyfinTheme { WelcomeScreenLayout(onAction = {}) }
 }
