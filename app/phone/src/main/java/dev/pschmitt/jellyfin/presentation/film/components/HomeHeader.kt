@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import dev.pschmitt.jellyfin.core.R as CoreR
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.presentation.theme.FindroidTheme
@@ -56,6 +57,7 @@ fun HomeHeader(
                 iconRes = CoreR.drawable.ic_launcher_foreground,
                 modifier = Modifier.clickable(onClick = onServerClick),
                 iconTint = Color.Unspecified,
+                iconSize = 48.dp,
             )
         },
         actions = {
