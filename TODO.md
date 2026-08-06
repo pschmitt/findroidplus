@@ -1852,19 +1852,20 @@ still out of scope - not asked for this time either, same boundary FINDROID-68 d
   not nixpkgs' newer standalone binary) - `just lint` clean afterward. Built and deployed the
   release APK (post keystore-rename) to all three attached devices (ASUS phone, Mi Pad 4, px5) with
   no install errors.
-- [ ] **Known gap, flagged rather than guessed at:** three locale `strings.xml` translations
-  (`values-fi`, `values-et`, `values-cs-rCZ`) still say bare "Findroid" in `privacy_policy_notice`
-  in *inflected/declined* form ("Findroidia"/"Findroidi"/"Findroidu" - partitive/genitive cases),
-  missed by FINDROID-68's literal-string sweep. Left untouched here: a mechanical substring replace
-  would produce "Jollyfinia"/etc., and grammatical correctness of a declined "JollyFin" in
-  Finnish/Estonian/Czech needs a native speaker's judgment, not a guess.
+- [x] Three locale `strings.xml` translations (`values-fi`, `values-et`, `values-cs-rCZ`) still
+  said bare "Findroid" in `privacy_policy_notice` in *inflected/declined* form
+  ("Findroidia"/"Findroidi"/"Findroidu" - partitive/genitive cases), missed by FINDROID-68's
+  literal-string sweep. Initially flagged rather than fixed, pending a native speaker's call on
+  correct declension of "JollyFin" - user said not to worry about grammatical correctness, so
+  fixed by dropping the case ending entirely and using bare "JollyFin", matching the convention
+  every other already-fixed inflected-language locale uses (German "Nutzung von JollyFin", Polish
+  "z JollyFin", Russian "используя JollyFin" - none of them decline it either).
 
 **Why:** direct user request, resolving the items FINDROID-68 explicitly deferred, expanded
-mid-session ("we can do even bigger", the `FindroidTheme` FYI, then explicit asks for the keystore
-filename and rbw entry).
+mid-session ("we can do even bigger", the `FindroidTheme` FYI, explicit asks for the keystore
+filename/rbw entry, then "just JollyFin, don't worry about it" for the three locale strings).
 **How to apply:** see FINDROID-68 for the boundary this entry does still respect (upstream
-attribution language, ticket ids). The three untranslated locale strings above are the one
-remaining known gap.
+attribution language, ticket ids).
 
 Status: **done**, 2026-08-06 - build/test/lint-verified remotely and deployed to all three
 attached devices; not yet tagged as a release build.
