@@ -105,6 +105,18 @@ class AutoDownloadRuleRepositoryImpl(private val database: ServerDatabaseDao) :
     override suspend fun setRuleEnabled(id: Long, enabled: Boolean) =
         withContext(Dispatchers.IO) { database.setAutoDownloadRuleEnabled(id, enabled) }
 
+    override suspend fun setRulesEnabledForShow(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        enabled: Boolean,
+    ) =
+        withContext(Dispatchers.IO) {
+            database.getAutoDownloadRulesForShow(serverId, userId, seriesId).forEach {
+                database.setAutoDownloadRuleEnabled(it.id, enabled)
+            }
+        }
+
     override suspend fun setRuleOnlyNewEpisodes(id: Long, onlyNewEpisodes: Boolean) =
         withContext(Dispatchers.IO) {
             database.setAutoDownloadRuleOnlyNewEpisodes(id, onlyNewEpisodes)

@@ -82,6 +82,20 @@ interface RemoteConfigRepository {
     )
 
     /**
+     * Enqueues a command that pauses/resumes [seriesId]'s existing rule scope on [targetDeviceId]
+     * without changing it - the remote counterpart to the local per-show enable/disable `Switch`.
+     * See [dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository.setRulesEnabledForShow],
+     * which the target applies this command with.
+     */
+    suspend fun pushSetRuleEnabled(
+        targetDeviceId: String,
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        enabled: Boolean,
+    )
+
+    /**
      * Commands in the shared queue that *this* device enqueued (via any of the `push*` methods
      * above) and that haven't been applied by their target yet - lets a controller see and cancel
      * its own still-pending pushes before they land.

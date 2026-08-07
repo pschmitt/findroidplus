@@ -185,6 +185,29 @@ class RemoteConfigRepositoryImpl(
         )
     }
 
+    override suspend fun pushSetRuleEnabled(
+        targetDeviceId: String,
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        enabled: Boolean,
+    ) {
+        val showName = resolveShowName(seriesId)
+        enqueue(
+            RemoteConfigCommand.SetRuleEnabled(
+                id = UUID.randomUUID().toString(),
+                targetDeviceId = targetDeviceId,
+                originDeviceId = appPreferences.getOrCreateThisDeviceId(),
+                createdAt = System.currentTimeMillis(),
+                serverId = serverId,
+                displayName = showName,
+                userId = userId.toString(),
+                seriesId = seriesId.toString(),
+                enabled = enabled,
+            )
+        )
+    }
+
     override suspend fun listPendingCommandsFromThisDevice(): List<RemoteConfigCommand> =
         withContext(Dispatchers.IO) {
             val thisId = appPreferences.getOrCreateThisDeviceId()
@@ -311,6 +334,7 @@ class RemoteConfigRepositoryImpl(
                         showName = jellyfinRepository.getShow(seriesId).name,
                         seasonCount = rules.count { it.seasonId != null && it.enabled },
                         alsoFutureSeasons = rules.any { it.seasonId == null && it.enabled },
+                        enabled = rules.any { it.enabled },
                     )
                 } catch (e: Exception) {
                     Timber.w(e, "Failed to resolve show name while publishing active-rule summary")
@@ -325,6 +349,7 @@ class RemoteConfigRepositoryImpl(
                 is RemoteConfigCommand.ReconcileRules -> applyReconcileRules(command)
                 is RemoteConfigCommand.EvaluateNow -> applyEvaluateNow(command)
                 is RemoteConfigCommand.DownloadItem -> applyDownloadItem(command)
+                is RemoteConfigCommand.SetRuleEnabled -> applySetRuleEnabled(command)
             }
         } catch (e: Exception) {
             Timber.e(e, "Failed to apply remote command ${command.id}")
@@ -386,6 +411,15 @@ class RemoteConfigRepositoryImpl(
                 command.onlyUnwatched,
             )
         }
+    }
+
+    private suspend fun applySetRuleEnabled(command: RemoteConfigCommand.SetRuleEnabled) {
+        ruleRepository.setRulesEnabledForShow(
+            serverId = command.serverId,
+            userId = UUID.fromString(command.userId),
+            seriesId = UUID.fromString(command.seriesId),
+            enabled = command.enabled,
+        )
     }
 
     private suspend fun applyDownloadItem(command: RemoteConfigCommand.DownloadItem) {

@@ -33,6 +33,13 @@ sealed interface RemoteDevicesAction {
         val alsoDeleteDownloads: Boolean = false,
     ) : RemoteDevicesAction
 
+    data class SetRuleEnabled(
+        val targetDeviceId: String,
+        val serverId: String,
+        val seriesId: String,
+        val enabled: Boolean,
+    ) : RemoteDevicesAction
+
     data class CancelPendingCommand(val commandId: String) : RemoteDevicesAction
 
     data class SetRemoteManagementEnabled(val enabled: Boolean) : RemoteDevicesAction

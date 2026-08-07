@@ -145,6 +145,13 @@ constructor(
                     action.alsoDeleteDownloads,
                 )
             is RemoteDevicesAction.CancelPendingCommand -> cancelPendingCommand(action.commandId)
+            is RemoteDevicesAction.SetRuleEnabled ->
+                setRuleEnabled(
+                    action.targetDeviceId,
+                    action.serverId,
+                    action.seriesId,
+                    action.enabled,
+                )
             is RemoteDevicesAction.SetRemoteManagementEnabled ->
                 setRemoteManagementEnabled(action.enabled)
             is RemoteDevicesAction.ForgetDevice -> forgetDevice(action.deviceId)
@@ -178,6 +185,25 @@ constructor(
             // command on its own next sync - reload now just to refresh the pending-commands list
             // (the new clearing command shows up there immediately), not because the removal is
             // already reflected in devices[].activeRules.
+            load()
+        }
+    }
+
+    private fun setRuleEnabled(
+        targetDeviceId: String,
+        serverId: String,
+        seriesId: String,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launch {
+            val userId = jellyfinRepository.getUserId()
+            remoteConfigRepository.pushSetRuleEnabled(
+                targetDeviceId = targetDeviceId,
+                serverId = serverId,
+                userId = userId,
+                seriesId = UUID.fromString(seriesId),
+                enabled = enabled,
+            )
             load()
         }
     }

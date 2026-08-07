@@ -222,6 +222,10 @@
     <string name="remote_devices_command_reconcile_suffix">auto-download rule</string>
     <string name="remote_devices_command_evaluate_suffix">download now</string>
     <string name="remote_devices_command_download_suffix">episode download</string>
+    <string name="remote_devices_command_enable_suffix">enable rule</string>
+    <string name="remote_devices_command_disable_suffix">disable rule</string>
+    <string name="remote_devices_rule_enable_sent_toast">Enable sent to %1$s</string>
+    <string name="remote_devices_rule_disable_sent_toast">Disable sent to %1$s</string>
     <string name="remote_devices_pending_to">%1$s → %2$s</string>
     <string name="remote_devices_allow_management_title">Allow remote management</string>
     <string name="remote_devices_allow_management_summary">Let your other devices push auto-download rules and downloads to this one</string>

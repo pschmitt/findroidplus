@@ -40,6 +40,22 @@ interface AutoDownloadRuleRepository {
 
     suspend fun setRuleEnabled(id: Long, enabled: Boolean)
 
+    /**
+     * Toggles every existing rule row for [seriesId] (whichever seasons/future-seasons scope is
+     * already configured) between enabled/disabled, without touching that scope - the same "pause
+     * without losing the configured scope" toggle the local rules screen's per-show `Switch`
+     * performs (`AutoDownloadRulesViewModel.toggleShowRule`), just resolvable by (serverId, userId,
+     * seriesId) alone rather than already-known local row ids. Needed so a remote push command -
+     * which only carries ids, not a cached rule list - can replay the same effect on the target
+     * device.
+     */
+    suspend fun setRulesEnabledForShow(
+        serverId: String,
+        userId: UUID,
+        seriesId: UUID,
+        enabled: Boolean,
+    )
+
     suspend fun setRuleOnlyNewEpisodes(id: Long, onlyNewEpisodes: Boolean)
 
     suspend fun setRuleOnlyUnwatched(id: Long, onlyUnwatched: Boolean)

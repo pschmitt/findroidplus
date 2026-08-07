@@ -101,6 +101,26 @@ sealed interface RemoteConfigCommand {
         val itemId: String,
         val sourceId: String,
     ) : RemoteConfigCommand
+
+    /**
+     * Pauses/resumes [seriesId]'s existing rule scope on [targetDeviceId] without changing it - the
+     * remote counterpart to the local per-show enable/disable `Switch`
+     * (`AutoDownloadRulesViewModel.toggleShowRule` /
+     * `AutoDownloadRuleRepository.setRulesEnabledForShow`).
+     */
+    @Serializable
+    @SerialName("set_rule_enabled")
+    data class SetRuleEnabled(
+        override val id: String,
+        override val targetDeviceId: String,
+        override val originDeviceId: String,
+        override val createdAt: Long,
+        override val serverId: String,
+        override val displayName: String,
+        val userId: String,
+        val seriesId: String,
+        val enabled: Boolean,
+    ) : RemoteConfigCommand
 }
 
 /**
@@ -116,6 +136,10 @@ data class RemoteActiveRuleSummary(
     val showName: String,
     val seasonCount: Int,
     val alsoFutureSeasons: Boolean,
+    // Whether this show's rule scope is currently enabled (vs paused) - defaults true so a
+    // summary published by an older, not-yet-upgraded device still round-trips as "on" instead of
+    // silently rendering a remote toggle as off.
+    val enabled: Boolean = true,
 )
 
 /** Heartbeat entry advertising a device's presence to others sharing the same Jellyfin account. */

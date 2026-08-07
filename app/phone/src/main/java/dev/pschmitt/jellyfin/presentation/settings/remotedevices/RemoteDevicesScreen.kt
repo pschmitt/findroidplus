@@ -220,6 +220,19 @@ private fun ActiveRuleRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Switch(
+            checked = rule.enabled,
+            onCheckedChange = { enabled ->
+                onAction(
+                    RemoteDevicesAction.SetRuleEnabled(
+                        targetDeviceId = device.id,
+                        serverId = rule.serverId,
+                        seriesId = rule.seriesId,
+                        enabled = enabled,
+                    )
+                )
+            },
+        )
         IconButton(onClick = { confirmOpen = true }) {
             Icon(painter = painterResource(CoreR.drawable.ic_trash), contentDescription = null)
         }
@@ -277,6 +290,12 @@ fun PendingCommandRow(
                 CoreR.string.remote_devices_command_evaluate_suffix
             is RemoteConfigCommand.DownloadItem ->
                 CoreR.string.remote_devices_command_download_suffix
+            is RemoteConfigCommand.SetRuleEnabled ->
+                if (command.enabled) {
+                    CoreR.string.remote_devices_command_enable_suffix
+                } else {
+                    CoreR.string.remote_devices_command_disable_suffix
+                }
         }
     val suffixText = stringResource(suffixRes)
 
