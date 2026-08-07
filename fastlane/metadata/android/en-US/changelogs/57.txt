@@ -1,0 +1,5 @@
+New:
+- Forget a remote device's entry immediately from Auto-download rules, instead of waiting up to 90 days for it to expire on its own.
+
+Fixed:
+- Restoring a backup on a different device no longer makes it impersonate the original device in the remote-devices list.
