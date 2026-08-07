@@ -1900,9 +1900,31 @@ attached devices; not yet tagged as a release build.
 
 Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
 
-- [ ] Verify the "setup another device" QR pairing flow (FINDROID-43) still works correctly now
+- [x] Verify the "setup another device" QR pairing flow (FINDROID-43) still works correctly now
       that Sonarr/Radarr/Seerr config is per-profile instead of a single global singleton - it was
-      built and tested before Profiles existed.
+      built and tested before Profiles existed. Read through `QrConfigManager`: `buildEnvelope()`
+      already resolves through the profile-aware `PvrConfigResolver` (not stale globals), and
+      `applyEnvelope()` already calls `ProfileMigrationRunner.reconcileAfterExternalRestore()` - so
+      the envelope mechanics themselves are correctly profile-aware (this was apparently already
+      wired correctly as part of the original Profiles work, not something broken by it).
+  - [x] Found a **real, separate bug** while checking this, not a QR-specific one: `HomeViewModel`,
+        `ShowViewModel`, `SeasonViewModel`, `HomeLayoutSettingsViewModel`, and
+        `QueueStatusScheduler` all still read the pre-Profiles global
+        `appPreferences.sonarrEnabled`/`radarrEnabled`/`seerrEnabled` directly for their
+        "should I do this at all" gating checks, even though most of them *also* already inject the
+        profile-aware `PvrConfiguration`/`PvrConfigResolver` for other checks in the same file (a
+        partial migration) - meaning after switching profiles or overriding a service per-profile,
+        these five spots would keep reflecting whatever the stale global flag says instead of the
+        active profile's real state. Fixed: swapped all five to
+        `PvrConfiguration.isXConfigured()` (already injected in four of the five;
+        `QueueStatusScheduler` - a plain `object`, not Hilt-injected - now takes a
+        `PvrConfigResolver` parameter from its one call site in `app/phone/BaseApplication.kt`).
+        Note `QueueStatusScheduler.schedule()` still only runs once at process startup, so a
+        profile switch mid-session won't re-evaluate it until the next cold start - a smaller,
+        separate follow-up if that turns out to matter in practice.
+  - [x] Verified: remote `ktfmtCheck` and `:app:phone:compileLibreDebugKotlin`/
+        `:app:tv:compileLibreDebugKotlin` both green on rofl-13. Not yet re-verified on a physical
+        device.
 - [ ] Let the QR export flow choose which profile's config gets encoded, instead of always
       encoding whichever profile happens to be active.
 - [ ] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in

@@ -383,8 +383,7 @@ constructor(
     // Sonarr/Radarr actions (search, grab, etc.).
     private suspend fun loadPvrServiceIcons() {
         val hasQueueSource =
-            appPreferences.getValue(appPreferences.sonarrEnabled) ||
-                appPreferences.getValue(appPreferences.radarrEnabled)
+            pvrConfiguration.isSonarrConfigured() || pvrConfiguration.isRadarrConfigured()
         val icons = if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
         _state.emit(_state.value.copy(pvrServiceIcons = icons))
     }

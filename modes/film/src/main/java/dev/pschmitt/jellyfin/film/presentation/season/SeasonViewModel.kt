@@ -130,7 +130,7 @@ constructor(
         knownEpisodes: List<JollyfinEpisode>,
     ) {
         val upcoming =
-            if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
+            if (!pvrConfiguration.isSonarrConfigured() || seriesTvdbId == null) {
                 emptyList()
             } else {
                 try {

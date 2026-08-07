@@ -120,7 +120,7 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         scheduleNewItemNotifications(workManager)
         schedulePreloadCalendar(workManager)
         AutoBackupScheduler.schedule(applicationContext, appPreferences)
-        QueueStatusScheduler.schedule(applicationContext, appPreferences)
+        QueueStatusScheduler.schedule(applicationContext, appPreferences, pvrConfigResolver)
         RemoteConfigScheduler.schedule(applicationContext)
         localControlServer.startIfEnabled()
         pauseDownloadsIfBatterySaverAlreadyOn()

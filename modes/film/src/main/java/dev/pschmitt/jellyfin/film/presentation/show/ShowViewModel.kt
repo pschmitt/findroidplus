@@ -137,7 +137,7 @@ constructor(
         knownSeasons: List<JollyfinSeason>,
     ) {
         val missing =
-            if (!appPreferences.getValue(appPreferences.sonarrEnabled) || seriesTvdbId == null) {
+            if (!pvrConfiguration.isSonarrConfigured() || seriesTvdbId == null) {
                 emptyList()
             } else {
                 try {
@@ -152,7 +152,7 @@ constructor(
             }
         _state.emit(_state.value.copy(missingSeasons = missing))
         if (missing.isEmpty() || seriesTmdbId == null) return
-        if (!appPreferences.getValue(appPreferences.seerrEnabled)) return
+        if (!pvrConfiguration.isSeerrConfigured()) return
         // Separate round trip after missingSeasons is already on screen - poster art is a nice-
         // to-have, not something worth delaying the placeholder cards themselves for.
         seerrRepository

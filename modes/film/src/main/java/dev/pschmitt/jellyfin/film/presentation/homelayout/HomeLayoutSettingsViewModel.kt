@@ -60,8 +60,7 @@ constructor(
             // they actually hand grabbed releases off to - so it wears a download-client icon
             // rather than the Sonarr/Radarr brand icons, same as HomeViewModel.loadPvrServiceIcons.
             val hasQueueSource =
-                appPreferences.getValue(appPreferences.sonarrEnabled) ||
-                    appPreferences.getValue(appPreferences.radarrEnabled)
+                pvrConfiguration.isSonarrConfigured() || pvrConfiguration.isRadarrConfigured()
             val pvrIcons =
                 if (hasQueueSource) listOf(CoreR.drawable.ic_transmission) else emptyList()
             labels[HomeSectionKeys.ACTIVE_DOWNLOADS] =
