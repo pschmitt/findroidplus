@@ -4,10 +4,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.repository.SeerrRepository
 import dev.pschmitt.jellyfin.repository.SeerrRepositoryImpl
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import javax.inject.Singleton
 
@@ -18,12 +19,14 @@ object SeerrModule {
     @Provides
     fun provideSeerrRepository(
         appPreferences: AppPreferences,
-        secureCredentialStore: SecureCredentialStore,
+        pvrConfigResolver: PvrConfigResolver,
     ): SeerrRepository {
         return SeerrRepositoryImpl(
             appPreferences = appPreferences,
-            seerrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY)
+            resolveConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.SEERR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
         )
     }

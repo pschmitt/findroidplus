@@ -60,8 +60,9 @@ import dev.pschmitt.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.pschmitt.jellyfin.presentation.settings.SettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.backup.BackupSettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.homelayout.HomeLayoutSettingsScreen
-import dev.pschmitt.jellyfin.presentation.settings.integrations.IntegrationsSettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.localaccess.LocalAccessScreen
+import dev.pschmitt.jellyfin.presentation.settings.profiles.ProfileDetailScreen
+import dev.pschmitt.jellyfin.presentation.settings.profiles.ProfilesListScreen
 import dev.pschmitt.jellyfin.presentation.settings.qrexport.QrExportScreen
 import dev.pschmitt.jellyfin.presentation.setup.addresses.ServerAddressesScreen
 import dev.pschmitt.jellyfin.presentation.setup.addserver.AddServerScreen
@@ -152,7 +153,9 @@ data class SeerrMediaRoute(
 
 @Serializable data object QrExportRoute
 
-@Serializable data object ConnectionsRoute
+@Serializable data object ProfilesRoute
+
+@Serializable data class ProfileDetailRoute(val profileId: String)
 
 @Serializable data object HomeLayoutSettingsRoute
 
@@ -461,7 +464,7 @@ fun NavigationRoot(
                     // add/switch user UI as the dedicated ServersRoute/AddServerRoute/UsersRoute
                     // flow (which stays reserved for first-run setup, before any server exists to
                     // have a Settings screen for).
-                    onManageServers = { navController.safeNavigate(ConnectionsRoute) },
+                    onManageServers = { navController.safeNavigate(ProfilesRoute) },
                     onItemClick = { item ->
                         navigateToItem(navController = navController, item = item)
                     },
@@ -777,7 +780,10 @@ fun NavigationRoot(
                     navigateToLocalAccess = { navController.safeNavigate(LocalAccessRoute) },
                     navigateToBackupSettings = { navController.safeNavigate(BackupSettingsRoute) },
                     navigateToQrExport = { navController.safeNavigate(QrExportRoute) },
-                    navigateToConnections = { navController.safeNavigate(ConnectionsRoute) },
+                    navigateToProfiles = { navController.safeNavigate(ProfilesRoute) },
+                    navigateToProfileDetail = { profileId ->
+                        navController.safeNavigate(ProfileDetailRoute(profileId = profileId))
+                    },
                     navigateToHomeLayout = { navController.safeNavigate(HomeLayoutSettingsRoute) },
                     navigateBack = { navController.safePopBackStack() },
                 )
@@ -794,8 +800,20 @@ fun NavigationRoot(
             composable<QrExportRoute> {
                 QrExportScreen(navigateBack = { navController.safePopBackStack() })
             }
-            composable<ConnectionsRoute> {
-                IntegrationsSettingsScreen(navigateBack = { navController.safePopBackStack() })
+            composable<ProfilesRoute> {
+                ProfilesListScreen(
+                    navigateBack = { navController.safePopBackStack() },
+                    navigateToProfileDetail = { profileId ->
+                        navController.safeNavigate(ProfileDetailRoute(profileId = profileId))
+                    },
+                )
+            }
+            composable<ProfileDetailRoute> { backStackEntry ->
+                val route: ProfileDetailRoute = backStackEntry.toRoute()
+                ProfileDetailScreen(
+                    profileId = route.profileId,
+                    navigateBack = { navController.safePopBackStack() },
+                )
             }
             composable<RestoreBackupRoute> {
                 RestoreBackupScreen(onBackClick = { navController.safePopBackStack() })

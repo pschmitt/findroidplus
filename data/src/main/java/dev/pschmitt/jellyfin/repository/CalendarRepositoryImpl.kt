@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrCalendarEntry
@@ -19,10 +20,10 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import timber.log.Timber
 
 /**
- * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
- * `SecureCredentialStore` - passed in as plain lambdas (rather than depending on
- * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`, not
- * the other way around. Same pattern as `QueueStatusRepositoryImpl`.
+ * [resolveSonarrConfig]/[resolveRadarrConfig] resolve the active profile's effective Sonarr/Radarr
+ * config from `core`'s `PvrConfigResolver` - passed in as plain lambdas (rather than depending on
+ * `PvrConfigResolver` directly) because that type lives in `core`, which depends on `data`, not the
+ * other way around. Same pattern as `QueueStatusRepositoryImpl`.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.CalendarModule] (a Hilt `@Provides`) rather than an
  * `@Inject` constructor, since `data` has no Hilt plugin.
@@ -45,8 +46,8 @@ class CalendarRepositoryImpl(
     private val appPreferences: AppPreferences,
     private val jellyfinRepository: JellyfinRepository,
     private val seerrRepository: SeerrRepository,
-    private val sonarrApiKeyProvider: () -> String?,
-    private val radarrApiKeyProvider: () -> String?,
+    private val resolveSonarrConfig: () -> PvrClientConfig?,
+    private val resolveRadarrConfig: () -> PvrClientConfig?,
 ) : CalendarRepository {
 
     override suspend fun getUpcoming(daysBack: Int, daysForward: Int): CalendarResult =
@@ -90,9 +91,10 @@ class CalendarRepositoryImpl(
         }
 
     private suspend fun fetchSonarrCalendar(start: LocalDate, end: LocalDate): CalendarResult {
-        if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return CalendarResult()
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveSonarrConfig() ?: return CalendarResult()
+        if (!config.enabled) return CalendarResult()
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return CalendarResult()
 
         return try {
@@ -109,9 +111,10 @@ class CalendarRepositoryImpl(
     }
 
     private suspend fun fetchRadarrCalendar(start: LocalDate, end: LocalDate): CalendarResult {
-        if (!appPreferences.getValue(appPreferences.radarrEnabled)) return CalendarResult()
-        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-        val apiKey = radarrApiKeyProvider()
+        val config = resolveRadarrConfig() ?: return CalendarResult()
+        if (!config.enabled) return CalendarResult()
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return CalendarResult()
 
         return try {

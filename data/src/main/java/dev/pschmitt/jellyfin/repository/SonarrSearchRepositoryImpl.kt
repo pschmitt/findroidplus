@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrRelease
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.models.AutomaticSearchOutcome
@@ -10,10 +11,10 @@ import kotlinx.coroutines.delay
 import timber.log.Timber
 
 /**
- * [sonarrApiKeyProvider] resolves the current secret from `SecureCredentialStore` - passed in as a
- * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type lives
- * in `core`, which depends on `data`, not the other way around. Same pattern as
- * [SeasonEpisodesRepositoryImpl]/[CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
+ * [resolveConfig] resolves the active profile's effective Sonarr config (enabled/baseUrl/apiKey) -
+ * passed in as a plain lambda (rather than depending on `core`'s `PvrConfigResolver` directly)
+ * because that type lives in `core`, which depends on `data`, not the other way around. Same
+ * pattern as [SeasonEpisodesRepositoryImpl]/[CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
  *
  * [scheduleCompletionCheck] enqueues `dev.pschmitt.jellyfin.work.AutomaticSearchWorker` - also a
  * lambda, for the same reason: WorkManager/notifications are `core`-layer concerns `data` can't
@@ -24,7 +25,7 @@ import timber.log.Timber
  */
 class SonarrSearchRepositoryImpl(
     private val appPreferences: AppPreferences,
-    private val sonarrApiKeyProvider: () -> String?,
+    private val resolveConfig: () -> PvrClientConfig?,
     private val scheduleCompletionCheck: (episodeId: Int, commandId: Int) -> Unit,
 ) : SonarrSearchRepository {
     // Keyed by Sonarr episode id. This repository is a Hilt singleton (see SonarrSearchModule),
@@ -153,9 +154,10 @@ class SonarrSearchRepositoryImpl(
     }
 
     private fun api(): SonarrApi? {
-        if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return null
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveConfig() ?: return null
+        if (!config.enabled) return null
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
         return SonarrApi(baseUrl, apiKey)
     }

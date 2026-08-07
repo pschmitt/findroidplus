@@ -12,6 +12,8 @@ import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.presentation.film.LibraryScreen
 import dev.pschmitt.jellyfin.presentation.film.SeasonScreen
 import dev.pschmitt.jellyfin.presentation.film.ShowScreen
+import dev.pschmitt.jellyfin.presentation.profiles.ProfileDetailScreen
+import dev.pschmitt.jellyfin.presentation.profiles.ProfilesScreen
 import dev.pschmitt.jellyfin.presentation.settings.SettingsScreen
 import dev.pschmitt.jellyfin.presentation.settings.SettingsSubScreen
 import dev.pschmitt.jellyfin.presentation.setup.addserver.AddServerScreen
@@ -76,6 +78,10 @@ data class LibraryRoute(
 @Serializable data object SettingsRoute
 
 @Serializable data class SettingsSubRoute(val indexes: IntArray)
+
+@Serializable data object ProfilesRoute
+
+@Serializable data class ProfileDetailRoute(val profileId: String)
 
 @OptIn(ExperimentalStdlibApi::class)
 @Composable
@@ -144,6 +150,7 @@ fun NavigationRoot(
         composable<MainRoute> {
             MainScreen(
                 navigateToSettings = { navController.navigate(SettingsRoute) },
+                navigateToProfiles = { navController.navigate(ProfilesRoute) },
                 navigateToLibrary = { libraryId, libraryName, libraryType ->
                     navController.navigate(
                         LibraryRoute(
@@ -249,6 +256,10 @@ fun NavigationRoot(
                 navigateToSubSettings = { indexes ->
                     navController.navigate(SettingsSubRoute(indexes = indexes))
                 },
+                navigateToProfiles = { navController.navigate(ProfilesRoute) },
+                navigateToProfileDetail = { profileId ->
+                    navController.navigate(ProfileDetailRoute(profileId = profileId))
+                },
             )
         }
         composable<SettingsSubRoute> { backStackEntry ->
@@ -260,6 +271,25 @@ fun NavigationRoot(
                 navigateToSubSettings = { indexes ->
                     navController.navigate(SettingsSubRoute(indexes = indexes))
                 },
+                navigateToProfiles = { navController.navigate(ProfilesRoute) },
+                navigateToProfileDetail = { profileId ->
+                    navController.navigate(ProfileDetailRoute(profileId = profileId))
+                },
+            )
+        }
+        composable<ProfilesRoute> {
+            ProfilesScreen(
+                navigateBack = { navController.popBackStack() },
+                navigateToProfileDetail = { profileId ->
+                    navController.navigate(ProfileDetailRoute(profileId = profileId))
+                },
+            )
+        }
+        composable<ProfileDetailRoute> { backStackEntry ->
+            val route: ProfileDetailRoute = backStackEntry.toRoute()
+            ProfileDetailScreen(
+                profileId = route.profileId,
+                navigateBack = { navController.popBackStack() },
             )
         }
     }

@@ -78,4 +78,39 @@ class ServerDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate16To17_createsProfilesAndPvrServiceConfigsTablesWithoutLosingExistingRows() {
+        val v16 = helper.createDatabase(testDbName, 16)
+        v16.execSQL(
+            "INSERT INTO servers (id, name, currentServerAddressId, currentUserId) VALUES ('s', 'Server', NULL, NULL)"
+        )
+        v16.execSQL(
+            "INSERT INTO users (id, name, serverId, accessToken) VALUES ('u', 'User', 's', NULL)"
+        )
+        v16.close()
+
+        val db = helper.runMigrationsAndValidate(testDbName, 17, true)
+
+        val tableCursor =
+            db.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('profiles', 'pvrServiceConfigs')"
+            )
+        tableCursor.use {
+            assert(it.count == 2) {
+                "profiles and pvrServiceConfigs tables should exist after migration"
+            }
+        }
+
+        val serverCursor = db.query("SELECT name FROM servers WHERE id = 's'")
+        serverCursor.use {
+            assert(it.moveToFirst()) { "Pre-migration server row should survive the migration" }
+        }
+
+        val userCursor = db.query("SELECT name FROM users WHERE id = 'u'")
+        userCursor.use {
+            assert(it.moveToFirst()) { "Pre-migration user row should survive the migration" }
+        }
+        db.close()
+    }
 }

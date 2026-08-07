@@ -27,10 +27,9 @@ import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import dev.pschmitt.jellyfin.api.pvr.PvrAdvancedConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrAdvancedSettings
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
-import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.localcontrol.LocalControlServer
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
+import dev.pschmitt.jellyfin.profile.ProfileMigrationRunner
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
 import dev.pschmitt.jellyfin.work.AutoBackupScheduler
@@ -57,13 +56,15 @@ import timber.log.Timber
 class BaseApplication : Application(), Configuration.Provider, SingletonImageLoader.Factory {
     @Inject lateinit var appPreferences: AppPreferences
 
-    @Inject lateinit var secureCredentialStore: SecureCredentialStore
+    @Inject lateinit var pvrConfigResolver: PvrConfigResolver
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     @Inject lateinit var downloader: Downloader
 
     @Inject lateinit var localControlServer: LocalControlServer
+
+    @Inject lateinit var profileMigrationRunner: ProfileMigrationRunner
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -77,33 +78,17 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         // PvrHttpClient/SonarrSearchRepositoryImpl).
         Timber.plant(Timber.DebugTree())
 
+        // Must run before anything below that reads Profile/PVR config (PvrAdvancedSettings
+        // provider, the scheduleX() calls, localControlServer) - a fresh install is a no-op here
+        // since there are no User rows yet.
+        profileMigrationRunner.run()
+
         PvrAdvancedSettings.provider = { service ->
-            val (headersKey, usernameKey, passwordKey) =
-                when (service) {
-                    PvrService.SONARR ->
-                        Triple(
-                            PvrCredentialKeys.SONARR_HTTP_HEADERS,
-                            PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
-                            PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
-                        )
-                    PvrService.RADARR ->
-                        Triple(
-                            PvrCredentialKeys.RADARR_HTTP_HEADERS,
-                            PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
-                            PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
-                        )
-                    PvrService.SEERR ->
-                        Triple(
-                            PvrCredentialKeys.SEERR_HTTP_HEADERS,
-                            PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
-                            PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
-                        )
-                }
+            val resolved = pvrConfigResolver.resolveConfig(service)
             PvrAdvancedConfig(
-                headers =
-                    PvrAdvancedConfig.parseHeaders(secureCredentialStore.getString(headersKey)),
-                basicAuthUsername = secureCredentialStore.getString(usernameKey),
-                basicAuthPassword = secureCredentialStore.getString(passwordKey),
+                headers = PvrAdvancedConfig.parseHeaders(resolved?.httpHeaders),
+                basicAuthUsername = resolved?.basicAuthUsername,
+                basicAuthPassword = resolved?.basicAuthPassword,
             )
         }
 

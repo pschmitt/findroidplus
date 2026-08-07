@@ -1,26 +1,24 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrEpisodeDto
 import dev.pschmitt.jellyfin.models.UpcomingEpisode
 import dev.pschmitt.jellyfin.models.UpcomingSeason
-import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 /**
- * [sonarrApiKeyProvider] resolves the current secret from `SecureCredentialStore` - passed in as a
- * plain lambda (rather than depending on `SecureCredentialStore` directly) because that type lives
- * in `core`, which depends on `data`, not the other way around. Same pattern as
- * [CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
+ * [resolveConfig] resolves the active profile's effective Sonarr config from `core`'s
+ * `PvrConfigResolver` - passed in as a plain lambda (rather than depending on `PvrConfigResolver`
+ * directly) because that type lives in `core`, which depends on `data`, not the other way around.
+ * Same pattern as [CalendarRepositoryImpl]/`QueueStatusRepositoryImpl`.
  *
  * Constructed via `dev.pschmitt.jellyfin.di.SeasonEpisodesModule` (a Hilt `@Provides`) rather than
  * an `@Inject` constructor, since `data` has no Hilt plugin.
  */
-class SeasonEpisodesRepositoryImpl(
-    private val appPreferences: AppPreferences,
-    private val sonarrApiKeyProvider: () -> String?,
-) : SeasonEpisodesRepository {
+class SeasonEpisodesRepositoryImpl(private val resolveConfig: () -> PvrClientConfig?) :
+    SeasonEpisodesRepository {
     override suspend fun getUpcomingEpisodes(
         seriesTvdbId: String,
         seasonNumber: Int,
@@ -41,9 +39,10 @@ class SeasonEpisodesRepositoryImpl(
      * tracked by Sonarr, or the request fails.
      */
     private suspend fun fetchSeriesEpisodes(seriesTvdbId: String): List<SonarrEpisodeDto> {
-        if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return emptyList()
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveConfig() ?: return emptyList()
+        if (!config.enabled) return emptyList()
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return emptyList()
 
         return try {

@@ -2,7 +2,9 @@ package dev.pschmitt.jellyfin.backup
 
 import android.content.Context
 import android.net.Uri
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
 import dev.pschmitt.jellyfin.models.AutoDownloadRuleDto
 import dev.pschmitt.jellyfin.models.JollyfinSourceType
@@ -16,17 +18,27 @@ import kotlinx.serialization.json.Json
  * has no Hilt setup, matching how `JellyfinRepositoryImpl` etc. are wired) - see
  * core/di/BackupModule.kt for the Hilt `@Provides` binding.
  *
- * [getSecret]/[putSecret] read/write `SecureCredentialStore` - passed in as plain lambdas (rather
- * than depending on `SecureCredentialStore` directly) because that type lives in `core`, which
- * depends on `data`, not the other way around. Same pattern as `CalendarRepositoryImpl`'s
- * `sonarrApiKeyProvider`.
+ * [resolvePvrConfig] resolves the active profile's effective Sonarr/Radarr/Seerr config from
+ * `core`'s `PvrConfigResolver` - passed in as a plain lambda (rather than depending on
+ * `PvrConfigResolver` directly) because that type lives in `core`, which depends on `data`, not the
+ * other way around. Same pattern as `CalendarRepositoryImpl`'s `resolveSonarrConfig`.
+ *
+ * [putSecret] writes `SecureCredentialStore` - also a lambda, for the same reason.
+ *
+ * [reconcileProfiles] runs `ProfileMigrationRunner.reconcileAfterExternalRestore()` (also `core`,
+ * also a lambda for the same reason) after [restore] finishes writing servers/users/prefs/secrets -
+ * without it, restoring a backup taken before this device's one-time Profiles migration already ran
+ * (e.g. onto a fresh install, which runs that migration as a no-op before the user ever taps
+ * "Restore from backup") would leave the newly-restored users with no Profile and their PVR
+ * credentials stuck in dead legacy keys nothing reads anymore.
  */
 class BackupManager(
     private val context: Context,
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
-    private val getSecret: (key: String) -> String? = { null },
+    private val resolvePvrConfig: (PvrService) -> PvrClientConfig? = { null },
     private val putSecret: (key: String, value: String) -> Unit = { _, _ -> },
+    private val reconcileProfiles: () -> Unit = {},
 ) {
     // ignoreUnknownKeys - so a future field addition (e.g. from a newer app version's backup)
     // doesn't hard-fail decoding on this app version; matches every other Json{} instance in the
@@ -106,7 +118,12 @@ class BackupManager(
                 for (user in backupServer.users) database.insertUser(user)
             }
             restorePreferences(envelope.preferences)
+            // Writes into the legacy flat SecureCredentialStore keys dumpSecrets() labels its
+            // export with (see PvrCredentialKeys.legacyApiKey()) - reconcileProfiles() below reads
+            // these same legacy keys (plus the plain prefs restorePreferences() just wrote) and
+            // folds them into the main profile's real PvrServiceConfig + namespaced secrets.
             for ((key, value) in envelope.secrets) putSecret(key, value)
+            reconcileProfiles()
 
             RestoreSummary(
                 serversRestored = envelope.servers.size,
@@ -149,8 +166,24 @@ class BackupManager(
         return items
     }
 
-    private fun dumpSecrets(): Map<String, String> =
-        SECRET_KEYS.mapNotNull { key -> getSecret(key)?.let { key to it } }.toMap()
+    /**
+     * Reads the active profile's resolved API key per service - MUST go through [resolvePvrConfig]
+     * (the profile-aware [dev.pschmitt.jellyfin.pvr.PvrConfigResolver]), not a direct
+     * `SecureCredentialStore` read keyed by [PvrCredentialKeys]'s legacy flat constants, since
+     * those are stale/unused once a profile has its own namespaced override. Still labels each
+     * exported secret with its legacy flat key name (via [PvrCredentialKeys.legacyApiKey]) purely
+     * as the envelope's map key - [restore] writes it straight back with that same label, seeded
+     * from whichever profile was active at export time.
+     */
+    private fun dumpSecrets(): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        for (service in PvrService.entries) {
+            resolvePvrConfig(service)?.apiKey?.let {
+                result[PvrCredentialKeys.legacyApiKey(service)] = it
+            }
+        }
+        return result
+    }
 
     private fun dumpPreferences(): Map<String, PrefValue> {
         val result = mutableMapOf<String, PrefValue>()
@@ -198,13 +231,6 @@ class BackupManager(
         // this (and add the actual migration logic in restore()) the day a real format change
         // happens - there's only ever been one format so far, so there's nothing to migrate yet.
         const val CURRENT_VERSION = 1
-
-        val SECRET_KEYS =
-            listOf(
-                PvrCredentialKeys.SONARR_API_KEY,
-                PvrCredentialKeys.RADARR_API_KEY,
-                PvrCredentialKeys.SEERR_API_KEY,
-            )
     }
 }
 

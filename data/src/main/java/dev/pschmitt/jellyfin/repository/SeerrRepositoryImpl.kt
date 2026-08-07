@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.SeerrApi
 import dev.pschmitt.jellyfin.api.pvr.SeerrMediaInfo
 import dev.pschmitt.jellyfin.api.pvr.SeerrRelatedVideo
@@ -20,14 +21,14 @@ import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
 
 /**
- * Same lambda-injection pattern as the other PVR repositories ([seerrApiKeyProvider] resolves the
- * secret from `SecureCredentialStore` in `core`). Constructed via
+ * Same lambda-injection pattern as the other PVR repositories ([resolveConfig] resolves the active
+ * profile's effective Seerr config from `core`'s `PvrConfigResolver`). Constructed via
  * `dev.pschmitt.jellyfin.di.SeerrModule` (a Hilt `@Provides`) rather than an `@Inject` constructor,
  * since `data` has no Hilt plugin.
  */
 class SeerrRepositoryImpl(
     private val appPreferences: AppPreferences,
-    private val seerrApiKeyProvider: () -> String?,
+    private val resolveConfig: () -> PvrClientConfig?,
 ) : SeerrRepository {
 
     override suspend fun search(query: String): Result<List<SeerrSearchItem>> = runAction { api ->
@@ -315,9 +316,10 @@ class SeerrRepositoryImpl(
     }
 
     private fun api(): SeerrApi? {
-        if (!appPreferences.getValue(appPreferences.seerrEnabled)) return null
-        val baseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl)
-        val apiKey = seerrApiKeyProvider()
+        val config = resolveConfig() ?: return null
+        if (!config.enabled) return null
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
         return SeerrApi(baseUrl, apiKey)
     }

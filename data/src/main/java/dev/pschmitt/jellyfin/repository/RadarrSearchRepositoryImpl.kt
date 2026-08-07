@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrRelease
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.models.AutomaticSearchOutcome
@@ -11,14 +12,15 @@ import timber.log.Timber
 
 /**
  * Movie counterpart of [SonarrSearchRepositoryImpl] - same lambda-injection pattern
- * ([radarrApiKeyProvider] resolves the secret from `SecureCredentialStore` in `core`,
- * [scheduleCompletionCheck] enqueues `dev.pschmitt.jellyfin.work.AutomaticSearchWorker`) and the
- * same per-target release cache. Constructed via `dev.pschmitt.jellyfin.di.RadarrSearchModule` (a
- * Hilt `@Provides`) rather than an `@Inject` constructor, since `data` has no Hilt plugin.
+ * ([resolveConfig] resolves the active profile's effective Radarr config from `core`'s
+ * `PvrConfigResolver`, [scheduleCompletionCheck] enqueues
+ * `dev.pschmitt.jellyfin.work.AutomaticSearchWorker`) and the same per-target release cache.
+ * Constructed via `dev.pschmitt.jellyfin.di.RadarrSearchModule` (a Hilt `@Provides`) rather than an
+ * `@Inject` constructor, since `data` has no Hilt plugin.
  */
 class RadarrSearchRepositoryImpl(
     private val appPreferences: AppPreferences,
-    private val radarrApiKeyProvider: () -> String?,
+    private val resolveConfig: () -> PvrClientConfig?,
     private val scheduleCompletionCheck: (movieId: Int, commandId: Int) -> Unit,
 ) : RadarrSearchRepository {
     // Keyed by Radarr movie id. This repository is a Hilt singleton (see RadarrSearchModule), so
@@ -115,9 +117,10 @@ class RadarrSearchRepositoryImpl(
     }
 
     private fun api(): RadarrApi? {
-        if (!appPreferences.getValue(appPreferences.radarrEnabled)) return null
-        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-        val apiKey = radarrApiKeyProvider()
+        val config = resolveConfig() ?: return null
+        if (!config.enabled) return null
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
         return RadarrApi(baseUrl, apiKey)
     }

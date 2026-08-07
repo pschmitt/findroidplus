@@ -7,10 +7,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.repository.SonarrSearchRepository
 import dev.pschmitt.jellyfin.repository.SonarrSearchRepositoryImpl
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.work.AutomaticSearchWorker
 import javax.inject.Singleton
@@ -22,13 +23,15 @@ object SonarrSearchModule {
     @Provides
     fun provideSonarrSearchRepository(
         appPreferences: AppPreferences,
-        secureCredentialStore: SecureCredentialStore,
+        pvrConfigResolver: PvrConfigResolver,
         workManager: WorkManager,
     ): SonarrSearchRepository {
         return SonarrSearchRepositoryImpl(
             appPreferences = appPreferences,
-            sonarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            resolveConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.SONARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
             scheduleCompletionCheck = { episodeId, commandId ->
                 val request =

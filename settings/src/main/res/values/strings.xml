@@ -7,8 +7,17 @@
     <string name="settings_preferred_audio_language_summary">Automatically select this language for audio tracks when available</string>
     <string name="settings_preferred_subtitle_language">Preferred subtitle language</string>
     <string name="settings_preferred_subtitle_language_summary">Automatically select this language for subtitles when available</string>
+    <string name="settings_category_profiles">Profiles</string>
+    <string name="settings_category_profiles_summary">Switch between Jellyfin logins, each with its own optional Sonarr/Radarr/Jellyseerr setup</string>
     <string name="settings_category_connections">Accounts</string>
     <string name="settings_connections_summary">Servers, users &amp; integrations</string>
+    <string name="pvr_poll_interval">Poll interval</string>
+    <string name="pvr_poll_interval_summary">How often to check Sonarr/Radarr for queue updates. Between 5 and 1440 minutes. Applies to every profile.</string>
+    <string name="pvr_release_cache">Release search cache</string>
+    <string name="pvr_release_cache_summary">How long to reuse the results of a manual release search for the same episode, instead of re-querying Sonarr/indexers. Applies to every profile.</string>
+    <string name="settings_category_advanced">Advanced</string>
+    <string name="settings_category_advanced_summary">Sync intervals, notifications, cache and network timeouts</string>
+    <string name="settings_group_pvr_sync">Sonarr/Radarr sync</string>
     <string name="settings_category_servers">Servers</string>
     <string name="settings_category_servers_summary">Manage the Jellyfin servers connected to this app</string>
     <string name="settings_category_backup">Backup &amp; Restore</string>

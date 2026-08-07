@@ -4,11 +4,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.repository.PvrDiskSpaceRepository
 import dev.pschmitt.jellyfin.repository.PvrDiskSpaceRepositoryImpl
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
-import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import javax.inject.Singleton
 
 @Module
@@ -17,16 +17,18 @@ object PvrDiskSpaceModule {
     @Singleton
     @Provides
     fun providePvrDiskSpaceRepository(
-        appPreferences: AppPreferences,
-        secureCredentialStore: SecureCredentialStore,
+        pvrConfigResolver: PvrConfigResolver
     ): PvrDiskSpaceRepository {
         return PvrDiskSpaceRepositoryImpl(
-            appPreferences = appPreferences,
-            sonarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            resolveSonarrConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.SONARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
-            radarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            resolveRadarrConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.RADARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
         )
     }

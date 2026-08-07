@@ -4,11 +4,12 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.repository.QueueStatusRepository
 import dev.pschmitt.jellyfin.repository.QueueStatusRepositoryImpl
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.work.PvrDownloadFinishedNotifier
 import javax.inject.Singleton
@@ -24,7 +25,7 @@ object QueueStatusModule {
     fun provideQueueStatusRepository(
         appPreferences: AppPreferences,
         jellyfinRepository: JellyfinRepository,
-        secureCredentialStore: SecureCredentialStore,
+        pvrConfigResolver: PvrConfigResolver,
         downloadFinishedNotifier: PvrDownloadFinishedNotifier,
     ): QueueStatusRepository {
         // Not tied to any Android component's lifecycle - the repository's poll loop should keep
@@ -34,11 +35,15 @@ object QueueStatusModule {
         return QueueStatusRepositoryImpl(
             appPreferences = appPreferences,
             jellyfinRepository = jellyfinRepository,
-            sonarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            resolveSonarrConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.SONARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
-            radarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            resolveRadarrConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.RADARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
             },
             onDownloadFinished = downloadFinishedNotifier::notifyFinished,
             scope = scope,

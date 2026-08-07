@@ -17,6 +17,9 @@ import dev.pschmitt.jellyfin.models.JollyfinSourceDto
 import dev.pschmitt.jellyfin.models.JollyfinTrickplayInfoDto
 import dev.pschmitt.jellyfin.models.JollyfinUserDataDto
 import dev.pschmitt.jellyfin.models.PendingDownloadRequestDto
+import dev.pschmitt.jellyfin.models.Profile
+import dev.pschmitt.jellyfin.models.ProfileWithUserAndServer
+import dev.pschmitt.jellyfin.models.PvrServiceConfig
 import dev.pschmitt.jellyfin.models.Server
 import dev.pschmitt.jellyfin.models.ServerAddress
 import dev.pschmitt.jellyfin.models.ServerWithAddressAndUser
@@ -413,4 +416,50 @@ interface ServerDatabaseDao {
         "SELECT * FROM pending_download_requests WHERE serverId = :serverId AND userId = :userId"
     )
     fun getPendingDownloadRequests(serverId: String, userId: UUID): List<PendingDownloadRequestDto>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertProfile(profile: Profile)
+
+    @Update fun updateProfile(profile: Profile)
+
+    @Query("DELETE FROM profiles WHERE id = :id") fun deleteProfile(id: UUID)
+
+    @Query("SELECT * FROM profiles WHERE id = :id") fun getProfile(id: UUID): Profile?
+
+    @Query("SELECT * FROM profiles WHERE isMain = 1 LIMIT 1") fun getMainProfile(): Profile?
+
+    @Query("SELECT * FROM profiles WHERE userId = :userId")
+    fun getProfilesForUser(userId: UUID): List<Profile>
+
+    @Query("SELECT * FROM profiles") fun getAllProfiles(): List<Profile>
+
+    @Query("SELECT * FROM users") fun getAllUsers(): List<User>
+
+    @Query(
+        "SELECT profiles.*, users.name AS userName, servers.id AS serverId, servers.name AS serverName FROM profiles JOIN users ON users.id = profiles.userId JOIN servers ON servers.id = users.serverId ORDER BY users.name ASC"
+    )
+    fun getProfilesWithUserAndServer(): List<ProfileWithUserAndServer>
+
+    @Query(
+        "SELECT profiles.*, users.name AS userName, servers.id AS serverId, servers.name AS serverName FROM profiles JOIN users ON users.id = profiles.userId JOIN servers ON servers.id = users.serverId WHERE profiles.id = :id"
+    )
+    fun getProfileWithUserAndServer(id: UUID): ProfileWithUserAndServer?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertPvrServiceConfig(config: PvrServiceConfig)
+
+    @Update fun updatePvrServiceConfig(config: PvrServiceConfig)
+
+    @Query("DELETE FROM pvrServiceConfigs WHERE id = :id") fun deletePvrServiceConfig(id: UUID)
+
+    @Query("SELECT * FROM pvrServiceConfigs WHERE id = :id")
+    fun getPvrServiceConfig(id: UUID): PvrServiceConfig?
+
+    // Used by ProfileMigrationRunner's one-time upgrade backfill: writes every newly-computed
+    // Profile/PvrServiceConfig row atomically, so a crash mid-way leaves nothing behind and a
+    // retry on next launch starts clean instead of duplicating rows.
+    @Transaction
+    fun backfillProfiles(profiles: List<Profile>, pvrServiceConfigs: List<PvrServiceConfig>) {
+        pvrServiceConfigs.forEach { insertPvrServiceConfig(it) }
+        profiles.forEach { insertProfile(it) }
+    }
 }

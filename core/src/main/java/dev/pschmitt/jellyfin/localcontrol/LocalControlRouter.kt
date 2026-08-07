@@ -2,7 +2,6 @@ package dev.pschmitt.jellyfin.localcontrol
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
 import dev.pschmitt.jellyfin.api.pvr.PvrHttpClient
 import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
@@ -18,11 +17,11 @@ import dev.pschmitt.jellyfin.models.JollyfinMovie
 import dev.pschmitt.jellyfin.models.JollyfinSeason
 import dev.pschmitt.jellyfin.models.JollyfinShow
 import dev.pschmitt.jellyfin.models.JollyfinSourceType
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.pvr.PvrConfiguration
 import dev.pschmitt.jellyfin.repository.AutoDownloadRuleRepository
 import dev.pschmitt.jellyfin.repository.JellyfinRepository
 import dev.pschmitt.jellyfin.repository.RemoteConfigRepository
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
 import java.util.UUID
@@ -66,7 +65,7 @@ class LocalControlRouter
 constructor(
     @ApplicationContext private val context: Context,
     private val appPreferences: AppPreferences,
-    private val secureCredentialStore: SecureCredentialStore,
+    private val pvrConfigResolver: PvrConfigResolver,
     private val jellyfinRepository: JellyfinRepository,
     private val downloader: Downloader,
     private val pvrConfiguration: PvrConfiguration,
@@ -653,14 +652,15 @@ constructor(
                 errorBody("Sonarr is not configured/enabled"),
             )
         }
+        val config = pvrConfigResolver.resolveConfig(PvrService.SONARR)
         val baseUrl =
-            appPreferences.getValue(appPreferences.sonarrBaseUrl)
+            config?.baseUrl
                 ?: return LocalControlResponse(
                     LocalControlStatus.CONFLICT,
                     errorBody("Sonarr is not configured/enabled"),
                 )
         val apiKey =
-            secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
+            config.apiKey
                 ?: return LocalControlResponse(
                     LocalControlStatus.CONFLICT,
                     errorBody("Sonarr is not configured/enabled"),
@@ -676,14 +676,15 @@ constructor(
                 errorBody("Radarr is not configured/enabled"),
             )
         }
+        val config = pvrConfigResolver.resolveConfig(PvrService.RADARR)
         val baseUrl =
-            appPreferences.getValue(appPreferences.radarrBaseUrl)
+            config?.baseUrl
                 ?: return LocalControlResponse(
                     LocalControlStatus.CONFLICT,
                     errorBody("Radarr is not configured/enabled"),
                 )
         val apiKey =
-            secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY)
+            config.apiKey
                 ?: return LocalControlResponse(
                     LocalControlStatus.CONFLICT,
                     errorBody("Radarr is not configured/enabled"),
@@ -694,8 +695,9 @@ constructor(
 
     private fun resolveSeerrApi(): SeerrApi? {
         if (!pvrConfiguration.isSeerrConfigured()) return null
-        val baseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl) ?: return null
-        val apiKey = secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY) ?: return null
+        val config = pvrConfigResolver.resolveConfig(PvrService.SEERR) ?: return null
+        val baseUrl = config.baseUrl ?: return null
+        val apiKey = config.apiKey ?: return null
         return SeerrApi(baseUrl, apiKey)
     }
 
@@ -1146,23 +1148,23 @@ constructor(
             }
             "sonarr" -> {
                 if (!pvrConfiguration.isSonarrConfigured()) return null
-                val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl) ?: return null
-                val apiKey =
-                    secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY) ?: return null
+                val config = pvrConfigResolver.resolveConfig(PvrService.SONARR) ?: return null
+                val baseUrl = config.baseUrl ?: return null
+                val apiKey = config.apiKey ?: return null
                 baseUrl to PvrHttpClient.create(apiKey, PvrService.SONARR)
             }
             "radarr" -> {
                 if (!pvrConfiguration.isRadarrConfigured()) return null
-                val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl) ?: return null
-                val apiKey =
-                    secureCredentialStore.getString(PvrCredentialKeys.RADARR_API_KEY) ?: return null
+                val config = pvrConfigResolver.resolveConfig(PvrService.RADARR) ?: return null
+                val baseUrl = config.baseUrl ?: return null
+                val apiKey = config.apiKey ?: return null
                 baseUrl to PvrHttpClient.create(apiKey, PvrService.RADARR)
             }
             "seerr" -> {
                 if (!pvrConfiguration.isSeerrConfigured()) return null
-                val baseUrl = appPreferences.getValue(appPreferences.seerrBaseUrl) ?: return null
-                val apiKey =
-                    secureCredentialStore.getString(PvrCredentialKeys.SEERR_API_KEY) ?: return null
+                val config = pvrConfigResolver.resolveConfig(PvrService.SEERR) ?: return null
+                val baseUrl = config.baseUrl ?: return null
+                val apiKey = config.apiKey ?: return null
                 baseUrl to PvrHttpClient.create(apiKey, PvrService.SEERR)
             }
             else -> null

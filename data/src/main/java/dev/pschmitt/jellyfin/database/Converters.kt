@@ -1,6 +1,7 @@
 package dev.pschmitt.jellyfin.database
 
 import androidx.room.TypeConverter
+import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.models.JollyfinChapter
 import java.time.ZoneOffset
 import java.util.UUID
@@ -9,6 +10,16 @@ import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.model.DateTime
 
 class Converters {
+    @TypeConverter
+    fun fromPvrServiceToString(value: PvrService?): String? {
+        return value?.name
+    }
+
+    @TypeConverter
+    fun fromStringToPvrService(value: String?): PvrService? {
+        return value?.let { PvrService.valueOf(it) }
+    }
+
     @TypeConverter
     fun fromStringToUUID(value: String?): UUID? {
         return value?.let { UUID.fromString(it) }

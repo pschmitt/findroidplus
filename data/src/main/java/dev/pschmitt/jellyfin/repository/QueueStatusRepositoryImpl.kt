@@ -1,5 +1,6 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.api.pvr.RadarrManualImportFile
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
@@ -38,10 +39,10 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import timber.log.Timber
 
 /**
- * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
- * `SecureCredentialStore` - passed in as plain lambdas (rather than depending on
- * `SecureCredentialStore` directly) because that type lives in `core`, which depends on `data`, not
- * the other way around. [onDownloadFinished] posts the "download finished" notification - also a
+ * [resolveSonarrConfig]/[resolveRadarrConfig] resolve the active profile's effective Sonarr/Radarr
+ * config from `core`'s `PvrConfigResolver` - passed in as plain lambdas (rather than depending on
+ * `PvrConfigResolver` directly) because that type lives in `core`, which depends on `data`, not the
+ * other way around. [onDownloadFinished] posts the "download finished" notification - also a
  * lambda, since notifications are a `core`-layer concern.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.QueueStatusModule] (a Hilt `@Provides`, mirroring
@@ -55,8 +56,8 @@ import timber.log.Timber
 class QueueStatusRepositoryImpl(
     private val appPreferences: AppPreferences,
     private val jellyfinRepository: JellyfinRepository,
-    private val sonarrApiKeyProvider: () -> String?,
-    private val radarrApiKeyProvider: () -> String?,
+    private val resolveSonarrConfig: () -> PvrClientConfig?,
+    private val resolveRadarrConfig: () -> PvrClientConfig?,
     private val onDownloadFinished: (title: String) -> Unit,
     private val scope: CoroutineScope,
 ) : QueueStatusRepository {
@@ -326,8 +327,9 @@ class QueueStatusRepositoryImpl(
     }
 
     private suspend fun sonarrApiOrThrow(): SonarrApi {
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveSonarrConfig()
+        val baseUrl = config?.baseUrl
+        val apiKey = config?.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
             throw IllegalStateException("Sonarr is not configured")
         }
@@ -335,8 +337,9 @@ class QueueStatusRepositoryImpl(
     }
 
     private suspend fun radarrApiOrThrow(): RadarrApi {
-        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-        val apiKey = radarrApiKeyProvider()
+        val config = resolveRadarrConfig()
+        val baseUrl = config?.baseUrl
+        val apiKey = config?.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) {
             throw IllegalStateException("Radarr is not configured")
         }
@@ -402,9 +405,10 @@ class QueueStatusRepositoryImpl(
     }
 
     private suspend fun fetchSonarrSnapshot(): PvrQueueSnapshot {
-        if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return PvrQueueSnapshot()
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveSonarrConfig() ?: return PvrQueueSnapshot()
+        if (!config.enabled) return PvrQueueSnapshot()
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return PvrQueueSnapshot()
 
         return try {
@@ -450,9 +454,10 @@ class QueueStatusRepositoryImpl(
     }
 
     private suspend fun fetchRadarrSnapshot(): PvrQueueSnapshot {
-        if (!appPreferences.getValue(appPreferences.radarrEnabled)) return PvrQueueSnapshot()
-        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-        val apiKey = radarrApiKeyProvider()
+        val config = resolveRadarrConfig() ?: return PvrQueueSnapshot()
+        if (!config.enabled) return PvrQueueSnapshot()
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return PvrQueueSnapshot()
 
         return try {

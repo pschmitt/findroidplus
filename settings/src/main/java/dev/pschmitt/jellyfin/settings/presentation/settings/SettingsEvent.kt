@@ -13,6 +13,10 @@ sealed interface SettingsEvent {
 
     data object NavigateToConnections : SettingsEvent
 
+    data object NavigateToProfiles : SettingsEvent
+
+    data class NavigateToProfileDetail(val profileId: String) : SettingsEvent
+
     data object NavigateToHomeLayout : SettingsEvent
 
     data object NavigateToAbout : SettingsEvent

@@ -55,6 +55,8 @@ fun SettingsSubScreen(
     navigateToSubSettings: (indexes: IntArray) -> Unit,
     navigateToServers: () -> Unit,
     navigateToUsers: () -> Unit,
+    navigateToProfiles: () -> Unit,
+    navigateToProfileDetail: (profileId: String) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -69,6 +71,8 @@ fun SettingsSubScreen(
             is SettingsEvent.NavigateToSettingsFileEdit -> {}
             is SettingsEvent.NavigateToUsers -> navigateToUsers()
             is SettingsEvent.NavigateToServers -> navigateToServers()
+            is SettingsEvent.NavigateToProfiles -> navigateToProfiles()
+            is SettingsEvent.NavigateToProfileDetail -> navigateToProfileDetail(event.profileId)
             is SettingsEvent.NavigateToAbout -> Unit
             is SettingsEvent.NavigateToAutoDownloadRules -> Unit
             // Local CLI access (jollyfin-cli pairing) is phone-only for this pass - nothing for

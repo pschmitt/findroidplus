@@ -10,6 +10,10 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // Server
     val currentServer = Preference<String?>("pref_current_server", null)
 
+    // Profiles
+    val currentProfileId = Preference<String?>("pref_current_profile", null)
+    val profilesMigrated = Preference("pref_profiles_migrated", false)
+
     // Language
     val preferredAudioLanguage = Preference<String?>("pref_audio_language", null)
     val preferredSubtitleLanguage = Preference<String?>("pref_subtitle_language", null)

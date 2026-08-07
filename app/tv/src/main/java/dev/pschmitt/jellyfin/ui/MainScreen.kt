@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabDefaults
@@ -47,6 +48,7 @@ import dev.pschmitt.jellyfin.presentation.film.HomeScreen
 import dev.pschmitt.jellyfin.presentation.film.MediaScreen
 import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
+import dev.pschmitt.jellyfin.settings.R as SettingsR
 import dev.pschmitt.jellyfin.ui.components.LoadingIndicator
 import dev.pschmitt.jellyfin.ui.components.PillBorderIndicator
 import dev.pschmitt.jellyfin.ui.components.ProfileButton
@@ -57,6 +59,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 @Composable
 fun MainScreen(
     navigateToSettings: () -> Unit,
+    navigateToProfiles: () -> Unit,
     navigateToLibrary: (libraryId: UUID, libraryName: String, libraryType: CollectionType) -> Unit,
     navigateToMovie: (itemId: UUID) -> Unit,
     navigateToShow: (itemId: UUID) -> Unit,
@@ -70,6 +73,7 @@ fun MainScreen(
     MainScreenLayout(
         uiState = delegatedUiState,
         navigateToSettings = navigateToSettings,
+        navigateToProfiles = navigateToProfiles,
         navigateToLibrary = navigateToLibrary,
         navigateToMovie = navigateToMovie,
         navigateToShow = navigateToShow,
@@ -89,6 +93,7 @@ enum class TabDestination(@param:DrawableRes val icon: Int, @param:StringRes val
 private fun MainScreenLayout(
     uiState: MainViewModel.UiState,
     navigateToSettings: () -> Unit,
+    navigateToProfiles: () -> Unit,
     navigateToLibrary: (libraryId: UUID, libraryName: String, libraryType: CollectionType) -> Unit,
     navigateToMovie: (itemId: UUID) -> Unit,
     navigateToShow: (itemId: UUID) -> Unit,
@@ -184,7 +189,19 @@ private fun MainScreenLayout(
                 if (isLoading) {
                     LoadingIndicator()
                 }
-                ProfileButton(user = user, onClick = { navigateToSettings() })
+                // Settings gets its own icon button now that the profile avatar opens the
+                // quick-switcher below - Settings > Profiles still reaches the same
+                // ProfilesScreen, so nothing is lost, it's just no longer the only door in.
+                IconButton(onClick = navigateToSettings) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_settings),
+                        contentDescription = stringResource(id = SettingsR.string.title_settings),
+                        tint = Color.White,
+                    )
+                }
+                // Repurposed as a home-screen profile quick-switcher (in addition to still being
+                // reachable via Settings > Profiles).
+                ProfileButton(user = user, onClick = { navigateToProfiles() })
             }
         }
         when (activeTabIndex) {
@@ -216,6 +233,7 @@ private fun MainScreenLayoutPreview() {
         MainScreenLayout(
             uiState = MainViewModel.UiState.Normal(server = dummyServer, user = dummyUser),
             navigateToSettings = {},
+            navigateToProfiles = {},
             navigateToLibrary = { _, _, _ -> },
             navigateToMovie = {},
             navigateToShow = {},

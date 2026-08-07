@@ -23,40 +23,40 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pschmitt.jellyfin.core.R as CoreR
-import dev.pschmitt.jellyfin.core.presentation.dummy.dummyServer
-import dev.pschmitt.jellyfin.core.presentation.dummy.dummyServerAddress
-import dev.pschmitt.jellyfin.models.ServerWithAddresses
 import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
-import dev.pschmitt.jellyfin.setup.presentation.servers.ServersAction
-import dev.pschmitt.jellyfin.setup.presentation.servers.ServersEvent
-import dev.pschmitt.jellyfin.setup.presentation.servers.ServersState
-import dev.pschmitt.jellyfin.setup.presentation.servers.ServersViewModel
+import dev.pschmitt.jellyfin.setup.presentation.profiles.ProfilesAction
+import dev.pschmitt.jellyfin.setup.presentation.profiles.ProfilesEvent
+import dev.pschmitt.jellyfin.setup.presentation.profiles.ProfilesState
+import dev.pschmitt.jellyfin.setup.presentation.profiles.ProfilesViewModel
 import dev.pschmitt.jellyfin.utils.ObserveAsEvents
+import java.util.UUID
 
+/**
+ * Home header's switcher - replaces the old server-only [dev.pschmitt.jellyfin.models.Server]
+ * picker. Lists Profiles (each already bundling a Jellyfin server+user, plus optional
+ * Sonarr/Radarr/Jellyseerr overrides) instead of raw servers.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServerSelectionBottomSheet(
-    currentServerId: String,
+fun ProfileSelectionBottomSheet(
     onUpdate: () -> Unit,
     onManage: () -> Unit,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    viewModel: ServersViewModel = hiltViewModel(),
+    viewModel: ProfilesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(true) { viewModel.loadServers() }
+    LaunchedEffect(true) { viewModel.loadProfiles() }
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is ServersEvent.ServerChanged -> onUpdate()
-            is ServersEvent.AddressChanged -> onUpdate()
+            is ProfilesEvent.ProfileChanged -> onUpdate()
         }
     }
 
-    ServerSelectionBottomSheetLayout(
-        currentServerId = currentServerId,
+    ProfileSelectionBottomSheetLayout(
         state = state,
         onManage = onManage,
         onAction = { action -> viewModel.onAction(action) },
@@ -67,11 +67,10 @@ fun ServerSelectionBottomSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ServerSelectionBottomSheetLayout(
-    currentServerId: String,
-    state: ServersState,
+private fun ProfileSelectionBottomSheetLayout(
+    state: ProfilesState,
     onManage: () -> Unit,
-    onAction: (action: ServersAction) -> Unit,
+    onAction: (action: ProfilesAction) -> Unit,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
@@ -83,22 +82,19 @@ private fun ServerSelectionBottomSheetLayout(
                     end = MaterialTheme.spacings.medium,
                     bottom = MaterialTheme.spacings.default,
                 ),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
-            items(items = state.servers, key = { it.server.id }) { server ->
-                ServerSelectionItem(
-                    server = server,
-                    selected = server.server.id == currentServerId,
-                    onClick = { onAction(ServersAction.OnServerClick(server.server.id)) },
-                    onClickAddress = { addressId ->
-                        onAction(ServersAction.OnAddressClick(addressId = addressId))
-                    },
+            items(items = state.profiles, key = { it.profile.id }) { profile ->
+                ProfileSelectionItem(
+                    profile = profile,
+                    selected = profile.profile.id == state.currentProfileId,
+                    onClick = { onAction(ProfilesAction.OnProfileClick(profile.profile.id)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
             item(key = "manage") {
                 OutlinedButton(onClick = onManage, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = stringResource(CoreR.string.manage_servers))
+                    Text(text = stringResource(CoreR.string.manage_profiles))
                 }
             }
         }
@@ -108,21 +104,10 @@ private fun ServerSelectionBottomSheetLayout(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
-private fun ServerSelectionBottomSheetPreview() {
+private fun ProfileSelectionBottomSheetPreview() {
     JollyfinTheme {
-        ServerSelectionBottomSheetLayout(
-            currentServerId = "",
-            state =
-                ServersState(
-                    servers =
-                        listOf(
-                            ServerWithAddresses(
-                                server = dummyServer,
-                                addresses = listOf(dummyServerAddress),
-                                user = null,
-                            )
-                        )
-                ),
+        ProfileSelectionBottomSheetLayout(
+            state = ProfilesState(currentProfileId = UUID.randomUUID()),
             onManage = {},
             onAction = {},
             onDismissRequest = {},

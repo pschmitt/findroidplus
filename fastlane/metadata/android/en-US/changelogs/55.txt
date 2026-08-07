@@ -1,0 +1,9 @@
+New:
+- Added Profiles: bundle a Jellyfin login with its own optional Sonarr/Radarr/Jellyseerr setup,
+  switch between them from the home header or Settings > Profiles.
+- New profiles default to "<user>@<server>" and inherit the main profile's Sonarr/Radarr/Jellyseerr
+  configuration until you override a service for that profile specifically.
+- Downloaded files are shared across profiles on the same Jellyfin server - switching profiles
+  never re-downloads anything.
+- Existing servers/users/PVR settings are migrated automatically on upgrade into a single main
+  profile, with nothing lost.

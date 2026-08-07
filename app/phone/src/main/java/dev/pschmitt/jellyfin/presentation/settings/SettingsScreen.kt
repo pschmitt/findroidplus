@@ -74,7 +74,8 @@ fun SettingsScreen(
     navigateToLocalAccess: () -> Unit,
     navigateToBackupSettings: () -> Unit,
     navigateToQrExport: () -> Unit,
-    navigateToConnections: () -> Unit,
+    navigateToProfiles: () -> Unit,
+    navigateToProfileDetail: (profileId: String) -> Unit,
     navigateToHomeLayout: () -> Unit,
     navigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -99,7 +100,9 @@ fun SettingsScreen(
             is SettingsEvent.NavigateToLocalAccess -> navigateToLocalAccess()
             is SettingsEvent.NavigateToBackupSettings -> navigateToBackupSettings()
             is SettingsEvent.NavigateToQrExport -> navigateToQrExport()
-            is SettingsEvent.NavigateToConnections -> navigateToConnections()
+            is SettingsEvent.NavigateToConnections -> Unit
+            is SettingsEvent.NavigateToProfiles -> navigateToProfiles()
+            is SettingsEvent.NavigateToProfileDetail -> navigateToProfileDetail(event.profileId)
             is SettingsEvent.NavigateToHomeLayout -> navigateToHomeLayout()
             is SettingsEvent.UpdateTheme -> {
                 val uiModeManager = context.getSystemService(UiModeManager::class.java)

@@ -4,11 +4,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.repository.SeasonEpisodesRepository
 import dev.pschmitt.jellyfin.repository.SeasonEpisodesRepositoryImpl
-import dev.pschmitt.jellyfin.security.SecureCredentialStore
-import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import javax.inject.Singleton
 
 @Module
@@ -17,14 +17,14 @@ object SeasonEpisodesModule {
     @Singleton
     @Provides
     fun provideSeasonEpisodesRepository(
-        appPreferences: AppPreferences,
-        secureCredentialStore: SecureCredentialStore,
+        pvrConfigResolver: PvrConfigResolver
     ): SeasonEpisodesRepository {
         return SeasonEpisodesRepositoryImpl(
-            appPreferences = appPreferences,
-            sonarrApiKeyProvider = {
-                secureCredentialStore.getString(PvrCredentialKeys.SONARR_API_KEY)
-            },
+            resolveConfig = {
+                pvrConfigResolver.resolveConfig(PvrService.SONARR)?.let {
+                    PvrClientConfig(enabled = it.enabled, baseUrl = it.baseUrl, apiKey = it.apiKey)
+                }
+            }
         )
     }
 }

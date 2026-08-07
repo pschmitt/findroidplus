@@ -1,30 +1,29 @@
 package dev.pschmitt.jellyfin.repository
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfig
 import dev.pschmitt.jellyfin.api.pvr.PvrDiskSpaceDto
 import dev.pschmitt.jellyfin.api.pvr.PvrRootFolderDto
 import dev.pschmitt.jellyfin.api.pvr.RadarrApi
 import dev.pschmitt.jellyfin.api.pvr.SonarrApi
 import dev.pschmitt.jellyfin.models.PvrDiskSpaceResult
 import dev.pschmitt.jellyfin.models.PvrServiceDiskSpace
-import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
 
 /**
- * [sonarrApiKeyProvider]/[radarrApiKeyProvider] resolve the current secret from
- * `SecureCredentialStore` - passed in as plain lambdas rather than a direct dependency because that
- * type lives in `core`, which depends on `data`, not the other way around. Same pattern as
- * `CalendarRepositoryImpl`/`QueueStatusRepositoryImpl`.
+ * [resolveSonarrConfig]/[resolveRadarrConfig] resolve the active profile's effective Sonarr/Radarr
+ * config from `core`'s `PvrConfigResolver` - passed in as plain lambdas rather than a direct
+ * dependency because that type lives in `core`, which depends on `data`, not the other way around.
+ * Same pattern as `CalendarRepositoryImpl`/`QueueStatusRepositoryImpl`.
  *
  * Constructed via [dev.pschmitt.jellyfin.di.PvrDiskSpaceModule] (a Hilt `@Provides`) rather than an
  * `@Inject` constructor, since `data` has no Hilt plugin.
  */
 class PvrDiskSpaceRepositoryImpl(
-    private val appPreferences: AppPreferences,
-    private val sonarrApiKeyProvider: () -> String?,
-    private val radarrApiKeyProvider: () -> String?,
+    private val resolveSonarrConfig: () -> PvrClientConfig?,
+    private val resolveRadarrConfig: () -> PvrClientConfig?,
 ) : PvrDiskSpaceRepository {
 
     override suspend fun getDiskSpace(): PvrDiskSpaceResult = coroutineScope {
@@ -35,9 +34,10 @@ class PvrDiskSpaceRepositoryImpl(
     }
 
     private suspend fun fetchSonarr(): PvrServiceDiskSpace? {
-        if (!appPreferences.getValue(appPreferences.sonarrEnabled)) return null
-        val baseUrl = appPreferences.getValue(appPreferences.sonarrBaseUrl)
-        val apiKey = sonarrApiKeyProvider()
+        val config = resolveSonarrConfig() ?: return null
+        if (!config.enabled) return null
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
 
         return try {
@@ -56,9 +56,10 @@ class PvrDiskSpaceRepositoryImpl(
     }
 
     private suspend fun fetchRadarr(): PvrServiceDiskSpace? {
-        if (!appPreferences.getValue(appPreferences.radarrEnabled)) return null
-        val baseUrl = appPreferences.getValue(appPreferences.radarrBaseUrl)
-        val apiKey = radarrApiKeyProvider()
+        val config = resolveRadarrConfig() ?: return null
+        if (!config.enabled) return null
+        val baseUrl = config.baseUrl
+        val apiKey = config.apiKey
         if (baseUrl.isNullOrBlank() || apiKey.isNullOrBlank()) return null
 
         return try {

@@ -68,12 +68,13 @@ import dev.pschmitt.jellyfin.presentation.film.components.HomeDiscoverSection
 import dev.pschmitt.jellyfin.presentation.film.components.HomeHeader
 import dev.pschmitt.jellyfin.presentation.film.components.HomeSection
 import dev.pschmitt.jellyfin.presentation.film.components.HomeView
+import dev.pschmitt.jellyfin.presentation.film.components.ProfileSelectionBottomSheet
 import dev.pschmitt.jellyfin.presentation.film.components.PvrQueueDownloadCard
 import dev.pschmitt.jellyfin.presentation.film.components.SectionServiceIcons
-import dev.pschmitt.jellyfin.presentation.film.components.ServerSelectionBottomSheet
 import dev.pschmitt.jellyfin.presentation.theme.JollyfinTheme
 import dev.pschmitt.jellyfin.presentation.theme.spacings
 import dev.pschmitt.jellyfin.presentation.utils.rememberSafePadding
+import dev.pschmitt.jellyfin.setup.presentation.profiles.ProfilesViewModel
 import dev.pschmitt.jellyfin.utils.HomeSectionKeys
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -137,6 +138,9 @@ private fun HomeScreenLayout(
     onSearchAction: (SearchAction) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val profilesViewModel: ProfilesViewModel = hiltViewModel()
+    val profilesState by profilesViewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(true) { profilesViewModel.loadProfiles() }
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default
@@ -169,7 +173,8 @@ private fun HomeScreenLayout(
             )
         } else {
             HomeHeader(
-                serverName = state.server?.name ?: "",
+                serverName =
+                    profilesState.currentProfile?.profile?.name ?: state.server?.name ?: "",
                 isLoading = state.isLoading,
                 isError = state.error != null,
                 onServerClick = { showServerSelectionBottomSheet = true },
@@ -360,10 +365,10 @@ private fun HomeScreenLayout(
     }
 
     if (showServerSelectionBottomSheet) {
-        ServerSelectionBottomSheet(
-            currentServerId = state.server?.id ?: "",
+        ProfileSelectionBottomSheet(
             onUpdate = {
                 onAction(HomeAction.OnRetryClick)
+                profilesViewModel.loadProfiles()
                 scope
                     .launch { showServerSelectionSheetState.hide() }
                     .invokeOnCompletion {

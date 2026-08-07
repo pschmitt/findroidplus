@@ -1,6 +1,8 @@
 package dev.pschmitt.jellyfin.qrsetup
 
+import dev.pschmitt.jellyfin.api.pvr.PvrClientConfigFull
 import dev.pschmitt.jellyfin.api.pvr.PvrCredentialKeys
+import dev.pschmitt.jellyfin.api.pvr.PvrService
 import dev.pschmitt.jellyfin.backup.BackupServer
 import dev.pschmitt.jellyfin.backup.PrefValue
 import dev.pschmitt.jellyfin.database.ServerDatabaseDao
@@ -31,14 +33,17 @@ data class PvrOverride(val baseUrl: String, val apiKey: String)
  * module has no Hilt setup) - see `core/di/QrConfigModule.kt` for the Hilt `@Provides` binding,
  * same pattern as [dev.pschmitt.jellyfin.backup.BackupManager].
  *
- * [getSecret]/[putSecret] read/write `SecureCredentialStore` via plain lambdas, since that type
- * lives in `core`, which depends on `data`, not the other way around.
+ * [resolvePvrConfig] resolves the active profile's effective Sonarr/Radarr/Seerr config from
+ * `core`'s `PvrConfigResolver`, and [putSecret] writes `SecureCredentialStore` - both plain
+ * lambdas, since those types live in `core`, which depends on `data`, not the other way around.
  */
 class QrConfigManager(
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
-    private val getSecret: (key: String) -> String? = { null },
+    private val resolvePvrConfig: (PvrService) -> PvrClientConfigFull? = { null },
     private val putSecret: (key: String, value: String) -> Unit = { _, _ -> },
+    // See BackupManager's identical parameter for why this is needed.
+    private val reconcileProfiles: () -> Unit = {},
 ) {
     suspend fun buildEnvelope(
         includeJellyfin: Boolean,
@@ -62,7 +67,7 @@ class QrConfigManager(
                     secrets,
                     appPreferences.sonarrEnabled,
                     appPreferences.sonarrBaseUrl,
-                    SONARR_SECRET_KEYS,
+                    PvrService.SONARR,
                     sonarrOverride,
                 )
             }
@@ -72,7 +77,7 @@ class QrConfigManager(
                     secrets,
                     appPreferences.radarrEnabled,
                     appPreferences.radarrBaseUrl,
-                    RADARR_SECRET_KEYS,
+                    PvrService.RADARR,
                     radarrOverride,
                 )
             }
@@ -82,7 +87,7 @@ class QrConfigManager(
                     secrets,
                     appPreferences.seerrEnabled,
                     appPreferences.seerrBaseUrl,
-                    SEERR_SECRET_KEYS,
+                    PvrService.SEERR,
                     seerrOverride,
                 )
             }
@@ -110,14 +115,11 @@ class QrConfigManager(
      * and only the export's [putPvrFields] falls back to the stored secret. Empty string if not
      * configured.
      */
-    fun currentSonarrBaseUrl(): String =
-        appPreferences.getValue(appPreferences.sonarrBaseUrl).orEmpty()
+    fun currentSonarrBaseUrl(): String = resolvePvrConfig(PvrService.SONARR)?.baseUrl.orEmpty()
 
-    fun currentRadarrBaseUrl(): String =
-        appPreferences.getValue(appPreferences.radarrBaseUrl).orEmpty()
+    fun currentRadarrBaseUrl(): String = resolvePvrConfig(PvrService.RADARR)?.baseUrl.orEmpty()
 
-    fun currentSeerrBaseUrl(): String =
-        appPreferences.getValue(appPreferences.seerrBaseUrl).orEmpty()
+    fun currentSeerrBaseUrl(): String = resolvePvrConfig(PvrService.SEERR)?.baseUrl.orEmpty()
 
     suspend fun applyEnvelope(envelope: QrConfigEnvelope): QrImportSummary =
         withContext(Dispatchers.IO) {
@@ -135,7 +137,13 @@ class QrConfigManager(
                 }
                 editor.apply()
             }
+            // Writes into the legacy flat SecureCredentialStore keys buildEnvelope()/putPvrFields()
+            // labels its export with (see PvrCredentialKeys.legacyApiKey() and friends) -
+            // reconcileProfiles() below reads these same legacy keys (plus the plainPrefs restore
+            // above) and folds them into the main profile's real PvrServiceConfig + namespaced
+            // secrets.
             for ((key, value) in envelope.secrets) putSecret(key, value)
+            reconcileProfiles()
 
             QrImportSummary(
                 serverImported = envelope.server != null,
@@ -181,57 +189,44 @@ class QrConfigManager(
         appPreferences.setValue(appPreferences.currentServer, backupServer.server.id)
     }
 
+    /**
+     * Reads the active profile's resolved Sonarr/Radarr/Seerr config - MUST go through
+     * [resolvePvrConfig] (the profile-aware [dev.pschmitt.jellyfin.pvr.PvrConfigResolver]), not a
+     * direct `SecureCredentialStore` read keyed by [PvrCredentialKeys]'s legacy flat constants,
+     * since those are stale/unused once a profile has its own namespaced override. Still labels
+     * each exported secret with its legacy flat key name (via [PvrCredentialKeys.legacyApiKey] and
+     * friends) purely as the envelope's map key - [applyEnvelope] writes it straight back with that
+     * same label.
+     */
     private fun putPvrFields(
         plainPrefs: MutableMap<String, PrefValue>,
         secrets: MutableMap<String, String>,
         enabled: Preference<Boolean>,
         baseUrl: Preference<String?>,
-        secretKeys: List<String>,
+        service: PvrService,
         override: PvrOverride?,
     ) {
+        val config = resolvePvrConfig(service)
         plainPrefs[enabled.backendName] = PrefValue.BoolValue(true)
         if (override != null) {
             plainPrefs[baseUrl.backendName] = PrefValue.StringValue(override.baseUrl)
             // A blank apiKey means "keep the existing one" (see QrExportState's apiKey fields),
-            // same as a blank jellyfinPassword - fall back to what's already stored instead of
-            // dropping the secret from the export.
-            if (override.apiKey.isNotBlank()) {
-                secrets[secretKeys.first()] = override.apiKey
-            } else {
-                getSecret(secretKeys.first())?.let { secrets[secretKeys.first()] = it }
-            }
-            // Headers/basic-auth aren't exposed as editable override fields - carry over
-            // whatever's already stored for them.
-            for (key in secretKeys.drop(1)) getSecret(key)?.let { secrets[key] = it }
+            // same as a blank jellyfinPassword - fall back to the active profile's resolved key
+            // instead of dropping the secret from the export.
+            val apiKey = override.apiKey.ifBlank { config?.apiKey }
+            apiKey?.let { secrets[PvrCredentialKeys.legacyApiKey(service)] = it }
         } else {
-            appPreferences.getValue(baseUrl)?.let {
-                plainPrefs[baseUrl.backendName] = PrefValue.StringValue(it)
-            }
-            for (key in secretKeys) getSecret(key)?.let { secrets[key] = it }
+            config?.baseUrl?.let { plainPrefs[baseUrl.backendName] = PrefValue.StringValue(it) }
+            config?.apiKey?.let { secrets[PvrCredentialKeys.legacyApiKey(service)] = it }
         }
-    }
-
-    private companion object {
-        val SONARR_SECRET_KEYS =
-            listOf(
-                PvrCredentialKeys.SONARR_API_KEY,
-                PvrCredentialKeys.SONARR_HTTP_HEADERS,
-                PvrCredentialKeys.SONARR_BASIC_AUTH_USERNAME,
-                PvrCredentialKeys.SONARR_BASIC_AUTH_PASSWORD,
-            )
-        val RADARR_SECRET_KEYS =
-            listOf(
-                PvrCredentialKeys.RADARR_API_KEY,
-                PvrCredentialKeys.RADARR_HTTP_HEADERS,
-                PvrCredentialKeys.RADARR_BASIC_AUTH_USERNAME,
-                PvrCredentialKeys.RADARR_BASIC_AUTH_PASSWORD,
-            )
-        val SEERR_SECRET_KEYS =
-            listOf(
-                PvrCredentialKeys.SEERR_API_KEY,
-                PvrCredentialKeys.SEERR_HTTP_HEADERS,
-                PvrCredentialKeys.SEERR_BASIC_AUTH_USERNAME,
-                PvrCredentialKeys.SEERR_BASIC_AUTH_PASSWORD,
-            )
+        // Headers/basic-auth aren't exposed as editable override fields either way - always carry
+        // over whatever's resolved for the active profile.
+        config?.httpHeaders?.let { secrets[PvrCredentialKeys.legacyHttpHeaders(service)] = it }
+        config?.basicAuthUsername?.let {
+            secrets[PvrCredentialKeys.legacyBasicAuthUsername(service)] = it
+        }
+        config?.basicAuthPassword?.let {
+            secrets[PvrCredentialKeys.legacyBasicAuthPassword(service)] = it
+        }
     }
 }

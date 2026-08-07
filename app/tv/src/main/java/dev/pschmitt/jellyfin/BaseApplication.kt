@@ -12,6 +12,7 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
+import dev.pschmitt.jellyfin.profile.ProfileMigrationRunner
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
 import dev.pschmitt.jellyfin.utils.Downloader
 import dev.pschmitt.jellyfin.work.ForegroundDownloadResumer
@@ -25,8 +26,13 @@ class BaseApplication : Application(), SingletonImageLoader.Factory {
 
     @Inject lateinit var downloader: Downloader
 
+    @Inject lateinit var profileMigrationRunner: ProfileMigrationRunner
+
     override fun onCreate() {
         super.onCreate()
+        // Must run before anything reads Profile/PVR config - a fresh install is a no-op here
+        // since there are no User rows yet. Matches app/phone's BaseApplication ordering.
+        profileMigrationRunner.run()
         ForegroundDownloadResumer(downloader).start()
     }
 

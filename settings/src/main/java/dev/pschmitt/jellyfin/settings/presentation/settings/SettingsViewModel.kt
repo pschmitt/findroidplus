@@ -72,13 +72,13 @@ constructor(
                 preferences =
                     listOf(
                         PreferenceCategory(
-                            nameStringResource = R.string.settings_category_connections,
-                            descriptionStringRes = R.string.settings_connections_summary,
-                            iconDrawableId = R.drawable.ic_network,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            nameStringResource = R.string.settings_category_profiles,
+                            descriptionStringRes = R.string.settings_category_profiles_summary,
+                            iconDrawableId = R.drawable.ic_user,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE, DeviceType.TV),
                             onClick = {
                                 viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.NavigateToConnections)
+                                    eventsChannel.send(SettingsEvent.NavigateToProfiles)
                                 }
                             },
                         ),
@@ -974,6 +974,58 @@ constructor(
                                                 ),
                                             ),
                                     ),
+                                ),
+                        )
+                    ),
+            ),
+            PreferenceGroup(
+                nameStringResource = R.string.settings_category_advanced,
+                preferences =
+                    listOf(
+                        PreferenceCategory(
+                            nameStringResource = R.string.settings_category_advanced,
+                            descriptionStringRes = R.string.settings_category_advanced_summary,
+                            iconDrawableId = R.drawable.ic_sliders_horizontal,
+                            onClick = {
+                                viewModelScope.launch {
+                                    eventsChannel.send(
+                                        SettingsEvent.NavigateToSettings(
+                                            intArrayOf(it.nameStringResource)
+                                        )
+                                    )
+                                }
+                            },
+                            nestedPreferenceGroups =
+                                listOf(
+                                    // Global, not per-profile (unlike the PVR overrides configured
+                                    // inside a profile's own detail screen) - applies to every
+                                    // profile at once.
+                                    PreferenceGroup(
+                                        nameStringResource = R.string.settings_group_pvr_sync,
+                                        preferences =
+                                            listOf(
+                                                PreferenceIntInput(
+                                                    nameStringResource = R.string.pvr_poll_interval,
+                                                    descriptionStringRes =
+                                                        R.string.pvr_poll_interval_summary,
+                                                    iconDrawableId = R.drawable.ic_refresh_cw,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.pvrPollIntervalMinutes,
+                                                    validRange = 5..1440,
+                                                ),
+                                                PreferenceIntInput(
+                                                    nameStringResource = R.string.pvr_release_cache,
+                                                    descriptionStringRes =
+                                                        R.string.pvr_release_cache_summary,
+                                                    iconDrawableId = R.drawable.ic_clock,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.pvrReleaseCacheMinutes,
+                                                    validRange = 1..1440,
+                                                ),
+                                            ),
+                                    ),
                                     PreferenceGroup(
                                         nameStringResource =
                                             R.string.download_group_new_item_notifications,
@@ -1014,10 +1066,6 @@ constructor(
                                                 ),
                                             ),
                                     ),
-                                    // "Network" used to be its own top-level group (general
-                                    // request/connect/socket/PVR-search timeouts, plus "Cache");
-                                    // folded in here since both are network-adjacent settings
-                                    // rather than a separate top-level concern.
                                     PreferenceGroup(
                                         nameStringResource = R.string.settings_group_timeouts,
                                         preferences =
@@ -1065,9 +1113,6 @@ constructor(
                                                 ),
                                             ),
                                     ),
-                                    // "Cache" used to be its own top-level group; folded in here
-                                    // since image caching is itself a network-traffic tradeoff, not
-                                    // a separate top-level concern.
                                     PreferenceGroup(
                                         nameStringResource = R.string.settings_category_cache,
                                         preferences =
