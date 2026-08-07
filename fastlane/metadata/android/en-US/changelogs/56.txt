@@ -1,0 +1,7 @@
+New:
+- Choose which saved profile to include when exporting QR setup configuration.
+- Group related Settings together and move less-used controls under Advanced.
+
+Fixed:
+- Keep QR setup, service status, and download actions tied to the active profile.
+- Preserve Seerr configuration when migrating existing profile settings.
