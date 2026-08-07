@@ -1978,6 +1978,7 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
       titleless About at the bottom. Keep the focused Player, Integrations, Network, and Data
       sections between those cards. Verified with remote `ktfmtCheck`, phone/TV Kotlin compilation,
       and core/data unit tests; not physically tested.
+- [x] Remove redundant outer titles from the remaining single-entry Settings root cards (Player,
+      Integrations, Network, and Data); their cards already contain the corresponding titled row.
 
-Status: **done** (2026-08-07) - Seerr renaming, QR export profile selection, and the refined
-Settings grouping are complete and verified remotely; no physical-device verification for Settings.
+Status: **done** (2026-08-07) - redundant single-entry root-card headers removed and deployed.

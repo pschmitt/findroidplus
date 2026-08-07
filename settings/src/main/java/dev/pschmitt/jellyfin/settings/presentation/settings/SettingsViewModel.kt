@@ -1243,7 +1243,6 @@ constructor(
             )
             add(
                 PreferenceGroup(
-                    nameStringResource = R.string.settings_category_player,
                     preferences =
                         listOf(
                             interfaceCategory.copy(
@@ -1257,7 +1256,6 @@ constructor(
             )
             add(
                 PreferenceGroup(
-                    nameStringResource = R.string.settings_category_integrations,
                     preferences =
                         listOf(
                             advancedCategory.copy(
@@ -1272,7 +1270,6 @@ constructor(
             )
             add(
                 PreferenceGroup(
-                    nameStringResource = R.string.settings_category_network,
                     preferences =
                         listOf(
                             advancedCategory.copy(
@@ -1284,7 +1281,7 @@ constructor(
                         ),
                 )
             )
-            add(baseGroup(R.string.settings_group_data))
+            add(PreferenceGroup(preferences = baseGroup(R.string.settings_group_data).preferences))
             add(PreferenceGroup(preferences = advancedPreferences))
             add(PreferenceGroup(preferences = baseGroup(R.string.about).preferences))
         }
