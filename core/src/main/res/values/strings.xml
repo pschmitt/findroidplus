@@ -343,6 +343,7 @@
     <string name="qr_export_toggle_password">Show/hide passphrase</string>
     <string name="qr_export_regenerate_password">Generate a new passphrase</string>
     <string name="qr_export_nothing_selected">Select at least one section above</string>
+    <string name="qr_export_profile">Profile</string>
     <string name="qr_export_jellyfin_account">Jellyfin account</string>
     <string name="qr_export_advanced">Advanced</string>
     <string name="qr_export_jellyfin_username">Username</string>

@@ -13,6 +13,8 @@ sealed interface QrExportAction {
 
     data class OnIncludeSeerrChanged(val include: Boolean) : QrExportAction
 
+    data class OnProfileSelected(val profileId: UUID) : QrExportAction
+
     data class OnServerSelected(val serverId: String) : QrExportAction
 
     data class OnUserSelected(val userId: UUID) : QrExportAction

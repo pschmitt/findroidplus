@@ -33,19 +33,20 @@ data class PvrOverride(val baseUrl: String, val apiKey: String)
  * module has no Hilt setup) - see `core/di/QrConfigModule.kt` for the Hilt `@Provides` binding,
  * same pattern as [dev.pschmitt.jellyfin.backup.BackupManager].
  *
- * [resolvePvrConfig] resolves the active profile's effective Sonarr/Radarr/Seerr config from
+ * [resolvePvrConfig] resolves the selected profile's effective Sonarr/Radarr/Seerr config from
  * `core`'s `PvrConfigResolver`, and [putSecret] writes `SecureCredentialStore` - both plain
  * lambdas, since those types live in `core`, which depends on `data`, not the other way around.
  */
 class QrConfigManager(
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
-    private val resolvePvrConfig: (PvrService) -> PvrClientConfigFull? = { null },
+    private val resolvePvrConfig: (UUID?, PvrService) -> PvrClientConfigFull? = { _, _ -> null },
     private val putSecret: (key: String, value: String) -> Unit = { _, _ -> },
     // See BackupManager's identical parameter for why this is needed.
     private val reconcileProfiles: () -> Unit = {},
 ) {
     suspend fun buildEnvelope(
+        profileId: UUID? = null,
         includeJellyfin: Boolean,
         jellyfinServerId: String?,
         jellyfinUserId: UUID?,
@@ -65,9 +66,9 @@ class QrConfigManager(
                 putPvrFields(
                     plainPrefs,
                     secrets,
-                    appPreferences.sonarrEnabled,
                     appPreferences.sonarrBaseUrl,
                     PvrService.SONARR,
+                    profileId,
                     sonarrOverride,
                 )
             }
@@ -75,9 +76,9 @@ class QrConfigManager(
                 putPvrFields(
                     plainPrefs,
                     secrets,
-                    appPreferences.radarrEnabled,
                     appPreferences.radarrBaseUrl,
                     PvrService.RADARR,
+                    profileId,
                     radarrOverride,
                 )
             }
@@ -85,9 +86,9 @@ class QrConfigManager(
                 putPvrFields(
                     plainPrefs,
                     secrets,
-                    appPreferences.seerrEnabled,
                     appPreferences.seerrBaseUrl,
                     PvrService.SEERR,
+                    profileId,
                     seerrOverride,
                 )
             }
@@ -110,16 +111,19 @@ class QrConfigManager(
         withContext(Dispatchers.IO) { database.getAllServersWithAddressesAndUsers() }
 
     /**
-     * Currently-stored base URL, to pre-fill the export screen's editable field. The API key is
-     * deliberately not exposed here - like `jellyfinPassword`, its export-screen field starts blank
-     * and only the export's [putPvrFields] falls back to the stored secret. Empty string if not
-     * configured.
+     * Currently-stored base URL for [profileId], to pre-fill the export screen's editable field.
+     * The API key is deliberately not exposed here - like `jellyfinPassword`, its export-screen
+     * field starts blank and only the export's [putPvrFields] falls back to the stored secret. Empty
+     * string if not configured.
      */
-    fun currentSonarrBaseUrl(): String = resolvePvrConfig(PvrService.SONARR)?.baseUrl.orEmpty()
+    fun currentSonarrBaseUrl(profileId: UUID? = null): String =
+        resolvePvrConfig(profileId, PvrService.SONARR)?.baseUrl.orEmpty()
 
-    fun currentRadarrBaseUrl(): String = resolvePvrConfig(PvrService.RADARR)?.baseUrl.orEmpty()
+    fun currentRadarrBaseUrl(profileId: UUID? = null): String =
+        resolvePvrConfig(profileId, PvrService.RADARR)?.baseUrl.orEmpty()
 
-    fun currentSeerrBaseUrl(): String = resolvePvrConfig(PvrService.SEERR)?.baseUrl.orEmpty()
+    fun currentSeerrBaseUrl(profileId: UUID? = null): String =
+        resolvePvrConfig(profileId, PvrService.SEERR)?.baseUrl.orEmpty()
 
     suspend fun applyEnvelope(envelope: QrConfigEnvelope): QrImportSummary =
         withContext(Dispatchers.IO) {
@@ -201,13 +205,13 @@ class QrConfigManager(
     private fun putPvrFields(
         plainPrefs: MutableMap<String, PrefValue>,
         secrets: MutableMap<String, String>,
-        enabled: Preference<Boolean>,
         baseUrl: Preference<String?>,
         service: PvrService,
+        profileId: UUID?,
         override: PvrOverride?,
     ) {
-        val config = resolvePvrConfig(service)
-        plainPrefs[enabled.backendName] = PrefValue.BoolValue(true)
+        val config = resolvePvrConfig(profileId, service)
+        plainPrefs[enabledPreference(service).backendName] = PrefValue.BoolValue(true)
         if (override != null) {
             plainPrefs[baseUrl.backendName] = PrefValue.StringValue(override.baseUrl)
             // A blank apiKey means "keep the existing one" (see QrExportState's apiKey fields),
@@ -229,4 +233,11 @@ class QrConfigManager(
             secrets[PvrCredentialKeys.legacyBasicAuthPassword(service)] = it
         }
     }
+
+    private fun enabledPreference(service: PvrService): Preference<Boolean> =
+        when (service) {
+            PvrService.SONARR -> appPreferences.sonarrEnabled
+            PvrService.RADARR -> appPreferences.radarrEnabled
+            PvrService.SEERR -> appPreferences.seerrEnabled
+        }
 }

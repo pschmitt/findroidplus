@@ -28,17 +28,22 @@ object QrConfigModule {
         return QrConfigManager(
             database = serverDatabase,
             appPreferences = appPreferences,
-            resolvePvrConfig = { service ->
-                pvrConfigResolver.resolveConfig(service)?.let {
-                    PvrClientConfigFull(
-                        enabled = it.enabled,
-                        baseUrl = it.baseUrl,
-                        apiKey = it.apiKey,
-                        httpHeaders = it.httpHeaders,
-                        basicAuthUsername = it.basicAuthUsername,
-                        basicAuthPassword = it.basicAuthPassword,
-                    )
-                }
+            resolvePvrConfig = { profileId, service ->
+                (if (profileId == null) {
+                        pvrConfigResolver.resolveConfig(service)
+                    } else {
+                        pvrConfigResolver.resolveConfigForProfile(profileId, service)
+                    })
+                    ?.let {
+                        PvrClientConfigFull(
+                            enabled = it.enabled,
+                            baseUrl = it.baseUrl,
+                            apiKey = it.apiKey,
+                            httpHeaders = it.httpHeaders,
+                            basicAuthUsername = it.basicAuthUsername,
+                            basicAuthPassword = it.basicAuthPassword,
+                        )
+                    }
             },
             // Blocking, not the fire-and-forget default - see
             // SecureCredentialStore.putStringBlocking.

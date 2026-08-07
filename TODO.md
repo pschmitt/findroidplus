@@ -1925,8 +1925,12 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
   - [x] Verified: remote `ktfmtCheck` and `:app:phone:compileLibreDebugKotlin`/
         `:app:tv:compileLibreDebugKotlin` both green on rofl-13. Not yet re-verified on a physical
         device.
-- [ ] Let the QR export flow choose which profile's config gets encoded, instead of always
-      encoding whichever profile happens to be active.
+- [x] Let the QR export flow choose which profile's config gets encoded, instead of always
+      encoding whichever profile happens to be active. Added a profile picker to the phone export
+      screen; the selected profile now drives service availability, base URL prefill, Jellyfin
+      account defaults, and `QrConfigManager.buildEnvelope(profileId = ...)` resolution through
+      `PvrConfigResolver.resolveConfigForProfile()`. Verified with remote ktfmt, phone/TV Kotlin
+      compilation, and core/data unit tests.
 - [x] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
       the generated envelope, rather than always bundling all three. Turned out this already
       existed: `QrExportState.includeSonarr/includeRadarr/includeSeerr` +
@@ -1965,5 +1969,5 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
       reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user; needs a
       concrete new grouping/order proposal before implementing.
 
-Status: in progress (2026-08-07) - Seerr renaming done; QR-flow verification/scoping and the
-Settings reorg still open.
+Status: in progress (2026-08-07) - Seerr renaming and QR export profile selection done; Settings
+reorg remains open pending a concrete UX/IA decision.

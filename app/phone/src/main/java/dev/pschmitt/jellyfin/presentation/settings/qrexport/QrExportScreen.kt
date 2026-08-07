@@ -57,6 +57,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.zxing.common.BitMatrix
 import dev.pschmitt.jellyfin.core.R as CoreR
+import dev.pschmitt.jellyfin.models.ProfileWithUserAndServer
 import dev.pschmitt.jellyfin.presentation.components.BaseDialog
 import dev.pschmitt.jellyfin.presentation.components.TopBarTitle
 import dev.pschmitt.jellyfin.qrsetup.QrCodec
@@ -188,6 +189,14 @@ private fun QrExportScreenLayout(state: QrExportState, onAction: (QrExportAction
                 text = stringResource(CoreR.string.qr_export_summary),
                 style = MaterialTheme.typography.bodySmall,
             )
+
+            if (state.availableProfiles.size > 1) {
+                ProfilePicker(
+                    profiles = state.availableProfiles,
+                    selectedProfileId = state.selectedProfileId,
+                    onSelected = { onAction(QrExportAction.OnProfileSelected(it)) },
+                )
+            }
 
             SectionCheckbox(
                 labelRes = CoreR.string.qr_export_include_jellyfin,
@@ -566,6 +575,72 @@ private fun JellyfinServerUserPicker(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = label)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfilePicker(
+    profiles: List<ProfileWithUserAndServer>,
+    selectedProfileId: UUID?,
+    onSelected: (UUID) -> Unit,
+) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val selectedProfile = profiles.firstOrNull { it.profile.id == selectedProfileId }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { showDialog = true },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(CoreR.string.qr_export_profile),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = selectedProfile?.profile?.name.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Icon(painter = painterResource(CoreR.drawable.ic_chevron_down), contentDescription = null)
+    }
+
+    if (showDialog) {
+        BaseDialog(
+            title = stringResource(CoreR.string.qr_export_profile),
+            onDismiss = { showDialog = false },
+        ) { contentPadding ->
+            Column(modifier = Modifier.fillMaxWidth().padding(contentPadding)) {
+                for (profile in profiles) {
+                    val isSelected = profile.profile.id == selectedProfileId
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    onSelected(profile.profile.id)
+                                    showDialog = false
+                                }
+                                .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = {
+                                onSelected(profile.profile.id)
+                                showDialog = false
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(text = profile.profile.name)
+                            Text(
+                                text = "${profile.userName} · ${profile.serverName}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }

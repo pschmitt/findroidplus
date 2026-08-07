@@ -6,13 +6,16 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pschmitt.jellyfin.api.JellyfinApi
-import dev.pschmitt.jellyfin.pvr.PvrConfiguration
+import dev.pschmitt.jellyfin.api.pvr.PvrService
+import dev.pschmitt.jellyfin.pvr.PvrConfigResolver
 import dev.pschmitt.jellyfin.qrsetup.JellyfinUserOverride
 import dev.pschmitt.jellyfin.qrsetup.PvrOverride
 import dev.pschmitt.jellyfin.qrsetup.QrConfigCodec
 import dev.pschmitt.jellyfin.qrsetup.QrConfigManager
 import dev.pschmitt.jellyfin.settings.domain.AppPreferences
+import dev.pschmitt.jellyfin.setup.domain.ProfileRepository
 import java.security.SecureRandom
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,7 +30,8 @@ class QrExportViewModel
 constructor(
     @param:ApplicationContext private val context: Context,
     private val appPreferences: AppPreferences,
-    private val pvrConfiguration: PvrConfiguration,
+    private val profileRepository: ProfileRepository,
+    private val pvrConfigResolver: PvrConfigResolver,
     private val qrConfigManager: QrConfigManager,
 ) : ViewModel() {
     private val _state = MutableStateFlow(QrExportState())
@@ -49,6 +53,7 @@ constructor(
                 updateAndRegenerate { it.copy(includeRadarr = action.include) }
             is QrExportAction.OnIncludeSeerrChanged ->
                 updateAndRegenerate { it.copy(includeSeerr = action.include) }
+            is QrExportAction.OnProfileSelected -> selectProfile(action.profileId)
             is QrExportAction.OnServerSelected -> {
                 val server = _state.value.availableServers.find { it.server.id == action.serverId }
                 val defaultUser =
@@ -122,31 +127,83 @@ constructor(
 
     private fun load() {
         viewModelScope.launch {
+            val availableProfiles = profileRepository.getProfiles()
+            val selectedProfileId =
+                profileRepository.getCurrentProfile()?.profile?.id
+                    ?: availableProfiles.firstOrNull()?.profile?.id
             val availableServers = qrConfigManager.getAvailableServers()
-            val currentServerId = appPreferences.getValue(appPreferences.currentServer)
+            val selectedProfile = availableProfiles.firstOrNull {
+                it.profile.id == selectedProfileId
+            }
+            val currentServerId =
+                selectedProfile?.serverId ?: appPreferences.getValue(appPreferences.currentServer)
             val currentServer =
                 availableServers.find { it.server.id == currentServerId }
                     ?: availableServers.firstOrNull()
             val currentUser =
-                currentServer?.users?.find { it.id == currentServer.server.currentUserId }
+                currentServer?.users?.find { it.id == selectedProfile?.profile?.userId }
+                    ?: currentServer?.users?.find { it.id == currentServer.server.currentUserId }
                     ?: currentServer?.users?.firstOrNull()
             _state.value =
                 _state.value.copy(
                     jellyfinAvailable = currentServer != null,
-                    sonarrAvailable = pvrConfiguration.isSonarrConfigured(),
-                    radarrAvailable = pvrConfiguration.isRadarrConfigured(),
-                    seerrAvailable = pvrConfiguration.isSeerrConfigured(),
+                    sonarrAvailable = isConfigured(selectedProfileId, PvrService.SONARR),
+                    radarrAvailable = isConfigured(selectedProfileId, PvrService.RADARR),
+                    seerrAvailable = isConfigured(selectedProfileId, PvrService.SEERR),
+                    availableProfiles = availableProfiles,
+                    selectedProfileId = selectedProfileId,
                     availableServers = availableServers,
                     selectedServerId = currentServer?.server?.id,
                     selectedUserId = currentUser?.id,
                     jellyfinUsername = currentUser?.name.orEmpty(),
-                    sonarrBaseUrl = qrConfigManager.currentSonarrBaseUrl(),
-                    radarrBaseUrl = qrConfigManager.currentRadarrBaseUrl(),
-                    seerrBaseUrl = qrConfigManager.currentSeerrBaseUrl(),
+                    sonarrBaseUrl = qrConfigManager.currentSonarrBaseUrl(selectedProfileId),
+                    radarrBaseUrl = qrConfigManager.currentRadarrBaseUrl(selectedProfileId),
+                    seerrBaseUrl = qrConfigManager.currentSeerrBaseUrl(selectedProfileId),
                     password = generatePassword(),
                 )
             generate()
         }
+    }
+
+    private fun selectProfile(profileId: UUID) {
+        val current = _state.value
+        val profile = current.availableProfiles.firstOrNull { it.profile.id == profileId } ?: return
+        val profileUser =
+            current.availableServers
+                .find { it.server.id == profile.serverId }
+                ?.users
+                ?.find { it.id == profile.profile.userId }
+        updateAndRegenerate {
+            it.copy(
+                selectedProfileId = profileId,
+                sonarrAvailable = isConfigured(profileId, PvrService.SONARR),
+                radarrAvailable = isConfigured(profileId, PvrService.RADARR),
+                seerrAvailable = isConfigured(profileId, PvrService.SEERR),
+                selectedServerId = profile.serverId,
+                selectedUserId = profileUser?.id,
+                jellyfinUsername = profileUser?.name.orEmpty(),
+                jellyfinPassword = "",
+                jellyfinLoginError = null,
+                sonarrBaseUrl = qrConfigManager.currentSonarrBaseUrl(profileId),
+                sonarrApiKey = "",
+                radarrBaseUrl = qrConfigManager.currentRadarrBaseUrl(profileId),
+                radarrApiKey = "",
+                seerrBaseUrl = qrConfigManager.currentSeerrBaseUrl(profileId),
+                seerrApiKey = "",
+            )
+        }
+    }
+
+    private fun isConfigured(profileId: UUID?, service: PvrService): Boolean {
+        val config =
+            if (profileId == null) {
+                pvrConfigResolver.resolveConfig(service)
+            } else {
+                pvrConfigResolver.resolveConfigForProfile(profileId, service)
+            }
+        return config?.let {
+            it.enabled && !it.baseUrl.isNullOrBlank() && !it.apiKey.isNullOrBlank()
+        } == true
     }
 
     private fun generate() {
@@ -187,6 +244,7 @@ constructor(
             try {
                 val envelope =
                     qrConfigManager.buildEnvelope(
+                        profileId = current.selectedProfileId,
                         includeJellyfin = current.includeJellyfin && current.jellyfinAvailable,
                         jellyfinServerId = current.selectedServerId,
                         jellyfinUserId = current.selectedUserId,

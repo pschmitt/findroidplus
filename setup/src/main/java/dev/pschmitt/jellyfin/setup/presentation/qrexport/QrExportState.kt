@@ -1,6 +1,7 @@
 package dev.pschmitt.jellyfin.setup.presentation.qrexport
 
 import dev.pschmitt.jellyfin.models.ServerWithAddressesAndUsers
+import dev.pschmitt.jellyfin.models.ProfileWithUserAndServer
 import java.util.UUID
 
 data class QrExportState(
@@ -12,6 +13,8 @@ data class QrExportState(
     val includeSonarr: Boolean = true,
     val includeRadarr: Boolean = true,
     val includeSeerr: Boolean = true,
+    val availableProfiles: List<ProfileWithUserAndServer> = emptyList(),
+    val selectedProfileId: UUID? = null,
     // Only relevant/shown when there's more than one server, or the selected server has more
     // than one user - single-server/single-user setups just use whichever one there is.
     val availableServers: List<ServerWithAddressesAndUsers> = emptyList(),
@@ -22,8 +25,8 @@ data class QrExportState(
     // means "keep the existing session" (no re-auth); a non-blank one triggers a live login
     // against the selected server to embed a fresh token instead. Sonarr/Radarr/Seerr apiKey
     // fields follow the same blank-means-"keep the stored one" pattern - only baseUrl is
-    // pre-filled from AppPreferences; apiKey starts blank and QrConfigManager falls back to
-    // SecureCredentialStore's value when it's left that way.
+    // pre-filled from the selected profile; apiKey starts blank and QrConfigManager falls back to
+    // the selected profile's resolved SecureCredentialStore value when it's left that way.
     val jellyfinUsername: String = "",
     val jellyfinPassword: String = "",
     val jellyfinPasswordVisible: Boolean = false,
