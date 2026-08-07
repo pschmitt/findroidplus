@@ -153,6 +153,20 @@ fun AutoDownloadRulesScreen(
                             Toast.LENGTH_SHORT,
                         )
                         .show()
+                is RemoteDevicesAction.ForgetDevice -> {
+                    val deviceName =
+                        devicesState.devices.find { it.id == action.deviceId }?.name
+                            ?: action.deviceId
+                    Toast.makeText(
+                            context,
+                            context.getString(
+                                CoreR.string.remote_devices_device_forgotten_toast,
+                                deviceName,
+                            ),
+                            Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                }
                 is RemoteDevicesAction.SetRemoteManagementEnabled,
                 is RemoteDevicesAction.OnBackClick -> Unit
             }

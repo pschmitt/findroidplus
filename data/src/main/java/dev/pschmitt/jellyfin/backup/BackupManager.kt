@@ -193,6 +193,14 @@ class BackupManager(
             // pending-download signal that overrides whatever the user answers in the restore
             // flow's own "redownload?" prompt (see RestoreBackupViewModel.OnRedownloadNo).
             if (key == appPreferences.pendingRestoreDownloads.backendName) continue
+            // A per-physical-device identity (RemoteConfigRepository's device registry key), not a
+            // user setting - must never round-trip through a backup either. Restoring it onto a
+            // different physical device would make that device impersonate whichever device the
+            // backup was taken on in the shared cross-device registry: both would then heartbeat
+            // under the same id, each one's own "other devices" list would filter the other out as
+            // itself (see RemoteConfigRepositoryImpl.listOtherDevices), and the restored device
+            // would never show up as a distinct entry to either side.
+            if (key == appPreferences.thisDeviceId.backendName) continue
             result[key] =
                 when (value) {
                     is Boolean -> PrefValue.BoolValue(value)
@@ -210,6 +218,10 @@ class BackupManager(
     private fun restorePreferences(preferences: Map<String, PrefValue>) {
         val editor = appPreferences.sharedPreferences.edit()
         for ((key, value) in preferences) {
+            // Belt-and-suspenders for backups written before dumpPreferences() started excluding
+            // this key: never let an *older* backup reintroduce the device-identity collision on
+            // restore either.
+            if (key == appPreferences.thisDeviceId.backendName) continue
             when (value) {
                 is PrefValue.BoolValue -> editor.putBoolean(key, value.value)
                 is PrefValue.IntValue -> editor.putInt(key, value.value)

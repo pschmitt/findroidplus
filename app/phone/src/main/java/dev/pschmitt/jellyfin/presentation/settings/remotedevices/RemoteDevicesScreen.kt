@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +77,8 @@ fun DeviceSection(
     showsBySeriesId: Map<String, JollyfinShow>,
     onAction: (RemoteDevicesAction) -> Unit,
 ) {
+    var confirmForgetOpen by remember { mutableStateOf(false) }
+
     Column(
         modifier =
             Modifier.padding(
@@ -82,16 +86,27 @@ fun DeviceSection(
                 vertical = MaterialTheme.spacings.small,
             )
     ) {
-        Text(text = device.name, style = MaterialTheme.typography.titleMedium)
-        Text(
-            text =
-                stringResource(
-                    CoreR.string.remote_devices_last_seen,
-                    formatRelativeTime(device.lastSeenMillis),
-                ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = device.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.remote_devices_last_seen,
+                            formatRelativeTime(device.lastSeenMillis),
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = { confirmForgetOpen = true }) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_trash),
+                    contentDescription = stringResource(CoreR.string.remote_devices_forget_device),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
         if (device.activeRules.isEmpty()) {
             Text(
                 text = stringResource(CoreR.string.remote_devices_no_active_rules),
@@ -109,6 +124,52 @@ fun DeviceSection(
             }
         }
         HorizontalDivider(modifier = Modifier.padding(top = MaterialTheme.spacings.small))
+    }
+
+    // For a device that's gone for good (uninstalled, factory reset, or restored its identity
+    // onto a different physical device via a backup, see BackupManager) and will therefore never
+    // sync again to prune or remove itself - lets it be cleared from the shared registry right
+    // away instead of waiting out REMOTE_CONFIG_DEVICE_TTL_MILLIS.
+    if (confirmForgetOpen) {
+        AlertDialog(
+            onDismissRequest = { confirmForgetOpen = false },
+            title = {
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.remote_devices_forget_device_confirm_title,
+                            device.name,
+                        )
+                )
+            },
+            text = {
+                Text(
+                    text =
+                        stringResource(
+                            CoreR.string.remote_devices_forget_device_confirm_message,
+                            device.name,
+                        )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmForgetOpen = false
+                        onAction(RemoteDevicesAction.ForgetDevice(device.id))
+                    }
+                ) {
+                    Text(
+                        text = stringResource(CoreR.string.remote_devices_forget_device),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmForgetOpen = false }) {
+                    Text(text = stringResource(CoreR.string.cancel))
+                }
+            },
+        )
     }
 }
 

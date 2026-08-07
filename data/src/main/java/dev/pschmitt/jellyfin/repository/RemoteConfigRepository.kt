@@ -113,6 +113,17 @@ interface RemoteConfigRepository {
     suspend fun setRemoteManagementEnabled(enabled: Boolean)
 
     /**
+     * Forcibly removes [deviceId]'s registry entry, and any commands still queued *for* it, right
+     * away - rather than waiting up to
+     * [dev.pschmitt.jellyfin.repository.REMOTE_CONFIG_DEVICE_TTL_MILLIS] for [syncNow] to prune it
+     * automatically. For a device that's gone for good (uninstalled, factory reset, or that had its
+     * identity overwritten by restoring a backup taken on a different physical device) and so will
+     * never sync again to prune or remove itself. Commands [deviceId] itself originated, targeting
+     * *other* devices, are left alone - same reasoning as [setRemoteManagementEnabled].
+     */
+    suspend fun removeDevice(deviceId: String)
+
+    /**
      * Fetches the shared bucket, applies every command addressed to this device (oldest first, so
      * the latest of several queued pushes for the same series wins), strips applied/expired
      * commands, prunes stale device heartbeats, refreshes this device's own heartbeat (including a

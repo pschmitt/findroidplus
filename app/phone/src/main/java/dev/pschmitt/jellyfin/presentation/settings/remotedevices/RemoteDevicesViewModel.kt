@@ -147,7 +147,15 @@ constructor(
             is RemoteDevicesAction.CancelPendingCommand -> cancelPendingCommand(action.commandId)
             is RemoteDevicesAction.SetRemoteManagementEnabled ->
                 setRemoteManagementEnabled(action.enabled)
+            is RemoteDevicesAction.ForgetDevice -> forgetDevice(action.deviceId)
             is RemoteDevicesAction.OnBackClick -> Unit
+        }
+    }
+
+    private fun forgetDevice(deviceId: String) {
+        viewModelScope.launch {
+            remoteConfigRepository.removeDevice(deviceId)
+            load()
         }
     }
 

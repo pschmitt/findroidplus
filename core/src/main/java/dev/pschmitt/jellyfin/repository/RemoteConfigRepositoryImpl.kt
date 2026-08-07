@@ -209,16 +209,22 @@ class RemoteConfigRepositoryImpl(
 
     override suspend fun setRemoteManagementEnabled(enabled: Boolean) {
         appPreferences.setValue(appPreferences.remoteManagementEnabled, enabled)
-        if (enabled) return
+        if (!enabled) removeDeviceEntry(appPreferences.getOrCreateThisDeviceId())
+    }
+
+    override suspend fun removeDevice(deviceId: String) {
+        removeDeviceEntry(deviceId)
+    }
+
+    private suspend fun removeDeviceEntry(deviceId: String) {
         withContext(Dispatchers.IO) {
             writeMutex.withLock {
-                val thisId = appPreferences.getOrCreateThisDeviceId()
                 val bucket = fetchBucket()
                 val devices =
-                    decodeDevices(bucket.customPrefs[KEY_DEVICES]).filterNot { it.id == thisId }
+                    decodeDevices(bucket.customPrefs[KEY_DEVICES]).filterNot { it.id == deviceId }
                 val pending =
                     decodeCommands(bucket.customPrefs[KEY_PENDING]).filterNot {
-                        it.targetDeviceId == thisId
+                        it.targetDeviceId == deviceId
                     }
                 writeBucket(
                     bucket,

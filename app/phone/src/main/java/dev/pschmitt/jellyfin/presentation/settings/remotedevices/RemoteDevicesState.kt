@@ -36,4 +36,6 @@ sealed interface RemoteDevicesAction {
     data class CancelPendingCommand(val commandId: String) : RemoteDevicesAction
 
     data class SetRemoteManagementEnabled(val enabled: Boolean) : RemoteDevicesAction
+
+    data class ForgetDevice(val deviceId: String) : RemoteDevicesAction
 }
