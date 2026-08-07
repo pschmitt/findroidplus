@@ -1927,8 +1927,11 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
         device.
 - [ ] Let the QR export flow choose which profile's config gets encoded, instead of always
       encoding whichever profile happens to be active.
-- [ ] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
-      the generated envelope, rather than always bundling all three.
+- [x] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
+      the generated envelope, rather than always bundling all three. Turned out this already
+      existed: `QrExportState.includeSonarr/includeRadarr/includeSeerr` +
+      `QrExportScreen.kt`'s per-service switches were already wired end to end. No change needed -
+      correcting this item's status so the next pass doesn't duplicate it.
 - [x] Sweep remaining "Jellyseer"/"jellyseer" spellings (strings.xml, identifiers, comments) and
       rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr". First
       pass renamed the two user/dev-facing text hits (`settings_category_profiles_summary`,
