@@ -35,7 +35,7 @@ import java.util.UUID
 /**
  * Home header's switcher - replaces the old server-only [dev.pschmitt.jellyfin.models.Server]
  * picker. Lists Profiles (each already bundling a Jellyfin server+user, plus optional
- * Sonarr/Radarr/Jellyseerr overrides) instead of raw servers.
+ * Sonarr/Radarr/Seerr overrides) instead of raw servers.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

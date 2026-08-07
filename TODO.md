@@ -1907,10 +1907,21 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
       encoding whichever profile happens to be active.
 - [ ] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
       the generated envelope, rather than always bundling all three.
-- [ ] Sweep remaining "Jellyseer"/"jellyseer" spellings (strings.xml, identifiers, comments) and
-      rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr".
+- [x] Sweep remaining "Jellyseer"/"jellyseer" spellings (strings.xml, identifiers, comments) and
+      rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr". Grepped
+      the whole tree (excluding stale `.claude/worktrees/*` leftovers from unrelated earlier agent
+      runs): only two real hits were user/dev-facing and safe to rename -
+      `settings_category_profiles_summary` (strings.xml, only locale that has this key) and a
+      doc-comment in `ProfileSelectionBottomSheet.kt`. Deliberately left everything else alone: the
+      persisted preference/credential-store key names (`PvrCredentialKeys.kt`,
+      `AppPreferences.kt`) already carry their own comments explaining the pre-rebrand spelling is
+      locked in for existing installs, and the remaining doc-comments in `SeerrApi.kt`/
+      `SeerrDtos.kt`/`SeerrRepositoryImpl.kt` correctly name the real external product ("Seerr,
+      formerly Jellyseerr") rather than this app's own branding, so changing those would make the
+      comments factually wrong.
 - [ ] Reorganize Settings grouping/ordering again - the current layout (post-Profiles/Advanced
       reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user; needs a
       concrete new grouping/order proposal before implementing.
 
-Status: not started (2026-08-07).
+Status: in progress (2026-08-07) - Seerr renaming done; QR-flow verification/scoping and the
+Settings reorg still open.

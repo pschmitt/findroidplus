@@ -8,7 +8,7 @@
     <string name="settings_preferred_subtitle_language">Preferred subtitle language</string>
     <string name="settings_preferred_subtitle_language_summary">Automatically select this language for subtitles when available</string>
     <string name="settings_category_profiles">Profiles</string>
-    <string name="settings_category_profiles_summary">Switch between Jellyfin logins, each with its own optional Sonarr/Radarr/Jellyseerr setup</string>
+    <string name="settings_category_profiles_summary">Switch between Jellyfin logins, each with its own optional Sonarr/Radarr/Seerr setup</string>
     <string name="settings_category_connections">Accounts</string>
     <string name="settings_connections_summary">Servers, users &amp; integrations</string>
     <string name="pvr_poll_interval">Poll interval</string>
