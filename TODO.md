@@ -1895,3 +1895,22 @@ first live test.
 
 Status: **done**, 2026-08-06 - build/test/lint-verified remotely and deployed to all three
 attached devices; not yet tagged as a release build.
+
+## FINDROID-74: Profiles follow-ups (QR profile/service scoping, Seerr renaming, Settings reorg)
+
+Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
+
+- [ ] Verify the "setup another device" QR pairing flow (FINDROID-43) still works correctly now
+      that Sonarr/Radarr/Seerr config is per-profile instead of a single global singleton - it was
+      built and tested before Profiles existed.
+- [ ] Let the QR export flow choose which profile's config gets encoded, instead of always
+      encoding whichever profile happens to be active.
+- [ ] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
+      the generated envelope, rather than always bundling all three.
+- [ ] Sweep remaining "Jellyseer"/"jellyseer" spellings (strings.xml, identifiers, comments) and
+      rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr".
+- [ ] Reorganize Settings grouping/ordering again - the current layout (post-Profiles/Advanced
+      reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user; needs a
+      concrete new grouping/order proposal before implementing.
+
+Status: not started (2026-08-07).
