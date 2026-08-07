@@ -1973,6 +1973,11 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
       app language stayed with Appearance. Updated summaries, MPV navigation, and the screenshot
       test tag. Verified with remote `ktfmtCheck`, phone/TV Kotlin compilation, and core/data unit
       tests; not physically tested.
+- [x] Refine the Settings root presentation after trying the first grouping: combine Account,
+      Appearance, and Downloads into one titleless card; move titleless Advanced immediately above
+      titleless About at the bottom. Keep the focused Player, Integrations, Network, and Data
+      sections between those cards. Verified with remote `ktfmtCheck`, phone/TV Kotlin compilation,
+      and core/data unit tests; not physically tested.
 
-Status: **done** (2026-08-07) - Seerr renaming, QR export profile selection, and Settings reorg
-completed and verified remotely; no physical-device verification for the Settings change.
+Status: **done** (2026-08-07) - Seerr renaming, QR export profile selection, and the refined
+Settings grouping are complete and verified remotely; no physical-device verification for Settings.

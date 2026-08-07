@@ -1214,20 +1214,31 @@ constructor(
                     as PreferenceCategory
             val advancedGroups = advancedCategory.nestedPreferenceGroups
 
-            add(baseGroup(R.string.settings_group_account))
+            val appearancePreferences =
+                listOf(
+                    interfaceCategory.copy(
+                        nameStringResource = R.string.settings_category_appearance,
+                        descriptionStringRes = R.string.settings_category_appearance_summary,
+                        iconDrawableId = R.drawable.ic_palette,
+                        nestedPreferenceGroups = interfaceGroups.take(3),
+                    )
+                )
+            val advancedPreferences =
+                listOf(
+                    advancedCategory.copy(
+                        nameStringResource = R.string.settings_category_advanced,
+                        descriptionStringRes = R.string.settings_category_advanced_summary,
+                        iconDrawableId = R.drawable.ic_sliders_horizontal,
+                        nestedPreferenceGroups = advancedGroups.drop(3),
+                    )
+                )
+
             add(
                 PreferenceGroup(
-                    nameStringResource = R.string.settings_category_appearance,
                     preferences =
-                        listOf(
-                            interfaceCategory.copy(
-                                nameStringResource = R.string.settings_category_appearance,
-                                descriptionStringRes =
-                                    R.string.settings_category_appearance_summary,
-                                iconDrawableId = R.drawable.ic_palette,
-                                nestedPreferenceGroups = interfaceGroups.take(3),
-                            )
-                        ),
+                        baseGroup(R.string.settings_group_account).preferences +
+                            appearancePreferences +
+                            baseGroup(R.string.title_download).preferences,
                 )
             )
             add(
@@ -1244,7 +1255,6 @@ constructor(
                         ),
                 )
             )
-            add(baseGroup(R.string.title_download))
             add(
                 PreferenceGroup(
                     nameStringResource = R.string.settings_category_integrations,
@@ -1275,22 +1285,8 @@ constructor(
                 )
             )
             add(baseGroup(R.string.settings_group_data))
-            add(
-                PreferenceGroup(
-                    nameStringResource = R.string.settings_category_advanced,
-                    preferences =
-                        listOf(
-                            advancedCategory.copy(
-                                nameStringResource = R.string.settings_category_advanced,
-                                descriptionStringRes =
-                                    R.string.settings_category_advanced_summary,
-                                iconDrawableId = R.drawable.ic_sliders_horizontal,
-                                nestedPreferenceGroups = advancedGroups.drop(3),
-                            )
-                        ),
-                )
-            )
-            add(baseGroup(R.string.about))
+            add(PreferenceGroup(preferences = advancedPreferences))
+            add(PreferenceGroup(preferences = baseGroup(R.string.about).preferences))
         }
 
     fun loadPreferences(indexes: IntArray = intArrayOf(), deviceType: DeviceType) {
