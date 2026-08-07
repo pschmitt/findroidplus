@@ -1966,8 +1966,15 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
         `:data:testDebugUnitTest` all green on rofl-13. Not yet re-verified on a physical device
         with a real old-format backup file (no such file was available in this pass).
 - [ ] Reorganize Settings grouping/ordering again - the current layout (post-Profiles/Advanced
-      reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user; needs a
-      concrete new grouping/order proposal before implementing.
+      reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user. Proposed
+      direction (not implemented; confirm before the broad UX change): restore focused top-level
+      groups in this order: Account, Appearance, Player, Downloads, Integrations, Network, Data,
+      Advanced, About. Keep theme/home/app-language in Appearance; move preferred media languages,
+      player backend, gestures, seeking, media segments, trickplay, PiP, and MPV options into
+      Player; move PVR sync and new-item notifications into Integrations; move request/connect/
+      socket/PVR-search timeouts into Network; leave cache in Advanced. This uses the existing
+      category strings and makes the current oversized Appearance and mixed Advanced screens
+      discoverable by purpose.
 
 Status: in progress (2026-08-07) - Seerr renaming and QR export profile selection done; Settings
 reorg remains open pending a concrete UX/IA decision.
