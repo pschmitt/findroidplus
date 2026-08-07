@@ -111,7 +111,7 @@ class StoreScreenshotTest {
         clickWithRetry { composeRule.onNodeWithTag("e2e-settings-button") }
         // The root Settings screen's lone "Appearance" section has both its own section header
         // and its single category row titled "Appearance" (SettingsViewModel.kt reuses
-        // settings_category_interface for both the PreferenceGroup name and the PreferenceCategory
+        // settings_category_appearance for both the PreferenceGroup name and the PreferenceCategory
         // inside it), so onNodeWithText("Appearance") is ambiguous - and text-matching around it
         // isn't reliably fixable at all: real CI runs showed "found 2 nodes" on phone but "found 0
         // nodes" for the same query on the sevenInch/tenInch NavigationRail layout, and even the

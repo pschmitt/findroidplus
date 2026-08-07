@@ -303,7 +303,7 @@ private fun SettingsScreenLayoutPreview() {
                                     listOf(
                                         PreferenceCategory(
                                             nameStringResource =
-                                                SettingsR.string.settings_category_interface,
+                                                SettingsR.string.settings_category_appearance,
                                             iconDrawableId = SettingsR.drawable.ic_palette,
                                         )
                                     ),

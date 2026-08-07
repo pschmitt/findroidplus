@@ -65,7 +65,7 @@ constructor(
     private val eventsChannel = Channel<SettingsEvent>()
     val events = eventsChannel.receiveAsFlow()
 
-    private val topLevelPreferences =
+    private val baseTopLevelPreferences =
         listOf(
             PreferenceGroup(
                 nameStringResource = R.string.settings_group_account,
@@ -239,13 +239,10 @@ constructor(
                                                 ),
                                             ),
                                     ),
-                                    // "Player" used to be its own top-level group; folded in here
-                                    // (this category is now "Appearance") so the whole visual +
-                                    // playback experience lives in one place instead of being split
-                                    // across two top-level entries.
-                                    // "Language" used to be its own top-level group; folded in here
-                                    // since it's really a player-experience setting (what you hear
-                                    // and read, not a separate top-level concern).
+                                    // These groups are assembled into one base tree and split into
+                                    // the final Appearance and Player top-level sections below.
+                                    // App language stays with Appearance; preferred media languages
+                                    // are moved into Player with the playback controls.
                                     PreferenceGroup(
                                         nameStringResource = R.string.settings_category_language,
                                         preferences =
@@ -262,6 +259,7 @@ constructor(
                                             ),
                                     ),
                                     PreferenceGroup(
+                                        nameStringResource = R.string.settings_category_language,
                                         preferences =
                                             listOf(
                                                 PreferenceSelect(
@@ -347,7 +345,7 @@ constructor(
                                                                 SettingsEvent.NavigateToSettings(
                                                                     intArrayOf(
                                                                         R.string
-                                                                            .settings_category_interface,
+                                                                        .settings_category_player,
                                                                         it.nameStringResource,
                                                                     )
                                                                 )
@@ -1199,6 +1197,101 @@ constructor(
                     ),
             ),
         )
+
+    private val topLevelPreferences =
+        buildList {
+            fun baseGroup(nameStringResource: Int) =
+                baseTopLevelPreferences.first {
+                    it.nameStringResource == nameStringResource
+                }
+
+            val interfaceCategory =
+                baseGroup(R.string.settings_category_interface).preferences.single()
+                    as PreferenceCategory
+            val interfaceGroups = interfaceCategory.nestedPreferenceGroups
+            val advancedCategory =
+                baseGroup(R.string.settings_category_advanced).preferences.single()
+                    as PreferenceCategory
+            val advancedGroups = advancedCategory.nestedPreferenceGroups
+
+            add(baseGroup(R.string.settings_group_account))
+            add(
+                PreferenceGroup(
+                    nameStringResource = R.string.settings_category_appearance,
+                    preferences =
+                        listOf(
+                            interfaceCategory.copy(
+                                nameStringResource = R.string.settings_category_appearance,
+                                descriptionStringRes =
+                                    R.string.settings_category_appearance_summary,
+                                iconDrawableId = R.drawable.ic_palette,
+                                nestedPreferenceGroups = interfaceGroups.take(3),
+                            )
+                        ),
+                )
+            )
+            add(
+                PreferenceGroup(
+                    nameStringResource = R.string.settings_category_player,
+                    preferences =
+                        listOf(
+                            interfaceCategory.copy(
+                                nameStringResource = R.string.settings_category_player,
+                                descriptionStringRes = R.string.settings_category_player_summary,
+                                iconDrawableId = R.drawable.ic_play,
+                                nestedPreferenceGroups = interfaceGroups.drop(3),
+                            )
+                        ),
+                )
+            )
+            add(baseGroup(R.string.title_download))
+            add(
+                PreferenceGroup(
+                    nameStringResource = R.string.settings_category_integrations,
+                    preferences =
+                        listOf(
+                            advancedCategory.copy(
+                                nameStringResource = R.string.settings_category_integrations,
+                                descriptionStringRes =
+                                    R.string.settings_category_integrations_summary,
+                                iconDrawableId = R.drawable.ic_refresh_cw,
+                                nestedPreferenceGroups = advancedGroups.take(2),
+                            )
+                        ),
+                )
+            )
+            add(
+                PreferenceGroup(
+                    nameStringResource = R.string.settings_category_network,
+                    preferences =
+                        listOf(
+                            advancedCategory.copy(
+                                nameStringResource = R.string.settings_category_network,
+                                descriptionStringRes = R.string.settings_category_network_summary,
+                                iconDrawableId = R.drawable.ic_network,
+                                nestedPreferenceGroups = advancedGroups.drop(2).take(1),
+                            )
+                        ),
+                )
+            )
+            add(baseGroup(R.string.settings_group_data))
+            add(
+                PreferenceGroup(
+                    nameStringResource = R.string.settings_category_advanced,
+                    preferences =
+                        listOf(
+                            advancedCategory.copy(
+                                nameStringResource = R.string.settings_category_advanced,
+                                descriptionStringRes =
+                                    R.string.settings_category_advanced_summary,
+                                iconDrawableId = R.drawable.ic_sliders_horizontal,
+                                nestedPreferenceGroups = advancedGroups.drop(3),
+                            )
+                        ),
+                )
+            )
+            add(baseGroup(R.string.about))
+        }
 
     fun loadPreferences(indexes: IntArray = intArrayOf(), deviceType: DeviceType) {
         viewModelScope.launch {

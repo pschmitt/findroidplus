@@ -16,7 +16,7 @@
     <string name="pvr_release_cache">Release search cache</string>
     <string name="pvr_release_cache_summary">How long to reuse the results of a manual release search for the same episode, instead of re-querying Sonarr/indexers. Applies to every profile.</string>
     <string name="settings_category_advanced">Advanced</string>
-    <string name="settings_category_advanced_summary">Sync intervals, notifications, cache and network timeouts</string>
+    <string name="settings_category_advanced_summary">Image cache and other less frequently changed settings</string>
     <string name="settings_group_pvr_sync">Sonarr/Radarr sync</string>
     <string name="settings_category_servers">Servers</string>
     <string name="settings_category_servers_summary">Manage the Jellyfin servers connected to this app</string>
@@ -25,12 +25,14 @@
     <string name="settings_category_qr_export">Provision device</string>
     <string name="settings_category_qr_export_summary">Set up a new device by scanning a QR code</string>
     <string name="settings_category_integrations">Integrations</string>
+    <string name="settings_category_integrations_summary">Sonarr/Radarr synchronization and new-item notifications</string>
     <string name="settings_category_player">Player</string>
     <string name="settings_category_player_summary">Playback, gestures, seeking and media segments</string>
     <string name="settings_category_download">Downloads</string>
     <string name="settings_category_appearance">Appearance</string>
+    <string name="settings_category_appearance_summary">Theme, home screen and language settings</string>
     <string name="settings_category_interface">Appearance</string>
-    <string name="settings_category_interface_summary">Theme, home screen, playback &amp; language</string>
+    <string name="settings_category_interface_summary">Theme, home screen and language settings</string>
     <string name="settings_category_device">Device</string>
     <string name="settings_category_home_layout">Customize home screen</string>
     <string name="settings_home_layout_summary">Change the order of Home screen sections</string>

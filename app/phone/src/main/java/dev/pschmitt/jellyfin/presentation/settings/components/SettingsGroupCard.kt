@@ -71,7 +71,7 @@ fun SettingsGroupCard(
                                     // matching isn't reliable here at all.
                                     if (
                                         preference.nameStringResource ==
-                                            SettingsR.string.settings_category_interface
+                                            SettingsR.string.settings_category_appearance
                                     ) {
                                         it.testTag("e2e-settings-appearance-category")
                                     } else {

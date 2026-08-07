@@ -1965,16 +1965,14 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
         `:app:tv:compileLibreDebugKotlin`, and `:core:testLibreDebugUnitTest`/
         `:data:testDebugUnitTest` all green on rofl-13. Not yet re-verified on a physical device
         with a real old-format backup file (no such file was available in this pass).
-- [ ] Reorganize Settings grouping/ordering again - the current layout (post-Profiles/Advanced
-      reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user. Proposed
-      direction (not implemented; confirm before the broad UX change): restore focused top-level
-      groups in this order: Account, Appearance, Player, Downloads, Integrations, Network, Data,
-      Advanced, About. Keep theme/home/app-language in Appearance; move preferred media languages,
-      player backend, gestures, seeking, media segments, trickplay, PiP, and MPV options into
-      Player; move PVR sync and new-item notifications into Integrations; move request/connect/
-      socket/PVR-search timeouts into Network; leave cache in Advanced. This uses the existing
-      category strings and makes the current oversized Appearance and mixed Advanced screens
-      discoverable by purpose.
+- [x] Reorganize Settings grouping/ordering again - split the oversized Appearance screen into
+      focused Appearance and Player sections, and split Advanced into Integrations (PVR sync plus
+      new-item notifications), Network (request/connect/socket/PVR-search timeouts), and Advanced
+      (image cache). The top-level order is now Account, Appearance, Player, Downloads,
+      Integrations, Network, Data, Advanced, About. Preferred media languages moved with Player;
+      app language stayed with Appearance. Updated summaries, MPV navigation, and the screenshot
+      test tag. Verified with remote `ktfmtCheck`, phone/TV Kotlin compilation, and core/data unit
+      tests; not physically tested.
 
-Status: in progress (2026-08-07) - Seerr renaming and QR export profile selection done; Settings
-reorg remains open pending a concrete UX/IA decision.
+Status: **done** (2026-08-07) - Seerr renaming, QR export profile selection, and Settings reorg
+completed and verified remotely; no physical-device verification for the Settings change.
