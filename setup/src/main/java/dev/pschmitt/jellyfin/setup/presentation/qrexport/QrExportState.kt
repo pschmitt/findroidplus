@@ -1,7 +1,7 @@
 package dev.pschmitt.jellyfin.setup.presentation.qrexport
 
-import dev.pschmitt.jellyfin.models.ServerWithAddressesAndUsers
 import dev.pschmitt.jellyfin.models.ProfileWithUserAndServer
+import dev.pschmitt.jellyfin.models.ServerWithAddressesAndUsers
 import java.util.UUID
 
 data class QrExportState(

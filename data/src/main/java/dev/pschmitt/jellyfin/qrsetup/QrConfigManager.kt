@@ -113,8 +113,8 @@ class QrConfigManager(
     /**
      * Currently-stored base URL for [profileId], to pre-fill the export screen's editable field.
      * The API key is deliberately not exposed here - like `jellyfinPassword`, its export-screen
-     * field starts blank and only the export's [putPvrFields] falls back to the stored secret. Empty
-     * string if not configured.
+     * field starts blank and only the export's [putPvrFields] falls back to the stored secret.
+     * Empty string if not configured.
      */
     fun currentSonarrBaseUrl(profileId: UUID? = null): String =
         resolvePvrConfig(profileId, PvrService.SONARR)?.baseUrl.orEmpty()
