@@ -1908,17 +1908,34 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
 - [ ] Add toggles to the QR export flow for whether to include each of Sonarr, Radarr, and Seerr in
       the generated envelope, rather than always bundling all three.
 - [x] Sweep remaining "Jellyseer"/"jellyseer" spellings (strings.xml, identifiers, comments) and
-      rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr". Grepped
-      the whole tree (excluding stale `.claude/worktrees/*` leftovers from unrelated earlier agent
-      runs): only two real hits were user/dev-facing and safe to rename -
-      `settings_category_profiles_summary` (strings.xml, only locale that has this key) and a
-      doc-comment in `ProfileSelectionBottomSheet.kt`. Deliberately left everything else alone: the
-      persisted preference/credential-store key names (`PvrCredentialKeys.kt`,
-      `AppPreferences.kt`) already carry their own comments explaining the pre-rebrand spelling is
-      locked in for existing installs, and the remaining doc-comments in `SeerrApi.kt`/
-      `SeerrDtos.kt`/`SeerrRepositoryImpl.kt` correctly name the real external product ("Seerr,
-      formerly Jellyseerr") rather than this app's own branding, so changing those would make the
-      comments factually wrong.
+      rename to "Seerr" - the rest of the codebase already uses `PvrService.SEERR`/"Seerr". First
+      pass renamed the two user/dev-facing text hits (`settings_category_profiles_summary`,
+      a doc-comment in `ProfileSelectionBottomSheet.kt`) and deliberately left the persisted
+      preference/credential-store key *string values* alone, since they were already documented as
+      locked in for backward compat. The user then clarified they want the persisted key names
+      renamed too, accepting that this needs a real migration - done as a second pass:
+  - [x] `PvrCredentialKeys.SEERR_API_KEY` now `"seerr_api_key"` (was `"jellyseerr_api_key"`, kept as
+        `LEGACY_JELLYSEERR_API_KEY` for migration reads only).
+  - [x] `AppPreferences.seerrEnabled`/`seerrBaseUrl` now back onto `"pref_pvr_seerr_enabled"`/
+        `"pref_pvr_seerr_base_url"` (were `"pref_pvr_jellyseerr_*"`).
+  - [x] New `ProfileMigrationRunner.migrateLegacySeerrKeyNames()`: copies any value still under an
+        old key name to its new name, for both `AppPreferences` (plain `SharedPreferences`) and
+        `SecureCredentialStore`. Naturally idempotent (copies only when the new key is absent and
+        the old one isn't) rather than flag-gated, so no new `AppPreferences.*Migrated` bool was
+        needed. Called from two places: `BaseApplication.onCreate()` (both phone/tv) ahead of
+        `profileMigrationRunner.run()` - since `run()`'s one-time backfill itself reads
+        `seerrEnabled`/`seerrBaseUrl` and would otherwise miss an old-named value on a real upgrade
+        - and at the top of `reconcileAfterExternalRestore()`, so **restoring an older backup/QR
+        export that still has the old key names in its payload keeps working**: `applyEnvelope()`/
+        `restorePreferences()` write the envelope's keys verbatim (old names, since that's what's
+        baked into an old file), then this migration step runs immediately after and copies them
+        into the new names before the rest of the reconcile logic reads via the new ones - same
+        "copy before anything reads the new name" ordering the original Profiles migration bug fix
+        established for the secret-loss case earlier this session.
+  - [x] Verified: remote `ktfmtCheck`, `:app:phone:compileLibreDebugKotlin`/
+        `:app:tv:compileLibreDebugKotlin`, and `:core:testLibreDebugUnitTest`/
+        `:data:testDebugUnitTest` all green on rofl-13. Not yet re-verified on a physical device
+        with a real old-format backup file (no such file was available in this pass).
 - [ ] Reorganize Settings grouping/ordering again - the current layout (post-Profiles/Advanced
       reorg, see the 2.14.0 work above) still doesn't read "naturally" per the user; needs a
       concrete new grouping/order proposal before implementing.

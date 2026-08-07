@@ -81,6 +81,9 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         // Must run before anything below that reads Profile/PVR config (PvrAdvancedSettings
         // provider, the scheduleX() calls, localControlServer) - a fresh install is a no-op here
         // since there are no User rows yet.
+        // migrateLegacySeerrKeyNames() must run first: run() reads AppPreferences.seerrEnabled/
+        // seerrBaseUrl, which only see a pre-rename install's value once this has copied it over.
+        profileMigrationRunner.migrateLegacySeerrKeyNames()
         profileMigrationRunner.run()
 
         PvrAdvancedSettings.provider = { service ->

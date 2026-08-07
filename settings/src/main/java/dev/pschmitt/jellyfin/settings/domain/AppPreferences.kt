@@ -163,10 +163,11 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val pvrReleaseCacheMinutes = Preference("pref_pvr_release_cache_minutes", 15)
 
     // Seerr (media requests, formerly Jellyseerr) - same secret-handling split as Sonarr/Radarr
-    // above. The pref keys keep the pre-rebrand "jellyseerr" names: they're already persisted on
-    // devices and in backups, and renaming them would silently reset the configuration.
-    val seerrEnabled = Preference("pref_pvr_jellyseerr_enabled", false)
-    val seerrBaseUrl = Preference<String?>("pref_pvr_jellyseerr_base_url", null)
+    // above. Renamed from the pre-rebrand "pref_pvr_jellyseerr_*" keys - see
+    // ProfileMigrationRunner.migrateLegacySeerrKeyNames() for the one-time copy that preserves
+    // already-persisted values (on-device and inside older backups/QR exports) under these names.
+    val seerrEnabled = Preference("pref_pvr_seerr_enabled", false)
+    val seerrBaseUrl = Preference<String?>("pref_pvr_seerr_base_url", null)
 
     // Remote config (cross-device auto-download rule push, see RemoteConfigRepository) - an
     // opaque per-install identifier, generated lazily on first use rather than at install time so

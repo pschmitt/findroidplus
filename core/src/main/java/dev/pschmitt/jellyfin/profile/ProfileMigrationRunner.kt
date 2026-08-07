@@ -32,6 +32,48 @@ constructor(
     private val appPreferences: AppPreferences,
     private val secureCredentialStore: SecureCredentialStore,
 ) {
+    /**
+     * One-time-per-key rename migration: the Seerr preference/credential keys used to keep their
+     * pre-rebrand "jellyseerr" spelling (see git history) - this copies any value still sitting
+     * under an old key into its renamed counterpart. Naturally idempotent (only copies when the new
+     * key is still absent and the old one isn't), so unlike [run] it needs no
+     * [AppPreferences.profilesMigrated]-style gating flag - safe to call on every cold start, and
+     * again from [reconcileAfterExternalRestore] in case a just-applied backup/QR envelope wrote
+     * secrets/prefs under the old names (an envelope exported by an older app build). Must run
+     * before anything reads [AppPreferences.seerrEnabled]/[AppPreferences.seerrBaseUrl]/
+     * [PvrCredentialKeys.SEERR_API_KEY] - see the call site in BaseApplication.onCreate(), ahead of
+     * [run] itself.
+     */
+    fun migrateLegacySeerrKeyNames() {
+        val prefs = appPreferences.sharedPreferences
+        if (
+            !prefs.contains(appPreferences.seerrEnabled.backendName) &&
+                prefs.contains(LEGACY_SEERR_ENABLED_KEY)
+        ) {
+            appPreferences.setValue(
+                appPreferences.seerrEnabled,
+                prefs.getBoolean(LEGACY_SEERR_ENABLED_KEY, false),
+            )
+        }
+        if (
+            !prefs.contains(appPreferences.seerrBaseUrl.backendName) &&
+                prefs.contains(LEGACY_SEERR_BASE_URL_KEY)
+        ) {
+            appPreferences.setValue(
+                appPreferences.seerrBaseUrl,
+                prefs.getString(LEGACY_SEERR_BASE_URL_KEY, null),
+            )
+        }
+        if (
+            !secureCredentialStore.contains(PvrCredentialKeys.SEERR_API_KEY) &&
+                secureCredentialStore.contains(PvrCredentialKeys.LEGACY_JELLYSEERR_API_KEY)
+        ) {
+            secureCredentialStore.getString(PvrCredentialKeys.LEGACY_JELLYSEERR_API_KEY)?.let {
+                secureCredentialStore.putStringBlocking(PvrCredentialKeys.SEERR_API_KEY, it)
+            }
+        }
+    }
+
     fun run() {
         if (appPreferences.getValue(appPreferences.profilesMigrated)) return
 
@@ -101,6 +143,8 @@ constructor(
      * SecureCredentialStore keys.
      */
     fun reconcileAfterExternalRestore() {
+        migrateLegacySeerrKeyNames()
+
         val users = dao.getAllUsers()
         if (users.isEmpty()) return
 
@@ -201,4 +245,9 @@ constructor(
             PvrService.RADARR -> appPreferences.radarrBaseUrl
             PvrService.SEERR -> appPreferences.seerrBaseUrl
         }
+
+    private companion object {
+        const val LEGACY_SEERR_ENABLED_KEY = "pref_pvr_jellyseerr_enabled"
+        const val LEGACY_SEERR_BASE_URL_KEY = "pref_pvr_jellyseerr_base_url"
+    }
 }

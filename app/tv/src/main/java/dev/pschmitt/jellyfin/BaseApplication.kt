@@ -32,6 +32,9 @@ class BaseApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // Must run before anything reads Profile/PVR config - a fresh install is a no-op here
         // since there are no User rows yet. Matches app/phone's BaseApplication ordering.
+        // migrateLegacySeerrKeyNames() must run first: run() reads AppPreferences.seerrEnabled/
+        // seerrBaseUrl, which only see a pre-rename install's value once this has copied it over.
+        profileMigrationRunner.migrateLegacySeerrKeyNames()
         profileMigrationRunner.run()
         ForegroundDownloadResumer(downloader).start()
     }

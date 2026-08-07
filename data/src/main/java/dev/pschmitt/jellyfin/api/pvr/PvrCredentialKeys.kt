@@ -15,9 +15,11 @@ object PvrCredentialKeys {
     // these once Profiles has shipped.
     const val SONARR_API_KEY = "sonarr_api_key"
     const val RADARR_API_KEY = "radarr_api_key"
-    // Key string keeps the pre-rebrand "jellyseerr" name - it's already persisted in encrypted
-    // prefs on devices and inside backups, so changing it would silently drop the stored key.
-    const val SEERR_API_KEY = "jellyseerr_api_key"
+    const val SEERR_API_KEY = "seerr_api_key"
+    // Pre-rebrand key name, still checked by ProfileMigrationRunner.migrateLegacySeerrKeyNames()
+    // so an API key persisted under the old name (on-device, or inside an older backup/QR export)
+    // isn't silently dropped once SEERR_API_KEY switched to the name above.
+    const val LEGACY_JELLYSEERR_API_KEY = "jellyseerr_api_key"
     const val SONARR_HTTP_HEADERS = "sonarr_http_headers"
     const val SONARR_BASIC_AUTH_USERNAME = "sonarr_basic_auth_username"
     const val SONARR_BASIC_AUTH_PASSWORD = "sonarr_basic_auth_password"
