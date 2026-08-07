@@ -1980,5 +1980,10 @@ Requested (2026-08-07), immediately after v2.14.0 (Profiles) shipped:
       and core/data unit tests; not physically tested.
 - [x] Remove redundant outer titles from the remaining single-entry Settings root cards (Player,
       Integrations, Network, and Data); their cards already contain the corresponding titled row.
+- [x] Move Player, Integrations, and Network under the Advanced Settings screen, keeping Advanced
+      immediately above About at the root and preserving nested navigation paths. Verified with
+      remote `ktfmtCheck`, phone/TV Kotlin compilation, and core/data unit tests; deployed to the
+      Mi Pad 4 and PX5.
 
-Status: **done** (2026-08-07) - redundant single-entry root-card headers removed and deployed.
+Status: **done** (2026-08-07) - less frequently used settings consolidated under Advanced and
+deployed.

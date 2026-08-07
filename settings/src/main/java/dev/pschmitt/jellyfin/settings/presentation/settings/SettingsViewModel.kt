@@ -345,7 +345,9 @@ constructor(
                                                                 SettingsEvent.NavigateToSettings(
                                                                     intArrayOf(
                                                                         R.string
-                                                                        .settings_category_player,
+                                                                        .settings_category_advanced,
+                                                                        R.string
+                                                                            .settings_category_player,
                                                                         it.nameStringResource,
                                                                     )
                                                                 )
@@ -1223,14 +1225,74 @@ constructor(
                         nestedPreferenceGroups = interfaceGroups.take(3),
                     )
                 )
-            val advancedPreferences =
-                listOf(
-                    advancedCategory.copy(
-                        nameStringResource = R.string.settings_category_advanced,
-                        descriptionStringRes = R.string.settings_category_advanced_summary,
-                        iconDrawableId = R.drawable.ic_sliders_horizontal,
-                        nestedPreferenceGroups = advancedGroups.drop(3),
-                    )
+            val playerPreference =
+                interfaceCategory.copy(
+                    nameStringResource = R.string.settings_category_player,
+                    descriptionStringRes = R.string.settings_category_player_summary,
+                    iconDrawableId = R.drawable.ic_play,
+                    onClick = {
+                        viewModelScope.launch {
+                            eventsChannel.send(
+                                SettingsEvent.NavigateToSettings(
+                                    intArrayOf(
+                                        R.string.settings_category_advanced,
+                                        it.nameStringResource,
+                                    )
+                                )
+                            )
+                        }
+                    },
+                    nestedPreferenceGroups = interfaceGroups.drop(3),
+                )
+            val integrationsPreference =
+                advancedCategory.copy(
+                    nameStringResource = R.string.settings_category_integrations,
+                    descriptionStringRes = R.string.settings_category_integrations_summary,
+                    iconDrawableId = R.drawable.ic_refresh_cw,
+                    onClick = {
+                        viewModelScope.launch {
+                            eventsChannel.send(
+                                SettingsEvent.NavigateToSettings(
+                                    intArrayOf(
+                                        R.string.settings_category_advanced,
+                                        it.nameStringResource,
+                                    )
+                                )
+                            )
+                        }
+                    },
+                    nestedPreferenceGroups = advancedGroups.take(2),
+                )
+            val networkPreference =
+                advancedCategory.copy(
+                    nameStringResource = R.string.settings_category_network,
+                    descriptionStringRes = R.string.settings_category_network_summary,
+                    iconDrawableId = R.drawable.ic_network,
+                    onClick = {
+                        viewModelScope.launch {
+                            eventsChannel.send(
+                                SettingsEvent.NavigateToSettings(
+                                    intArrayOf(
+                                        R.string.settings_category_advanced,
+                                        it.nameStringResource,
+                                    )
+                                )
+                            )
+                        }
+                    },
+                    nestedPreferenceGroups = advancedGroups.drop(2).take(1),
+                )
+            val advancedPreference =
+                advancedCategory.copy(
+                    nameStringResource = R.string.settings_category_advanced,
+                    descriptionStringRes = R.string.settings_category_advanced_summary,
+                    iconDrawableId = R.drawable.ic_sliders_horizontal,
+                    nestedPreferenceGroups =
+                        listOf(
+                            PreferenceGroup(preferences = listOf(playerPreference)),
+                            PreferenceGroup(preferences = listOf(integrationsPreference)),
+                            PreferenceGroup(preferences = listOf(networkPreference)),
+                        ) + advancedGroups.drop(3),
                 )
 
             add(
@@ -1241,48 +1303,8 @@ constructor(
                             baseGroup(R.string.title_download).preferences,
                 )
             )
-            add(
-                PreferenceGroup(
-                    preferences =
-                        listOf(
-                            interfaceCategory.copy(
-                                nameStringResource = R.string.settings_category_player,
-                                descriptionStringRes = R.string.settings_category_player_summary,
-                                iconDrawableId = R.drawable.ic_play,
-                                nestedPreferenceGroups = interfaceGroups.drop(3),
-                            )
-                        ),
-                )
-            )
-            add(
-                PreferenceGroup(
-                    preferences =
-                        listOf(
-                            advancedCategory.copy(
-                                nameStringResource = R.string.settings_category_integrations,
-                                descriptionStringRes =
-                                    R.string.settings_category_integrations_summary,
-                                iconDrawableId = R.drawable.ic_refresh_cw,
-                                nestedPreferenceGroups = advancedGroups.take(2),
-                            )
-                        ),
-                )
-            )
-            add(
-                PreferenceGroup(
-                    preferences =
-                        listOf(
-                            advancedCategory.copy(
-                                nameStringResource = R.string.settings_category_network,
-                                descriptionStringRes = R.string.settings_category_network_summary,
-                                iconDrawableId = R.drawable.ic_network,
-                                nestedPreferenceGroups = advancedGroups.drop(2).take(1),
-                            )
-                        ),
-                )
-            )
             add(PreferenceGroup(preferences = baseGroup(R.string.settings_group_data).preferences))
-            add(PreferenceGroup(preferences = advancedPreferences))
+            add(PreferenceGroup(preferences = listOf(advancedPreference)))
             add(PreferenceGroup(preferences = baseGroup(R.string.about).preferences))
         }
 
